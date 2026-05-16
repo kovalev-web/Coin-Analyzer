@@ -1,0 +1,12 @@
+{
+  "name": "pump-analyzer",
+  "version": "1.0.0",
+  "description": "Altcoin Pump Monitor — local web service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
