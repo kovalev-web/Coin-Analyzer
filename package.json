@@ -2,9 +2,8 @@
   "name": "pump-analyzer",
   "version": "1.0.0",
   "description": "Altcoin Pump Monitor — Binance Futures + Gemini AI",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node server.js"
   },
   "devDependencies": {
     "express": "^4.18.2"
