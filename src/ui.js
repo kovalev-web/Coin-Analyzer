@@ -169,6 +169,8 @@ export function setChartTF(symbol, tf) {
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   _charts = {}; _fullSeries = {}; _volSeries = {}; _rulers = {};
+  window.__chartSeries = _fullSeries;
+  window.__chartVolSeries = _volSeries;
 }
 
 function drawRuler(sym, p1, p2, pr1, pr2) {

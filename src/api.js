@@ -262,7 +262,7 @@ export function applyLiveChartUpdates() {
       volume: last.volume,
     };
     cd.candles[cd.candles.length - 1] = updated;
-    s.update(updated);
+    try { s.update(updated); } catch (e) { }
     var vs = volSeries[coin.symbol];
     if (vs) vs.update({
       time: updated.time,
