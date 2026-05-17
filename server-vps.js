@@ -1,7 +1,7 @@
 const { WebSocketServer, WebSocket } = require('ws');
 
 var PORT = process.env.WSS_PORT || 3001;
-var BINANCE_WS = 'wss://fstream.binance.com/ws/!miniTicker@arr';
+var BINANCE_WS = 'wss://fstream.binance.com/stream?streams=!miniTicker@arr';
 var BINANCE_REST = 'https://fapi.binance.com';
 
 var clients = new Set();
@@ -14,7 +14,9 @@ function connectBinance() {
   ws.on('open', function () { console.log('[Binance] Ticker stream connected'); });
   ws.on('message', function (raw) {
     try {
-      var data = JSON.parse(raw.toString());
+      var parsed = JSON.parse(raw.toString());
+      // Combined stream wraps in { stream: "...", data: [...] }
+      var data = parsed.stream ? parsed.data : parsed;
       if (Array.isArray(data)) {
         tickerCache = data;
         var msg = JSON.stringify({ type: 'ticker', data: data });
