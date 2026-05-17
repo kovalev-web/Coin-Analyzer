@@ -256,8 +256,8 @@ export function applyLiveChartUpdates() {
     var updated = {
       time: last.time,
       open: last.open,
-      high: Math.max(last.high, price),
-      low: Math.min(last.low, price),
+      high: last.high,
+      low: last.low,
       close: price,
       volume: last.volume,
     };
