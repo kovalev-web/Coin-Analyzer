@@ -1,31 +1,30 @@
 const { WebSocketServer, WebSocket } = require('ws');
 
 var PORT = process.env.WSS_PORT || 3001;
-var BINANCE_WS = 'wss://fstream.binance.com/stream?streams=!miniTicker@arr';
 var BINANCE_REST = 'https://fapi.binance.com';
 
 var clients = new Set();
 var tickerCache = null;
 
-// ── Binance WebSocket (real-time tickers) ────────────────────────────────
+// ── Poll Binance REST every 2s (more reliable than WS on some VPS) ──────
 
-function connectBinance() {
-  var ws = new WebSocket(BINANCE_WS);
-  ws.on('open', function () { console.log('[Binance] Ticker stream connected'); });
-  ws.on('message', function (raw) {
-    try {
-      var parsed = JSON.parse(raw.toString());
-      // Combined stream wraps in { stream: "...", data: [...] }
-      var data = parsed.stream ? parsed.data : parsed;
-      if (Array.isArray(data)) {
-        tickerCache = data;
-        var msg = JSON.stringify({ type: 'ticker', data: data });
-        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-      }
-    } catch (e) {}
-  });
-  ws.on('close', function () { console.log('[Binance] Disconnected, reconnect in 3s'); setTimeout(connectBinance, 3000); });
-  ws.on('error', function (e) { console.error('[Binance] Error:', e.message); ws.close(); });
+var _pollTimer = null;
+
+async function pollTickers() {
+  try {
+    var res = await fetch(BINANCE_REST + '/fapi/v1/ticker/24hr');
+    if (!res.ok) return;
+    var data = await res.json();
+    tickerCache = data;
+    var msg = JSON.stringify({ type: 'ticker', data: data });
+    clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+  } catch (e) {}
+}
+
+function startPolling() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(pollTickers, 2000);
+  pollTickers(); // immediate first call
 }
 
 // ── Binance REST proxy ───────────────────────────────────────────────────
@@ -98,4 +97,4 @@ wss.on('connection', function (ws) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 
-connectBinance();
+startPolling();

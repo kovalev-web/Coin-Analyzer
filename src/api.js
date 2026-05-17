@@ -115,15 +115,15 @@ function processTickerPush(arr) {
   // Initial load — state.coins empty
   if (state.coins.length === 0) {
     state.coins = arr.filter(function (t) {
-      return t.s.endsWith('USDT') && !STABLE_SYMBOLS.has(t.s.replace('USDT', '').toLowerCase()) && t.s !== 'USDTUSDT';
+      return t.symbol.endsWith('USDT') && !STABLE_SYMBOLS.has(t.symbol.replace('USDT', '').toLowerCase()) && t.symbol !== 'USDTUSDT';
     }).map(function (t) {
-      var sym = t.s.replace('USDT', '').toLowerCase();
+      var sym = t.symbol.replace('USDT', '').toLowerCase();
       return {
         symbol: sym,
         name: sym.toUpperCase(),
-        current_price: parseFloat(t.c),
-        total_volume: Math.round(parseFloat(t.q)),
-        price_change_percentage_24h: ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
+        current_price: parseFloat(t.lastPrice),
+        total_volume: Math.round(parseFloat(t.quoteVolume)),
+        price_change_percentage_24h: parseFloat(t.priceChangePercent),
       };
     }).sort(function (a, b) { return b.total_volume - a.total_volume; });
     state.lastUpdate = new Date();
@@ -135,20 +135,20 @@ function processTickerPush(arr) {
   // Push update — update existing coins and add new ones
   var newCoins = 0;
   arr.forEach(function (t) {
-    var sym = t.s.replace('USDT', '').toLowerCase();
+    var sym = t.symbol.replace('USDT', '').toLowerCase();
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
     if (!coin) {
-      if (!t.s.endsWith('USDT') || STABLE_SYMBOLS.has(sym) || sym === 'usdt') return;
-      var qv = Math.round(parseFloat(t.q));
-      var pc = ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+      if (!t.symbol.endsWith('USDT') || STABLE_SYMBOLS.has(sym) || sym === 'usdt') return;
+      var qv = Math.round(parseFloat(t.quoteVolume));
+      var pc = parseFloat(t.priceChangePercent);
       if (qv < ((state.minVolume || 0) * 1e6) || pc < (state.minChange || 0)) return;
-      state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.c), total_volume: qv, price_change_percentage_24h: pc });
+      state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.lastPrice), total_volume: qv, price_change_percentage_24h: pc });
       newCoins++;
       return;
     }
-    coin.current_price = parseFloat(t.c);
-    coin.price_change_percentage_24h = ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
-    coin.total_volume = Math.round(parseFloat(t.q));
+    coin.current_price = parseFloat(t.lastPrice);
+    coin.price_change_percentage_24h = parseFloat(t.priceChangePercent);
+    coin.total_volume = Math.round(parseFloat(t.quoteVolume));
   });
 
   if (newCoins) { emit('render'); return; }
