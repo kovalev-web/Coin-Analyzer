@@ -118,6 +118,20 @@ var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {};
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
 
+function calcPriceFormat(price) {
+  if (!price || price <= 0) return { type: 'price', precision: 4, minMove: 0.0001 };
+  if (price < 0.00001) return { type: 'price', precision: 8, minMove: 0.00000001 };
+  if (price < 0.0001)  return { type: 'price', precision: 7, minMove: 0.0000001 };
+  if (price < 0.001)   return { type: 'price', precision: 6, minMove: 0.000001 };
+  if (price < 0.01)    return { type: 'price', precision: 5, minMove: 0.00001 };
+  if (price < 0.1)     return { type: 'price', precision: 4, minMove: 0.0001 };
+  if (price < 1)       return { type: 'price', precision: 4, minMove: 0.0001 };
+  if (price < 10)      return { type: 'price', precision: 3, minMove: 0.001 };
+  if (price < 100)     return { type: 'price', precision: 2, minMove: 0.01 };
+  if (price < 10000)   return { type: 'price', precision: 1, minMove: 0.1 };
+  return { type: 'price', precision: 0, minMove: 1 };
+}
+
 function getChartOpts(width) {
   return {
     width: width, height: 300,
@@ -143,6 +157,8 @@ function updateChart(symbol) {
   var tf = state.chartTF[symbol] || '5m';
   var cd = state.chartData[symbol + '_' + tf];
   if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
+  var lastClose = cd.candles[cd.candles.length - 1].close;
+  s.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
   s.setData(cd.candles);
   var vs = _volSeries[symbol];
   if (vs) vs.setData(cd.candles.map(function (c) {
