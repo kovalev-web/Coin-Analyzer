@@ -290,10 +290,14 @@ export async function pollCharts() {
       if (!Array.isArray(data) || !data.length) continue;
       var k = data[data.length - 1];
       var newCandle = { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
+      // Use live ticker price for close so REST lag doesn't conflict with applyLiveChartUpdates
+      if (c.current_price) newCandle.close = c.current_price;
       var arr = cd.candles, last = arr[arr.length - 1];
       if (last && last.time === newCandle.time) { arr[arr.length - 1] = newCandle; }
       else if (!last || newCandle.time > last.time) { arr.push(newCandle); if (arr.length > 300) arr.shift(); }
-      // Do NOT call s.update() here — applyLiveChartUpdates() owns all chart rendering
+      s.update(newCandle);
+      var vs = volSeries[c.symbol];
+      if (vs) vs.update({ time: newCandle.time, value: newCandle.volume, color: newCandle.close >= newCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' });
     } catch (e) { }
   }
 }
