@@ -5,26 +5,48 @@ var BINANCE_REST = 'https://fapi.binance.com';
 
 var clients = new Set();
 var tickerCache = null;
+var binanceWS = null;
 
-// ── Poll Binance REST every 2s (more reliable than WS on some VPS) ──────
+// ── Binance WebSocket (real-time tickers via SUBSCRIBE) ──────────────────
 
-var _pollTimer = null;
+function connectBinance() {
+  binanceWS = new WebSocket('wss://fstream.binance.com/ws');
 
-async function pollTickers() {
-  try {
-    var res = await fetch(BINANCE_REST + '/fapi/v1/ticker/24hr');
-    if (!res.ok) return;
-    var data = await res.json();
-    tickerCache = data;
-    var msg = JSON.stringify({ type: 'ticker', data: data });
-    clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-  } catch (e) {}
-}
+  binanceWS.on('open', function () {
+    console.log('[Binance] Connected, subscribing to !miniTicker@arr');
+    binanceWS.send(JSON.stringify({
+      method: 'SUBSCRIBE',
+      params: ['!miniTicker@arr'],
+      id: 1,
+    }));
+  });
 
-function startPolling() {
-  if (_pollTimer) clearInterval(_pollTimer);
-  _pollTimer = setInterval(pollTickers, 2000);
-  pollTickers(); // immediate first call
+  binanceWS.on('message', function (raw) {
+    try {
+      var parsed = JSON.parse(raw.toString());
+      // SUBSCRIBE confirmation
+      if (parsed.id === 1 && parsed.result === null) {
+        console.log('[Binance] Subscribed to !miniTicker@arr');
+        return;
+      }
+      // Ticker data
+      if (Array.isArray(parsed)) {
+        tickerCache = parsed;
+        var msg = JSON.stringify({ type: 'ticker', data: parsed });
+        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+      }
+    } catch (e) {}
+  });
+
+  binanceWS.on('close', function () {
+    console.log('[Binance] Disconnected, reconnecting in 3s');
+    setTimeout(connectBinance, 3000);
+  });
+
+  binanceWS.on('error', function (e) {
+    console.error('[Binance] Error:', e.message);
+    binanceWS.close();
+  });
 }
 
 // ── Binance REST proxy ───────────────────────────────────────────────────
@@ -97,4 +119,4 @@ wss.on('connection', function (ws) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 
-startPolling();
+connectBinance();
