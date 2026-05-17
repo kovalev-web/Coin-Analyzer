@@ -103,6 +103,43 @@
     .error-banner{margin:16px 32px 0;background:#fff1f1;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;color:var(--bloom-deep);font-size:13px;font-weight:600;}
     .empty-state{text-align:center;padding:64px 24px;color:var(--graphite);font-size:14px;font-weight:600;}
 
+    /* ── Market Strength ── */
+    .ms-panel{background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);margin:16px 32px 0;padding:20px 24px;}
+    .ms-panel-idle{display:flex;align-items:center;justify-content:space-between;}
+    .ms-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--graphite);margin-bottom:2px;}
+    .ms-verdict-row{display:flex;align-items:baseline;gap:12px;margin:4px 0 16px;}
+    .ms-verdict-strong{font-size:22px;font-weight:700;color:var(--bullish);}
+    .ms-verdict-medium{font-size:22px;font-weight:700;color:var(--caution);}
+    .ms-verdict-weak{font-size:22px;font-weight:700;color:var(--bloom-deep);}
+    .ms-phase{font-size:12px;color:var(--graphite);font-weight:500;}
+    .ms-metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;margin-bottom:14px;}
+    .ms-metric{display:flex;flex-direction:column;gap:5px;}
+    .ms-metric-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--graphite);}
+    .ms-bar-row{display:flex;align-items:center;gap:8px;}
+    .ms-bar{flex:1;height:6px;background:var(--fog);border-radius:3px;overflow:hidden;}
+    .ms-bar-fill{height:100%;border-radius:3px;transition:width 0.6s ease;}
+    .ms-bar-fill.strong{background:var(--bullish);}
+    .ms-bar-fill.medium{background:var(--caution);}
+    .ms-bar-fill.weak{background:var(--bloom-coral);}
+    .ms-bar-pct{font-size:11px;font-weight:700;color:var(--charcoal);min-width:24px;text-align:right;}
+    .ms-oi-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;}
+    .ms-oi-badge.up{background:var(--bullish-bg);color:var(--bullish);}
+    .ms-oi-badge.down{background:#fff1f1;color:var(--bloom-deep);}
+    .ms-oi-badge.neutral{background:var(--fog);color:var(--graphite);}
+    .ms-inplay{border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px;}
+    .ms-inplay-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--graphite);margin-bottom:7px;}
+    .ms-inplay-coins{display:flex;flex-wrap:wrap;gap:6px;}
+    .ms-inplay-pill{background:var(--caution-bg);color:var(--caution);border:1px solid #fde68a;padding:2px 10px;border-radius:9999px;font-size:12px;font-weight:700;}
+    .ms-loading{display:flex;align-items:center;gap:8px;color:var(--graphite);font-size:14px;font-weight:500;}
+    .ms-footer{font-size:11px;color:var(--graphite);margin-top:10px;}
+    .ms-card{cursor:pointer;transition:box-shadow 0.15s;}
+    .ms-card:hover{box-shadow:0 4px 16px rgba(26,26,26,0.14);}
+    .ms-card-sub{font-size:11px;color:var(--graphite);font-weight:500;margin-top:2px;}
+    .ms-popup{position:absolute;z-index:9999;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.13);width:440px;max-width:calc(100vw - 24px);max-height:70vh;overflow-y:auto;}
+    .ms-popup-close{width:28px;height:28px;padding:0;border-radius:50%;background:var(--fog);color:var(--graphite);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
+    .ms-popup-close:hover{background:var(--steel);}
+    @media(max-width:768px){.ms-panel{margin:12px 12px 0;padding:14px 16px;}.ms-metrics-grid{grid-template-columns:1fr;gap:8px 0;}}
+
     @media(max-width:768px){
       .topbar{margin:12px 12px 0;border-radius:12px;overflow:visible;}
       .filters{padding:10px 14px;gap:12px;flex-direction:column;align-items:stretch;}
@@ -135,6 +172,7 @@ var state={
   lastUpdate:null,cacheExpires:0,loading:false,error:null,
   minVolume:100,minChange:1,sortCol:'price_change_percentage_24h',sortDir:'desc',
   analyzingAll:false,analyzeAllAbort:false,
+  marketStrength:null,
 };
 
 function fmt(n){if(n==null)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+(n/1e3).toFixed(1)+'K';return'$'+n.toFixed(4);}
@@ -372,6 +410,8 @@ function pickTF(sym,tf,e){
 document.addEventListener('click',function(e){
   var popup=document.getElementById('analysis-overlay');
   if(popup&&popup.style.display==='block'&&!popup.contains(e.target)&&!e.target.closest('[data-ck]'))popup.style.display='none';
+  var msPopup=document.getElementById('ms-popup');
+  if(msPopup&&msPopup.style.display!=='none'&&!msPopup.contains(e.target)&&!e.target.closest('#ms-card'))msPopup.style.display='none';
   if(!e.target.closest('.tf-picker'))document.querySelectorAll('.tf-dd').forEach(function(el){el.style.display='none';});
 });
 
@@ -617,6 +657,215 @@ function initCharts(){
   });
 }
 
+// ── Market Strength ───────────────────────────────────────────────────────
+function getMSKPhase(){
+  var utcMs=Date.now()+new Date().getTimezoneOffset()*60000;
+  var msk=new Date(utcMs+3*3600*1000);
+  var h=msk.getHours()+msk.getMinutes()/60;
+  var timeStr=msk.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  if(h>=0&&h<2)return{label:'Ночь',time:timeStr};
+  if(h>=2&&h<9)return{label:'Азия',time:timeStr};
+  if(h>=9&&h<11)return{label:'Открытие Европы',time:timeStr};
+  if(h>=11&&h<15.5)return{label:'Обед Европы',time:timeStr};
+  if(h>=15.5&&h<19.5)return{label:'Оверлап США+Европа',time:timeStr};
+  return{label:'Вечер Америки',time:timeStr};
+}
+
+function msBar(val){
+  var cls=val>=65?'strong':val>=40?'medium':'weak';
+  return'<div class="ms-bar-row"><div class="ms-bar"><div class="ms-bar-fill '+cls+'" style="width:'+val+'%"></div></div><span class="ms-bar-pct">'+val+'</span></div>';
+}
+
+function msCardInner(){
+  var ms=state.marketStrength;
+  if(!ms){
+    return'<div class="label">Сила рынка</div>'+
+      '<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">Оценить →</div>';
+  }
+  if(ms.status==='loading'){
+    return'<div class="label">Сила рынка</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:8px;"><span class="spinner"></span>'+
+      '<span style="font-size:13px;font-weight:500;color:var(--graphite);">Анализирую...</span></div>';
+  }
+  if(ms.status==='error'){
+    return'<div class="label">Сила рынка</div>'+
+      '<div style="font-size:16px;font-weight:700;color:var(--bloom-deep);margin-top:8px;">Ошибка</div>'+
+      '<div class="ms-card-sub">Нажмите для повтора</div>';
+  }
+  var vLabel=ms.verdict==='strong'?'💪 Сильный':ms.verdict==='medium'?'😐 Средний':'😵 Слабый';
+  var vColor=ms.verdict==='strong'?'var(--bullish)':ms.verdict==='medium'?'var(--caution)':'var(--bloom-deep)';
+  return'<div class="label">Сила рынка</div>'+
+    '<div style="font-size:20px;font-weight:700;color:'+vColor+';margin-top:6px;">'+vLabel+'</div>';
+}
+
+function msPopupInner(){
+  var ms=state.marketStrength;
+  var phase=getMSKPhase();
+  var closeBtn='<button class="ms-popup-close" onclick="closeMSPopup()">✕</button>';
+  if(!ms||ms.status==='loading'){
+    return'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+      '<div class="ms-title">Сила рынка</div>'+closeBtn+'</div>'+
+      '<div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div>';
+  }
+  if(ms.status==='error'){
+    return'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+      '<div class="ms-title">Сила рынка</div>'+closeBtn+'</div>'+
+      '<div style="color:var(--bloom-deep);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div>'+
+      '<button style="width:100%;height:36px;background:var(--ink);color:var(--on-ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" onclick="fetchMarketStrength()">Повторить</button>';
+  }
+  var m=ms.metrics;
+  var vLabel=ms.verdict==='strong'?'💪 Сильный':ms.verdict==='medium'?'😐 Средний':'😵 Слабый';
+  var vClass='ms-verdict-'+ms.verdict;
+  var oiHtml='<span class="ms-oi-badge '+(m.oiDir==='up'?'up':m.oiDir==='down'?'down':'neutral')+'">'+(m.oiDir==='up'?'▲ Подтверждён':m.oiDir==='down'?'▼ Ликвидации':'— Нейтрально')+'</span>';
+  var ts=new Date(ms.timestamp).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  var inPlayHtml=ms.inPlay.length?
+    '<div class="ms-inplay"><div class="ms-inplay-label">⚡ In-play (объём ×3+)</div><div class="ms-inplay-coins">'+
+      ms.inPlay.map(function(s){return'<span class="ms-inplay-pill">'+s+'</span>';}).join('')+
+    '</div></div>':'';
+  return'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'+
+    '<div>'+
+      '<div class="ms-title">Сила рынка</div>'+
+      '<div class="ms-verdict-row"><span class="'+vClass+'">'+vLabel+'</span><span class="ms-phase">'+phase.label+' · '+phase.time+' МСК</span></div>'+
+    '</div>'+
+    closeBtn+
+  '</div>'+
+  '<div class="ms-metrics-grid">'+
+    '<div class="ms-metric"><div class="ms-metric-label">Объём</div>'+msBar(m.volumePulse)+'</div>'+
+    '<div class="ms-metric"><div class="ms-metric-label">Направленность</div>'+msBar(m.movement)+'</div>'+
+    '<div class="ms-metric"><div class="ms-metric-label">Волатильность</div>'+msBar(m.volatility)+'</div>'+
+    '<div class="ms-metric"><div class="ms-metric-label">Open Interest</div>'+oiHtml+'</div>'+
+  '</div>'+
+  inPlayHtml+
+  '<div class="ms-footer">Оценка: '+ms.score+' · топ-10 по объёму · '+ts+'</div>'+
+  '<button style="width:100%;height:36px;margin-top:12px;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" onclick="fetchMarketStrength()">Обновить</button>';
+}
+
+function getMSPopup(){
+  var el=document.getElementById('ms-popup');
+  if(!el){el=document.createElement('div');el.id='ms-popup';el.className='ms-popup';document.body.appendChild(el);}
+  return el;
+}
+
+function openMSPopup(){
+  if(!state.marketStrength)fetchMarketStrength();
+  var popup=getMSPopup();
+  popup.innerHTML=msPopupInner();
+  popup.style.display='block';
+  var card=document.getElementById('ms-card');
+  if(card){
+    var rect=card.getBoundingClientRect();
+    var top=rect.bottom+window.scrollY+8;
+    var left=rect.left+window.scrollX;
+    if(left+440>window.innerWidth)left=Math.max(8,window.innerWidth-448);
+    if(rect.bottom+360>window.innerHeight)top=rect.top+window.scrollY-380;
+    popup.style.top=top+'px';popup.style.left=left+'px';
+  }
+}
+
+function closeMSPopup(){
+  var el=document.getElementById('ms-popup');
+  if(el)el.style.display='none';
+}
+
+function updateMSPanel(){
+  var card=document.getElementById('ms-card');
+  if(card)card.innerHTML=msCardInner();
+  var popup=document.getElementById('ms-popup');
+  if(popup&&popup.style.display!=='none')popup.innerHTML=msPopupInner();
+}
+
+async function fetchMarketStrength(){
+  var sorted=filteredCoins().slice().sort(function(a,b){return b.total_volume-a.total_volume;});
+  var top=sorted.slice(0,10);
+  if(!top.length)return;
+  state.marketStrength={status:'loading'};
+  updateMSPanel();
+
+  var results=await Promise.all(top.map(async function(coin){
+    var sym=coin.symbol.toUpperCase()+'USDT';
+    try{
+      var [k1m,k1h,k1d,oiHist]=await Promise.all([
+        fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1m&limit=30').then(function(r){return r.json();}),
+        fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1h&limit=20').then(function(r){return r.json();}),
+        fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'&interval=1d&limit=11').then(function(r){return r.json();}),
+        fetch('https://fapi.binance.com/futures/data/openInterestHist?symbol='+sym+'&period=5m&limit=4').then(function(r){return r.json();}),
+      ]);
+      return{coin:coin,k1m:k1m,k1h:k1h,k1d:k1d,oiHist:oiHist};
+    }catch(e){return null;}
+  }));
+
+  var valid=results.filter(function(r){return r&&Array.isArray(r.k1m)&&Array.isArray(r.k1h);});
+  if(!valid.length){state.marketStrength={status:'error'};updateMSPanel();return;}
+
+  var volumePulses=[],atrRatios=[],qualities=[],oiDirs=[],volAnomalies=[],inPlay=[];
+
+  valid.forEach(function(r){
+    // 1. Объём: последние 5 свечей 1m vs предыдущие 25
+    if(r.k1m.length>=10){
+      var vols=r.k1m.map(function(k){return parseFloat(k[5]);});
+      var recent=vols.slice(-5).reduce(function(s,v){return s+v;},0)/5;
+      var base=vols.slice(0,-5).reduce(function(s,v){return s+v;},0)/Math.max(vols.slice(0,-5).length,1);
+      if(base>0)volumePulses.push(Math.min(100,Math.round(recent/base*50)));
+    }
+    // 2. ATR: последние 5 vs предыдущие 14 на 1h
+    if(r.k1h.length>=7){
+      var trs=[];
+      for(var i=1;i<r.k1h.length;i++){
+        var h2=parseFloat(r.k1h[i][2]),l2=parseFloat(r.k1h[i][3]),pc=parseFloat(r.k1h[i-1][4]);
+        trs.push(Math.max(h2-l2,Math.abs(h2-pc),Math.abs(l2-pc)));
+      }
+      var atrR=trs.slice(-5).reduce(function(s,v){return s+v;},0)/5;
+      var atrB=trs.slice(0,-5).reduce(function(s,v){return s+v;},0)/Math.max(trs.slice(0,-5).length,1);
+      if(atrB>0)atrRatios.push(Math.min(100,Math.round(atrR/atrB*50)));
+    }
+    // 3. Качество движения: тело/диапазон на 1h последние 10
+    if(r.k1h.length>=5){
+      var qs=r.k1h.slice(-10).map(function(k){
+        var o=parseFloat(k[1]),c=parseFloat(k[4]),h3=parseFloat(k[2]),l3=parseFloat(k[3]);
+        var range=h3-l3;return range>0?Math.abs(c-o)/range:0;
+      });
+      qualities.push(Math.round(qs.reduce(function(s,v){return s+v;},0)/qs.length*100));
+    }
+    // 4. OI: текущий vs 15м назад
+    if(Array.isArray(r.oiHist)&&r.oiHist.length>=2){
+      var oiNew=parseFloat(r.oiHist[r.oiHist.length-1].sumOpenInterest);
+      var oiOld=parseFloat(r.oiHist[0].sumOpenInterest);
+      var priceUp=(r.coin.price_change_percentage_24h||0)>0;
+      var oiUp=oiNew>oiOld*1.001; // порог 0.1% чтобы отсечь шум
+      oiDirs.push(priceUp?(oiUp?1:-1):0);
+    }
+    // 5. Аномальный объём: 24h rolling vs среднее за 10 дней
+    if(Array.isArray(r.k1d)&&r.k1d.length>=5){
+      var prev=r.k1d.slice(0,-1);
+      var avgVol=prev.reduce(function(s,k){return s+parseFloat(k[7]);},0)/prev.length;
+      if(avgVol>0){
+        var ratio=r.coin.total_volume/avgVol;
+        volAnomalies.push(Math.min(100,Math.round(ratio*20)));
+        if(ratio>=3)inPlay.push(r.coin.symbol.toUpperCase());
+      }
+    }
+  });
+
+  function avg(arr){return arr.length?Math.round(arr.reduce(function(s,v){return s+v;},0)/arr.length):50;}
+  var vPulse=avg(volumePulses);
+  var atrQ=avg(atrRatios);
+  var moveQ=avg(qualities);
+  var volAnom=avg(volAnomalies);
+  var oiAvg=oiDirs.length?oiDirs.reduce(function(s,v){return s+v;},0)/oiDirs.length:0;
+  var oiDir=oiAvg>0.2?'up':oiAvg<-0.2?'down':'neutral';
+  var oiScore=oiDir==='up'?80:oiDir==='down'?20:50;
+
+  var score=Math.round(vPulse*0.25+atrQ*0.20+moveQ*0.25+volAnom*0.15+oiScore*0.15);
+  var verdict=score>=65?'strong':score>=40?'medium':'weak';
+
+  state.marketStrength={
+    status:'ok',verdict:verdict,score:score,
+    metrics:{volumePulse:vPulse,volatility:atrQ,movement:moveQ,oiDir:oiDir},
+    inPlay:inPlay,timestamp:Date.now(),
+  };
+  updateMSPanel();
+}
+
 // ── Render ────────────────────────────────────────────────────────────────
 function signalLabel(s){return s==='bullish'?'↑ Bullish':s==='caution'?'⚠ Caution':'— Neutral';}
 
@@ -723,6 +972,7 @@ function render(){
       '<div class="metric-card"><div class="label">Максимальный рост</div><div class="value green">'+(maxRise>=0?'+':'')+maxRise+'%</div></div>'+
       '<div class="metric-card"><div class="label">Максимальный объем</div><div class="value blue">'+fmt(mv)+'</div></div>'+
       '<div class="metric-card"><div class="label">Bullish сигналов</div><div class="value green">'+bc+'</div></div>'+
+      '<div class="metric-card ms-card" id="ms-card" onclick="openMSPopup()">'+msCardInner()+'</div>'+
     '</div>'+cardsHtml;
 
   initCharts();
@@ -731,7 +981,7 @@ function render(){
 }
 
 loadCache();
-fetchCoins();
+fetchCoins().then(function(){fetchMarketStrength();});
 startPricePolling();
 </script>
 </body>
