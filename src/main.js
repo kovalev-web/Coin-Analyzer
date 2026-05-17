@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import {
   fetchCoins, refreshCoins, analyzeCoinBySymbol, analyzeAll,
-  fetchMarketStrength, loadCache, startPricePolling, startMSPolling,
+  fetchMarketStrength, loadCache, startChartPolling, startMSPolling,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF,
@@ -137,7 +137,7 @@ document.body.addEventListener('click', function (e) {
 registerRoute('/', function () {
   render();
   if (state.coins.length === 0) {
-    fetchCoins().then(function () { render(); startPricePolling(); fetchMarketStrength(false); startMSPolling(); });
+    fetchCoins().then(function () { render(); startChartPolling(); fetchMarketStrength(false); startMSPolling(); });
   }
 });
 

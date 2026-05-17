@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol } from './api.js';
+import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -134,19 +134,7 @@ function fetchChart(symbol, tf) {
   tf = tf || state.chartTF[symbol] || '5m';
   var key = symbol + '_' + tf;
   if (state.chartData[key] && state.chartData[key].status === 'ok') { updateChart(symbol); return; }
-  fetch('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol.toUpperCase() + 'USDT&interval=' + tf + '&limit=300')
-    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function (data) {
-      if (!Array.isArray(data) || !data.length) throw new Error('No data');
-      state.chartData[key] = {
-        status: 'ok',
-        candles: data.map(function (k) {
-          return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
-        }),
-      };
-    })
-    .catch(function () { state.chartData[key] = { status: 'error' }; })
-    .then(function () { updateChart(symbol); });
+  fetchChartData(symbol, tf).then(function () { updateChart(symbol); });
 }
 
 function updateChart(symbol) {

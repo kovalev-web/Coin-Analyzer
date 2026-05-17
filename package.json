@@ -5,10 +5,14 @@
   "description": "Altcoin Pump Monitor — Binance Futures + Gemini AI",
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"node server.js\" \"vite\"",
+    "dev:ws": "node server-vps.js",
+    "dev:ws:web": "concurrently -n ws,web -c yellow,green \"node server-vps.js\" \"vite\"",
+    "dev:all": "concurrently -n ws,api,web -c yellow,blue,green \"node server-vps.js\" \"node server.js\" \"vite\"",
     "dev:server": "node server.js",
     "dev:front": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server-vps.js"
   },
   "devDependencies": {
     "better-sqlite3": "^12.10.0",
@@ -18,5 +22,7 @@
     "express": "^4.18.2",
     "vite": "^6.3.5"
   },
-  "dependencies": {}
+  "dependencies": {
+    "ws": "^8.18.2"
+  }
 }
