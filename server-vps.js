@@ -141,7 +141,7 @@ wss.on('connection', function (ws) {
     try {
       if (msg.type === 'get_ticker') {
         var cur = Object.values(tickerCache);
-        if (cur.length) ws.send(JSON.stringify({ type: 'ticker', data: cur }));
+        if (cur.length) ws.send(JSON.stringify({ type: 'ticker', _id: msg._id, data: cur }));
       }
 
       else if (msg.type === 'fetch_klines') {
