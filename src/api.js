@@ -156,6 +156,7 @@ function processTickerPush(arr) {
 
   if (newCoins) { emit('render'); return; }
   applyLivePriceUpdates();
+  applyLiveChartUpdates();
 }
 
 // ── Individual ticker update (from per-coin WS subscriptions) ────────────
@@ -234,6 +235,40 @@ export function applyLivePriceUpdates() {
     }
     var newVol = fmt(Math.round(coin.total_volume || 0));
     if (spans[2].textContent !== newVol) spans[2].textContent = newVol;
+  });
+}
+
+// ── Live chart updates from ticker (каждый пуш обновляет последнюю свечу) ─
+
+export function applyLiveChartUpdates() {
+  var series = window.__chartSeries || {};
+  var volSeries = window.__chartVolSeries || {};
+  filteredCoins().forEach(function (coin) {
+    var s = series[coin.symbol];
+    if (!s) return;
+    var tf = state.chartTF[coin.symbol] || '5m';
+    var key = coin.symbol + '_' + tf;
+    var cd = state.chartData[key];
+    if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
+    var last = cd.candles[cd.candles.length - 1];
+    var price = coin.current_price;
+    if (!price) return;
+    var updated = {
+      time: last.time,
+      open: last.open,
+      high: Math.max(last.high, price),
+      low: Math.min(last.low, price),
+      close: price,
+      volume: last.volume,
+    };
+    cd.candles[cd.candles.length - 1] = updated;
+    s.update(updated);
+    var vs = volSeries[coin.symbol];
+    if (vs) vs.update({
+      time: updated.time,
+      value: updated.volume,
+      color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)',
+    });
   });
 }
 
