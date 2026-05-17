@@ -293,9 +293,7 @@ export async function pollCharts() {
       var arr = cd.candles, last = arr[arr.length - 1];
       if (last && last.time === newCandle.time) { arr[arr.length - 1] = newCandle; }
       else if (!last || newCandle.time > last.time) { arr.push(newCandle); if (arr.length > 300) arr.shift(); }
-      s.update(newCandle);
-      var vs = volSeries[c.symbol];
-      if (vs) vs.update({ time: newCandle.time, value: newCandle.volume, color: newCandle.close >= newCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' });
+      // Do NOT call s.update() here — applyLiveChartUpdates() owns all chart rendering
     } catch (e) { }
   }
 }
