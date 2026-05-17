@@ -126,7 +126,7 @@ function processTickerPush(arr) {
         name: sym.toUpperCase(),
         current_price: parseFloat(t.c),
         total_volume: Math.round(parseFloat(t.q)),
-        price_change_percentage_24h: ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
+        price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
       };
     }).sort(function (a, b) { return b.total_volume - a.total_volume; });
     state.lastUpdate = new Date();
@@ -150,7 +150,7 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.price_change_percentage_24h = ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+    coin.price_change_percentage_24h = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 

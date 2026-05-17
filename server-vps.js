@@ -92,6 +92,7 @@ function connectBinanceWS(symbols) {
           l: msg.l, // low
           v: msg.v, // base volume
           q: msg.q, // quote volume (USDT)
+          P: msg.P, // priceChangePercent (Binance pre-calculated)
         };
       }
     } catch (e) {}
@@ -117,7 +118,7 @@ function pushTicker() {
   clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
 }
 
-setInterval(pushTicker, 2000);
+setInterval(pushTicker, 1000);
 
 // ── WebSocket сервер для фронтенда ───────────────────────────────────────
 
