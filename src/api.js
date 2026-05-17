@@ -2,6 +2,18 @@ import { state, STABLE_SYMBOLS, CACHE_TTL_MS, ANALYZE_DELAY_MS, filteredCoins } 
 import { fmt, sleep } from './utils.js';
 import { emit } from './events.js';
 
+// Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
+var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
+
+function getCurrentSessionId() {
+  var utcMs = Date.now() + new Date().getTimezoneOffset() * 60000;
+  var msk = new Date(utcMs + 3 * 3600 * 1000);
+  var h = msk.getHours() + msk.getMinutes() / 60;
+  var day = msk.toISOString().slice(0, 10);
+  var session = h >= 22 ? 'night' : h >= 15.5 ? 'us' : h >= 9 ? 'europe' : h >= 2 ? 'asia' : 'night';
+  return day + '_' + session;
+}
+
 // ── Coin fetching ──────────────────────────────────────────────────────────
 
 export async function fetchCoins() {
@@ -25,7 +37,7 @@ export async function fetchCoins() {
   state.loading = false; emit('render');
 }
 
-export async function refreshCoins() { state.cacheExpires = 0; await fetchCoins(); fetchMarketStrength(); }
+export async function refreshCoins() { state.cacheExpires = 0; await fetchCoins(); fetchMarketStrength(true); }
 
 // ── Cache ──────────────────────────────────────────────────────────────────
 
@@ -209,9 +221,14 @@ export async function analyzeAll() {
 
 // ── Market Strength ────────────────────────────────────────────────────────
 
-export async function fetchMarketStrength() {
-  var sorted = filteredCoins().slice().sort(function (a, b) { return b.total_volume - a.total_volume; });
-  var top = sorted.slice(0, 10);
+export async function fetchMarketStrength(force) {
+  var sessionId = getCurrentSessionId();
+  if (!force && state.marketStrength && state.marketStrength.status === 'ok' && state.marketStrength.session === sessionId) return;
+
+  var top = state.coins
+    .filter(function (c) { return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()) && !MS_EXCLUDE.has(c.symbol.toLowerCase()); })
+    .sort(function (a, b) { return b.total_volume - a.total_volume; })
+    .slice(0, 20);
   if (!top.length) return;
   state.marketStrength = { status: 'loading' };
   emit('ms:update');
@@ -292,6 +309,12 @@ export async function fetchMarketStrength() {
     status: 'ok', verdict: verdict, score: score,
     metrics: { volumePulse: vPulse, volatility: atrQ, movement: moveQ, oiDir: oiDir },
     inPlay: inPlay, timestamp: Date.now(),
+    session: sessionId,
   };
   emit('ms:update');
+}
+
+export function startMSPolling() {
+  // Check every minute — fetches only when session boundary is crossed
+  setInterval(function () { fetchMarketStrength(false); }, 60 * 1000);
 }

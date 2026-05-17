@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import {
   fetchCoins, refreshCoins, analyzeCoinBySymbol, analyzeAll,
-  fetchMarketStrength, loadCache, startPricePolling,
+  fetchMarketStrength, loadCache, startPricePolling, startMSPolling,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF,
@@ -127,7 +127,7 @@ document.body.addEventListener('click', function (e) {
       closeMSPopup();
       break;
     case 'refresh-ms':
-      fetchMarketStrength();
+      fetchMarketStrength(true);
       break;
   }
 });
@@ -137,7 +137,7 @@ document.body.addEventListener('click', function (e) {
 registerRoute('/', function () {
   render();
   if (state.coins.length === 0) {
-    fetchCoins().then(function () { render(); startPricePolling(); fetchMarketStrength(); });
+    fetchCoins().then(function () { render(); startPricePolling(); fetchMarketStrength(false); startMSPolling(); });
   }
 });
 

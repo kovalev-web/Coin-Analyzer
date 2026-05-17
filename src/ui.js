@@ -167,6 +167,14 @@ function updateChart(symbol) {
 export function setChartTF(symbol, tf) {
   state.chartTF[symbol] = tf;
   clearRuler(symbol);
+  var card = document.querySelector('.coin-card[data-sym="' + symbol + '"]');
+  if (card) {
+    var pill = card.querySelector('.tf-pill');
+    if (pill) pill.textContent = tf;
+    card.querySelectorAll('.tf-dd button').forEach(function (btn) {
+      btn.className = btn.dataset.tf === tf ? 'active' : '';
+    });
+  }
   fetchChart(symbol, tf);
 }
 
@@ -192,13 +200,23 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
       pctStr += '  ·  ' + dur;
     }
   }
+  // Fill zone between the two price levels
   ctx.fillStyle = isUp ? 'rgba(22,163,74,0.09)' : 'rgba(220,38,38,0.09)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
+  // Horizontal dashed lines at each price level
   ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
   ctx.beginPath();
   ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y);
   ctx.moveTo(0, p2.y); ctx.lineTo(rc.width, p2.y);
   ctx.stroke(); ctx.setLineDash([]);
+  // Diagonal line from start to end point
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  // Dots at endpoints
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
+  // Label
   ctx.font = 'bold 16px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
   var lx = p2.x + 12, ly = p2.y - 10;
   if (lx + 170 > rc.width) lx = p2.x - 175; if (lx < 2) lx = 2;
@@ -332,7 +350,8 @@ export function updateAnalysisPopup(sym) {
         newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
       }
     }
-    content.innerHTML = '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
+    content.innerHTML = '<div style="font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;margin-bottom:10px;">' + escHtml(sym.toUpperCase()) + '</div>' +
+      '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
       (ts ? '<div style="margin-top:12px;font-size:11px;color:var(--graphite);font-weight:600;">Анализ: ' + ts + '</div>' : '') +
       '<button class="ao-reanalyze" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
@@ -408,21 +427,34 @@ function msPopupInner() {
     '<div class="ms-inplay"><div class="ms-inplay-label">⚡ In-play (объём ×3+)</div><div class="ms-inplay-coins">' +
     ms.inPlay.map(function (s) { return '<span class="ms-inplay-pill">' + s + '</span>'; }).join('') +
     '</div></div>' : '';
-  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">' +
-    '<div>' +
-    '<div class="ms-title">Сила рынка</div>' +
-    '<div class="ms-verdict-row"><span class="' + vClass + '">' + vLabel + '</span><span class="ms-phase">' + phase.label + ' · ' + phase.time + ' МСК</span></div>' +
-    '</div>' +
+
+  function tip(text) {
+    return '<span class="ms-tip-wrap" tabindex="0">' +
+      '<span class="ms-tip-icon">i</span>' +
+      '<span class="ms-tip-text">' + text + '</span>' +
+      '</span>';
+  }
+
+  var tips = {
+    vol: 'Сравниваем объём последних 5 свечей (1м) с предыдущими 25. Высокий — рынок разогрет, деньги заходят. Низкий — всё вяло, даже хорошая точка входа может не отработать.',
+    move: 'Насколько тело свечи заполняет её диапазон на 1ч. Высокая — движение устойчивое, свечи закрываются уверенно. Низкая — много хвостов и неопределённости, рынок болтает без чёткого вектора.',
+    vol2: 'ATR — средний размах свечи за последние 5 часов против базового. Высокая — диапазоны расширяются, есть куда двигаться. Низкая — рынок зажат, пробои часто оказываются ложными.',
+    oi: '▲ Подтверждён — цена растёт и открытых позиций больше: реальные покупатели заходят, движение надёжное. ▼ Ликвидации — цена растёт, но OI падает: выносят шортистов. Рост резкий, но может не удержаться. — Нейтрально — картина неоднозначная, сигнала нет.',
+  };
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+    '<div class="ms-phase" style="font-size:13px;">' + phase.label + ' · ' + phase.time + ' МСК</div>' +
     closeBtn +
     '</div>' +
+    '<div class="ms-verdict-row"><span class="' + vClass + '">' + vLabel + '</span></div>' +
     '<div class="ms-metrics-grid">' +
-    '<div class="ms-metric"><div class="ms-metric-label">Объём</div>' + msBar(m.volumePulse) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Направленность</div>' + msBar(m.movement) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Волатильность</div>' + msBar(m.volatility) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Open Interest</div>' + oiHtml + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Волатильность' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Open Interest' + tip(tips.oi) + '</div>' + oiHtml + '</div>' +
     '</div>' +
     inPlayHtml +
-    '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-10 по объёму · ' + ts + '</div>' +
+    '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-20 по объёму · ' + ts + '</div>' +
     '<button style="width:100%;height:36px;margin-top:12px;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" data-action="refresh-ms">Обновить</button>';
 }
 
@@ -545,6 +577,64 @@ export function render() {
     + coinsHtml;
   initCharts();
 }
+
+// ── Tooltip positioning ────────────────────────────────────────────────────
+
+var _activeTip = null;
+var _activeWrap = null;
+
+function showTip(wrap) {
+  var tip = wrap.querySelector('.ms-tip-text');
+  if (!tip) return;
+  if (_activeTip && _activeTip !== tip) { _activeTip.style.display = 'none'; }
+  _activeTip = tip;
+  _activeWrap = wrap;
+  // Render off-screen first to measure height
+  tip.style.top = '-9999px'; tip.style.left = '-9999px';
+  tip.style.display = 'block';
+  var TIP_W = 210, MARGIN = 8;
+  var rect = wrap.getBoundingClientRect();
+  var tipH = tip.offsetHeight || 100;
+  var top = rect.bottom + 4;
+  var left = rect.left;
+  // Flip above if goes below viewport
+  if (top + tipH > window.innerHeight - MARGIN) top = rect.top - tipH - 4;
+  if (top < MARGIN) top = MARGIN;
+  // Clamp horizontally
+  if (left + TIP_W > window.innerWidth - MARGIN) left = window.innerWidth - TIP_W - MARGIN;
+  if (left < MARGIN) left = MARGIN;
+  tip.style.top = top + 'px';
+  tip.style.left = left + 'px';
+}
+
+function hideTip(wrap) {
+  var tip = wrap.querySelector('.ms-tip-text');
+  if (tip) { tip.style.display = 'none'; _activeTip = null; _activeWrap = null; }
+}
+
+// Reposition tooltip on page scroll so it follows the icon
+window.addEventListener('scroll', function () {
+  if (_activeWrap) showTip(_activeWrap);
+}, { passive: true });
+
+document.body.addEventListener('mouseover', function (e) {
+  var wrap = e.target.closest('.ms-tip-wrap');
+  if (wrap) showTip(wrap);
+});
+document.body.addEventListener('mouseout', function (e) {
+  var wrap = e.target.closest('.ms-tip-wrap');
+  if (!wrap) return;
+  if (e.relatedTarget && wrap.contains(e.relatedTarget)) return;
+  hideTip(wrap);
+});
+document.body.addEventListener('focus', function (e) {
+  var wrap = e.target.closest('.ms-tip-wrap');
+  if (wrap) showTip(wrap);
+}, true);
+document.body.addEventListener('blur', function (e) {
+  var wrap = e.target.closest('.ms-tip-wrap');
+  if (wrap) hideTip(wrap);
+}, true);
 
 // ── Event listeners ────────────────────────────────────────────────────────
 
