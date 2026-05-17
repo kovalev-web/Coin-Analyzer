@@ -2,34 +2,55 @@ const { WebSocketServer, WebSocket } = require('ws');
 
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
+var BINANCE_WS = 'wss://fstream.binance.com/ws';
 
 var clients = new Set();
 var tickerCache = null;
+
+// ── Binance ticker fetch (REST, used as fallback) ────────────────────────
+
+async function fetchTickers() {
+  var res = await fetch(BINANCE_REST + '/fapi/v1/ticker/24hr');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  var data = await res.json();
+  // Convert REST format to WS miniTicker format (frontend uses t.s, t.c, t.q, t.o)
+  return data.map(function (t) {
+    return {
+      s: t.symbol,
+      c: t.lastPrice,
+      o: t.openPrice,
+      h: t.highPrice,
+      l: t.lowPrice,
+      v: t.volume,
+      q: t.quoteVolume,
+    };
+  });
+}
+
+// ── Binance WebSocket (primary) ──────────────────────────────────────────
+
 var binanceWS = null;
+var binanceReady = false;
+var restFallbackTimer = null;
 
-// ── Binance WebSocket (real-time tickers via SUBSCRIBE) ──────────────────
-
-function connectBinance() {
-  binanceWS = new WebSocket('wss://fstream.binance.com/ws');
+function startBinanceWS() {
+  binanceReady = false;
+  binanceWS = new WebSocket(BINANCE_WS);
 
   binanceWS.on('open', function () {
-    console.log('[Binance] Connected, subscribing to !miniTicker@arr');
-    binanceWS.send(JSON.stringify({
-      method: 'SUBSCRIBE',
-      params: ['!miniTicker@arr'],
-      id: 1,
-    }));
+    console.log('[Binance] Connected, subscribing...');
+    binanceWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: ['!miniTicker@arr'], id: 1 }));
   });
 
   binanceWS.on('message', function (raw) {
     try {
       var parsed = JSON.parse(raw.toString());
-      // SUBSCRIBE confirmation
       if (parsed.id === 1 && parsed.result === null) {
-        console.log('[Binance] Subscribed to !miniTicker@arr');
+        console.log('[Binance] Subscribed to !miniTicker@arr (WS mode)');
+        binanceReady = true;
+        if (restFallbackTimer) { clearTimeout(restFallbackTimer); restFallbackTimer = null; }
         return;
       }
-      // Ticker data
       if (Array.isArray(parsed)) {
         tickerCache = parsed;
         var msg = JSON.stringify({ type: 'ticker', data: parsed });
@@ -39,17 +60,55 @@ function connectBinance() {
   });
 
   binanceWS.on('close', function () {
-    console.log('[Binance] Disconnected, reconnecting in 3s');
-    setTimeout(connectBinance, 3000);
+    console.log('[Binance] WS disconnected');
+    binanceReady = false;
+    // Use REST until WS reconnects
+    startRESTFallback();
+    setTimeout(startBinanceWS, 5000);
   });
 
   binanceWS.on('error', function (e) {
-    console.error('[Binance] Error:', e.message);
+    console.error('[Binance] WS error:', e.message);
     binanceWS.close();
   });
+
+  // If no WS data within 4s, fall back to REST
+  restFallbackTimer = setTimeout(function () {
+    if (!binanceReady) {
+      console.log('[Binance] No WS data, switching to REST fallback');
+      startRESTFallback();
+    }
+  }, 4000);
 }
 
-// ── Binance REST proxy ───────────────────────────────────────────────────
+// ── REST fallback (polls every 2s, converts format) ──────────────────────
+
+var restTimer = null;
+
+function startRESTFallback() {
+  if (restTimer) return;
+  console.log('[Binance] REST fallback active');
+  restTimer = setInterval(async function () {
+    try {
+      var data = await fetchTickers();
+      tickerCache = data;
+      var msg = JSON.stringify({ type: 'ticker', data: data });
+      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+    } catch (e) {}
+  }, 2000);
+  // Immediate first call
+  fetchTickers().then(function (data) {
+    tickerCache = data;
+    var msg = JSON.stringify({ type: 'ticker', data: data });
+    clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+  }).catch(function (e) { console.error('[Binance] REST error:', e.message); });
+}
+
+function stopRESTFallback() {
+  if (restTimer) { clearInterval(restTimer); restTimer = null; console.log('[Binance] REST fallback stopped (WS active)'); }
+}
+
+// ── REST proxy ───────────────────────────────────────────────────────────
 
 async function fetchBinance(url) {
   var res = await fetch(url);
@@ -66,7 +125,6 @@ wss.on('connection', function (ws) {
   clients.add(ws);
   console.log('[Server] Client connected (' + clients.size + ' total)');
 
-  // Send cached ticker immediately on connect
   if (tickerCache) {
     ws.send(JSON.stringify({ type: 'ticker', data: tickerCache }));
   }
@@ -119,4 +177,4 @@ wss.on('connection', function (ws) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 
-connectBinance();
+startBinanceWS();
