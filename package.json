@@ -1,11 +1,22 @@
 {
   "name": "pump-analyzer",
   "version": "1.0.0",
+  "private": true,
   "description": "Altcoin Pump Monitor — Binance Futures + Gemini AI",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "concurrently -n api,web -c blue,green \"node server.js\" \"vite\"",
+    "dev:server": "node server.js",
+    "dev:front": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "express": "^4.18.2"
-  }
+    "better-sqlite3": "^12.10.0",
+    "concurrently": "^9.1.2",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "express": "^4.18.2",
+    "vite": "^6.3.5"
+  },
+  "dependencies": {}
 }
