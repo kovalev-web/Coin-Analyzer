@@ -7,105 +7,104 @@ var BINANCE_WS = 'wss://fstream.binance.com/ws';
 var clients = new Set();
 var tickerCache = null;
 
-// ── Binance ticker fetch (REST, used as fallback) ────────────────────────
+// ── Get all USDT symbols from REST, then subscribe individually ──────────
 
-async function fetchTickers() {
-  var res = await fetch(BINANCE_REST + '/fapi/v1/ticker/24hr');
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  var data = await res.json();
-  // Convert REST format to WS miniTicker format (frontend uses t.s, t.c, t.q, t.o)
-  return data.map(function (t) {
-    return {
-      s: t.symbol,
-      c: t.lastPrice,
-      o: t.openPrice,
-      h: t.highPrice,
-      l: t.lowPrice,
-      v: t.volume,
-      q: t.quoteVolume,
-    };
-  });
+var allSymbols = [];
+
+async function fetchSymbols() {
+  try {
+    var res = await fetch(BINANCE_REST + '/fapi/v1/exchangeInfo');
+    var data = await res.json();
+    allSymbols = data.symbols
+      .filter(function (s) { return s.symbol.endsWith('USDT') && s.status === 'TRADING'; })
+      .map(function (s) { return s.symbol.toLowerCase() + '@ticker'; });
+    console.log('[Binance] Loaded', allSymbols.length, 'USDT symbols');
+    return allSymbols;
+  } catch (e) {
+    console.error('[Binance] Failed to load symbols:', e.message);
+    return [];
+  }
 }
 
-// ── Binance WebSocket (primary) ──────────────────────────────────────────
+// ── WebSocket connection (individual subscriptions) ──────────────────────
 
 var binanceWS = null;
-var binanceReady = false;
-var restFallbackTimer = null;
 
-function startBinanceWS() {
-  binanceReady = false;
+function connectBinance() {
   binanceWS = new WebSocket(BINANCE_WS);
 
   binanceWS.on('open', function () {
-    console.log('[Binance] Connected, subscribing...');
-    binanceWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: ['!miniTicker@arr'], id: 1 }));
+    console.log('[Binance] Connected, subscribing to', allSymbols.length, 'tickers...');
+    // Subscribe in batches of 200
+    for (var i = 0; i < allSymbols.length; i += 200) {
+      var batch = allSymbols.slice(i, i + 200);
+      binanceWS.send(JSON.stringify({
+        method: 'SUBSCRIBE',
+        params: batch,
+        id: i / 200 + 1,
+      }));
+    }
   });
 
   binanceWS.on('message', function (raw) {
     try {
       var parsed = JSON.parse(raw.toString());
-      if (parsed.id === 1 && parsed.result === null) {
-        console.log('[Binance] Subscribed to !miniTicker@arr (WS mode)');
-        binanceReady = true;
-        if (restFallbackTimer) { clearTimeout(restFallbackTimer); restFallbackTimer = null; }
-        return;
-      }
-      if (Array.isArray(parsed)) {
-        tickerCache = parsed;
-        var msg = JSON.stringify({ type: 'ticker', data: parsed });
+      // Single ticker: { "e": "24hrTicker", "s": "BTCUSDT", "c": "...", ... }
+      if (parsed.e === '24hrTicker' && parsed.s) {
+        var ticker = parsed;
+        var sym = ticker.s.replace('USDT', '').toLowerCase();
+        // Update cache
+        if (tickerCache) {
+          var found = false;
+          for (var i = 0; i < tickerCache.length; i++) {
+            if (tickerCache[i].s === ticker.s) {
+              tickerCache[i] = ticker;
+              found = true;
+              break;
+            }
+          }
+          if (!found) tickerCache.push(ticker);
+        }
+        // Push to clients (only changed coin to reduce bandwidth)
+        var msg = JSON.stringify({ type: 'ticker_update', data: ticker, symbol: sym });
         clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
       }
     } catch (e) {}
   });
 
   binanceWS.on('close', function () {
-    console.log('[Binance] WS disconnected');
-    binanceReady = false;
-    // Use REST until WS reconnects
-    startRESTFallback();
-    setTimeout(startBinanceWS, 5000);
+    console.log('[Binance] Disconnected, reconnecting in 3s');
+    setTimeout(connectBinance, 3000);
   });
 
   binanceWS.on('error', function (e) {
-    console.error('[Binance] WS error:', e.message);
+    console.error('[Binance] Error:', e.message);
     binanceWS.close();
   });
-
-  // If no WS data within 4s, fall back to REST
-  restFallbackTimer = setTimeout(function () {
-    if (!binanceReady) {
-      console.log('[Binance] No WS data, switching to REST fallback');
-      startRESTFallback();
-    }
-  }, 4000);
 }
 
-// ── REST fallback (polls every 2s, converts format) ──────────────────────
+// ── Initial full ticker fetch (REST) for first load ──────────────────────
 
-var restTimer = null;
-
-function startRESTFallback() {
-  if (restTimer) return;
-  console.log('[Binance] REST fallback active');
-  restTimer = setInterval(async function () {
-    try {
-      var data = await fetchTickers();
-      tickerCache = data;
-      var msg = JSON.stringify({ type: 'ticker', data: data });
-      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-    } catch (e) {}
-  }, 2000);
-  // Immediate first call
-  fetchTickers().then(function (data) {
-    tickerCache = data;
-    var msg = JSON.stringify({ type: 'ticker', data: data });
+async function fetchFullTicker() {
+  try {
+    var res = await fetch(BINANCE_REST + '/fapi/v1/ticker/24hr');
+    if (!res.ok) return;
+    var data = await res.json();
+    // Convert REST format to WS format (frontend uses t.s, t.c, t.q, t.o)
+    tickerCache = data.map(function (t) {
+      return {
+        e: '24hrTicker', s: t.symbol,
+        c: t.lastPrice, o: t.openPrice,
+        h: t.highPrice, l: t.lowPrice,
+        v: t.volume, q: t.quoteVolume,
+        p: t.priceChange, P: t.priceChangePercent,
+      };
+    });
+    var msg = JSON.stringify({ type: 'ticker', data: tickerCache });
     clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-  }).catch(function (e) { console.error('[Binance] REST error:', e.message); });
-}
-
-function stopRESTFallback() {
-  if (restTimer) { clearInterval(restTimer); restTimer = null; console.log('[Binance] REST fallback stopped (WS active)'); }
+  } catch (e) {
+    console.error('[Binance] Initial fetch error:', e.message);
+  }
 }
 
 // ── REST proxy ───────────────────────────────────────────────────────────
@@ -119,7 +118,7 @@ async function fetchBinance(url) {
 // ── WebSocket Server (for frontend) ──────────────────────────────────────
 
 var wss = new WebSocketServer({ port: PORT });
-console.log('[Server] Pump Analyzer WS running on port', PORT);
+console.log('[Server] Pump Analyzer WS on port', PORT);
 
 wss.on('connection', function (ws) {
   clients.add(ws);
@@ -177,4 +176,9 @@ wss.on('connection', function (ws) {
 
 // ── Start ────────────────────────────────────────────────────────────────
 
-startBinanceWS();
+fetchSymbols().then(function () {
+  connectBinance();
+  fetchFullTicker(); // initial data immediately
+  // Refresh full ticker every 30s (to catch new coins)
+  setInterval(fetchFullTicker, 30000);
+});

@@ -55,6 +55,9 @@ function connectWS() {
       case 'ticker':
         processTickerPush(msg.data);
         break;
+      case 'ticker_update':
+        processSingleUpdate(msg);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -152,6 +155,20 @@ function processTickerPush(arr) {
   });
 
   if (newCoins) { emit('render'); return; }
+  applyLivePriceUpdates();
+}
+
+// ── Individual ticker update (from per-coin WS subscriptions) ────────────
+
+function processSingleUpdate(msg) {
+  var t = msg.data;
+  if (!t || !t.s) return;
+  var sym = t.s.replace('USDT', '').toLowerCase();
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  if (!coin) return; // coin not in our filtered list
+  coin.current_price = parseFloat(t.c);
+  coin.price_change_percentage_24h = parseFloat(t.P);
+  coin.total_volume = Math.round(parseFloat(t.q));
   applyLivePriceUpdates();
 }
 
