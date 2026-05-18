@@ -78,9 +78,8 @@ export function renderCards() {
 
 export function updateCardBadge(symbol) {
   var el = document.querySelector('[data-ck="' + symbol + '"]');
-  if (!el) {
-    el = document.querySelector('[data-action="open-analysis"][data-sym="' + symbol + '"]');
-  }
+  if (!el) el = document.querySelector('[data-action="open-analysis"][data-sym="' + symbol + '"]');
+  if (!el) el = document.querySelector('[data-action="analyze"][data-sym="' + symbol + '"]');
   var cache = state.analysisCache[symbol];
   var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
@@ -309,24 +308,22 @@ export function openAnalysisPopup(sym, btn) {
   popup.dataset.sym = sym;
   if (window.innerWidth <= 768) {
     popup.style.position = 'fixed';
-    popup.style.top = '50%';
+    popup.style.top = '16px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
-    popup.style.transform = 'translateY(-50%)';
+    popup.style.transform = 'none';
   } else {
-    popup.style.position = 'absolute';
-    popup.style.top = '';
-    popup.style.left = '';
+    popup.style.position = 'fixed';
     popup.style.right = '';
     popup.style.width = '';
     popup.style.maxWidth = '';
     popup.style.transform = '';
     var rect = btn.getBoundingClientRect();
-    var top = rect.bottom + window.scrollY + 8, left = rect.left + window.scrollX;
-    if (left + 380 > window.innerWidth) left = Math.max(8, rect.right + window.scrollX - 380);
-    if (rect.bottom + 300 > window.innerHeight) top = rect.top + window.scrollY - 280;
+    var top = rect.bottom + 8, left = rect.left;
+    if (left + 380 > window.innerWidth) left = Math.max(8, rect.right - 380);
+    if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 280);
     popup.style.top = top + 'px'; popup.style.left = left + 'px';
   }
   if (cache && cache.status === 'loading') return;
@@ -452,7 +449,6 @@ function msPopupInner() {
     '<div class="ms-phase" style="font-size:13px;">' + phase.label + ' · ' + phase.time + ' МСК</div>' +
     closeBtn +
     '</div>' +
-    '<div class="ms-verdict-row"><span class="' + vClass + '">' + vLabel + '</span></div>' +
     '<div class="ms-metrics-grid">' +
     '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
@@ -477,16 +473,14 @@ export function openMSPopup() {
   popup.style.display = 'block';
   if (window.innerWidth <= 768) {
     popup.style.position = 'fixed';
-    popup.style.top = '50%';
+    popup.style.top = '16px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
-    popup.style.transform = 'translateY(-50%)';
+    popup.style.transform = 'none';
   } else {
-    popup.style.position = 'absolute';
-    popup.style.top = '';
-    popup.style.left = '';
+    popup.style.position = 'fixed';
     popup.style.right = '';
     popup.style.width = '';
     popup.style.maxWidth = '';
@@ -494,10 +488,10 @@ export function openMSPopup() {
     var card = document.getElementById('ms-card');
     if (card) {
       var rect = card.getBoundingClientRect();
-      var top = rect.bottom + window.scrollY + 8;
-      var left = rect.left + window.scrollX;
+      var top = rect.bottom + 8;
+      var left = rect.left;
       if (left + 440 > window.innerWidth) left = Math.max(8, window.innerWidth - 448);
-      if (rect.bottom + 360 > window.innerHeight) top = rect.top + window.scrollY - 380;
+      if (rect.bottom + 360 > window.innerHeight) top = Math.max(8, rect.top - 380);
       popup.style.top = top + 'px'; popup.style.left = left + 'px';
     }
   }
