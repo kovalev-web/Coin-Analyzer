@@ -67,7 +67,7 @@
     .btn-analyze-one,.btn-retry,.btn-pressed{width:90px;text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}
     .btn-pressed{background:var(--cloud);border:1px solid var(--steel);color:var(--graphite);cursor:default;opacity:0.6;}
     .btn-retry{background:#fff1f1;color:var(--bloom-deep);border:1px solid #fca5a5;padding:0 10px;}
-    .analysis-overlay{position:fixed;z-index:9999;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.12);min-width:260px;max-width:380px;font-size:14px;line-height:1.55;color:var(--charcoal);}
+    .analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.12);min-width:260px;max-width:380px;font-size:14px;line-height:1.55;color:var(--charcoal);}
     .ao-spinner{display:flex;align-items:center;justify-content:center;padding:32px 24px;}
     .ao-content{display:none;}
     .ao-content.show{display:block;}
@@ -126,7 +126,7 @@
     .ms-card{cursor:pointer;transition:box-shadow 0.15s;}
     .ms-card:hover{box-shadow:0 4px 16px rgba(26,26,26,0.14);}
     .ms-card-sub{font-size:11px;color:var(--graphite);font-weight:500;margin-top:2px;}
-    .ms-popup{position:fixed;z-index:9999;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.13);width:440px;max-width:calc(100vw - 24px);}
+    .ms-popup{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.13);width:440px;max-width:calc(100vw - 24px);}
     .ms-popup-close{width:28px;height:28px;padding:0;border-radius:50%;background:var(--fog);color:var(--graphite);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
     .ms-popup-close:hover{background:var(--steel);}
     .ms-refresh-btn{background:none;border:none;cursor:pointer;font-size:15px;color:var(--graphite);padding:2px 4px;line-height:1;border-radius:4px;flex-shrink:0;}

@@ -280,6 +280,17 @@ function initCharts() {
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
+function getPopupHost() {
+  var el = document.getElementById('popup-host');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'popup-host';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;overflow:hidden;';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
 function getOverlay() {
   var el = document.getElementById('analysis-overlay');
   if (!el) {
@@ -292,7 +303,7 @@ function getOverlay() {
       '</div>' +
       '<div class="ao-spinner"><span class="spinner"></span></div>' +
       '<div class="ao-content"></div>';
-    document.body.appendChild(el);
+    getPopupHost().appendChild(el);
   }
   return el;
 }
@@ -307,22 +318,20 @@ export function openAnalysisPopup(sym, btn) {
   popup.style.display = 'block';
   popup.dataset.sym = sym;
   var rect = btn.getBoundingClientRect();
+  popup.style.position = 'absolute';
+  popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
     var top = rect.bottom + 8;
     if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 300);
-    popup.style.position = 'fixed';
     popup.style.top = top + 'px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
-    popup.style.transform = 'none';
   } else {
-    popup.style.position = 'fixed';
     popup.style.right = '';
     popup.style.width = '';
     popup.style.maxWidth = '';
-    popup.style.transform = '';
     var top = rect.bottom + 8, left = rect.left;
     if (left + 380 > window.innerWidth) left = Math.max(8, rect.right - 380);
     if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 280);
@@ -464,7 +473,7 @@ function msPopupInner() {
 
 function getMSPopup() {
   var el = document.getElementById('ms-popup');
-  if (!el) { el = document.createElement('div'); el.id = 'ms-popup'; el.className = 'ms-popup'; document.body.appendChild(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'ms-popup'; el.className = 'ms-popup'; getPopupHost().appendChild(el); }
   return el;
 }
 
@@ -473,20 +482,18 @@ export function openMSPopup() {
   var popup = getMSPopup();
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
+  popup.style.position = 'absolute';
+  popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
-    popup.style.position = 'fixed';
     popup.style.top = '16px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
-    popup.style.transform = 'none';
   } else {
-    popup.style.position = 'fixed';
     popup.style.right = '';
     popup.style.width = '';
     popup.style.maxWidth = '';
-    popup.style.transform = '';
     var card = document.getElementById('ms-card');
     if (card) {
       var rect = card.getBoundingClientRect();
