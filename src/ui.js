@@ -525,18 +525,20 @@ export function openMSPopup() {
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
-  popup.style.right = '0';
-  popup.style.width = '880px';
+  popup.style.width = '400px';
   popup.style.maxWidth = 'calc(100% - 12px)';
   if (window.innerWidth <= 768) {
     var rect = card.getBoundingClientRect();
     var metricsRect = metrics.getBoundingClientRect();
-    var topOffset = rect.bottom - metricsRect.top + 6;
-    popup.style.top = topOffset + 'px';
+    var cardRight = rect.right - metricsRect.left;
+    popup.style.top = rect.bottom - metricsRect.top + 6 + 'px';
+    popup.style.left = (cardRight - 400) + 'px';
   } else {
     var rect2 = card.getBoundingClientRect();
     var metricsRect2 = metrics.getBoundingClientRect();
+    var cardRight2 = rect2.right - metricsRect2.left;
     popup.style.top = rect2.bottom - metricsRect2.top + 6 + 'px';
+    popup.style.left = (cardRight2 - 400) + 'px';
   }
 }
 
