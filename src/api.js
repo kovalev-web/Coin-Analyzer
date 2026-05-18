@@ -17,7 +17,7 @@ function getCurrentSessionId() {
 // ── WebSocket connection ─────────────────────────────────────────────────
 
 var ws = null;
-var wsConnected = false;
+export var wsConnected = false;
 var _wsReady = null; // promise that resolves when WS connects
 var _wsReadyResolve = null;
 var _reqId = 0;
@@ -36,6 +36,7 @@ function connectWS() {
     wsConnected = true;
     console.log('[WS] Connected to', url);
     if (_wsReadyResolve) { _wsReadyResolve(); _wsReadyResolve = null; }
+    emit('ws:status');
   };
 
   ws.onmessage = function (event) {
@@ -73,6 +74,7 @@ function connectWS() {
       _pending[id].reject(new Error('WS disconnected'));
       delete _pending[id];
     });
+    emit('ws:status');
     setTimeout(connectWS, 3000);
   };
 

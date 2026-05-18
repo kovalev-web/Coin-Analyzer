@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData } from './api.js';
+import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -607,12 +607,14 @@ export function render() {
     + [1, 2, 5, 10].map(function (v) { return '<button class="' + (v === state.minChange ? 'active' : '') + '" data-action="pick-change" data-val="' + v + '">' + v + '%</button>'; }).join('')
     + '</div></div>'
     + (state.lastUpdate ? '<span class="mobile-update">' + state.lastUpdate.toLocaleTimeString() + '</span>' : '')
+    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
     + '</button>'
     + '</div>'
     + '<div class="filters-right">'
     + '<span class="last-update">' + (state.lastUpdate ? 'Обновлено: ' + state.lastUpdate.toLocaleTimeString('ru-RU') : '') + '</span>'
+    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-refresh" data-action="refresh">Обновить</button>'
     + '</div>'
     + '</div></div>'
@@ -692,3 +694,10 @@ document.body.addEventListener('blur', function (e) {
 on('render', render);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('ms:update', updateMSPanel);
+on('ws:status', function () {
+  var els = document.querySelectorAll('.ws-indicator');
+  for (var i = 0; i < els.length; i++) {
+    els[i].className = 'ws-indicator ' + (wsConnected ? 'connected' : 'disconnected');
+    els[i].title = wsConnected ? 'WebSocket подключен' : 'WebSocket отключен';
+  }
+});
