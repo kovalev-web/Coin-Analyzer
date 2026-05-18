@@ -363,6 +363,7 @@ export function openAnalysisPopup(sym, btn) {
     popup.style.right = '0';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
+    popup.style.zIndex = '1000';
     popup.style.margin = '0';
   } else {
     var rect = btn.getBoundingClientRect();
