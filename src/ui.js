@@ -319,30 +319,25 @@ export function openAnalysisPopup(sym, btn) {
   if (existingMs && existingMs.style.display !== 'none') closeMSPopup();
 
   var card = btn.closest('.coin-card');
-  var isMobile = window.innerWidth <= 768;
 
-  var popup;
-  if (isMobile && card) {
-    popup = document.getElementById('analysis-overlay');
-    if (!popup) {
-      popup = document.createElement('div');
-      popup.id = 'analysis-overlay';
-      popup.className = 'analysis-overlay';
-      popup.innerHTML =
-        '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;">' +
-          '<button class="ms-popup-close" data-action="close-analysis">✕</button>' +
-        '</div>' +
-        '<div class="ao-spinner"><span class="spinner"></span></div>' +
-        '<div class="ao-content"></div>';
-    }
-    popup._popupCard = card;
-    card.style.overflow = 'visible';
-    card.style.position = 'relative';
-    card.appendChild(popup);
-  } else {
-    popup = getOverlay();
-    popup._popupCard = null;
+  var popup = document.getElementById('analysis-overlay');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'analysis-overlay';
+    popup.className = 'analysis-overlay';
+    popup.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;">' +
+        '<button class="ms-popup-close" data-action="close-analysis">✕</button>' +
+      '</div>' +
+      '<div class="ao-spinner"><span class="spinner"></span></div>' +
+      '<div class="ao-content"></div>';
   }
+  if (popup.parentNode) popup.parentNode.removeChild(popup);
+
+  popup._popupCard = card;
+  card.style.overflow = 'visible';
+  card.style.position = 'relative';
+  card.appendChild(popup);
 
   var cache = state.analysisCache[sym];
   var spinner = popup.querySelector('.ao-spinner');
@@ -352,31 +347,18 @@ export function openAnalysisPopup(sym, btn) {
   popup.style.display = 'block';
   popup.dataset.sym = sym;
 
-  if (isMobile) {
-    var cardRect = card.getBoundingClientRect();
-    var btnRect = btn.getBoundingClientRect();
-    var topOffset = (btnRect.bottom - cardRect.top) + 8;
-    popup.style.position = 'absolute';
-    popup.style.transform = 'none';
-    popup.style.top = topOffset + 'px';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.width = 'auto';
-    popup.style.maxWidth = 'none';
-    popup.style.zIndex = '1000';
-    popup.style.margin = '0';
-  } else {
-    var rect = btn.getBoundingClientRect();
-    popup.style.position = 'absolute';
-    popup.style.transform = 'none';
-    popup.style.right = '';
-    popup.style.width = '';
-    popup.style.maxWidth = '';
-    var top = rect.bottom + 8, left = rect.left;
-    if (left + 380 > window.innerWidth) left = Math.max(8, rect.right - 380);
-    if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 280);
-    popup.style.top = top + 'px'; popup.style.left = left + 'px';
-  }
+  var cardRect = card.getBoundingClientRect();
+  var btnRect = btn.getBoundingClientRect();
+  var topOffset = (btnRect.bottom - cardRect.top) + 8;
+  popup.style.position = 'absolute';
+  popup.style.transform = 'none';
+  popup.style.top = topOffset + 'px';
+  popup.style.left = '0';
+  popup.style.right = '0';
+  popup.style.width = 'auto';
+  popup.style.maxWidth = 'none';
+  popup.style.zIndex = '1000';
+  popup.style.margin = '0';
   if (cache && cache.status === 'loading') return;
   if (cache && (cache.status === 'ok' || cache.status === 'error')) { updateAnalysisPopup(sym); return; }
   analyzeCoinBySymbol(sym);
