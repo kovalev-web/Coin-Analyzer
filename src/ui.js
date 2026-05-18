@@ -306,9 +306,12 @@ export function openAnalysisPopup(sym, btn) {
   content.style.display = 'none';
   popup.style.display = 'block';
   popup.dataset.sym = sym;
+  var rect = btn.getBoundingClientRect();
   if (window.innerWidth <= 768) {
+    var top = rect.bottom + 8;
+    if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 300);
     popup.style.position = 'fixed';
-    popup.style.top = '16px';
+    popup.style.top = top + 'px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
@@ -320,7 +323,6 @@ export function openAnalysisPopup(sym, btn) {
     popup.style.width = '';
     popup.style.maxWidth = '';
     popup.style.transform = '';
-    var rect = btn.getBoundingClientRect();
     var top = rect.bottom + 8, left = rect.left;
     if (left + 380 > window.innerWidth) left = Math.max(8, rect.right - 380);
     if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 280);
