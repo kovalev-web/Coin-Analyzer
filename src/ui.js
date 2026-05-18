@@ -309,6 +309,11 @@ function getOverlay() {
 }
 
 export function openAnalysisPopup(sym, btn) {
+  var existingPopup = document.getElementById('analysis-overlay');
+  if (existingPopup) existingPopup.style.display = 'none';
+  var existingMs = document.getElementById('ms-popup');
+  if (existingMs && existingMs.style.display !== 'none') closeMSPopup();
+
   var popup = getOverlay();
   var cache = state.analysisCache[sym];
   var spinner = popup.querySelector('.ao-spinner');
@@ -318,17 +323,17 @@ export function openAnalysisPopup(sym, btn) {
   popup.style.display = 'block';
   popup.dataset.sym = sym;
   var rect = btn.getBoundingClientRect();
-  popup.style.position = 'absolute';
-  popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
-    var top = rect.bottom + 8;
-    if (rect.bottom + 300 > window.innerHeight) top = Math.max(8, rect.top - 300);
-    popup.style.top = top + 'px';
+    popup.style.position = 'fixed';
+    popup.style.transform = 'none';
+    popup.style.top = rect.bottom + 8 + 'px';
     popup.style.left = '16px';
     popup.style.right = '16px';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
   } else {
+    popup.style.position = 'absolute';
+    popup.style.transform = 'none';
     popup.style.right = '';
     popup.style.width = '';
     popup.style.maxWidth = '';
