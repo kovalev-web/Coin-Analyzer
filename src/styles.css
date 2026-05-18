@@ -15,6 +15,7 @@
     button:hover{opacity:0.85;}
     button:disabled{opacity:0.4;cursor:not-allowed;}
     .btn-refresh{background:var(--canvas);color:var(--ink);border:1px solid var(--ink);}
+    .btn-tv{background:var(--canvas);color:var(--ink);border:1px solid var(--steel);padding:0 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;}
     .btn-refresh-icon{display:none;width:36px;height:36px;padding:0;border-radius:9999px;background:transparent;border:1px solid var(--steel);color:var(--ink);align-items:center;justify-content:center;flex-shrink:0;}
     .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px;}
     .ws-indicator.connected{background:#22c55e;}
@@ -46,7 +47,7 @@
     .sort-pill{background:var(--canvas);color:var(--charcoal);border:1px solid var(--steel);padding:0 14px;height:28px;font-size:11px;font-weight:500;border-radius:9999px;}
     .sort-pill.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
     .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-    @media(max-width:1200px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
     .coin-card{background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);overflow:hidden;display:flex;flex-direction:column;}
     .card-head{padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
     .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;}
@@ -138,6 +139,31 @@
     .ms-tip-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--steel);color:#fff;font-size:8px;font-weight:700;font-style:normal;font-family:'Manrope',Arial,sans-serif;vertical-align:middle;line-height:1;flex-shrink:0;}
     .ms-tip-text{display:none;position:fixed;width:210px;background:var(--ink);color:var(--on-ink);font-size:12px;font-weight:400;line-height:1.55;padding:10px 13px;border-radius:10px;z-index:999999;white-space:normal;text-transform:none;letter-spacing:0;pointer-events:none;}
     @media(max-width:768px){.ms-panel{margin:12px 12px 0;padding:14px 16px;}.ms-metrics-grid{grid-template-columns:1fr;gap:8px 0;}}
+
+    /* ── TV Mode ── */
+    .tv-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--cloud);z-index:99999;display:none;}
+    .tv-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);height:100%;gap:2px;background:var(--hairline);}
+    .tv-slot{background:var(--paper);display:flex;flex-direction:column;overflow:hidden;}
+    .tv-slot-head{padding:7px 14px;display:flex;align-items:baseline;gap:10px;flex-shrink:0;border-bottom:1px solid var(--hairline);}
+    .tv-sym{font-size:17px;font-weight:700;color:var(--ink);letter-spacing:0.3px;}
+    .tv-chg{font-size:14px;font-weight:700;}
+    .tv-price{font-size:13px;font-weight:500;color:var(--graphite);margin-left:auto;}
+    .tv-chart{flex:1;min-height:0;}
+    .tv-exit-btn{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;background:var(--ink);color:var(--on-ink);border:none;border-radius:8px;padding:0 32px;height:44px;font-family:'Manrope',Arial,sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:0.3px;opacity:0.7;}
+    .tv-exit-btn:hover{opacity:1;}
+
+    /* ── Dark mode ── */
+    @media(prefers-color-scheme:dark){
+      :root{
+        --canvas:#111111;--paper:#161616;--cloud:#0c0c0c;--fog:#222222;--steel:#383838;--hairline:#252525;
+        --ink:#f0f0f0;--ink-deep:#ffffff;--on-ink:#111111;--charcoal:#c0c0c0;--graphite:#808080;
+        --shadow-soft:0 2px 8px rgba(0,0,0,0.5);
+        --bullish-bg:rgba(22,163,74,0.15);--caution-bg:rgba(180,83,9,0.15);
+      }
+      .ms-oi-badge.down{background:rgba(179,38,43,0.15);}
+      .btn-retry{background:rgba(179,38,43,0.12);border-color:rgba(179,38,43,0.4);}
+      .ao-reanalyze{background:var(--fog);}
+    }
 
     @media(max-width:768px){
       .topbar{margin:12px 12px 0;border-radius:12px;overflow:visible;}

@@ -239,16 +239,29 @@ export function applyLivePriceUpdates() {
     var newVol = fmt(Math.round(coin.total_volume || 0));
     if (spans[2].textContent !== newVol) spans[2].textContent = newVol;
   });
+
+  // Update TV slot headers
+  document.querySelectorAll('[data-tv-sym]').forEach(function (el) {
+    var sym = el.dataset.tvSym;
+    var coin = state.coins.find(function (c) { return c.symbol === sym; });
+    if (!coin) return;
+    var ch = coin.price_change_percentage_24h || 0;
+    var chgEl = el.querySelector('.tv-chg');
+    if (chgEl) { chgEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; chgEl.className = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn'); }
+    var prEl = el.querySelector('.tv-price');
+    if (prEl && coin.current_price) prEl.textContent = '$' + coin.current_price;
+  });
+
+  emit('metrics:update');
 }
 
 // ── Live chart updates from ticker (каждый пуш обновляет последнюю свечу) ─
 
 export function applyLiveChartUpdates() {
   var series = window.__chartSeries || {};
+  var tvSeries = window.__tvChartSeries || {};
   var volSeries = window.__chartVolSeries || {};
   filteredCoins().forEach(function (coin) {
-    var s = series[coin.symbol];
-    if (!s) return;
     var tf = state.chartTF[coin.symbol] || '5m';
     var key = coin.symbol + '_' + tf;
     var cd = state.chartData[key];
@@ -265,9 +278,12 @@ export function applyLiveChartUpdates() {
       volume: last.volume,
     };
     cd.candles[cd.candles.length - 1] = updated;
-    try { s.update(updated); } catch (e) { }
+    var s = series[coin.symbol];
+    if (s) { try { s.update(updated); } catch (e) { } }
     var vs = volSeries[coin.symbol];
     if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
+    var ts = tvSeries[coin.symbol];
+    if (ts) { try { ts.update(updated); } catch (e) { } }
   });
 }
 
@@ -547,5 +563,5 @@ export async function fetchMarketStrength(force) {
 }
 
 export function startMSPolling() {
-  setInterval(function () { fetchMarketStrength(false); }, 60 * 1000);
+  setInterval(function () { fetchMarketStrength(true); }, 5 * 60 * 1000);
 }

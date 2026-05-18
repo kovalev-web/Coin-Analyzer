@@ -4,7 +4,7 @@ import {
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode,
 } from './ui.js';
 import { initRouter, registerRoute } from './router.js';
 import './styles.css';
@@ -134,6 +134,12 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'refresh-ms':
       fetchMarketStrength(true);
+      break;
+    case 'tv':
+      openTVMode();
+      break;
+    case 'close-tv':
+      closeTVMode();
       break;
   }
 });

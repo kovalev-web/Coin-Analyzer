@@ -118,6 +118,20 @@ window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
 window.__charts = _charts;
 
+function isDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function getChartColors() {
+  if (isDark()) return { bg: '#111111', text: '#808080', grid: '#1e1e1e', border: '#252525' };
+  return { bg: '#ffffff', text: '#636363', grid: '#e8e8e8', border: '#e8e8e8' };
+}
+
+function getSeriesColors() {
+  if (isDark()) return { upColor: '#d0d0d0', downColor: '#484848', borderUpColor: '#d0d0d0', borderDownColor: '#484848', wickUpColor: '#d0d0d0', wickDownColor: '#484848' };
+  return { upColor: '#1a1a1a', downColor: '#999999', borderUpColor: '#1a1a1a', borderDownColor: '#999999', wickUpColor: '#1a1a1a', wickDownColor: '#999999' };
+}
+
 function calcPriceFormat(price) {
   if (!price || price <= 0) return { type: 'price', precision: 4, minMove: 0.0001 };
   if (price < 0.00001) return { type: 'price', precision: 8, minMove: 0.00000001 };
@@ -132,14 +146,15 @@ function calcPriceFormat(price) {
   return { type: 'price', precision: 0, minMove: 1 };
 }
 
-function getChartOpts(width) {
+function getChartOpts(width, height) {
+  var c = getChartColors();
   return {
-    width: width, height: 300,
-    layout: { background: { color: '#ffffff' }, textColor: '#636363' },
-    grid: { vertLines: { color: '#e8e8e8' }, horzLines: { color: '#e8e8e8' } },
+    width: width, height: height || 300,
+    layout: { background: { color: c.bg }, textColor: c.text },
+    grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
-    rightPriceScale: { visible: true, borderColor: '#e8e8e8', scaleMargins: { top: 0.05, bottom: 0.25 } },
-    timeScale: { borderColor: '#e8e8e8', timeVisible: true, secondsVisible: false },
+    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
     handleScroll: true, handleScale: true,
   };
 }
@@ -244,7 +259,7 @@ function initCharts() {
     if (!el) return;
     if (_charts[c.symbol]) return;
     var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 400));
-    var s = chart.addCandlestickSeries({ upColor: '#1a1a1a', downColor: '#999999', borderUpColor: '#1a1a1a', borderDownColor: '#999999', wickUpColor: '#1a1a1a', wickDownColor: '#999999' });
+    var s = chart.addCandlestickSeries(getSeriesColors());
     var vs = chart.addHistogramSeries({ color: '#94a3b8', priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
     _charts[c.symbol] = chart; _fullSeries[c.symbol] = s; _volSeries[c.symbol] = vs;
@@ -559,6 +574,119 @@ export function closeMSPopup() {
   }
 }
 
+// ── TV Mode ────────────────────────────────────────────────────────────────
+
+var _tvCharts = {};
+window.__tvChartSeries = {};
+
+export function openTVMode() {
+  var coins = filteredCoins().slice(0, 6);
+  if (!coins.length) return;
+
+  var overlay = document.getElementById('tv-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tv-overlay';
+    overlay.className = 'tv-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML =
+    '<button class="tv-exit-btn" data-action="close-tv">Выйти из TV</button>' +
+    '<div class="tv-grid">' +
+    coins.map(function (c) {
+      var ch = c.price_change_percentage_24h || 0;
+      return '<div class="tv-slot">' +
+        '<div class="tv-slot-head" data-tv-sym="' + c.symbol + '">' +
+          '<span class="tv-sym">' + c.symbol.toUpperCase() + '</span>' +
+          '<span class="tv-chg ' + (ch >= 0 ? 'up' : 'dn') + '">' + (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%</span>' +
+          '<span class="tv-price">' + (c.current_price || '') + '</span>' +
+        '</div>' +
+        '<div class="tv-chart" id="tvchart-' + c.symbol + '"></div>' +
+      '</div>';
+    }).join('') +
+    '</div>';
+
+  overlay.style.display = 'block';
+  if (overlay.requestFullscreen) overlay.requestFullscreen().catch(function () {});
+  else if (overlay.webkitRequestFullscreen) overlay.webkitRequestFullscreen();
+
+  // destroy previous TV charts
+  Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
+  _tvCharts = {};
+  window.__tvChartSeries = {};
+
+  // create charts after layout settles
+  setTimeout(function () {
+    coins.forEach(function (c) {
+      var el = document.getElementById('tvchart-' + c.symbol);
+      if (!el || !window.LightweightCharts) return;
+      var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 600, el.offsetHeight || 380));
+      var s = chart.addCandlestickSeries(getSeriesColors());
+      var volClr = isDark() ? 'rgba(128,128,128,0.3)' : 'rgba(26,26,26,0.25)';
+      var vs = chart.addHistogramSeries({ color: volClr, priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
+      chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+      _tvCharts[c.symbol] = chart;
+      window.__tvChartSeries[c.symbol] = s;
+
+      var tf = state.chartTF[c.symbol] || '5m';
+      var cd = state.chartData[c.symbol + '_' + tf];
+      if (cd && cd.status === 'ok' && cd.candles.length) {
+        var lastClose = cd.candles[cd.candles.length - 1].close;
+        s.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
+        s.setData(cd.candles);
+        vs.setData(cd.candles.map(function (k) { return { time: k.time, value: k.volume || 0, color: k.close >= k.open ? volClr : 'rgba(100,100,100,0.25)' }; }));
+        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+      }
+
+      new ResizeObserver(function () {
+        if (_tvCharts[c.symbol]) _tvCharts[c.symbol].resize(el.offsetWidth, el.offsetHeight);
+      }).observe(el);
+    });
+  }, 80);
+}
+
+export function closeTVMode() {
+  var overlay = document.getElementById('tv-overlay');
+  if (overlay) overlay.style.display = 'none';
+  if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+  else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+  Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
+  _tvCharts = {};
+  window.__tvChartSeries = {};
+}
+
+// close TV mode when user presses ESC / exits fullscreen
+document.addEventListener('fullscreenchange', function () {
+  if (!document.fullscreenElement) {
+    var overlay = document.getElementById('tv-overlay');
+    if (overlay && overlay.style.display !== 'none') {
+      overlay.style.display = 'none';
+      Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
+      _tvCharts = {};
+      window.__tvChartSeries = {};
+    }
+  }
+});
+
+// ── Metric cards live update ────────────────────────────────────────────────
+
+function updateMetricCards() {
+  var coins = filteredCoins();
+  var c1 = document.querySelector('.metric-card:nth-child(1) .value');
+  if (c1) c1.textContent = coins.length;
+  if (!coins.length) return;
+  var maxRise = Math.max.apply(null, coins.map(function (c) { return c.price_change_percentage_24h || 0; })).toFixed(2);
+  var c2 = document.querySelector('.metric-card:nth-child(2) .value');
+  if (c2) c2.textContent = '+' + maxRise + '%';
+  var mv = Math.max.apply(null, coins.map(function (c) { return c.total_volume || 0; }));
+  var c3 = document.querySelector('.metric-card:nth-child(3) .value');
+  if (c3) c3.textContent = mv >= 1e9 ? '$' + (mv / 1e9).toFixed(1) + 'B' : mv >= 1e6 ? '$' + (mv / 1e6).toFixed(1) + 'M' : '$' + (mv / 1e3).toFixed(1) + 'K';
+  var bc = coins.filter(function (c) { return state.analysisCache[c.symbol] && state.analysisCache[c.symbol].result && state.analysisCache[c.symbol].result.signal === 'bullish'; }).length;
+  var c4 = document.querySelector('.metric-card:nth-child(4) .value');
+  if (c4) c4.textContent = bc;
+}
+
 export function updateMSPanel() {
   var card = document.getElementById('ms-card');
   if (card) card.innerHTML = msCardInner();
@@ -621,6 +749,7 @@ export function render() {
     + '<div class="filters-right">'
     + '<span class="last-update">' + (state.lastUpdate ? 'Обновлено: ' + state.lastUpdate.toLocaleTimeString('ru-RU') : '') + '</span>'
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
+    + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-refresh" data-action="refresh">Обновить</button>'
     + '</div>'
     + '</div></div>'
@@ -700,6 +829,7 @@ document.body.addEventListener('blur', function (e) {
 on('render', render);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('ms:update', updateMSPanel);
+on('metrics:update', updateMetricCards);
 on('ws:status', function () {
   var els = document.querySelectorAll('.ws-indicator');
   for (var i = 0; i < els.length; i++) {
