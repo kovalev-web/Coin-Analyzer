@@ -137,6 +137,7 @@ function processTickerPush(arr) {
 
   // Push update — update existing coins and add new ones
   var newCoins = 0;
+  console.log('[DBG] ticker push, coins in state:', state.coins.length, 'arr:', arr.length);
   arr.forEach(function (t) {
     var sym = t.s.replace('USDT', '').toLowerCase();
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
@@ -154,7 +155,8 @@ function processTickerPush(arr) {
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
-  if (newCoins) { emit('render'); return; }
+  if (newCoins) { console.log('[DBG] newCoins:', newCoins, '— render+return'); emit('render'); return; }
+  console.log('[DBG] update path OK, calling applyLiveChartUpdates');
   applyLivePriceUpdates();
   applyLiveChartUpdates();
 }
@@ -307,7 +309,12 @@ export function startChartPolling() {
   // Poll klines every 3s to sync H/L and detect new candles
   _chartTimer = setInterval(function () { pollCharts(); }, 3000);
   // Update live close price every 1s — independent of ticker push path
-  _liveTimer = setInterval(function () { applyLiveChartUpdates(); }, 1000);
+  _liveTimer = setInterval(function () {
+    var fc = filteredCoins();
+    var first = fc[0];
+    if (first) console.log('[DBG] liveTimer tick, price:', first.symbol, first.current_price);
+    applyLiveChartUpdates();
+  }, 1000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
