@@ -31,7 +31,7 @@ function renderCard(coin) {
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
     '<div class="tf-dd" style="display:none">' +
-    ['5m', '15m', '1h', '4h'].map(function (t) {
+    ['1m', '5m', '15m', '1h', '4h'].map(function (t) {
       return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
     }).join('') +
     '</div>' +
