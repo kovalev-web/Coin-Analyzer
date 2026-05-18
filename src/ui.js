@@ -119,7 +119,22 @@ window.__chartVolSeries = _volSeries;
 window.__charts = _charts;
 
 function isDark() {
+  var t = document.documentElement.dataset.theme;
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function initTheme() {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
+}
+
+export function toggleTheme() {
+  var next = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('theme', next);
+  render();
 }
 
 function getChartColors() {
@@ -751,6 +766,11 @@ export function render() {
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-refresh" data-action="refresh">Обновить</button>'
+    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
+    + (isDark()
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>')
+    + '</button>'
     + '</div>'
     + '</div></div>'
     + '<div class="metrics">'
@@ -826,6 +846,7 @@ document.body.addEventListener('blur', function (e) {
 
 // ── Event listeners ────────────────────────────────────────────────────────
 
+initTheme();
 on('render', render);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('ms:update', updateMSPanel);
