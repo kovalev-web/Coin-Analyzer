@@ -157,9 +157,10 @@ function processTickerPush(arr) {
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
-  if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
+  if (newCoins) { emit('cards:sync'); fetchAllNATR(filteredCoins()); return; }
   applyLivePriceUpdates();
   applyLiveChartUpdates();
+  emit('cards:sync');
 }
 
 // ── Individual ticker update (from per-coin WS subscriptions) ────────────

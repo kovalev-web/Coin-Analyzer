@@ -71,7 +71,12 @@ export function renderCards() {
     grid.appendChild(card.firstElementChild);
   });
   Object.keys(existing).forEach(function (sym) {
-    if (!seen[sym]) { var el = existing[sym]; if (el) el.remove(); }
+    if (!seen[sym]) {
+      var el = existing[sym]; if (el) el.remove();
+      try { if (_charts[sym]) _charts[sym].remove(); } catch (e) {}
+      delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
+      window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
+    }
   });
   initCharts();
 }
@@ -861,6 +866,7 @@ document.body.addEventListener('blur', function (e) {
 
 initTheme();
 on('render', render);
+on('cards:sync', renderCards);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('ms:update', updateMSPanel);
 on('metrics:update', updateMetricCards);
