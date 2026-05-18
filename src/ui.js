@@ -137,14 +137,22 @@ export function toggleTheme() {
   render();
 }
 
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function getChartColors() {
-  if (isDark()) return { bg: '#111111', text: '#808080', grid: '#1e1e1e', border: '#252525' };
-  return { bg: '#ffffff', text: '#636363', grid: '#e8e8e8', border: '#e8e8e8' };
+  return {
+    bg: getCSSVar('--canvas'),
+    text: getCSSVar('--graphite'),
+    grid: getCSSVar('--hairline'),
+    border: getCSSVar('--hairline'),
+  };
 }
 
 function getSeriesColors() {
-  if (isDark()) return { upColor: '#d0d0d0', downColor: '#484848', borderUpColor: '#d0d0d0', borderDownColor: '#484848', wickUpColor: '#d0d0d0', wickDownColor: '#484848' };
-  return { upColor: '#1a1a1a', downColor: '#999999', borderUpColor: '#1a1a1a', borderDownColor: '#999999', wickUpColor: '#1a1a1a', wickDownColor: '#999999' };
+  var up = getCSSVar('--ink'), dn = getCSSVar('--steel');
+  return { upColor: up, downColor: dn, borderUpColor: up, borderDownColor: dn, wickUpColor: up, wickDownColor: dn };
 }
 
 function calcPriceFormat(price) {
@@ -192,7 +200,7 @@ function updateChart(symbol) {
   s.setData(cd.candles);
   var vs = _volSeries[symbol];
   if (vs) vs.setData(cd.candles.map(function (c) {
-    return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' };
+    var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn'); return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
   }));
   var total = cd.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 80), to: total - 1 });
@@ -225,7 +233,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var rc = ruler.canvas, ctx = rc.getContext('2d');
   ctx.clearRect(0, 0, rc.width, rc.height);
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
-  var isUp = pr2 >= pr1, color = isUp ? '#16a34a' : '#dc2626';
+  var isUp = pr2 >= pr1, color = isUp ? getCSSVar('--bullish') : getCSSVar('--danger');
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
   var pctStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
   var chart = _charts[sym];
@@ -238,7 +246,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     }
   }
   // Fill zone between the two price levels
-  ctx.fillStyle = isUp ? 'rgba(22,163,74,0.09)' : 'rgba(220,38,38,0.09)';
+  ctx.fillStyle = isUp ? getCSSVar('--bullish-bg') : 'rgba(220,38,38,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
   // Horizontal dashed lines at each price level
   ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
@@ -275,7 +283,7 @@ function initCharts() {
     if (_charts[c.symbol]) return;
     var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 400));
     var s = chart.addCandlestickSeries(getSeriesColors());
-    var vs = chart.addHistogramSeries({ color: '#94a3b8', priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
+    var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
     _charts[c.symbol] = chart; _fullSeries[c.symbol] = s; _volSeries[c.symbol] = vs;
     var rc = document.createElement('canvas');
@@ -638,7 +646,7 @@ export function openTVMode() {
       if (!el || !window.LightweightCharts) return;
       var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 600, el.offsetHeight || 380));
       var s = chart.addCandlestickSeries(getSeriesColors());
-      var volClr = isDark() ? 'rgba(128,128,128,0.3)' : 'rgba(26,26,26,0.25)';
+      var volClr = getCSSVar('--vol-up');
       var vs = chart.addHistogramSeries({ color: volClr, priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
       chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       _tvCharts[c.symbol] = chart;
@@ -650,7 +658,7 @@ export function openTVMode() {
         var lastClose = cd.candles[cd.candles.length - 1].close;
         s.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
         s.setData(cd.candles);
-        vs.setData(cd.candles.map(function (k) { return { time: k.time, value: k.volume || 0, color: k.close >= k.open ? volClr : 'rgba(100,100,100,0.25)' }; }));
+        var tvVolDn = getCSSVar('--vol-dn'); vs.setData(cd.candles.map(function (k) { return { time: k.time, value: k.volume || 0, color: k.close >= k.open ? volClr : tvVolDn }; }));
         chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
       }
 
