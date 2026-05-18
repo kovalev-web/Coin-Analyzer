@@ -525,7 +525,7 @@ export function openMSPopup() {
   popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
     var rect = card.getBoundingClientRect();
-    var topOffset = rect.height;
+    var topOffset = rect.height + 6;
     popup.style.top = topOffset + 'px';
     popup.style.left = '0';
     popup.style.right = '0';
@@ -533,7 +533,7 @@ export function openMSPopup() {
     popup.style.maxWidth = 'none';
   } else {
     var rect2 = card.getBoundingClientRect();
-    popup.style.top = rect2.height + 'px';
+    popup.style.top = rect2.height + 6 + 'px';
     popup.style.left = '0';
     popup.style.right = '0';
     popup.style.width = '100%';
