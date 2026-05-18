@@ -186,3 +186,26 @@ wss.on('connection', function (ws) {
 
 bootstrapTicker(); // сразу: REST → кэш → push клиентам
 startBinanceWS();  // параллельно: WS подписки для live-обновлений
+
+// REST-рефреш каждые 3 секунды — гарантирует свежие цены даже если WS-события не приходят
+setInterval(async function () {
+  try {
+    var data = await fetchBinance(BINANCE_REST + '/fapi/v1/ticker/24hr');
+    data.forEach(function (t) {
+      if (t.symbol.endsWith('USDT')) {
+        tickerCache[t.symbol] = {
+          s: t.symbol,
+          c: t.lastPrice,
+          o: t.openPrice,
+          h: t.highPrice,
+          l: t.lowPrice,
+          v: t.volume,
+          q: t.quoteVolume,
+          P: t.priceChangePercent,
+        };
+      }
+    });
+  } catch (e) {
+    console.error('[REST refresh] Failed:', e.message);
+  }
+}, 3000);
