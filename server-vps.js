@@ -134,6 +134,18 @@ setInterval(pushTicker, 1000);
 
 var klineWS = null;
 var klineSubscribed = new Set(); // 'btcusdt@kline_5m'
+var klinePending = {}; // 'sym_tf' → последнее состояние свечи
+
+// Флашим буфер раз в 200мс — независимо от частоты входящих событий
+setInterval(function () {
+  var keys = Object.keys(klinePending);
+  if (!keys.length || !clients.size) return;
+  keys.forEach(function (key) {
+    var payload = JSON.stringify({ type: 'kline_update', symbol: klinePending[key].symbol, tf: klinePending[key].tf, candle: klinePending[key].candle });
+    clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
+  });
+  klinePending = {};
+}, 200);
 
 function subscribeKline(streamName) {
   if (klineSubscribed.has(streamName)) return;
@@ -165,8 +177,9 @@ function startKlineWS() {
 
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
-      var update = JSON.stringify({
-        type: 'kline_update',
+      // Буферизуем последнее состояние свечи — флашим раз в 200мс
+      // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
+      klinePending[sym + '_' + k.i] = {
         symbol: sym,
         tf: k.i,
         candle: {
@@ -176,10 +189,9 @@ function startKlineWS() {
           low: parseFloat(k.l),
           close: parseFloat(k.c),
           volume: parseFloat(k.v),
-          closed: k.x, // true = свеча закрылась
+          closed: k.x,
         },
-      });
-      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(update); });
+      };
     } catch (e) {}
   });
 
