@@ -264,49 +264,50 @@ export function applyLiveChartUpdates() {
     cd.candles[cd.candles.length - 1] = updated;
     try { s.update(updated); } catch (e) { }
     var vs = volSeries[coin.symbol];
-    if (vs) vs.update({
-      time: updated.time,
-      value: updated.volume,
-      color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)',
-    });
+    if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
   });
 }
 
 // ── Chart polling ────────────────────────────────────────────────────────
 
 export async function pollCharts() {
-  var series = window.__chartSeries || {};
-  var volSeries = window.__chartVolSeries || {};
   var coins = filteredCoins();
   for (var i = 0; i < coins.length; i++) {
     var c = coins[i], tf = state.chartTF[c.symbol] || '5m', key = c.symbol + '_' + tf;
     var cd = state.chartData[key];
     if (!cd || cd.status !== 'ok') continue;
-    var s = series[c.symbol];
-    if (!s) continue;
+    // Check series exists before making the network request
+    if (!(window.__chartSeries || {})[c.symbol]) continue;
     try {
       var msg = await wsRequest({ type: 'fetch_klines', symbol: c.symbol, tf: tf, limit: 2 });
       var data = msg.data;
       if (!Array.isArray(data) || !data.length) continue;
       var k = data[data.length - 1];
       var newCandle = { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
-      // Use live ticker price for close so REST lag doesn't conflict with applyLiveChartUpdates
       if (c.current_price) newCandle.close = c.current_price;
       var arr = cd.candles, last = arr[arr.length - 1];
       if (last && last.time === newCandle.time) { arr[arr.length - 1] = newCandle; }
       else if (!last || newCandle.time > last.time) { arr.push(newCandle); if (arr.length > 300) arr.shift(); }
-      s.update(newCandle);
-      var vs = volSeries[c.symbol];
-      if (vs) vs.update({ time: newCandle.time, value: newCandle.volume, color: newCandle.close >= newCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' });
+      // Re-read series after await — charts may have been destroyed and recreated during the request
+      var s = (window.__chartSeries || {})[c.symbol];
+      if (!s) continue;
+      try { s.update(newCandle); } catch (e) { }
+      var vs = (window.__chartVolSeries || {})[c.symbol];
+      if (vs) { try { vs.update({ time: newCandle.time, value: newCandle.volume, color: newCandle.close >= newCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
     } catch (e) { }
   }
 }
 
 var _chartTimer = null;
+var _liveTimer = null;
 
 export function startChartPolling() {
   if (_chartTimer) clearInterval(_chartTimer);
+  if (_liveTimer) clearInterval(_liveTimer);
+  // Poll klines every 3s to sync H/L and detect new candles
   _chartTimer = setInterval(function () { pollCharts(); }, 3000);
+  // Update live close price every 1s — independent of ticker push path
+  _liveTimer = setInterval(function () { applyLiveChartUpdates(); }, 1000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
