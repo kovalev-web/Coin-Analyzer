@@ -187,6 +187,7 @@
       .mobile-filters-row .tf-pill{height:32px;font-size:12px;padding:0 14px;}
       .mobile-update{display:block;margin-left:auto;font-size:12px;color:var(--graphite);font-weight:500;white-space:nowrap;}
       .mobile-filters-row .btn-refresh-icon{display:flex;}
+      .mobile-filters-row .btn-theme-mob{display:inline-flex;width:36px;height:36px;}
       .metrics{padding:12px 12px 0;gap:8px;grid-template-columns:repeat(2,1fr);}
       .metric-card:nth-child(2),.metric-card:nth-child(3),.metric-card:nth-child(4){display:none;}
       .metric-card{padding:12px 14px;border-radius:12px;}
