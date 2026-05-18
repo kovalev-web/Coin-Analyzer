@@ -44,6 +44,13 @@ async function bootstrapTicker() {
 // ── Binance WS: индивидуальные @ticker подписки (работают на VPS) ────────
 
 var binanceWS = null;
+var _pushPending = false;
+
+function schedulePush() {
+  if (_pushPending) return;
+  _pushPending = true;
+  setTimeout(function () { _pushPending = false; pushTicker(); }, 100);
+}
 
 async function startBinanceWS() {
   var symbols;
@@ -94,6 +101,7 @@ function connectBinanceWS(symbols) {
           q: msg.q, // quote volume (USDT)
           P: msg.P, // priceChangePercent (Binance pre-calculated)
         };
+        schedulePush(); // push to clients ~100ms after this event
       }
     } catch (e) {}
   });
@@ -187,7 +195,7 @@ wss.on('connection', function (ws) {
 bootstrapTicker(); // сразу: REST → кэш → push клиентам
 startBinanceWS();  // параллельно: WS подписки для live-обновлений
 
-// REST-рефреш каждые 3 секунды — гарантирует свежие цены даже если WS-события не приходят
+// REST-рефреш каждые 2 секунды — гарантирует свежие цены даже если WS-события не приходят
 setInterval(async function () {
   try {
     var data = await fetchBinance(BINANCE_REST + '/fapi/v1/ticker/24hr');
@@ -208,4 +216,4 @@ setInterval(async function () {
   } catch (e) {
     console.error('[REST refresh] Failed:', e.message);
   }
-}, 3000);
+}, 2000);
