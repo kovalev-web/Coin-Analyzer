@@ -506,6 +506,7 @@ export function openMSPopup() {
 
   if (!state.marketStrength) fetchMarketStrength();
   var card = document.getElementById('ms-card');
+  var metrics = card ? card.parentElement : null;
 
   var popup = document.getElementById('ms-popup');
   if (!popup) {
@@ -515,28 +516,28 @@ export function openMSPopup() {
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
 
-  card.style.overflow = 'visible';
-  card.style.position = 'relative';
-  card.appendChild(popup);
+  if (metrics) {
+    metrics.style.overflow = 'visible';
+    metrics.style.position = 'relative';
+    metrics.appendChild(popup);
+  }
 
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
+  popup.style.left = '0';
+  popup.style.right = '0';
+  popup.style.width = '100%';
+  popup.style.maxWidth = 'none';
   if (window.innerWidth <= 768) {
     var rect = card.getBoundingClientRect();
-    var topOffset = rect.height + 6;
+    var metricsRect = metrics.getBoundingClientRect();
+    var topOffset = rect.bottom - metricsRect.top + 6;
     popup.style.top = topOffset + 'px';
-    popup.style.left = '50%';
-    popup.style.transform = 'translateX(-50%)';
-    popup.style.width = '880px';
-    popup.style.maxWidth = 'calc(100% - 12px)';
   } else {
     var rect2 = card.getBoundingClientRect();
-    popup.style.top = rect2.height + 6 + 'px';
-    popup.style.left = '50%';
-    popup.style.transform = 'translateX(-50%)';
-    popup.style.width = '880px';
-    popup.style.maxWidth = 'calc(100% - 12px)';
+    var metricsRect2 = metrics.getBoundingClientRect();
+    popup.style.top = rect2.bottom - metricsRect2.top + 6 + 'px';
   }
 }
 
@@ -544,9 +545,10 @@ export function closeMSPopup() {
   var el = document.getElementById('ms-popup');
   if (el) el.style.display = 'none';
   var card = document.getElementById('ms-card');
-  if (card) {
-    card.style.overflow = '';
-    card.style.position = '';
+  var metrics = card ? card.parentElement : null;
+  if (metrics) {
+    metrics.style.overflow = '';
+    metrics.style.position = '';
   }
 }
 
