@@ -493,44 +493,62 @@ function msPopupInner() {
     '<button style="width:100%;height:36px;margin-top:12px;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" data-action="refresh-ms">Обновить</button>';
 }
 
-function getMSPopup() {
-  var el = document.getElementById('ms-popup');
-  if (!el) { el = document.createElement('div'); el.id = 'ms-popup'; el.className = 'ms-popup'; getPopupHost().appendChild(el); }
-  return el;
-}
-
 export function openMSPopup() {
+  // Close any existing analysis popup
+  var existingAp = document.getElementById('analysis-overlay');
+  if (existingAp && existingAp._popupCard) {
+    existingAp._popupCard.style.overflow = '';
+    existingAp._popupCard = null;
+  }
+  if (existingAp) existingAp.style.display = 'none';
+  var existingMs = document.getElementById('ms-popup');
+  if (existingMs) existingMs.style.display = 'none';
+
   if (!state.marketStrength) fetchMarketStrength();
-  var popup = getMSPopup();
+  var card = document.getElementById('ms-card');
+
+  var popup = document.getElementById('ms-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'ms-popup';
+    popup.className = 'ms-popup';
+  }
+  if (popup.parentNode) popup.parentNode.removeChild(popup);
+
+  card.style.overflow = 'visible';
+  card.style.position = 'relative';
+  card.appendChild(popup);
+
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
   popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
-    popup.style.top = '16px';
-    popup.style.left = '16px';
-    popup.style.right = '16px';
-    popup.style.width = 'auto';
+    var rect = card.getBoundingClientRect();
+    var topOffset = rect.height;
+    popup.style.top = topOffset + 'px';
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.width = '100%';
     popup.style.maxWidth = 'none';
   } else {
-    popup.style.right = '';
-    popup.style.width = '';
-    popup.style.maxWidth = '';
-    var card = document.getElementById('ms-card');
-    if (card) {
-      var rect = card.getBoundingClientRect();
-      var top = rect.bottom + 8;
-      var left = rect.left;
-      if (left + 440 > window.innerWidth) left = Math.max(8, window.innerWidth - 448);
-      if (rect.bottom + 360 > window.innerHeight) top = Math.max(8, rect.top - 380);
-      popup.style.top = top + 'px'; popup.style.left = left + 'px';
-    }
+    var rect2 = card.getBoundingClientRect();
+    popup.style.top = rect2.height + 'px';
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.width = '100%';
+    popup.style.maxWidth = 'none';
   }
 }
 
 export function closeMSPopup() {
   var el = document.getElementById('ms-popup');
   if (el) el.style.display = 'none';
+  var card = document.getElementById('ms-card');
+  if (card) {
+    card.style.overflow = '';
+    card.style.position = '';
+  }
 }
 
 export function updateMSPanel() {
