@@ -353,9 +353,12 @@ export function openAnalysisPopup(sym, btn) {
   popup.dataset.sym = sym;
 
   if (isMobile) {
+    var cardRect = card.getBoundingClientRect();
+    var btnRect = btn.getBoundingClientRect();
+    var topOffset = (btnRect.bottom - cardRect.top) + 8;
     popup.style.position = 'absolute';
     popup.style.transform = 'none';
-    popup.style.top = '100%';
+    popup.style.top = topOffset + 'px';
     popup.style.left = '0';
     popup.style.right = '0';
     popup.style.width = 'auto';
