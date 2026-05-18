@@ -525,10 +525,9 @@ export function openMSPopup() {
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
-  popup.style.left = '0';
   popup.style.right = '0';
-  popup.style.width = '100%';
-  popup.style.maxWidth = 'none';
+  popup.style.width = '880px';
+  popup.style.maxWidth = 'calc(100% - 12px)';
   if (window.innerWidth <= 768) {
     var rect = card.getBoundingClientRect();
     var metricsRect = metrics.getBoundingClientRect();
