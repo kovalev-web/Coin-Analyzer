@@ -23,10 +23,10 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isL) badge = '<span class="btn-pressed">Анализ</span>';
+  if (isL) badge = '<span class="btn-pressed"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg></span>';
   else if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
   else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
-  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '">Анализ</button>';
+  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg></button>';
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
@@ -85,17 +85,17 @@ export function updateCardBadge(symbol) {
   var signal = hasA ? cache.result.signal : null;
   var tag = 'span';
   var html = '';
-  if (isL) { tag = 'span'; html = 'Анализ'; }
+  if (isL) { tag = 'span'; html = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg>'; }
   else if (isE) { tag = 'button'; html = 'Повтор'; }
   else if (hasA) { tag = 'span'; html = signalLabel(signal); }
-  else { tag = 'button'; html = 'Анализ'; }
+  else { tag = 'button'; html = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg>'; }
 
   var newEl = document.createElement(tag);
   if (isE) { newEl.className = 'btn-retry'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
   else if (hasA) { newEl.className = 'signal-badge ' + signal; newEl.dataset.action = 'open-analysis'; newEl.dataset.sym = symbol; }
   else if (isL) { newEl.className = 'btn-pressed'; }
   else { newEl.className = 'btn-analyze-one'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
-  newEl.textContent = html;
+  newEl.innerHTML = html;
 
   if (el && el.parentNode) {
     var ckAttr = document.createAttribute('data-ck');

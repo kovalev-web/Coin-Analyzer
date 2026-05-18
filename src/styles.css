@@ -69,7 +69,9 @@
     .tf-dd button{display:block;width:100%;text-align:left;padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink);background:transparent;border:none;border-radius:0;height:auto;letter-spacing:0;}
     .tf-dd button:hover{background:var(--cloud);opacity:1;}
     .tf-dd button.active{color:var(--primary);font-weight:600;}
-    .btn-analyze-one,.btn-retry,.btn-pressed{width:90px;text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}
+    .btn-analyze-one,.btn-retry,.btn-pressed{text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}
+    .btn-analyze-one,.btn-pressed{width:32px;padding:0;}
+    .btn-retry{padding:0 10px;}
     .btn-pressed{background:var(--cloud);border:1px solid var(--steel);color:var(--graphite);cursor:default;opacity:0.6;}
     .btn-retry{background:#fff1f1;color:var(--bloom-deep);border:1px solid #fca5a5;padding:0 10px;}
     .analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.12);min-width:260px;max-width:380px;font-size:14px;line-height:1.55;color:var(--charcoal);}
@@ -85,7 +87,7 @@
     @media(max-width:768px){.analysis-overlay{min-width:200px;max-width:calc(100vw - 32px);padding:14px 16px;}}
 
     /* ── Signal badge ── */
-    .signal-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+    .signal-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:26px;padding:0;border-radius:9999px;}
     .signal-badge.bullish{background:var(--bullish-bg);color:var(--bullish);}
     .signal-badge.caution{background:var(--caution-bg);color:var(--caution);}
     .signal-badge.neutral{background:var(--fog);color:var(--graphite);}
