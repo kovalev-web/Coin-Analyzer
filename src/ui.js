@@ -314,7 +314,29 @@ export function openAnalysisPopup(sym, btn) {
   var existingMs = document.getElementById('ms-popup');
   if (existingMs && existingMs.style.display !== 'none') closeMSPopup();
 
-  var popup = getOverlay();
+  var card = btn.closest('.coin-card');
+  var isMobile = window.innerWidth <= 768;
+
+  var popup;
+  if (isMobile && card) {
+    popup = document.getElementById('analysis-overlay');
+    if (!popup) {
+      popup = document.createElement('div');
+      popup.id = 'analysis-overlay';
+      popup.className = 'analysis-overlay';
+      popup.innerHTML =
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;">' +
+          '<button class="ms-popup-close" data-action="close-analysis">✕</button>' +
+        '</div>' +
+        '<div class="ao-spinner"><span class="spinner"></span></div>' +
+        '<div class="ao-content"></div>';
+    }
+    if (popup.parentNode) popup.parentNode.removeChild(popup);
+    card.parentNode.insertBefore(popup, card.nextSibling);
+  } else {
+    popup = getOverlay();
+  }
+
   var cache = state.analysisCache[sym];
   var spinner = popup.querySelector('.ao-spinner');
   var content = popup.querySelector('.ao-content');
@@ -322,16 +344,18 @@ export function openAnalysisPopup(sym, btn) {
   content.style.display = 'none';
   popup.style.display = 'block';
   popup.dataset.sym = sym;
-  var rect = btn.getBoundingClientRect();
-  if (window.innerWidth <= 768) {
-    popup.style.position = 'fixed';
+
+  if (isMobile) {
+    popup.style.position = 'relative';
     popup.style.transform = 'none';
-    popup.style.top = rect.bottom + 8 + 'px';
-    popup.style.left = '16px';
-    popup.style.right = '16px';
+    popup.style.top = '0';
+    popup.style.left = '0';
+    popup.style.right = '0';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
+    popup.style.margin = '8px 0 0 0';
   } else {
+    var rect = btn.getBoundingClientRect();
     popup.style.position = 'absolute';
     popup.style.transform = 'none';
     popup.style.right = '';
