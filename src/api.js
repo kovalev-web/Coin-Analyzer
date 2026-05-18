@@ -59,6 +59,9 @@ function connectWS() {
       case 'ticker_update':
         processSingleUpdate(msg);
         break;
+      case 'kline_update':
+        processKlineUpdate(msg);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -175,6 +178,51 @@ function processSingleUpdate(msg) {
   coin.price_change_percentage_24h = parseFloat(t.P);
   coin.total_volume = Math.round(parseFloat(t.q));
   applyLivePriceUpdates();
+}
+
+// ── Real-time kline update (fires on every trade from server kline WS) ──
+
+function processKlineUpdate(msg) {
+  var sym = msg.symbol;
+  var tf = msg.tf;
+  var k = msg.candle;
+  var key = sym + '_' + tf;
+  var cd = state.chartData[key];
+  if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
+
+  var arr = cd.candles;
+  var last = arr[arr.length - 1];
+
+  if (last && last.time === k.time) {
+    // Обновляем текущую свечу. H/L берём максимум: стрим иногда присылает
+    // промежуточные значения, не хотим откатывать уже нарисованные экстремумы.
+    k.high = k.high > last.high ? k.high : last.high;
+    k.low  = k.low  < last.low  ? k.low  : last.low;
+    arr[arr.length - 1] = k;
+  } else if (!last || k.time > last.time) {
+    arr.push(k);
+    if (arr.length > 300) arr.shift();
+  } else {
+    return; // старая свеча — игнорируем
+  }
+
+  // Обновляем график напрямую — никаких интервалов, сразу на экран
+  var s = (window.__chartSeries || {})[sym];
+  if (s) { try { s.update(k); } catch (e) {} }
+
+  var vs = (window.__chartVolSeries || {})[sym];
+  if (vs) {
+    var volClr = k.close >= k.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)';
+    try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {}
+  }
+
+  // TV-режим тоже обновляем
+  var ts = (window.__tvChartSeries || {})[sym];
+  if (ts) { try { ts.update(k); } catch (e) {} }
+
+  // Синхронизируем coin.current_price чтобы карточки тоже показывали актуальную цену
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  if (coin) coin.current_price = k.close;
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
@@ -369,8 +417,9 @@ var _liveTimer = null;
 export function startChartPolling() {
   if (_chartTimer) clearInterval(_chartTimer);
   if (_liveTimer) clearInterval(_liveTimer);
-  // Poll klines every 3s to sync H/L and detect new candles
-  _chartTimer = setInterval(function () { pollCharts(); }, 3000);
+  // Sync кlines каждые 10с — только для восстановления после разрыва WS.
+  // Основной источник обновлений теперь kline_update push (processKlineUpdate).
+  _chartTimer = setInterval(function () { pollCharts(); }, 10000);
   // Update live close price every 1s — independent of ticker push path
   _liveTimer = setInterval(function () { applyLiveChartUpdates(); }, 1000);
 }
@@ -380,7 +429,11 @@ export function startChartPolling() {
 export async function fetchChartData(symbol, tf) {
   tf = tf || state.chartTF[symbol] || '5m';
   var key = symbol + '_' + tf;
-  if (state.chartData[key] && state.chartData[key].status === 'ok') return;
+  if (state.chartData[key] && state.chartData[key].status === 'ok') {
+    // Данные уже есть — просто убедимся что подписка активна
+    wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: tf });
+    return;
+  }
   try {
     var msg = await wsRequest({ type: 'fetch_klines', symbol: symbol, tf: tf, limit: 300 });
     var data = msg.data;
@@ -391,6 +444,8 @@ export async function fetchChartData(symbol, tf) {
         return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
       }),
     };
+    // Подписываемся на real-time kline стрим — обновления будут приходить через processKlineUpdate
+    wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: tf });
   } catch (e) {
     state.chartData[key] = { status: 'error' };
   }

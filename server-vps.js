@@ -117,7 +117,7 @@ function connectBinanceWS(symbols) {
   });
 }
 
-// ── Push полный тикер всем клиентам каждые 2 секунды ────────────────────
+// ── Push полный тикер всем клиентам каждую секунду ──────────────────────
 
 function pushTicker() {
   var arr = Object.values(tickerCache);
@@ -127,6 +127,72 @@ function pushTicker() {
 }
 
 setInterval(pushTicker, 1000);
+
+// ── Kline WebSocket: real-time свечи по каждой сделке ───────────────────
+// Binance kline stream присылает обновление на КАЖДОЙ сделке (sub-100ms),
+// в отличие от 24hrTicker который обновляется раз в ~1с.
+
+var klineWS = null;
+var klineSubscribed = new Set(); // 'btcusdt@kline_5m'
+
+function subscribeKline(streamName) {
+  if (klineSubscribed.has(streamName)) return;
+  klineSubscribed.add(streamName);
+  if (klineWS && klineWS.readyState === WebSocket.OPEN) {
+    klineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
+    console.log('[KlineWS] Subscribed:', streamName);
+  }
+}
+
+function startKlineWS() {
+  klineWS = new WebSocket(BINANCE_WS_URL);
+
+  klineWS.on('open', function () {
+    console.log('[KlineWS] Connected');
+    // Переподписаться на все стримы после реконнекта
+    var params = Array.from(klineSubscribed);
+    for (var i = 0; i < params.length; i += 200) {
+      klineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 100 }));
+    }
+  });
+
+  klineWS.on('message', function (raw) {
+    try {
+      var msg = JSON.parse(raw.toString());
+      // Игнорируем подтверждения подписки
+      if (msg.id != null && msg.result === null) return;
+      if (msg.e !== 'kline') return;
+
+      var k = msg.k;
+      var sym = k.s.replace('USDT', '').toLowerCase();
+      var update = JSON.stringify({
+        type: 'kline_update',
+        symbol: sym,
+        tf: k.i,
+        candle: {
+          time: Math.floor(k.t / 1000),
+          open: parseFloat(k.o),
+          high: parseFloat(k.h),
+          low: parseFloat(k.l),
+          close: parseFloat(k.c),
+          volume: parseFloat(k.v),
+          closed: k.x, // true = свеча закрылась
+        },
+      });
+      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(update); });
+    } catch (e) {}
+  });
+
+  klineWS.on('close', function () {
+    console.log('[KlineWS] Disconnected, reconnecting in 5s...');
+    setTimeout(startKlineWS, 5000);
+  });
+
+  klineWS.on('error', function (e) {
+    console.error('[KlineWS] Error:', e.message);
+    klineWS.close();
+  });
+}
 
 // ── WebSocket сервер для фронтенда ───────────────────────────────────────
 
@@ -165,6 +231,15 @@ wss.on('connection', function (ws) {
         ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: data2 }));
       }
 
+      else if (msg.type === 'subscribe_klines') {
+        // Клиент просит подписаться на real-time kline стримы для списка монет
+        var syms = Array.isArray(msg.symbols) ? msg.symbols : [];
+        var tf = msg.tf || '5m';
+        syms.forEach(function (sym) {
+          subscribeKline(sym.toLowerCase() + 'usdt@kline_' + tf);
+        });
+      }
+
       else if (msg.type === 'fetch_market_strength') {
         var results = await Promise.all(msg.symbols.map(async function (sym) {
           var s = sym.toUpperCase() + 'USDT';
@@ -194,8 +269,11 @@ wss.on('connection', function (ws) {
 
 bootstrapTicker(); // сразу: REST → кэш → push клиентам
 startBinanceWS();  // параллельно: WS подписки для live-обновлений
+startKlineWS();    // kline WS для real-time обновлений свечей
 
-// REST-рефреш каждые 2 секунды — гарантирует свежие цены даже если WS-события не приходят
+// REST-рефреш каждые 60 секунд — только как fallback для восстановления
+// после разрыва WS. Убрали частый опрос: он перезаписывал свежие WS-данные
+// устаревшими HTTP-ответами и добавлял задержку.
 setInterval(async function () {
   try {
     var data = await fetchBinance(BINANCE_REST + '/fapi/v1/ticker/24hr');
@@ -216,4 +294,4 @@ setInterval(async function () {
   } catch (e) {
     console.error('[REST refresh] Failed:', e.message);
   }
-}, 2000);
+}, 60000);
