@@ -258,8 +258,8 @@ export function applyLiveChartUpdates() {
     var updated = {
       time: last.time,
       open: last.open,
-      high: last.high,
-      low: last.low,
+      high: price > last.high ? price : last.high,
+      low: price < last.low ? price : last.low,
       close: price,
       volume: last.volume,
     };
@@ -281,21 +281,66 @@ export async function pollCharts() {
     // Check series exists before making the network request
     if (!(window.__chartSeries || {})[c.symbol]) continue;
     try {
-      var msg = await wsRequest({ type: 'fetch_klines', symbol: c.symbol, tf: tf, limit: 2 });
+      var msg = await wsRequest({ type: 'fetch_klines', symbol: c.symbol, tf: tf, limit: 5 });
       var data = msg.data;
       if (!Array.isArray(data) || !data.length) continue;
-      var k = data[data.length - 1];
-      var newCandle = { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
-      if (c.current_price) newCandle.close = c.current_price;
-      var arr = cd.candles, last = arr[arr.length - 1];
-      if (last && last.time === newCandle.time) { arr[arr.length - 1] = newCandle; }
-      else if (!last || newCandle.time > last.time) { arr.push(newCandle); if (arr.length > 300) arr.shift(); }
-      // Re-read series after await — charts may have been destroyed and recreated during the request
+
+      var arr = cd.candles;
+      var hadNewCandle = false;
+
+      // Process all returned candles in order — fixes missing/wrong closed candles during pumps
+      for (var j = 0; j < data.length; j++) {
+        var k = data[j];
+        var isLast = j === data.length - 1;
+        var candle = {
+          time: Math.floor(parseInt(k[0]) / 1000),
+          open: parseFloat(k[1]),
+          high: parseFloat(k[2]),
+          low: parseFloat(k[3]),
+          close: parseFloat(k[4]),
+          volume: parseFloat(k[5]),
+        };
+        // Apply live price only to the current (last, still-forming) candle
+        if (isLast && c.current_price) {
+          candle.close = c.current_price;
+          candle.high = c.current_price > candle.high ? c.current_price : candle.high;
+          candle.low = c.current_price < candle.low ? c.current_price : candle.low;
+        }
+        var last = arr[arr.length - 1];
+        if (last && last.time === candle.time) {
+          // Update existing candle — keep max H/L so live-tracked values aren't erased
+          candle.high = candle.high > last.high ? candle.high : last.high;
+          candle.low = candle.low < last.low ? candle.low : last.low;
+          arr[arr.length - 1] = candle;
+        } else if (!last || candle.time > last.time) {
+          arr.push(candle);
+          if (arr.length > 300) arr.shift();
+          if (!isLast) hadNewCandle = true; // a closed candle was missing — need full redraw
+        }
+      }
+
+      // Re-read series after await
       var s = (window.__chartSeries || {})[c.symbol];
       if (!s) continue;
-      try { s.update(newCandle); } catch (e) { }
-      var vs = (window.__chartVolSeries || {})[c.symbol];
-      if (vs) { try { vs.update({ time: newCandle.time, value: newCandle.volume, color: newCandle.close >= newCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
+
+      var lastCandle = arr[arr.length - 1];
+      var lastVol = { time: lastCandle.time, value: lastCandle.volume, color: lastCandle.close >= lastCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' };
+
+      if (hadNewCandle) {
+        // New closed candles were added — setData to ensure chart history is correct
+        // Save + restore visible range so chart doesn't jump
+        var chart = (window.__charts || {})[c.symbol];
+        var visibleRange = null;
+        if (chart) { try { visibleRange = chart.timeScale().getVisibleRange(); } catch (e) { } }
+        try { s.setData(arr); } catch (e) { }
+        var vs2 = (window.__chartVolSeries || {})[c.symbol];
+        if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }; })); } catch (e) { } }
+        if (chart && visibleRange) { try { chart.timeScale().setVisibleRange(visibleRange); } catch (e) { } }
+      } else {
+        try { s.update(lastCandle); } catch (e) { }
+        var vs = (window.__chartVolSeries || {})[c.symbol];
+        if (vs) { try { vs.update(lastVol); } catch (e) { } }
+      }
     } catch (e) { }
   }
 }

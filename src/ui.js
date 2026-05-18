@@ -116,6 +116,7 @@ var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {};
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
+window.__charts = _charts;
 
 function calcPriceFormat(price) {
   if (!price || price <= 0) return { type: 'price', precision: 4, minMove: 0.0001 };
@@ -186,6 +187,7 @@ export function destroyCharts() {
   _charts = {}; _fullSeries = {}; _volSeries = {}; _rulers = {};
   window.__chartSeries = _fullSeries;
   window.__chartVolSeries = _volSeries;
+  window.__charts = _charts;
 }
 
 function drawRuler(sym, p1, p2, pr1, pr2) {
