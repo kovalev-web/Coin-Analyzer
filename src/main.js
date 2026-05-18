@@ -17,6 +17,7 @@ document.body.addEventListener('click', function (e) {
     // Close popups on outside click
     var popup = document.getElementById('analysis-overlay');
     if (popup && popup.style.display === 'block' && !popup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
+      if (popup._popupCard) { popup._popupCard.style.overflow = ''; popup._popupCard = null; }
       popup.style.display = 'none';
     }
     var msPopup = document.getElementById('ms-popup');
@@ -55,7 +56,10 @@ document.body.addEventListener('click', function (e) {
     }
     case 'close-analysis': {
       var ap = document.getElementById('analysis-overlay');
-      if (ap) ap.style.display = 'none';
+      if (ap) {
+        if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; }
+        ap.style.display = 'none';
+      }
       break;
     }
     case 'tf-pick': {

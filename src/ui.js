@@ -310,6 +310,10 @@ function getOverlay() {
 
 export function openAnalysisPopup(sym, btn) {
   var existingPopup = document.getElementById('analysis-overlay');
+  if (existingPopup && existingPopup._popupCard) {
+    existingPopup._popupCard.style.overflow = '';
+    existingPopup._popupCard = null;
+  }
   if (existingPopup) existingPopup.style.display = 'none';
   var existingMs = document.getElementById('ms-popup');
   if (existingMs && existingMs.style.display !== 'none') closeMSPopup();
@@ -331,10 +335,13 @@ export function openAnalysisPopup(sym, btn) {
         '<div class="ao-spinner"><span class="spinner"></span></div>' +
         '<div class="ao-content"></div>';
     }
-    if (popup.parentNode) popup.parentNode.removeChild(popup);
-    card.parentNode.insertBefore(popup, card.nextSibling);
+    popup._popupCard = card;
+    card.style.overflow = 'visible';
+    card.style.position = 'relative';
+    card.appendChild(popup);
   } else {
     popup = getOverlay();
+    popup._popupCard = null;
   }
 
   var cache = state.analysisCache[sym];
@@ -346,14 +353,14 @@ export function openAnalysisPopup(sym, btn) {
   popup.dataset.sym = sym;
 
   if (isMobile) {
-    popup.style.position = 'relative';
+    popup.style.position = 'absolute';
     popup.style.transform = 'none';
-    popup.style.top = '0';
+    popup.style.top = '100%';
     popup.style.left = '0';
     popup.style.right = '0';
     popup.style.width = 'auto';
     popup.style.maxWidth = 'none';
-    popup.style.margin = '8px 0 0 0';
+    popup.style.margin = '0';
   } else {
     var rect = btn.getBoundingClientRect();
     popup.style.position = 'absolute';
