@@ -126,7 +126,7 @@
     .ms-card{cursor:pointer;transition:box-shadow 0.15s;}
     .ms-card:hover{box-shadow:0 4px 16px rgba(26,26,26,0.14);}
     .ms-card-sub{font-size:11px;color:var(--graphite);font-weight:500;margin-top:2px;}
-    .ms-popup{position:absolute;pointer-events:auto;z-index:100;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.13);width:calc(100% - 12px);margin-left:6px;margin-right:6px;}
+    .ms-popup{position:absolute;pointer-events:auto;z-index:100;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:20px 24px;box-shadow:0 8px 24px rgba(26,26,26,0.13);width:880px;max-width:calc(100vw - 24px);}
     .ms-popup-close{width:28px;height:28px;padding:0;border-radius:50%;background:var(--fog);color:var(--graphite);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
     .ms-popup-close:hover{background:var(--steel);}
     .ms-refresh-btn{background:none;border:none;cursor:pointer;font-size:15px;color:var(--graphite);padding:2px 4px;line-height:1;border-radius:4px;flex-shrink:0;}

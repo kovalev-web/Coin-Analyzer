@@ -522,22 +522,21 @@ export function openMSPopup() {
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
-  popup.style.transform = 'none';
   if (window.innerWidth <= 768) {
     var rect = card.getBoundingClientRect();
     var topOffset = rect.height + 6;
     popup.style.top = topOffset + 'px';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.width = '100%';
-    popup.style.maxWidth = 'none';
+    popup.style.left = '50%';
+    popup.style.transform = 'translateX(-50%)';
+    popup.style.width = '880px';
+    popup.style.maxWidth = 'calc(100% - 12px)';
   } else {
     var rect2 = card.getBoundingClientRect();
     popup.style.top = rect2.height + 6 + 'px';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.width = '100%';
-    popup.style.maxWidth = 'none';
+    popup.style.left = '50%';
+    popup.style.transform = 'translateX(-50%)';
+    popup.style.width = '880px';
+    popup.style.maxWidth = 'calc(100% - 12px)';
   }
 }
 
