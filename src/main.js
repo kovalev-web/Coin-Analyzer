@@ -1,7 +1,7 @@
-import { state } from './state.js';
+import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, refreshCoins, analyzeCoinBySymbol, analyzeAll,
-  fetchMarketStrength, loadCache, startChartPolling, startMSPolling,
+  fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF,
@@ -106,6 +106,7 @@ document.body.addEventListener('click', function (e) {
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
       state.minVolume = parseFloat(target.dataset.val);
       render();
+      fetchAllNATR(filteredCoins());
       break;
     }
     case 'change-pick': {
@@ -122,6 +123,7 @@ document.body.addEventListener('click', function (e) {
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
       state.minChange = parseFloat(target.dataset.val);
       render();
+      fetchAllNATR(filteredCoins());
       break;
     }
     case 'open-ms':

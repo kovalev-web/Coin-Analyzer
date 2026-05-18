@@ -134,6 +134,7 @@ function processTickerPush(arr) {
     state.lastUpdate = new Date();
     state.cacheExpires = Date.now() + CACHE_TTL_MS;
     emit('render');
+    fetchAllNATR(filteredCoins());
     return;
   }
 
@@ -156,7 +157,7 @@ function processTickerPush(arr) {
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
-  if (newCoins) { emit('render'); return; }
+  if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
   applyLivePriceUpdates();
   applyLiveChartUpdates();
 }

@@ -355,9 +355,9 @@ export function openAnalysisPopup(sym, btn) {
   popup.style.position = 'absolute';
   popup.style.transform = 'none';
   popup.style.top = topOffset + 'px';
-  popup.style.left = '0';
   popup.style.right = '0';
-  popup.style.width = 'auto';
+  popup.style.left = 'auto';
+  popup.style.width = '67%';
   popup.style.maxWidth = 'none';
   popup.style.zIndex = '1000';
   popup.style.margin = '0';
@@ -427,8 +427,7 @@ function msCardInner() {
   }
   if (ms.status === 'loading') {
     return '<div class="label">Сила рынка</div>' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-top:8px;"><span class="spinner"></span>' +
-      '<span style="font-size:13px;font-weight:500;color:var(--graphite);">Анализирую...</span></div>';
+      '<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">Анализирую...</div>';
   }
   if (ms.status === 'error') {
     return '<div class="label">Сила рынка</div>' +
@@ -528,19 +527,24 @@ export function openMSPopup() {
   popup.style.display = 'block';
   popup.style.position = 'absolute';
   popup.style.width = '400px';
-  popup.style.maxWidth = 'calc(100% - 12px)';
+  popup.style.maxWidth = 'none';
+
+  var rect = card.getBoundingClientRect();
+  var metricsRect = metrics.getBoundingClientRect();
+  var topOffset = rect.bottom - metricsRect.top + 6;
+  popup.style.top = topOffset + 'px';
+
   if (window.innerWidth <= 768) {
-    var rect = card.getBoundingClientRect();
-    var metricsRect = metrics.getBoundingClientRect();
-    var cardRight = rect.right - metricsRect.left;
-    popup.style.top = rect.bottom - metricsRect.top + 6 + 'px';
-    popup.style.left = (cardRight - 400) + 'px';
+    // На мобильных — растягиваем на всю ширину контейнера
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.width = 'auto';
   } else {
-    var rect2 = card.getBoundingClientRect();
-    var metricsRect2 = metrics.getBoundingClientRect();
-    var cardRight2 = rect2.right - metricsRect2.left;
-    popup.style.top = rect2.bottom - metricsRect2.top + 6 + 'px';
-    popup.style.left = (cardRight2 - 400) + 'px';
+    // На десктопе — правый край попапа совпадает с правым краем ms-card
+    var rightOffset = metricsRect.right - rect.right;
+    popup.style.right = rightOffset + 'px';
+    popup.style.left = 'auto';
+    popup.style.width = '400px';
   }
 }
 
