@@ -180,7 +180,16 @@ function fetchServerLevels(code) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'get', code: code }),
   }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d && d.levels) applyServerLevels(d.levels);
+    if (!d || !d.levels) return;
+    var serverEmpty = Object.keys(d.levels).length === 0;
+    var localData = levelsData();
+    var localHasData = Object.keys(localData).length > 0;
+    // If server is empty but we have local levels, push them up
+    if (serverEmpty && localHasData) {
+      syncToServer();
+    } else {
+      applyServerLevels(d.levels);
+    }
   }).catch(function () {});
 }
 
@@ -454,7 +463,7 @@ function initCharts() {
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
 
     (function (sym, container, cs) {
-      // Right-click: add level or remove if within 8px
+      // Right-click: add level or remove if within 14px
       container.addEventListener('contextmenu', function (e) {
         e.preventDefault();
         var rect = container.getBoundingClientRect();
@@ -464,7 +473,7 @@ function initCharts() {
         var levels = _levels[sym] || [];
         for (var i = 0; i < levels.length; i++) {
           var ly = cs.priceToCoordinate(levels[i].price);
-          if (ly != null && Math.abs(ly - y) < 8) { removeLevel(sym, i); return; }
+          if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
         }
         addLevel(sym, price);
       });
