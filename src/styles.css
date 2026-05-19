@@ -58,7 +58,7 @@
     .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
     @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
     .coin-card{background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);overflow:hidden;display:flex;flex-direction:column;}
-    .card-head{padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+    .card-head{padding:10px 16px;display:flex;align-items:center;gap:10px;}
     .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;}
     .card-head-left{display:flex;align-items:center;gap:10px;min-width:0;}
     .card-inline-stats{display:flex;align-items:center;gap:0;}
@@ -69,7 +69,7 @@
     .stat-val.warn{color:var(--caution);}
     .stat-val.dim{color:var(--steel);}
     .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;}
-    .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;}
+    .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;margin-left:auto;}
     .tf-picker{position:relative;display:inline-block;}
     .tf-pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
     .tf-pill:hover{opacity:0.8;}
@@ -214,9 +214,13 @@
       .filters-right{display:none;}
       .vol-desktop{display:none;}
       .change-desktop{display:none;}
-      .mobile-filters-row{display:flex;gap:8px;align-items:center;}
-      .mobile-filters-row .tf-pill{height:32px;font-size:12px;padding:0 14px;}
+      .tier-desktop{display:none;}
+      .mobile-filters-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+      .mobile-filters-row .filter-pill{height:32px;font-size:12px;padding:0 14px;}
       .mobile-filters-row .ws-indicator{margin-left:auto;}
+      .card-head{flex-wrap:wrap;padding:8px 14px;gap:4px 0;}
+      .card-sym{flex:0 0 100%;}
+      .card-inline-stats{flex:1;}
       .btn-settings-mob{display:inline-flex;width:36px;height:36px;}
       .mobile-filters-row .btn-refresh-icon{display:flex;}
       .mobile-filters-row .btn-theme-mob{display:inline-flex;width:36px;height:36px;}

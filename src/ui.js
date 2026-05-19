@@ -39,13 +39,11 @@ function renderCard(coin) {
 
   return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
     '<div class="card-head">' +
-    '<div class="card-head-left">' +
     '<span class="card-sym">' + coin.symbol.toUpperCase() + '</span>' +
     '<div class="card-inline-stats">' +
     '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="Изменение за 24ч">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
     '<span class="stat-val ' + natr.cls + '" title="NATR — волатильность (5m × 30 свечей)">' + natr.val + '</span>' +
     '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume) + '</span>' +
-    '</div>' +
     '</div>' +
     '<div class="card-head-right">' +
     '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + coin.symbol + '" title="Алерты (Shift+ПКМ для добавления)" style="display:' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) || 0) + '</button>' +
@@ -1261,7 +1259,7 @@ export function render() {
 
   app.innerHTML =
     '<div class="topbar"><div class="filters">'
-    + '<div class="filter-group">'
+    + '<div class="filter-group tier-desktop">'
     + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
     + '</div>'
     + '<div class="mobile-filters-row">'
