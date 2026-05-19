@@ -663,10 +663,17 @@ function initCharts() {
     // Restore saved levels and alerts
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
     (_alerts[c.symbol] || []).forEach(function (a) { attachAlert(c.symbol, a); });
-    // Redraw alert bells when chart scrolls/zooms
-    chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
-      setTimeout(function () { redrawAlerts(c.symbol); }, 16);
-    });
+    // Keep alert bell icons in sync with chart on every frame
+    (function alertIconLoop(sym) {
+      if (!_charts[sym]) return; // chart was destroyed, stop loop
+      var ruler = _rulers[sym];
+      if (ruler && ruler.canvas && !ruler.start) {
+        var rc = ruler.canvas, ctx = rc.getContext('2d');
+        ctx.clearRect(0, 0, rc.width, rc.height);
+        drawAlertIcons(sym, ctx, rc);
+      }
+      requestAnimationFrame(function () { alertIconLoop(sym); });
+    }(c.symbol));
 
     (function (sym, container, cs) {
       // Right-click: add/remove level; Shift+right-click: add/remove alert
