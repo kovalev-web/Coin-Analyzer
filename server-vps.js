@@ -21,6 +21,101 @@ async function redis(cmd) {
   return res.json();
 }
 
+// ── Telegram ─────────────────────────────────────────────────────────────
+
+var TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+var tgOffset = 0;
+
+async function sendTG(chatId, text) {
+  if (!TELEGRAM_TOKEN || !chatId) return;
+  try {
+    await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' }),
+    });
+  } catch (e) {}
+}
+
+async function pollTelegram() {
+  if (!TELEGRAM_TOKEN) return;
+  try {
+    var r = await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/getUpdates?offset=' + tgOffset + '&timeout=0&limit=10');
+    var d = await r.json();
+    if (!d.ok || !d.result) return;
+    d.result.forEach(function (upd) {
+      tgOffset = upd.update_id + 1;
+      var msg = upd.message;
+      if (msg && msg.text && msg.text.startsWith('/start')) {
+        sendTG(msg.chat.id, 'Ваш Telegram chat_id:\n<code>' + msg.chat.id + '</code>\n\nВведите его в Pump Analyzer → кнопка ⚙️ → поле «Telegram chat_id».');
+      }
+    });
+  } catch (e) {}
+}
+
+setInterval(pollTelegram, 3000);
+
+// ── Alerts ────────────────────────────────────────────────────────────────
+
+var alertsMemory = {}; // code → {chatId, data: {sym: [{price, triggered}]}}
+var prevPrices = {};   // sym (lowercase, no USDT) → last price
+
+async function saveAlertsToRedis(code) {
+  try {
+    await redis(['SET', 'alerts:' + code, JSON.stringify(alertsMemory[code])]);
+    await redis(['SADD', 'alert_codes', code]);
+  } catch (e) {}
+}
+
+async function loadAlertsOnStartup() {
+  try {
+    var r = await redis(['SMEMBERS', 'alert_codes']);
+    var codes = r.result || [];
+    for (var i = 0; i < codes.length; i++) {
+      var code = codes[i];
+      var ar = await redis(['GET', 'alerts:' + code]);
+      if (ar.result) alertsMemory[code] = JSON.parse(ar.result);
+    }
+    console.log('[Alerts] Loaded', codes.length, 'codes from Redis');
+  } catch (e) {
+    console.error('[Alerts] Load failed:', e.message);
+  }
+}
+
+function checkAlerts() {
+  var codes = Object.keys(alertsMemory);
+  codes.forEach(function (code) {
+    var entry = alertsMemory[code];
+    if (!entry || !entry.data) return;
+    var dirty = false;
+    Object.keys(entry.data).forEach(function (sym) {
+      var ticker = tickerCache[sym.toUpperCase() + 'USDT'];
+      if (!ticker) return;
+      var cur = parseFloat(ticker.c);
+      var prev = prevPrices[sym];
+      if (prev == null) return;
+      (entry.data[sym] || []).forEach(function (a) {
+        if (a.triggered) return;
+        var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
+        if (!crossed) return;
+        a.triggered = true;
+        dirty = true;
+        var dir = cur >= a.price ? '📈 пробой вверх' : '📉 пробой вниз';
+        sendTG(entry.chatId, '<b>' + sym.toUpperCase() + '</b> ' + dir + '\n🎯 Алерт: <code>' + a.price + '</code>\n💰 Цена: <code>' + cur + '</code>');
+        var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
+        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
+      });
+    });
+    if (dirty) saveAlertsToRedis(code);
+  });
+  // Update prevPrices after all checks
+  Object.keys(tickerCache).forEach(function (sym) {
+    prevPrices[sym.replace('USDT', '').toLowerCase()] = parseFloat(tickerCache[sym].c);
+  });
+}
+
+setInterval(checkAlerts, 1000);
+
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
 
@@ -266,6 +361,45 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/api/alerts') {
+    var body2 = '';
+    req.on('data', function (chunk) { body2 += chunk; });
+    req.on('end', async function () {
+      try {
+        var parsed = JSON.parse(body2);
+        var action = parsed.action, code = parsed.code, chatId = parsed.chatId, data = parsed.data;
+        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid code' }));
+          return;
+        }
+        var codeKey = code.toLowerCase();
+        if (action === 'get') {
+          if (!alertsMemory[codeKey]) {
+            var ar = await redis(['GET', 'alerts:' + codeKey]);
+            alertsMemory[codeKey] = ar.result ? JSON.parse(ar.result) : { chatId: '', data: {} };
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(alertsMemory[codeKey]));
+        } else if (action === 'save') {
+          if (!alertsMemory[codeKey]) alertsMemory[codeKey] = { chatId: '', data: {} };
+          if (chatId !== undefined) alertsMemory[codeKey].chatId = String(chatId);
+          if (data !== undefined) alertsMemory[codeKey].data = data;
+          await saveAlertsToRedis(codeKey);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown action' }));
+        }
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404); res.end();
 });
 
@@ -344,9 +478,10 @@ wss.on('connection', function (ws) {
 
 // ── Старт ────────────────────────────────────────────────────────────────
 
-bootstrapTicker(); // сразу: REST → кэш → push клиентам
-startBinanceWS();  // параллельно: WS подписки для live-обновлений
-startKlineWS();    // kline WS для real-time обновлений свечей
+bootstrapTicker();      // сразу: REST → кэш → push клиентам
+startBinanceWS();       // параллельно: WS подписки для live-обновлений
+startKlineWS();         // kline WS для real-time обновлений свечей
+loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
 // после разрыва WS. Убрали частый опрос: он перезаписывал свежие WS-данные

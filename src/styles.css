@@ -74,6 +74,8 @@
     .tf-dd button{display:block;width:100%;text-align:left;padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink);background:transparent;border:none;border-radius:0;height:auto;letter-spacing:0;}
     .tf-dd button:hover{background:var(--cloud);opacity:1;}
     .tf-dd button.active{color:var(--primary);font-weight:600;}
+    .btn-clear-alerts{display:inline-flex;align-items:center;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
+    .btn-clear-alerts:hover{background:rgba(239,68,68,0.2);}
     .btn-clear-levels{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:rgba(245,158,11,0.12);color:var(--level);border:1px solid rgba(245,158,11,0.35);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
     .btn-clear-levels:hover{background:rgba(245,158,11,0.22);}
     .btn-analyze-one,.btn-retry,.btn-pressed{text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}

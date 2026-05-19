@@ -48,6 +48,7 @@ function renderCard(coin) {
     '</div>' +
     '</div>' +
     '<div class="card-head-right">' +
+    '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + coin.symbol + '" title="Алерты (Shift+ПКМ для добавления)" style="display:' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) || 0) + '</button>' +
     '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
     tfPicker +
     badge +
@@ -217,9 +218,12 @@ export function showCodeModal() {
   backdrop.className = 'code-modal-backdrop';
   backdrop.innerHTML =
     '<div class="code-modal">' +
-      '<h2>Синхронизация уровней</h2>' +
+      '<h2>Синхронизация</h2>' +
       '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
       '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
+      '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
+      '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
+      '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
       '<div class="code-modal-actions">' +
         '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
         '<button class="code-modal-skip" id="code-modal-skip">Пропустить</button>' +
@@ -228,10 +232,12 @@ export function showCodeModal() {
   document.body.appendChild(backdrop);
 
   var input = document.getElementById('code-modal-input');
+  var chatInput = document.getElementById('chat-id-input');
   var saveBtn = document.getElementById('code-modal-save');
   var skipBtn = document.getElementById('code-modal-skip');
 
   if (_userCode) input.value = _userCode;
+  if (_chatId) chatInput.value = _chatId;
 
   function save() {
     var code = input.value.trim();
@@ -240,10 +246,13 @@ export function showCodeModal() {
       input.focus();
       return;
     }
+    var newChatId = chatInput.value.trim();
+    if (newChatId) { _chatId = newChatId; localStorage.setItem('pa_chat_id', newChatId); }
     _userCode = code;
     localStorage.setItem('pa_user_code', code);
     backdrop.remove();
     fetchServerLevels(code);
+    fetchServerAlerts(code);
   }
 
   saveBtn.addEventListener('click', save);
@@ -290,6 +299,144 @@ function updateLevelsBtn(sym) {
   var count = (_levels[sym] || []).length;
   btn.style.display = count ? 'inline-flex' : 'none';
   btn.textContent = count;
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+
+var _alerts = {}; // symbol → [{price, triggered, line}]
+var _chatId = localStorage.getItem('pa_chat_id') || '';
+var _alertSyncTimer = null;
+
+function alertsData() {
+  var data = {};
+  Object.keys(_alerts).forEach(function (sym) {
+    if (_alerts[sym] && _alerts[sym].length) {
+      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered }; });
+    }
+  });
+  return data;
+}
+
+function alertLineOpts(triggered) {
+  return { color: triggered ? 'rgba(239,68,68,0.3)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: triggered ? '✓' : '🔔' };
+}
+
+function attachAlert(sym, a) {
+  var s = _fullSeries[sym];
+  if (!s) return;
+  a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+}
+
+function addAlert(sym, price) {
+  if (!_alerts[sym]) _alerts[sym] = [];
+  var a = { price: price, triggered: false, line: null };
+  _alerts[sym].push(a);
+  attachAlert(sym, a);
+  saveAlerts();
+  updateAlertsBtn(sym);
+}
+
+function removeAlert(sym, idx) {
+  if (!_alerts[sym] || _alerts[sym][idx] == null) return;
+  var s = _fullSeries[sym];
+  if (s && _alerts[sym][idx].line) { try { s.removePriceLine(_alerts[sym][idx].line); } catch (e) {} }
+  _alerts[sym].splice(idx, 1);
+  saveAlerts();
+  updateAlertsBtn(sym);
+}
+
+export function clearAlerts(sym) {
+  var s = _fullSeries[sym];
+  (_alerts[sym] || []).forEach(function (a) { if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} } });
+  _alerts[sym] = [];
+  saveAlerts();
+  updateAlertsBtn(sym);
+}
+
+function updateAlertsBtn(sym) {
+  var btn = document.querySelector('.btn-clear-alerts[data-sym="' + sym + '"]');
+  if (!btn) return;
+  var count = (_alerts[sym] || []).length;
+  btn.style.display = count ? 'inline-flex' : 'none';
+  btn.textContent = count;
+}
+
+function saveAlerts() {
+  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  clearTimeout(_alertSyncTimer);
+  _alertSyncTimer = setTimeout(syncAlertsToServer, 1000);
+}
+
+function syncAlertsToServer() {
+  if (!_userCode) return;
+  fetch('/api/alerts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save', code: _userCode, chatId: _chatId, data: alertsData() }),
+  }).catch(function () {});
+}
+
+function reattachAllAlerts() {
+  Object.keys(_alerts).forEach(function (sym) {
+    var s = _fullSeries[sym];
+    (_alerts[sym] || []).forEach(function (a) {
+      if (a.line) { try { if (s) s.removePriceLine(a.line); } catch (e) {} a.line = null; }
+    });
+    (_alerts[sym] || []).forEach(function (a) { attachAlert(sym, a); });
+    updateAlertsBtn(sym);
+  });
+}
+
+function applyServerAlerts(entry) {
+  Object.keys(_alerts).forEach(function (sym) {
+    var s = _fullSeries[sym];
+    (_alerts[sym] || []).forEach(function (a) { if (a.line && s) { try { s.removePriceLine(a.line); } catch (e) {} } });
+  });
+  _alerts = {};
+  if (entry && entry.data) {
+    Object.keys(entry.data).forEach(function (sym) {
+      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null }; });
+    });
+  }
+  if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
+  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  reattachAllAlerts();
+}
+
+function fetchServerAlerts(code) {
+  fetch('/api/alerts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'get', code: code }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d) return;
+    var serverHasData = d.data && Object.keys(d.data).length > 0;
+    var localHasData = Object.keys(alertsData()).length > 0;
+    if (!serverHasData && localHasData) { syncAlertsToServer(); }
+    else { applyServerAlerts(d); }
+  }).catch(function () {});
+}
+
+export function loadAlerts() {
+  try {
+    var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
+    Object.keys(local).forEach(function (sym) {
+      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null }; });
+    });
+  } catch (e) {}
+  if (_userCode) fetchServerAlerts(_userCode);
+}
+
+export function handleAlertTriggered(sym, price) {
+  (_alerts[sym] || []).forEach(function (a) {
+    if (a.price === price && !a.triggered) {
+      a.triggered = true;
+      var s = _fullSeries[sym];
+      if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} a.line = null; }
+      attachAlert(sym, a);
+    }
+  });
+  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
 }
 
 function isDark() {
@@ -397,6 +544,7 @@ export function setChartTF(symbol, tf) {
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
+  Object.keys(_alerts).forEach(function (sym) { if (_alerts[sym]) _alerts[sym].forEach(function (a) { a.line = null; }); });
   _charts = {}; _fullSeries = {}; _volSeries = {}; _rulers = {};
   window.__chartSeries = _fullSeries;
   window.__chartVolSeries = _volSeries;
@@ -466,23 +614,33 @@ function initCharts() {
     el.style.position = 'relative'; el.appendChild(rc);
     rc.width = el.offsetWidth || 400; rc.height = el.offsetHeight || 300;
     _rulers[c.symbol] = { start: null, canvas: rc };
-    // Restore saved levels
+    // Restore saved levels and alerts
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
+    (_alerts[c.symbol] || []).forEach(function (a) { attachAlert(c.symbol, a); });
 
     (function (sym, container, cs) {
-      // Right-click: add level or remove if within 14px
+      // Right-click: add/remove level; Shift+right-click: add/remove alert
       container.addEventListener('contextmenu', function (e) {
         e.preventDefault();
         var rect = container.getBoundingClientRect();
         var y = e.clientY - rect.top;
         var price = cs.coordinateToPrice(y);
         if (price == null) return;
-        var levels = _levels[sym] || [];
-        for (var i = 0; i < levels.length; i++) {
-          var ly = cs.priceToCoordinate(levels[i].price);
-          if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+        if (e.shiftKey) {
+          var alerts = _alerts[sym] || [];
+          for (var i = 0; i < alerts.length; i++) {
+            var ay = cs.priceToCoordinate(alerts[i].price);
+            if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+          }
+          addAlert(sym, price);
+        } else {
+          var levels = _levels[sym] || [];
+          for (var i = 0; i < levels.length; i++) {
+            var ly = cs.priceToCoordinate(levels[i].price);
+            if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+          }
+          addLevel(sym, price);
         }
-        addLevel(sym, price);
       });
       // Left mousedown: start drag if near a level, else ruler (middle)
       container.addEventListener('mousedown', function (e) {

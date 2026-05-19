@@ -70,6 +70,9 @@ function connectWS() {
       case 'kline_update':
         processKlineUpdate(msg);
         break;
+      case 'alert_triggered':
+        emit('alert:triggered', msg);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;

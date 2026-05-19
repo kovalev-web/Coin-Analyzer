@@ -4,8 +4,9 @@ import {
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered,
 } from './ui.js';
+import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
 import './styles.css';
 
@@ -147,7 +148,16 @@ document.body.addEventListener('click', function (e) {
     case 'clear-levels':
       if (confirm('Удалить все уровни для ' + sym.toUpperCase() + '?')) clearLevels(sym);
       break;
+    case 'clear-alerts':
+      if (confirm('Удалить все алерты для ' + sym.toUpperCase() + '?')) clearAlerts(sym);
+      break;
   }
+});
+
+// ── WS events ─────────────────────────────────────────────────────────────
+
+on('alert:triggered', function (msg) {
+  handleAlertTriggered(msg.sym, msg.price);
 });
 
 // ── Router ─────────────────────────────────────────────────────────────────
@@ -190,6 +200,7 @@ registerRoute('/404', function () {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 loadCache();
+loadAlerts();
 
 // Show code modal on first visit (no code set yet)
 if (!localStorage.getItem('pa_user_code')) showCodeModal();
