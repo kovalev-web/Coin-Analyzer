@@ -85,39 +85,31 @@ async function loadAlertsOnStartup() {
 // Reload alerts from Redis every 30 seconds to pick up changes saved via Vercel
 setInterval(loadAlertsOnStartup, 30000);
 
-function checkAlerts() {
+// Called on every price update (ticker or kline) — no polling delay
+function checkAlertsForSym(fullSym, cur) {
+  var sym = fullSym.replace(/USDT$/, '').toLowerCase();
+  var prev = prevPrices[sym];
+  prevPrices[sym] = cur;
+  if (prev == null || prev === cur) return;
   var codes = Object.keys(alertsMemory);
   codes.forEach(function (code) {
     var entry = alertsMemory[code];
-    if (!entry || !entry.data) return;
+    if (!entry || !entry.data || !entry.data[sym]) return;
     var dirty = false;
-    Object.keys(entry.data).forEach(function (sym) {
-      var ticker = tickerCache[sym.toUpperCase() + 'USDT'];
-      if (!ticker) return;
-      var cur = parseFloat(ticker.c);
-      var prev = prevPrices[sym];
-      if (prev == null) return;
-      (entry.data[sym] || []).forEach(function (a) {
-        if (a.triggered) return;
-        var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
-        if (!crossed) return;
-        a.triggered = true;
-        dirty = true;
-        var dir = cur >= a.price ? '📈 пробой вверх' : '📉 пробой вниз';
-        sendTG(entry.chatId, '<b>' + sym.toUpperCase() + '</b> ' + dir + '\n🎯 Алерт: <code>' + a.price + '</code>\n💰 Цена: <code>' + cur + '</code>');
-        var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
-        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
-      });
+    (entry.data[sym] || []).forEach(function (a) {
+      if (a.triggered) return;
+      var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
+      if (!crossed) return;
+      a.triggered = true;
+      dirty = true;
+      var dir = cur >= a.price ? '📈 пробой вверх' : '📉 пробой вниз';
+      sendTG(entry.chatId, '<b>' + sym.toUpperCase() + '</b> ' + dir + '\n🎯 Алерт: <code>' + a.price + '</code>\n💰 Цена: <code>' + cur + '</code>');
+      var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
+      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
     });
     if (dirty) saveAlertsToRedis(code);
   });
-  // Update prevPrices after all checks
-  Object.keys(tickerCache).forEach(function (sym) {
-    prevPrices[sym.replace('USDT', '').toLowerCase()] = parseFloat(tickerCache[sym].c);
-  });
 }
-
-setInterval(checkAlerts, 1000);
 
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
@@ -216,6 +208,7 @@ function connectBinanceWS(symbols) {
           q: msg.q, // quote volume (USDT)
           P: msg.P, // priceChangePercent (Binance pre-calculated)
         };
+        checkAlertsForSym(msg.s, parseFloat(msg.c));
         schedulePush(); // push to clients ~100ms after this event
       }
     } catch (e) {}
@@ -292,6 +285,8 @@ function startKlineWS() {
 
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
+      // Real-time alert check on every trade (kline updates per-trade)
+      checkAlertsForSym(k.s, parseFloat(k.c));
       // Буферизуем последнее состояние свечи — флашим раз в 200мс
       // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
       klinePending[sym + '_' + k.i] = {
