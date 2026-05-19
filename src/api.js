@@ -235,6 +235,14 @@ function processKlineUpdate(msg) {
   var tvs = (window.__tvChartVolSeries || {})[sym];
   if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
+  // Full view обновляем если открыт для этой монеты
+  if (window.__fvSymbol === sym) {
+    var fvs = window.__fvSeries;
+    if (fvs) { try { fvs.update(k); } catch (e) {} }
+    var fvvs = window.__fvVolSeries;
+    if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
+  }
+
   // Синхронизируем coin.current_price чтобы карточки тоже показывали актуальную цену
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) coin.current_price = k.close;

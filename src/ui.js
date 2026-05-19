@@ -50,6 +50,7 @@ function renderCard(coin) {
     '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
     tfPicker +
     badge +
+    '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize-2', 13) + '</button>' +
     '</div>' +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
@@ -119,6 +120,7 @@ export function updateCardBadge(symbol) {
 // ── Charts ─────────────────────────────────────────────────────────────────
 
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
+var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null;
 
 // Pre-render Lucide bell as SVG image for canvas drawing
 var _bellImg = (function () {
@@ -1373,3 +1375,136 @@ on('ws:status', function () {
     els[i].title = wsConnected ? 'WebSocket подключен' : 'WebSocket отключен';
   }
 });
+
+// ── Full View ──────────────────────────────────────────────────────────────
+
+function _fvTopbarHTML() {
+  var sym = _fvSym, tf = state.chartTF[sym] || '5m';
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
+  var nd = natrDisplay(sym);
+  return '<div class="topbar fv-topbar">'
+    + '<div class="filters">'
+    + '<div class="fv-nav-left">'
+    + '<button class="fv-back-btn" data-action="close-fv">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="card-sym">' + sym.toUpperCase() + '</span>'
+    + '<div class="card-inline-stats">'
+    + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+    + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
+    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
+    + '</div>'
+    + '</div>'
+    + '<div class="filters-right">'
+    + '<div class="tf-picker">'
+    + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
+    + '<div class="tf-dd fv-tf-dd" style="display:none">'
+    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) {
+        return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>';
+      }).join('')
+    + '</div>'
+    + '</div>'
+    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
+    + '<button class="btn-settings" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
+    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
+    + '<button class="btn-close-fv" data-action="close-fv" title="Закрыть">' + icon('x', 16) + '</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function _setFVData(cd) {
+  if (!_fvSeries || !_fvChart || !cd || cd.status !== 'ok' || !cd.candles.length) return;
+  var lastClose = cd.candles[cd.candles.length - 1].close;
+  _fvSeries.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
+  _fvSeries.setData(cd.candles);
+  if (_fvVolSeries) {
+    _fvVolSeries.setData(cd.candles.map(function (c) {
+      var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn');
+      return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
+    }));
+  }
+  var total = cd.candles.length;
+  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 80), to: total - 1 });
+  // Levels
+  (_levels[_fvSym] || []).forEach(function (l) {
+    if (l.price) _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true });
+  });
+  // Alerts
+  (_alerts[_fvSym] || []).forEach(function (a) {
+    if (!a.triggered && a.price) _fvSeries.createPriceLine({ price: a.price, color: getCSSVar('--danger'), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+  });
+}
+
+function _loadFVData(sym, tf) {
+  var key = sym + '_' + tf;
+  var cd = state.chartData[key];
+  if (cd && cd.status === 'ok' && cd.candles.length) {
+    _setFVData(cd);
+  } else {
+    fetchChartData(sym, tf).then(function () { _setFVData(state.chartData[key]); });
+  }
+}
+
+export function openCoinFullView(sym) {
+  if (!window.LightweightCharts) return;
+  // Destroy previous fv chart if exists
+  if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
+  _fvSeries = null; _fvVolSeries = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  _fvSym = sym;
+
+  var overlay = document.getElementById('fv-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fv-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = _fvTopbarHTML()
+    + '<div class="fv-chart-wrap"><div id="fv-chart"></div></div>';
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  var el = document.getElementById('fv-chart');
+  var c = getChartColors();
+  _fvChart = window.LightweightCharts.createChart(el, {
+    autoSize: true,
+    layout: { background: { color: c.bg }, textColor: c.text },
+    grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+    crosshair: { mode: 0 },
+    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
+    handleScroll: true, handleScale: true,
+  });
+  _fvSeries = _fvChart.addCandlestickSeries(getSeriesColors());
+  _fvVolSeries = _fvChart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
+  _fvChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  window.__fvSeries = _fvSeries;
+  window.__fvVolSeries = _fvVolSeries;
+  window.__fvSymbol = sym;
+
+  _loadFVData(sym, state.chartTF[sym] || '5m');
+}
+
+export function closeCoinFullView() {
+  if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
+  _fvSeries = null; _fvVolSeries = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  _fvSym = null;
+  var overlay = document.getElementById('fv-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+export function setFVChartTF(tf) {
+  if (!_fvSym || !_fvSeries) return;
+  state.chartTF[_fvSym] = tf;
+  var pill = document.querySelector('#fv-overlay .tf-pill');
+  if (pill) pill.textContent = tf;
+  document.querySelector('#fv-overlay .fv-tf-dd').querySelectorAll('button').forEach(function (btn) {
+    btn.className = btn.dataset.tf === tf ? 'active' : '';
+  });
+  // Clear price lines and reload data
+  _fvSeries.setData([]);
+  _loadFVData(_fvSym, tf);
+}

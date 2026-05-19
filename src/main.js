@@ -4,7 +4,7 @@ import {
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -97,6 +97,29 @@ document.body.addEventListener('click', function (e) {
       state.volTier = target.dataset.val;
       render();
       fetchAllNATR(filteredCoins());
+      break;
+    }
+    case 'expand': {
+      openCoinFullView(sym);
+      break;
+    }
+    case 'close-fv': {
+      closeCoinFullView();
+      break;
+    }
+    case 'fv-tf-pick': {
+      e.stopPropagation();
+      var fvDd = document.querySelector('#fv-overlay .fv-tf-dd');
+      if (fvDd) {
+        document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+        fvDd.style.display = fvDd.style.display === 'none' ? 'block' : 'none';
+      }
+      break;
+    }
+    case 'fv-tf-opt': {
+      e.stopPropagation();
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      setFVChartTF(target.dataset.tf);
       break;
     }
     case 'open-ms':
