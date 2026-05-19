@@ -457,7 +457,8 @@ export function handleAlertTriggered(sym, price) {
     }
   });
   redrawAlerts(sym);
-  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  // Cancel any pending debounced save that might have stale triggered:false state
+  saveAlerts();
 }
 
 function isDark() {
