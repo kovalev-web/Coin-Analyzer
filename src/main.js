@@ -151,6 +151,9 @@ document.body.addEventListener('click', function (e) {
     case 'clear-alerts':
       if (confirm('Удалить все алерты для ' + sym.toUpperCase() + '?')) clearAlerts(sym);
       break;
+    case 'open-settings':
+      showCodeModal();
+      break;
   }
 });
 
