@@ -121,6 +121,18 @@ export function updateCardBadge(symbol) {
 // ── Charts ─────────────────────────────────────────────────────────────────
 
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
+
+// Pre-render Lucide bell as SVG image for canvas drawing
+var _bellImg = (function () {
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">' +
+    '<circle cx="12" cy="12" r="11" fill="#ef4444"/>' +
+    '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+  var img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return img;
+}());
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
@@ -602,16 +614,20 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
 
 function drawAlertIcons(sym, ctx, rc) {
   var s = _fullSeries[sym]; if (!s) return;
+  if (!_bellImg || !_bellImg.complete) return;
   var alerts = _alerts[sym] || [];
-  ctx.save();
-  ctx.font = '13px sans-serif';
+  var sz = 22;
   alerts.forEach(function (a) {
-    var y = s.priceToCoordinate(a.price);
+    // During drag use exact mouse Y so icon tracks cursor without lag
+    var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
+      ? _alertDragging.dragY
+      : s.priceToCoordinate(a.price);
     if (y == null || y < 0 || y > rc.height) return;
-    ctx.globalAlpha = a.triggered ? 0.3 : 0.75;
-    ctx.fillText('🔔', rc.width / 2 - 7, y + 5);
+    ctx.save();
+    ctx.globalAlpha = a.triggered ? 0.35 : 1;
+    ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+    ctx.restore();
   });
-  ctx.restore();
 }
 
 function redrawAlerts(sym) {
@@ -738,6 +754,7 @@ function initCharts() {
           if (alertPrice != null && _alertDragging.alert.line) {
             _alertDragging.alert.price = alertPrice;
             _alertDragging.alert.line.applyOptions({ price: alertPrice });
+            _alertDragging.dragY = y;
             _alertDragMoved = true;
             redrawAlerts(sym);
           }
@@ -772,16 +789,18 @@ function initCharts() {
           return;
         }
         if (e.button === 2 && _alertDragging && _alertDragging.sym === sym) {
+          var adSym = _alertDragging.sym;
           _alertDragging = null;
           container.style.cursor = '';
           saveAlerts();
+          redrawAlerts(adSym);
           return;
         }
         if (e.button === 1) clearRuler(sym);
       });
       container.addEventListener('mouseleave', function () {
         if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
-        if (_alertDragging && _alertDragging.sym === sym) { _alertDragging = null; saveAlerts(); }
+        if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; saveAlerts(); redrawAlerts(adLeaveSym); }
         container.style.cursor = '';
         clearRuler(sym);
       });
