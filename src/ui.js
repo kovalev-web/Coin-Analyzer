@@ -166,6 +166,13 @@ function reattachAllLevels() {
 }
 
 function applyServerLevels(data) {
+  // Remove all existing price lines from charts before replacing _levels
+  Object.keys(_levels).forEach(function (sym) {
+    var s = _fullSeries[sym];
+    (_levels[sym] || []).forEach(function (l) {
+      if (l.line && s) { try { s.removePriceLine(l.line); } catch (e) {} }
+    });
+  });
   _levels = {};
   Object.keys(data).forEach(function (sym) {
     _levels[sym] = data[sym].map(function (p) { return { price: p, line: null }; });
