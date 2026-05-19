@@ -278,13 +278,13 @@ export function showCodeModal() {
 
 function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
-  if (!s) return;
-  lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  if (s) lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  if (_fvSeries && _fvSym === sym) lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
 }
 
 function addLevel(sym, price) {
   if (!_levels[sym]) _levels[sym] = [];
-  var lvl = { price: price, line: null };
+  var lvl = { price: price, line: null, fvLine: null };
   _levels[sym].push(lvl);
   attachLevel(sym, lvl);
   saveLevels();
@@ -293,8 +293,10 @@ function addLevel(sym, price) {
 
 function removeLevel(sym, idx) {
   if (!_levels[sym] || _levels[sym][idx] == null) return;
+  var lvl = _levels[sym][idx];
   var s = _fullSeries[sym];
-  if (s && _levels[sym][idx].line) { try { s.removePriceLine(_levels[sym][idx].line); } catch (e) {} }
+  if (s && lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
+  if (_fvSeries && _fvSym === sym && lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
   _levels[sym].splice(idx, 1);
   saveLevels();
   updateLevelsBtn(sym);
@@ -338,13 +340,13 @@ function alertLineOpts(triggered) {
 
 function attachAlert(sym, a) {
   var s = _fullSeries[sym];
-  if (!s) return;
-  a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  if (s) a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  if (_fvSeries && _fvSym === sym) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
 }
 
 function addAlert(sym, price) {
   if (!_alerts[sym]) _alerts[sym] = [];
-  var a = { price: price, triggered: false, line: null };
+  var a = { price: price, triggered: false, line: null, fvLine: null };
   _alerts[sym].push(a);
   attachAlert(sym, a);
   saveAlerts();
@@ -354,8 +356,10 @@ function addAlert(sym, price) {
 
 function removeAlert(sym, idx) {
   if (!_alerts[sym] || _alerts[sym][idx] == null) return;
+  var a = _alerts[sym][idx];
   var s = _fullSeries[sym];
-  if (s && _alerts[sym][idx].line) { try { s.removePriceLine(_alerts[sym][idx].line); } catch (e) {} }
+  if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
+  if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
   _alerts[sym].splice(idx, 1);
   saveAlerts();
   updateAlertsBtn(sym);
@@ -1232,6 +1236,31 @@ export function updateMSPanel() {
   if (popup && popup.style.display !== 'none') popup.innerHTML = msPopupInner();
 }
 
+// ── Topbar HTML (shared between main render and full view) ─────────────────
+
+function _topbarHTML() {
+  var ws = wsConnected;
+  var wsTitle = ws ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...';
+  return '<div class="topbar"><div class="filters">'
+    + '<div class="filter-group tier-desktop">'
+    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
+    + '</div>'
+    + '<div class="mobile-filters-row">'
+    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
+    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
+    + '<button class="btn-settings btn-settings-mob" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
+    + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">' + icon('refresh-cw', 16) + '</button>'
+    + '<button class="btn-theme btn-theme-mob" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
+    + '</div>'
+    + '<div class="filters-right">'
+    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
+    + '<button class="btn-settings" data-action="open-settings" title="Настройки: код синхронизации и Telegram">' + icon('bell', 15) + '</button>'
+    + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
+    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
+    + '</div>'
+    + '</div></div>';
+}
+
 // ── Main Render ────────────────────────────────────────────────────────────
 
 export function render() {
@@ -1260,34 +1289,7 @@ export function render() {
   var mv = coins.length ? Math.max.apply(null, coins.map(function (c) { return c.total_volume || 0; })) : 0;
 
   app.innerHTML =
-    '<div class="topbar"><div class="filters">'
-    + '<div class="filter-group tier-desktop">'
-    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
-    + '</div>'
-    + '<div class="mobile-filters-row">'
-    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
-    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...') + '"></span>'
-    + '<button class="btn-settings btn-settings-mob" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'
-    + icon('refresh-cw', 16)
-    + '</button>'
-    + '<button class="btn-theme btn-theme-mob" data-action="toggle-theme" title="Переключить тему">'
-    + (isDark()
-      ? icon('sun', 14)
-      : icon('moon', 14))
-    + '</button>'
-    + '</div>'
-    + '<div class="filters-right">'
-    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...') + '"></span>'
-    + '<button class="btn-settings" data-action="open-settings" title="Настройки: код синхронизации и Telegram">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
-    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
-    + (isDark()
-      ? icon('sun', 14)
-      : icon('moon', 14))
-    + '</button>'
-    + '</div>'
-    + '</div></div>'
+    _topbarHTML()
     + '<div class="metrics">'
     + '<div class="metric-card"><div class="label">Монет в фильтре</div><div class="value">' + coins.length + '</div></div>'
     + '<div class="metric-card"><div class="label">Максимальный рост</div><div class="value green">+' + maxRise + '%</div></div>'
@@ -1378,41 +1380,28 @@ on('ws:status', function () {
 
 // ── Full View ──────────────────────────────────────────────────────────────
 
-function _fvTopbarHTML() {
-  var sym = _fvSym, tf = state.chartTF[sym] || '5m';
+var _fvRuler = null;
+
+function _fvCoinInfoHTML(sym, tf) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
   var nd = natrDisplay(sym);
-  return '<div class="topbar fv-topbar">'
-    + '<div class="filters">'
-    + '<div class="fv-nav-left">'
-    + '<button class="fv-back-btn" data-action="close-fv">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="card-sym">' + sym.toUpperCase() + '</span>'
-    + '<div class="card-inline-stats">'
+  return '<div class="fv-coin-info">'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
     + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
     + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
     + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
-    + '</div>'
-    + '</div>'
-    + '<div class="filters-right">'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
-    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) {
-        return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>';
-      }).join('')
-    + '</div>'
-    + '</div>'
-    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
-    + '<button class="btn-settings" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
-    + '<button class="btn-close-fv" data-action="close-fv" title="Закрыть">' + icon('x', 16) + '</button>'
+    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
     + '</div>';
 }
 
-function _setFVData(cd) {
+function _setFVData(sym, cd) {
   if (!_fvSeries || !_fvChart || !cd || cd.status !== 'ok' || !cd.candles.length) return;
   var lastClose = cd.candles[cd.candles.length - 1].close;
   _fvSeries.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
@@ -1423,15 +1412,13 @@ function _setFVData(cd) {
       return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
     }));
   }
-  var total = cd.candles.length;
-  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 80), to: total - 1 });
-  // Levels
-  (_levels[_fvSym] || []).forEach(function (l) {
-    if (l.price) _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true });
+  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+  // Attach existing levels and alerts to fv series
+  (_levels[sym] || []).forEach(function (l) {
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
-  // Alerts
-  (_alerts[_fvSym] || []).forEach(function (a) {
-    if (!a.triggered && a.price) _fvSeries.createPriceLine({ price: a.price, color: getCSSVar('--danger'), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+  (_alerts[sym] || []).forEach(function (a) {
+    if (a.price && !a.fvLine) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
   });
 }
 
@@ -1439,32 +1426,38 @@ function _loadFVData(sym, tf) {
   var key = sym + '_' + tf;
   var cd = state.chartData[key];
   if (cd && cd.status === 'ok' && cd.candles.length) {
-    _setFVData(cd);
+    _setFVData(sym, cd);
   } else {
-    fetchChartData(sym, tf).then(function () { _setFVData(state.chartData[key]); });
+    fetchChartData(sym, tf).then(function () { _setFVData(sym, state.chartData[key]); });
   }
 }
 
 export function openCoinFullView(sym) {
   if (!window.LightweightCharts) return;
-  // Destroy previous fv chart if exists
+  // Destroy previous
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
-  _fvSeries = null; _fvVolSeries = null;
+  _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  // Clear fvLines from previous session
+  if (_fvSym) {
+    (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  }
   _fvSym = sym;
 
   var overlay = document.getElementById('fv-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'fv-overlay';
-    document.body.appendChild(overlay);
-  }
+  if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; document.body.appendChild(overlay); }
 
-  overlay.innerHTML = _fvTopbarHTML()
-    + '<div class="fv-chart-wrap"><div id="fv-chart"></div></div>';
+  var tf = state.chartTF[sym] || '5m';
+  overlay.innerHTML = _topbarHTML()
+    + '<div class="fv-chart-wrap">'
+    + _fvCoinInfoHTML(sym, tf)
+    + '<div id="fv-chart"></div>'
+    + '</div>';
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
+  // Init chart
   var el = document.getElementById('fv-chart');
   var c = getChartColors();
   _fvChart = window.LightweightCharts.createChart(el, {
@@ -1483,13 +1476,96 @@ export function openCoinFullView(sym) {
   window.__fvVolSeries = _fvVolSeries;
   window.__fvSymbol = sym;
 
-  _loadFVData(sym, state.chartTF[sym] || '5m');
+  // Canvas overlay for alert bells + ruler
+  var wrap = document.querySelector('.fv-chart-wrap');
+  var rc = document.createElement('canvas');
+  rc.className = 'fv-canvas';
+  wrap.appendChild(rc);
+  function _syncFVCanvas() { rc.width = wrap.offsetWidth || window.innerWidth; rc.height = wrap.offsetHeight || window.innerHeight; }
+  _syncFVCanvas();
+  window.addEventListener('resize', _syncFVCanvas);
+  _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas };
+
+  // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level)
+  var _fvDragging = null;
+  el.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var rect = el.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    var price = _fvSeries.coordinateToPrice(y);
+    if (price == null) return;
+    if (e.shiftKey) {
+      var alerts = _alerts[sym] || [];
+      for (var i = 0; i < alerts.length; i++) {
+        var ay = _fvSeries.priceToCoordinate(alerts[i].price);
+        if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+      }
+      addAlert(sym, price);
+    } else {
+      var levels = _levels[sym] || [];
+      for (var i = 0; i < levels.length; i++) {
+        var ly = _fvSeries.priceToCoordinate(levels[i].price);
+        if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+      }
+      addLevel(sym, price);
+    }
+  });
+  el.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    var rect = el.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    var levels = _levels[sym] || [];
+    for (var i = 0; i < levels.length; i++) {
+      var ly = _fvSeries.priceToCoordinate(levels[i].price);
+      if (ly != null && Math.abs(ly - y) < 8) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
+    }
+  }, { capture: true });
+  el.addEventListener('mousemove', function (e) {
+    if (!_fvDragging || !(e.buttons & 1)) return;
+    var price = _fvSeries.coordinateToPrice(e.clientY - el.getBoundingClientRect().top);
+    if (price != null) {
+      _fvDragging.lvl.price = price;
+      if (_fvDragging.lvl.fvLine) _fvDragging.lvl.fvLine.applyOptions({ price: price });
+      if (_fvDragging.lvl.line) _fvDragging.lvl.line.applyOptions({ price: price });
+    }
+  });
+  el.addEventListener('mouseup', function () {
+    if (_fvDragging) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
+  });
+
+  // rAF loop: alert bell icons on canvas
+  (function fvBellLoop() {
+    if (!_fvChart) return;
+    var ruler = _fvRuler;
+    if (ruler && ruler.canvas && !ruler.start) {
+      var ctx = ruler.canvas.getContext('2d');
+      ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height);
+      if (_fvSeries && _bellImg && _bellImg.complete) {
+        (_alerts[sym] || []).forEach(function (a) {
+          var y = _fvSeries.priceToCoordinate(a.price);
+          if (y == null || y < 0 || y > ruler.canvas.height) return;
+          var sz = 18;
+          ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
+          ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
+          ctx.restore();
+        });
+      }
+    }
+    requestAnimationFrame(fvBellLoop);
+  }());
+
+  _loadFVData(sym, tf);
 }
 
 export function closeCoinFullView() {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
-  _fvSeries = null; _fvVolSeries = null;
+  if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
+  _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  if (_fvSym) {
+    (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  }
   _fvSym = null;
   var overlay = document.getElementById('fv-overlay');
   if (overlay) overlay.style.display = 'none';
@@ -1501,10 +1577,11 @@ export function setFVChartTF(tf) {
   state.chartTF[_fvSym] = tf;
   var pill = document.querySelector('#fv-overlay .tf-pill');
   if (pill) pill.textContent = tf;
-  document.querySelector('#fv-overlay .fv-tf-dd').querySelectorAll('button').forEach(function (btn) {
-    btn.className = btn.dataset.tf === tf ? 'active' : '';
-  });
-  // Clear price lines and reload data
+  var dd = document.querySelector('#fv-overlay .fv-tf-dd');
+  if (dd) dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
+  // Clear fvLines before reload
+  (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+  (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
   _fvSeries.setData([]);
   _loadFVData(_fvSym, tf);
 }
