@@ -58,10 +58,10 @@
     .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
     @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
     .coin-card{background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);overflow:hidden;display:flex;flex-direction:column;}
-    .card-head{padding:10px 16px;display:flex;align-items:center;gap:10px;}
-    .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;}
+    .card-head{padding:10px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:2px 10px;}
+    .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;flex:1;}
     .card-head-left{display:flex;align-items:center;gap:10px;min-width:0;}
-    .card-inline-stats{display:flex;align-items:center;gap:10px;}
+    .card-inline-stats{display:flex;align-items:center;gap:10px;order:3;flex:0 0 100%;padding-bottom:2px;}
     .card-inline-stats .stat-val{font-size:12px;font-weight:700;color:var(--ink);cursor:default;padding:0;}
     .stat-val{font-size:12px;font-weight:700;color:var(--ink);cursor:default;}
     .stat-val.up{color:var(--bullish);}
@@ -69,7 +69,7 @@
     .stat-val.warn{color:var(--caution);}
     .stat-val.dim{color:var(--steel);}
     .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;}
-    .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;margin-left:auto;}
+    .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;}
     .tf-picker{position:relative;display:inline-block;}
     .tf-pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
     .tf-pill:hover{opacity:0.8;}
@@ -218,9 +218,7 @@
       .mobile-filters-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
       .mobile-filters-row .filter-pill{height:32px;font-size:12px;padding:0 14px;}
       .mobile-filters-row .ws-indicator{margin-left:auto;}
-      .card-head{flex-wrap:wrap;padding:8px 14px;gap:4px 0;}
-      .card-sym{flex:0 0 100%;}
-      .card-inline-stats{flex:1;}
+      .card-head{padding:8px 14px;}
       .btn-settings-mob{display:inline-flex;width:36px;height:36px;}
       .mobile-filters-row .btn-refresh-icon{display:flex;}
       .mobile-filters-row .btn-theme-mob{display:inline-flex;width:36px;height:36px;}
