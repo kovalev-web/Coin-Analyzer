@@ -120,7 +120,7 @@ export function updateCardBadge(symbol) {
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 
-var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null;
+var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
@@ -318,7 +318,7 @@ function alertsData() {
 }
 
 function alertLineOpts(triggered) {
-  return { color: triggered ? 'rgba(239,68,68,0.3)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: triggered ? '✓' : '🔔' };
+  return { color: triggered ? 'rgba(239,68,68,0.3)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 function attachAlert(sym, a) {
@@ -334,6 +334,7 @@ function addAlert(sym, price) {
   attachAlert(sym, a);
   saveAlerts();
   updateAlertsBtn(sym);
+  redrawAlerts(sym);
 }
 
 function removeAlert(sym, idx) {
@@ -343,6 +344,7 @@ function removeAlert(sym, idx) {
   _alerts[sym].splice(idx, 1);
   saveAlerts();
   updateAlertsBtn(sym);
+  redrawAlerts(sym);
 }
 
 export function clearAlerts(sym) {
@@ -351,6 +353,7 @@ export function clearAlerts(sym) {
   _alerts[sym] = [];
   saveAlerts();
   updateAlertsBtn(sym);
+  redrawAlerts(sym);
 }
 
 function updateAlertsBtn(sym) {
@@ -384,6 +387,7 @@ function reattachAllAlerts() {
     });
     (_alerts[sym] || []).forEach(function (a) { attachAlert(sym, a); });
     updateAlertsBtn(sym);
+    redrawAlerts(sym);
   });
 }
 
@@ -436,6 +440,7 @@ export function handleAlertTriggered(sym, price) {
       attachAlert(sym, a);
     }
   });
+  redrawAlerts(sym);
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
 }
 
@@ -473,7 +478,8 @@ function getChartColors() {
 
 function getSeriesColors() {
   var up = getCSSVar('--ink'), dn = getCSSVar('--steel');
-  return { upColor: up, downColor: dn, borderUpColor: up, borderDownColor: dn, wickUpColor: up, wickDownColor: dn };
+  var grey = getCSSVar('--graphite');
+  return { upColor: up, downColor: dn, borderUpColor: up, borderDownColor: dn, wickUpColor: up, wickDownColor: dn, priceLineColor: grey };
 }
 
 function calcPriceFormat(price) {
@@ -525,6 +531,7 @@ function updateChart(symbol) {
   }));
   var total = cd.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 80), to: total - 1 });
+  redrawAlerts(symbol);
 }
 
 export function setChartTF(symbol, tf) {
@@ -555,6 +562,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var ruler = _rulers[sym]; if (!ruler || !ruler.canvas) return;
   var rc = ruler.canvas, ctx = rc.getContext('2d');
   ctx.clearRect(0, 0, rc.width, rc.height);
+  drawAlertIcons(sym, ctx, rc);
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
   var isUp = pr2 >= pr1, color = isUp ? getCSSVar('--bullish') : getCSSVar('--danger');
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
@@ -592,10 +600,32 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.fillText(pctStr, lx, ly);
 }
 
+function drawAlertIcons(sym, ctx, rc) {
+  var s = _fullSeries[sym]; if (!s) return;
+  var alerts = _alerts[sym] || [];
+  ctx.save();
+  ctx.font = '13px sans-serif';
+  alerts.forEach(function (a) {
+    var y = s.priceToCoordinate(a.price);
+    if (y == null || y < 0 || y > rc.height) return;
+    ctx.globalAlpha = a.triggered ? 0.3 : 0.75;
+    ctx.fillText('🔔', rc.width / 2 - 7, y + 5);
+  });
+  ctx.restore();
+}
+
+function redrawAlerts(sym) {
+  var ruler = _rulers[sym]; if (!ruler || !ruler.canvas) return;
+  if (ruler.start) return; // ruler draw cycle is active, it handles the canvas
+  var rc = ruler.canvas, ctx = rc.getContext('2d');
+  ctx.clearRect(0, 0, rc.width, rc.height);
+  drawAlertIcons(sym, ctx, rc);
+}
+
 function clearRuler(sym) {
   var ruler = _rulers[sym]; if (!ruler) return;
   ruler.start = null;
-  if (ruler.canvas) { var ctx = ruler.canvas.getContext('2d'); ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height); }
+  redrawAlerts(sym);
 }
 
 function initCharts() {
@@ -617,6 +647,10 @@ function initCharts() {
     // Restore saved levels and alerts
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
     (_alerts[c.symbol] || []).forEach(function (a) { attachAlert(c.symbol, a); });
+    // Redraw alert bells when chart scrolls/zooms
+    chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
+      setTimeout(function () { redrawAlerts(c.symbol); }, 16);
+    });
 
     (function (sym, container, cs) {
       // Right-click: add/remove level; Shift+right-click: add/remove alert
@@ -627,6 +661,8 @@ function initCharts() {
         var price = cs.coordinateToPrice(y);
         if (price == null) return;
         if (e.shiftKey) {
+          // If we were dragging, suppress the context menu action
+          if (_alertDragMoved) { _alertDragMoved = false; return; }
           var alerts = _alerts[sym] || [];
           for (var i = 0; i < alerts.length; i++) {
             var ay = cs.priceToCoordinate(alerts[i].price);
@@ -660,6 +696,23 @@ function initCharts() {
           }
           return;
         }
+        // Alert drag: shift + right-click (button 2)
+        if (e.button === 2 && e.shiftKey) {
+          var alertRect = container.getBoundingClientRect();
+          var alertY = e.clientY - alertRect.top;
+          var alertArr = _alerts[sym] || [];
+          for (var ai = 0; ai < alertArr.length; ai++) {
+            var aCoord = cs.priceToCoordinate(alertArr[ai].price);
+            if (aCoord != null && Math.abs(aCoord - alertY) < 10) {
+              e.stopPropagation();
+              e.preventDefault();
+              _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
+              _alertDragMoved = false;
+              container.style.cursor = 'ns-resize';
+              return;
+            }
+          }
+        }
         if (e.button !== 1) return;
         e.preventDefault();
         var rect = container.getBoundingClientRect();
@@ -679,12 +732,30 @@ function initCharts() {
           }
           return;
         }
-        // Cursor hint near level
+        // Drag alert (shift + right button)
+        if (_alertDragging && _alertDragging.sym === sym && (e.buttons & 2)) {
+          var alertPrice = cs.coordinateToPrice(y);
+          if (alertPrice != null && _alertDragging.alert.line) {
+            _alertDragging.alert.price = alertPrice;
+            _alertDragging.alert.line.applyOptions({ price: alertPrice });
+            _alertDragMoved = true;
+            redrawAlerts(sym);
+          }
+          return;
+        }
+        // Cursor hint near level or alert (when shift held)
         var levels = _levels[sym] || [];
         var near = false;
         for (var j = 0; j < levels.length; j++) {
           var ly2 = cs.priceToCoordinate(levels[j].price);
           if (ly2 != null && Math.abs(ly2 - y) < 8) { near = true; break; }
+        }
+        if (!near && e.shiftKey) {
+          var alertsHint = _alerts[sym] || [];
+          for (var ak = 0; ak < alertsHint.length; ak++) {
+            var ayk = cs.priceToCoordinate(alertsHint[ak].price);
+            if (ayk != null && Math.abs(ayk - y) < 10) { near = true; break; }
+          }
         }
         container.style.cursor = near ? 'ns-resize' : '';
         // Ruler
@@ -700,10 +771,17 @@ function initCharts() {
           saveLevels();
           return;
         }
+        if (e.button === 2 && _alertDragging && _alertDragging.sym === sym) {
+          _alertDragging = null;
+          container.style.cursor = '';
+          saveAlerts();
+          return;
+        }
         if (e.button === 1) clearRuler(sym);
       });
       container.addEventListener('mouseleave', function () {
         if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
+        if (_alertDragging && _alertDragging.sym === sym) { _alertDragging = null; saveAlerts(); }
         container.style.cursor = '';
         clearRuler(sym);
       });
