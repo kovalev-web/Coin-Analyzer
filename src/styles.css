@@ -62,7 +62,7 @@
     .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;}
     .card-head-left{display:flex;align-items:center;gap:10px;min-width:0;}
     .card-inline-stats{display:flex;align-items:center;gap:0;}
-    .card-inline-stats .stat-val{font-size:12px;font-weight:700;color:var(--ink);cursor:default;padding:0 7px;border-left:1px solid var(--hairline);}
+    .card-inline-stats .stat-val{font-size:12px;font-weight:700;color:var(--ink);cursor:default;padding:0 7px;}
     .stat-val{font-size:12px;font-weight:700;color:var(--ink);cursor:default;}
     .stat-val.up{color:var(--bullish);}
     .stat-val.dn{color:var(--bloom-deep);}
