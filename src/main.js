@@ -1,6 +1,6 @@
 import { state, filteredCoins } from './state.js';
 import {
-  fetchCoins, refreshCoins, analyzeCoinBySymbol, analyzeAll,
+  fetchCoins, analyzeCoinBySymbol, analyzeAll,
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
@@ -83,7 +83,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'refresh':
-      refreshCoins();
+      location.reload();
       break;
     case 'sort': {
       var col = target.dataset.col;
