@@ -20,11 +20,11 @@
     button:hover{opacity:0.85;}
     button:disabled{opacity:0.4;cursor:not-allowed;}
     .btn-refresh{background:var(--canvas);color:var(--ink);border:1px solid var(--ink);}
-    .btn-settings{background:var(--canvas);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+    .btn-settings{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
     .btn-settings:hover{color:var(--primary);}
     .btn-settings-mob{display:none;}
-    .btn-tv{background:var(--canvas);color:var(--ink);border:none;padding:0 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;}
-    .btn-theme{background:var(--canvas);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .btn-tv{background:var(--fog);color:var(--ink);border:none;padding:0 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;}
+    .btn-theme{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
     .btn-refresh-icon{display:none;width:36px;height:36px;padding:0;border-radius:9999px;background:transparent;border:1px solid var(--steel);color:var(--ink);align-items:center;justify-content:center;flex-shrink:0;}
     .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px;}
     .ws-indicator.connected{background:var(--ws-on);}
