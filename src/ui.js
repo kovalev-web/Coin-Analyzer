@@ -187,6 +187,7 @@ function applyServerLevels(data) {
     var s = _fullSeries[sym];
     (_levels[sym] || []).forEach(function (l) {
       if (l.line && s) { try { s.removePriceLine(l.line); } catch (e) {} }
+      if (_fvSeries && _fvSym === sym && l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} }
     });
   });
   _levels = {};
