@@ -211,7 +211,7 @@
       .change-desktop{display:none;}
       .mobile-filters-row{display:flex;gap:8px;align-items:center;}
       .mobile-filters-row .tf-pill{height:32px;font-size:12px;padding:0 14px;}
-
+      .mobile-filters-row .ws-indicator{margin-left:auto;}
       .mobile-filters-row .btn-refresh-icon{display:flex;}
       .mobile-filters-row .btn-theme-mob{display:inline-flex;width:36px;height:36px;}
       .metrics{padding:12px 12px 0;gap:8px;grid-template-columns:repeat(2,1fr);}

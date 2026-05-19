@@ -42,9 +42,9 @@ function renderCard(coin) {
     '<div class="card-head-left">' +
     '<span class="card-sym">' + coin.symbol.toUpperCase() + '</span>' +
     '<div class="card-inline-stats">' +
-    '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
-    '<span class="stat-val ' + natr.cls + '">' + natr.val + '</span>' +
-    '<span class="stat-val">' + fmt(coin.total_volume) + '</span>' +
+    '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="Изменение за 24ч">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
+    '<span class="stat-val ' + natr.cls + '" title="NATR — волатильность (5m × 30 свечей)">' + natr.val + '</span>' +
+    '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume) + '</span>' +
     '</div>' +
     '</div>' +
     '<div class="card-head-right">' +
@@ -1008,7 +1008,7 @@ export function render() {
     + '<div class="tf-dd" id="change-dd" style="display:none">'
     + [1, 2, 5, 10].map(function (v) { return '<button class="' + (v === state.minChange ? 'active' : '') + '" data-action="pick-change" data-val="' + v + '">' + v + '%</button>'; }).join('')
     + '</div></div>'
-    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
+    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...') + '"></span>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'
     + icon('refresh-cw', 16)
     + '</button>'
@@ -1019,7 +1019,7 @@ export function render() {
     + '</button>'
     + '</div>'
     + '<div class="filters-right">'
-    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
+    + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...') + '"></span>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
     + (isDark()
