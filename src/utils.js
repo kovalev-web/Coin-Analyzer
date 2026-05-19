@@ -24,7 +24,7 @@ export function escHtml(s) {
 
 export function icon(name, size, style) {
   size = size || 14;
-  var key = name.replace(/-([a-z])/g, function(_, c) { return c.toUpperCase(); });
+  var key = name.replace(/-([a-z0-9])/g, function(_, c) { return c.toUpperCase(); });
   key = key.charAt(0).toUpperCase() + key.slice(1);
   var def = window.lucide && window.lucide[key];
   if (!def) return '';
