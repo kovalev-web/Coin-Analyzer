@@ -218,6 +218,8 @@ function processKlineUpdate(msg) {
   // TV-режим тоже обновляем
   var ts = (window.__tvChartSeries || {})[sym];
   if (ts) { try { ts.update(k); } catch (e) {} }
+  var tvs = (window.__tvChartVolSeries || {})[sym];
+  if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
   // Синхронизируем coin.current_price чтобы карточки тоже показывали актуальную цену
   var coin = state.coins.find(function (c) { return c.symbol === sym; });

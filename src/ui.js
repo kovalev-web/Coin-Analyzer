@@ -606,6 +606,7 @@ export function closeMSPopup() {
 
 var _tvCharts = {};
 window.__tvChartSeries = {};
+window.__tvChartVolSeries = {};
 
 export function openTVMode() {
   var coins = filteredCoins().slice(0, 6);
@@ -643,6 +644,7 @@ export function openTVMode() {
   Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
   _tvCharts = {};
   window.__tvChartSeries = {};
+  window.__tvChartVolSeries = {};
 
   // create charts after layout settles
   setTimeout(function () {
@@ -656,6 +658,7 @@ export function openTVMode() {
       chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       _tvCharts[c.symbol] = chart;
       window.__tvChartSeries[c.symbol] = s;
+      window.__tvChartVolSeries[c.symbol] = vs;
 
       var tf = state.chartTF[c.symbol] || '5m';
       var cd = state.chartData[c.symbol + '_' + tf];
@@ -682,6 +685,7 @@ export function closeTVMode() {
   Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
   _tvCharts = {};
   window.__tvChartSeries = {};
+  window.__tvChartVolSeries = {};
 }
 
 // close TV mode when user presses ESC / exits fullscreen
@@ -693,6 +697,7 @@ document.addEventListener('fullscreenchange', function () {
       Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
       _tvCharts = {};
       window.__tvChartSeries = {};
+      window.__tvChartVolSeries = {};
     }
   }
 });
