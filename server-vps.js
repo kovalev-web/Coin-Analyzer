@@ -1,9 +1,25 @@
+const http = require('http');
 const { WebSocketServer, WebSocket } = require('ws');
 
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
 var BINANCE_WS_URL = 'wss://fstream.binance.com/ws';
 var BINANCE_KLINE_WS_URL = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
+
+// ── Redis (Upstash) helper ────────────────────────────────────────────────
+
+var REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function redis(cmd) {
+  if (!REDIS_URL || !REDIS_TOKEN) throw new Error('Redis not configured');
+  var res = await fetch(REDIS_URL, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + REDIS_TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  });
+  return res.json();
+}
 
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
@@ -207,10 +223,58 @@ function startKlineWS() {
   });
 }
 
+// ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
+
+var httpServer = http.createServer(async function (req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+  if (req.method === 'POST' && req.url === '/api/levels') {
+    var body = '';
+    req.on('data', function (chunk) { body += chunk; });
+    req.on('end', async function () {
+      try {
+        var parsed = JSON.parse(body);
+        var action = parsed.action, code = parsed.code, levels = parsed.levels;
+        // Allow Latin, digits, underscore, hyphen, Cyrillic
+        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid code' }));
+          return;
+        }
+        var key = 'levels:' + code.toLowerCase();
+        if (action === 'get') {
+          var r = await redis(['GET', key]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ levels: r.result ? JSON.parse(r.result) : {} }));
+        } else if (action === 'save') {
+          await redis(['SET', key, JSON.stringify(levels || {})]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown action' }));
+        }
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  res.writeHead(404); res.end();
+});
+
 // ── WebSocket сервер для фронтенда ───────────────────────────────────────
 
-var wss = new WebSocketServer({ port: PORT });
-console.log('[Server] Pump Analyzer WS running on port', PORT);
+var wss = new WebSocketServer({ server: httpServer });
+httpServer.listen(PORT, function () {
+  console.log('[Server] Pump Analyzer running on port', PORT);
+});
 
 wss.on('connection', function (ws) {
   clients.add(ws);

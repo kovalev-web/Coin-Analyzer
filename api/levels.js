@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
   const { action, code, levels } = req.body || {};
 
-  if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-]{2,40}$/.test(code)) {
+  if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
     return res.status(400).json({ error: 'Invalid code' });
   }
 
