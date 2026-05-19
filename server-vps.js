@@ -106,9 +106,9 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       if (!crossed) return;
       a.triggered = true;
       dirty = true;
-      var dir = cur >= a.price ? '📈 пробой вверх' : '📉 пробой вниз';
-      console.log('[Alert] ' + sym.toUpperCase() + ' crossed ' + a.price + ' | chatId=' + (entry.chatId || 'EMPTY'));
-      sendTG(entry.chatId, '<b>' + sym.toUpperCase() + '</b> ' + dir + '\n🎯 Алерт: <code>' + a.price + '</code>\n💰 Цена: <code>' + cur + '</code>');
+      var fmtPrice = parseFloat(parseFloat(a.price).toPrecision(6));
+      console.log('[Alert] ' + sym.toUpperCase() + ' crossed ' + fmtPrice + ' | chatId=' + (entry.chatId || 'EMPTY'));
+      sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>');
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
       clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
     });
