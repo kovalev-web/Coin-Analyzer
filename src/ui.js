@@ -48,6 +48,7 @@ function renderCard(coin) {
     '</div>' +
     '</div>' +
     '<div class="card-head-right">' +
+    '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + ' ур ×</button>' +
     tfPicker +
     badge +
     '</div>' +
@@ -74,6 +75,7 @@ export function renderCards() {
     if (!seen[sym]) {
       var el = existing[sym]; if (el) el.remove();
       try { if (_charts[sym]) _charts[sym].remove(); } catch (e) {}
+      if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
       delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
       window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
     }
@@ -122,6 +124,67 @@ var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {};
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
 window.__charts = _charts;
+
+// ── Levels ─────────────────────────────────────────────────────────────────
+
+var _levels = {}; // symbol → [{price, line}]
+
+function saveLevels() {
+  var data = {};
+  Object.keys(_levels).forEach(function (sym) {
+    if (_levels[sym] && _levels[sym].length) data[sym] = _levels[sym].map(function (l) { return l.price; });
+  });
+  try { localStorage.setItem('pa_levels', JSON.stringify(data)); } catch (e) {}
+}
+
+export function loadLevels() {
+  try {
+    var data = JSON.parse(localStorage.getItem('pa_levels') || '{}');
+    Object.keys(data).forEach(function (sym) {
+      _levels[sym] = data[sym].map(function (p) { return { price: p, line: null }; });
+    });
+  } catch (e) {}
+}
+
+function attachLevel(sym, lvl) {
+  var s = _fullSeries[sym];
+  if (!s) return;
+  lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+}
+
+function addLevel(sym, price) {
+  if (!_levels[sym]) _levels[sym] = [];
+  var lvl = { price: price, line: null };
+  _levels[sym].push(lvl);
+  attachLevel(sym, lvl);
+  saveLevels();
+  updateLevelsBtn(sym);
+}
+
+function removeLevel(sym, idx) {
+  if (!_levels[sym] || _levels[sym][idx] == null) return;
+  var s = _fullSeries[sym];
+  if (s && _levels[sym][idx].line) { try { s.removePriceLine(_levels[sym][idx].line); } catch (e) {} }
+  _levels[sym].splice(idx, 1);
+  saveLevels();
+  updateLevelsBtn(sym);
+}
+
+export function clearLevels(sym) {
+  var s = _fullSeries[sym];
+  (_levels[sym] || []).forEach(function (l) { if (s && l.line) { try { s.removePriceLine(l.line); } catch (e) {} } });
+  _levels[sym] = [];
+  saveLevels();
+  updateLevelsBtn(sym);
+}
+
+function updateLevelsBtn(sym) {
+  var btn = document.querySelector('.btn-clear-levels[data-sym="' + sym + '"]');
+  if (!btn) return;
+  var count = (_levels[sym] || []).length;
+  btn.style.display = count ? 'inline-flex' : 'none';
+  btn.textContent = count + ' ур ×';
+}
 
 function isDark() {
   var t = document.documentElement.dataset.theme;
@@ -227,6 +290,7 @@ export function setChartTF(symbol, tf) {
 
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
+  Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
   _charts = {}; _fullSeries = {}; _volSeries = {}; _rulers = {};
   window.__chartSeries = _fullSeries;
   window.__chartVolSeries = _volSeries;
@@ -296,7 +360,23 @@ function initCharts() {
     el.style.position = 'relative'; el.appendChild(rc);
     rc.width = el.offsetWidth || 400; rc.height = el.offsetHeight || 300;
     _rulers[c.symbol] = { start: null, canvas: rc };
+    // Restore saved levels
+    (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
+
     (function (sym, container, cs) {
+      container.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        var rect = container.getBoundingClientRect();
+        var y = e.clientY - rect.top;
+        var price = cs.coordinateToPrice(y);
+        if (price == null) return;
+        var levels = _levels[sym] || [];
+        for (var i = 0; i < levels.length; i++) {
+          var ly = cs.priceToCoordinate(levels[i].price);
+          if (ly != null && Math.abs(ly - y) < 8) { removeLevel(sym, i); return; }
+        }
+        addLevel(sym, price);
+      });
       container.addEventListener('mousedown', function (e) {
         if (e.button !== 1) return;
         e.preventDefault();
@@ -869,6 +949,7 @@ document.body.addEventListener('blur', function (e) {
 // ── Event listeners ────────────────────────────────────────────────────────
 
 initTheme();
+loadLevels();
 on('render', render);
 on('cards:sync', renderCards);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });

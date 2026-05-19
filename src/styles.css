@@ -6,6 +6,7 @@
       --bloom-coral:#ff5050;--bloom-deep:#b3262b;
       --bullish:#16a34a;--bullish-bg:#f0fdf4;--caution:#b45309;--caution-bg:#fffbeb;--neutral-bar:#c2c2c2;
       --danger:#dc2626;
+      --level:#f59e0b;
       --ws-on:#22c55e;--ws-off:#ef4444;
       --vol-up:rgba(26,26,26,0.35);--vol-dn:rgba(153,153,153,0.35);
       --retry-bg:#fff1f1;--retry-border:#fca5a5;
@@ -73,6 +74,8 @@
     .tf-dd button{display:block;width:100%;text-align:left;padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink);background:transparent;border:none;border-radius:0;height:auto;letter-spacing:0;}
     .tf-dd button:hover{background:var(--cloud);opacity:1;}
     .tf-dd button.active{color:var(--primary);font-weight:600;}
+    .btn-clear-levels{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:rgba(245,158,11,0.12);color:var(--level);border:1px solid rgba(245,158,11,0.35);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
+    .btn-clear-levels:hover{background:rgba(245,158,11,0.22);}
     .btn-analyze-one,.btn-retry,.btn-pressed{text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}
     .btn-analyze-one,.btn-pressed{width:32px;padding:0;}
     .btn-retry{padding:0 10px;}
