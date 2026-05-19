@@ -1,5 +1,5 @@
 import { state, filteredCoins } from './state.js';
-import { fmt, fmtPrice, escHtml, signalLabel } from './utils.js';
+import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected } from './api.js';
 
@@ -23,10 +23,10 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isL) badge = '<span class="btn-pressed"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg></span>';
+  if (isL) badge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
   else if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
   else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
-  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg></button>';
+  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 14) + '</button>';
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
@@ -90,10 +90,10 @@ export function updateCardBadge(symbol) {
   var signal = hasA ? cache.result.signal : null;
   var tag = 'span';
   var html = '';
-  if (isL) { tag = 'span'; html = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg>'; }
+  if (isL) { tag = 'span'; html = '' + icon('zap', 14) + ''; }
   else if (isE) { tag = 'button'; html = 'Повтор'; }
   else if (hasA) { tag = 'span'; html = signalLabel(signal); }
-  else { tag = 'button'; html = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:block"><path d="M12 2l2.09 6.26L20 9l-4.5 3.27 1.69 6.28L12 15l-5.19 3.55 1.69-6.28L4 9l5.91-.74z"/></svg>'; }
+  else { tag = 'button'; html = '' + icon('zap', 14) + ''; }
 
   var newEl = document.createElement(tag);
   if (isE) { newEl.className = 'btn-retry'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
@@ -180,7 +180,7 @@ function getChartOpts(width, height) {
     width: width, height: height || 300,
     layout: { background: { color: c.bg }, textColor: c.text },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
-    crosshair: { mode: 1 },
+    crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
     timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
     handleScroll: true, handleScale: true,
@@ -421,7 +421,7 @@ export function updateAnalysisPopup(sym) {
   if (cache.status === 'ok' && cache.result) {
     var r = cache.result;
     var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-    var extIcon = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="vertical-align:middle;margin-left:3px;margin-bottom:1px"><path d="M7 1h4v4M11 1L5 7M4 3H2a1 1 0 00-1 1v6a1 1 0 001 1h6a1 1 0 001-1V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var extIcon = icon('external-link', 11, 'vertical-align:middle;margin-left:3px;margin-bottom:1px');
     var newsBlock = '';
     if (r.news_summary) {
       var hasRealNews = r.news_url && !r.news_summary.toLowerCase().includes('не найдено');
@@ -776,12 +776,12 @@ export function render() {
     + (state.lastUpdate ? '<span class="mobile-update">' + state.lastUpdate.toLocaleTimeString() + '</span>' : '')
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'
-    + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+    + icon('refresh-cw', 16)
     + '</button>'
     + '<button class="btn-theme btn-theme-mob" data-action="toggle-theme" title="Переключить тему">'
     + (isDark()
-      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'
-      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>')
+      ? icon('sun', 14)
+      : icon('moon', 14))
     + '</button>'
     + '</div>'
     + '<div class="filters-right">'
@@ -790,8 +790,8 @@ export function render() {
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
     + (isDark()
-      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'
-      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>')
+      ? icon('sun', 14)
+      : icon('moon', 14))
     + '</button>'
     + '</div>'
     + '</div></div>'

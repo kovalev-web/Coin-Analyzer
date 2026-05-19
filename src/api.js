@@ -5,6 +5,14 @@ import { emit } from './events.js';
 // Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
 var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
 
+function volClrs() {
+  var s = getComputedStyle(document.documentElement);
+  return {
+    up: s.getPropertyValue('--vol-up').trim() || 'rgba(26,26,26,0.35)',
+    dn: s.getPropertyValue('--vol-dn').trim() || 'rgba(153,153,153,0.35)',
+  };
+}
+
 function getCurrentSessionId() {
   var utcMs = Date.now() + new Date().getTimezoneOffset() * 60000;
   var msk = new Date(utcMs + 3 * 3600 * 1000);
@@ -211,7 +219,8 @@ function processKlineUpdate(msg) {
 
   var vs = (window.__chartVolSeries || {})[sym];
   if (vs) {
-    var volClr = k.close >= k.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)';
+    var vc = volClrs();
+    var volClr = k.close >= k.open ? vc.up : vc.dn;
     try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {}
   }
 
@@ -331,11 +340,11 @@ export function applyLiveChartUpdates() {
     var s = series[coin.symbol];
     if (s) { try { s.update(updated); } catch (e) { } }
     var vs = volSeries[coin.symbol];
-    if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
+    if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
     var ts = tvSeries[coin.symbol];
     if (ts) { try { ts.update(updated); } catch (e) { } }
     var tvvs = (window.__tvChartVolSeries || {})[coin.symbol];
-    if (tvvs) { try { tvvs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
+    if (tvvs) { try { tvvs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
   });
 }
 
@@ -393,7 +402,8 @@ export async function pollCharts() {
       if (!s) continue;
 
       var lastCandle = arr[arr.length - 1];
-      var lastVol = { time: lastCandle.time, value: lastCandle.volume, color: lastCandle.close >= lastCandle.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' };
+      var _vc = volClrs();
+      var lastVol = { time: lastCandle.time, value: lastCandle.volume, color: lastCandle.close >= lastCandle.open ? _vc.up : _vc.dn };
 
       if (hadNewCandle) {
         // New closed candles were added — setData to ensure chart history is correct
@@ -403,9 +413,9 @@ export async function pollCharts() {
         if (chart) { try { visibleRange = chart.timeScale().getVisibleRange(); } catch (e) { } }
         try { s.setData(arr); } catch (e) { }
         var vs2 = (window.__chartVolSeries || {})[c.symbol];
-        if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }; })); } catch (e) { } }
+        if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
         var tvs2 = (window.__tvChartVolSeries || {})[c.symbol];
-        if (tvs2) { try { tvs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }; })); } catch (e) { } }
+        if (tvs2) { try { tvs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
         if (chart && visibleRange) { try { chart.timeScale().setVisibleRange(visibleRange); } catch (e) { } }
       } else {
         try { s.update(lastCandle); } catch (e) { }

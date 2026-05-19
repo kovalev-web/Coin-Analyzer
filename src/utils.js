@@ -22,8 +22,30 @@ export function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+export function icon(name, size, style) {
+  size = size || 14;
+  var key = name.replace(/-([a-z])/g, function(_, c) { return c.toUpperCase(); });
+  key = key.charAt(0).toUpperCase() + key.slice(1);
+  var def = window.lucide && window.lucide[key];
+  if (!def) return '';
+  var base = def[1] || {}, attrs = {};
+  Object.keys(base).forEach(function(k) { attrs[k] = base[k]; });
+  attrs.width = size;
+  attrs.height = size;
+  if (style) attrs.style = style;
+  var attrStr = Object.keys(attrs).map(function(k) { return k + '="' + attrs[k] + '"'; }).join(' ');
+  function kids(arr) {
+    return (arr || []).map(function(c) {
+      var t = c[0], a = c[1] || {}, ch = c[2];
+      var as = Object.keys(a).map(function(k) { return k + '="' + a[k] + '"'; }).join(' ');
+      return ch && ch.length ? '<' + t + ' ' + as + '>' + kids(ch) + '</' + t + '>' : '<' + t + ' ' + as + '/>';
+    }).join('');
+  }
+  return '<svg ' + attrStr + '>' + kids(def[2]) + '</svg>';
+}
+
 export function signalLabel(s) {
-  if (s === 'bullish') return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
-  if (s === 'caution') return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  if (s === 'bullish') return icon('chevron-up', 13);
+  if (s === 'caution') return icon('alert-triangle', 13);
+  return icon('minus', 13);
 }
