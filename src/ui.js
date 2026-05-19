@@ -485,6 +485,11 @@ export function toggleTheme() {
   document.documentElement.dataset.theme = next;
   localStorage.setItem('theme', next);
   render();
+  if (_fvChart) {
+    var fc = getChartColors();
+    _fvChart.applyOptions({ layout: { background: { color: fc.bg }, textColor: fc.text }, grid: { vertLines: { color: fc.grid }, horzLines: { color: fc.grid } }, rightPriceScale: { borderColor: fc.border }, timeScale: { borderColor: fc.border } });
+    if (_fvSeries) _fvSeries.applyOptions(getSeriesColors());
+  }
 }
 
 function getCSSVar(name) {
