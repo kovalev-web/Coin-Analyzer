@@ -1366,4 +1366,273 @@ document.body.addEventListener('blur', function (e) {
 initTheme();
 loadLevels();
 on('render', render);
-on('cards:s
+on('cards:sync', renderCards);
+on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
+on('ms:update', updateMSPanel);
+on('metrics:update', updateMetricCards);
+on('ws:status', function () {
+  var els = document.querySelectorAll('.ws-indicator');
+  for (var i = 0; i < els.length; i++) {
+    els[i].className = 'ws-indicator ' + (wsConnected ? 'connected' : 'disconnected');
+    els[i].title = wsConnected ? 'WebSocket подключен' : 'WebSocket отключен';
+  }
+});
+
+// ── Full View ──────────────────────────────────────────────────────────────
+
+var _fvRuler = null;
+
+function _fvCoinInfoHTML(sym, tf) {
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
+  var nd = natrDisplay(sym);
+  return '<div class="fv-coin-info">'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
+    + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+    + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
+    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
+    + '<div class="tf-picker">'
+    + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
+    + '<div class="tf-dd fv-tf-dd" style="display:none">'
+    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
+    + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function _setFVData(sym, cd) {
+  if (!_fvSeries || !_fvChart || !cd || cd.status !== 'ok' || !cd.candles.length) return;
+  var lastClose = cd.candles[cd.candles.length - 1].close;
+  _fvSeries.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
+  _fvSeries.setData(cd.candles);
+  if (_fvVolSeries) {
+    _fvVolSeries.setData(cd.candles.map(function (c) {
+      var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn');
+      return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
+    }));
+  }
+  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+  // Attach existing levels and alerts to fv series
+  (_levels[sym] || []).forEach(function (l) {
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  });
+  (_alerts[sym] || []).forEach(function (a) {
+    if (a.price && !a.fvLine) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  });
+}
+
+function _loadFVData(sym, tf) {
+  var key = sym + '_' + tf;
+  var cd = state.chartData[key];
+  if (cd && cd.status === 'ok' && cd.candles.length) {
+    _setFVData(sym, cd);
+  } else {
+    fetchChartData(sym, tf).then(function () { _setFVData(sym, state.chartData[key]); });
+  }
+}
+
+export function openCoinFullView(sym) {
+  if (!window.LightweightCharts) return;
+  // Destroy previous
+  if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
+  _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  // Clear fvLines from previous session
+  if (_fvSym) {
+    (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  }
+  _fvSym = sym;
+
+  var overlay = document.getElementById('fv-overlay');
+  if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; document.body.appendChild(overlay); }
+
+  var tf = state.chartTF[sym] || '5m';
+  overlay.innerHTML = _topbarHTML()
+    + '<div class="fv-chart-wrap">'
+    + _fvCoinInfoHTML(sym, tf)
+    + '<div id="fv-chart"></div>'
+    + '</div>';
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Init chart
+  var el = document.getElementById('fv-chart');
+  var c = getChartColors();
+  _fvChart = window.LightweightCharts.createChart(el, {
+    autoSize: true,
+    layout: { background: { color: c.bg }, textColor: c.text },
+    grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+    crosshair: { mode: 0 },
+    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
+    handleScroll: true, handleScale: true,
+  });
+  _fvSeries = _fvChart.addCandlestickSeries(getSeriesColors());
+  _fvVolSeries = _fvChart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
+  _fvChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  window.__fvSeries = _fvSeries;
+  window.__fvVolSeries = _fvVolSeries;
+  window.__fvSymbol = sym;
+
+  // Canvas overlay for alert bells + ruler
+  var wrap = document.querySelector('.fv-chart-wrap');
+  var rc = document.createElement('canvas');
+  rc.className = 'fv-canvas';
+  wrap.appendChild(rc);
+  function _syncFVCanvas() { rc.width = wrap.offsetWidth || window.innerWidth; rc.height = wrap.offsetHeight || window.innerHeight; }
+  _syncFVCanvas();
+  window.addEventListener('resize', _syncFVCanvas);
+  _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas };
+
+  // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level)
+  var _fvDragging = null;
+  el.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var rect = el.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    var price = _fvSeries.coordinateToPrice(y);
+    if (price == null) return;
+    if (e.shiftKey) {
+      var alerts = _alerts[sym] || [];
+      for (var i = 0; i < alerts.length; i++) {
+        var ay = _fvSeries.priceToCoordinate(alerts[i].price);
+        if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+      }
+      addAlert(sym, price);
+    } else {
+      var levels = _levels[sym] || [];
+      for (var i = 0; i < levels.length; i++) {
+        var ly = _fvSeries.priceToCoordinate(levels[i].price);
+        if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+      }
+      addLevel(sym, price);
+    }
+  });
+  el.addEventListener('mousedown', function (e) {
+    if (e.button === 1) {
+      e.preventDefault();
+      var rect = el.getBoundingClientRect();
+      var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      var pr = _fvSeries.coordinateToPrice(pt.y);
+      if (pr != null) _fvRuler.start = { pt: pt, price: pr };
+      return;
+    }
+    if (e.button !== 0) return;
+    var rect = el.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    var levels = _levels[sym] || [];
+    for (var i = 0; i < levels.length; i++) {
+      var ly = _fvSeries.priceToCoordinate(levels[i].price);
+      if (ly != null && Math.abs(ly - y) < 8) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
+    }
+  }, { capture: true });
+  el.addEventListener('mousemove', function (e) {
+    var rect = el.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    if (_fvDragging && (e.buttons & 1)) {
+      var price = _fvSeries.coordinateToPrice(y);
+      if (price != null) {
+        _fvDragging.lvl.price = price;
+        if (_fvDragging.lvl.fvLine) _fvDragging.lvl.fvLine.applyOptions({ price: price });
+        if (_fvDragging.lvl.line) _fvDragging.lvl.line.applyOptions({ price: price });
+      }
+      return;
+    }
+    var ruler = _fvRuler;
+    if (!ruler || !ruler.start || !(e.buttons & 4)) return;
+    var pt = { x: e.clientX - rect.left, y: y };
+    var pr2 = _fvSeries.coordinateToPrice(y);
+    if (pr2 == null) return;
+    var rc = ruler.canvas, ctx = rc.getContext('2d');
+    ctx.clearRect(0, 0, rc.width, rc.height);
+    var p1 = ruler.start.pt, pr1 = ruler.start.price;
+    var isUp = pr2 >= pr1, color = isUp ? getCSSVar('--bullish') : getCSSVar('--danger');
+    var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
+    var pctStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+    if (_fvChart) {
+      var t1 = _fvChart.timeScale().coordinateToTime(p1.x), t2 = _fvChart.timeScale().coordinateToTime(pt.x);
+      if (t1 != null && t2 != null) {
+        var d = Math.abs(t2 - t1);
+        var dur = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
+        pctStr += '  ·  ' + dur;
+      }
+    }
+    ctx.fillStyle = isUp ? 'rgba(22,163,74,0.07)' : 'rgba(220,38,38,0.07)';
+    ctx.fillRect(0, Math.min(p1.y, pt.y), rc.width, Math.abs(pt.y - p1.y) || 1);
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.moveTo(0, pt.y); ctx.lineTo(rc.width, pt.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = 'bold 16px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
+    var lx = pt.x + 12, lyt = pt.y - 10;
+    if (lx + 170 > rc.width) lx = pt.x - 175; if (lx < 2) lx = 2;
+    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 4) lyt = rc.height - 4;
+    ctx.fillText(pctStr, lx, lyt);
+  });
+  el.addEventListener('mouseup', function (e) {
+    if (e.button === 1 && _fvRuler) _fvRuler.start = null;
+    if (_fvDragging) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
+  });
+  el.addEventListener('mouseleave', function () {
+    if (_fvDragging) { _fvDragging = null; saveLevels(); }
+    if (_fvRuler) _fvRuler.start = null;
+    el.style.cursor = '';
+  });
+
+  // rAF loop: alert bell icons on canvas
+  (function fvBellLoop() {
+    if (!_fvChart) return;
+    var ruler = _fvRuler;
+    if (ruler && ruler.canvas && !ruler.start) {
+      var ctx = ruler.canvas.getContext('2d');
+      ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height);
+      if (_fvSeries && _bellImg && _bellImg.complete) {
+        (_alerts[sym] || []).forEach(function (a) {
+          var y = _fvSeries.priceToCoordinate(a.price);
+          if (y == null || y < 0 || y > ruler.canvas.height) return;
+          var sz = 18;
+          ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
+          ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
+          ctx.restore();
+        });
+      }
+    }
+    requestAnimationFrame(fvBellLoop);
+  }());
+
+  _loadFVData(sym, tf);
+}
+
+export function closeCoinFullView() {
+  if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
+  if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
+  _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  if (_fvSym) {
+    (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  }
+  _fvSym = null;
+  var overlay = document.getElementById('fv-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+export function setFVChartTF(tf) {
+  if (!_fvSym || !_fvSeries) return;
+  state.chartTF[_fvSym] = tf;
+  var pill = document.querySelector('#fv-overlay .tf-pill');
+  if (pill) pill.textContent = tf;
+  var dd = document.querySelector('#fv-overlay .fv-tf-dd');
+  if (dd) dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
+  // Clear fvLines before reload
+  (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+  (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  _fvSeries.setData([]);
+  _loadFVData(_fvSym, tf);
+}
