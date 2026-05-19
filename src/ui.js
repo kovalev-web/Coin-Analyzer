@@ -1490,7 +1490,9 @@ export function openCoinFullView(sym) {
   function _syncFVCanvas() { rc.width = wrap.offsetWidth || window.innerWidth; rc.height = wrap.offsetHeight || window.innerHeight; }
   _syncFVCanvas();
   window.addEventListener('resize', _syncFVCanvas);
-  _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas };
+  function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
+  document.addEventListener('keydown', _onEscKey);
+  _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
   // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level)
   var _fvDragging = null;
@@ -1617,6 +1619,7 @@ export function openCoinFullView(sym) {
 export function closeCoinFullView() {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
+  if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
   if (_fvSym) {
