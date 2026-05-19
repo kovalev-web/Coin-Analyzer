@@ -107,6 +107,7 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       a.triggered = true;
       dirty = true;
       var dir = cur >= a.price ? '📈 пробой вверх' : '📉 пробой вниз';
+      console.log('[Alert] ' + sym.toUpperCase() + ' crossed ' + a.price + ' | chatId=' + (entry.chatId || 'EMPTY'));
       sendTG(entry.chatId, '<b>' + sym.toUpperCase() + '</b> ' + dir + '\n🎯 Алерт: <code>' + a.price + '</code>\n💰 Цена: <code>' + cur + '</code>');
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
       clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
@@ -450,7 +451,7 @@ wss.on('connection', function (ws) {
         if (code && typeof code === 'string' && /^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
           var ck = code.toLowerCase();
           if (!alertsMemory[ck]) alertsMemory[ck] = { chatId: '', data: {} };
-          if (msg.chatId !== undefined) alertsMemory[ck].chatId = String(msg.chatId);
+          if (msg.chatId) alertsMemory[ck].chatId = String(msg.chatId); // never overwrite with empty
           if (msg.data !== undefined) alertsMemory[ck].data = msg.data;
         }
       }
