@@ -444,6 +444,17 @@ wss.on('connection', function (ws) {
         ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: data2 }));
       }
 
+      else if (msg.type === 'save_alerts') {
+        // Frontend pushes alert data directly — instant alertsMemory update, no Redis polling delay
+        var code = msg.code;
+        if (code && typeof code === 'string' && /^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
+          var ck = code.toLowerCase();
+          if (!alertsMemory[ck]) alertsMemory[ck] = { chatId: '', data: {} };
+          if (msg.chatId !== undefined) alertsMemory[ck].chatId = String(msg.chatId);
+          if (msg.data !== undefined) alertsMemory[ck].data = msg.data;
+        }
+      }
+
       else if (msg.type === 'subscribe_klines') {
         // Клиент просит подписаться на real-time kline стримы для списка монет
         var syms = Array.isArray(msg.symbols) ? msg.symbols : [];

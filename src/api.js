@@ -106,6 +106,8 @@ function wsSend(msg) {
   }
 }
 
+export function sendWS(obj) { wsSend(obj); }
+
 function wsRequest(msg) {
   return new Promise(function (resolve, reject) {
     var id = String(++_reqId);

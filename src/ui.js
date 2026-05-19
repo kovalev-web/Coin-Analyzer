@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected } from './api.js';
+import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -384,10 +384,14 @@ function saveAlerts() {
 
 function syncAlertsToServer() {
   if (!_userCode) return;
+  var data = alertsData();
+  // Notify VPS directly via WS for instant alertsMemory update
+  sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: data });
+  // Also persist to Redis via Vercel for cross-device sync and VPS restart recovery
   fetch('/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: _userCode, chatId: _chatId, data: alertsData() }),
+    body: JSON.stringify({ action: 'save', code: _userCode, chatId: _chatId, data: data }),
   }).catch(function () {});
 }
 
