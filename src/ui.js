@@ -1001,7 +1001,6 @@ export function render() {
     + '<div class="tf-dd" id="change-dd" style="display:none">'
     + [1, 2, 5, 10].map(function (v) { return '<button class="' + (v === state.minChange ? 'active' : '') + '" data-action="pick-change" data-val="' + v + '">' + v + '%</button>'; }).join('')
     + '</div></div>'
-    + (state.lastUpdate ? '<span class="mobile-update">' + state.lastUpdate.toLocaleTimeString() + '</span>' : '')
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'
     + icon('refresh-cw', 16)
@@ -1013,7 +1012,6 @@ export function render() {
     + '</button>'
     + '</div>'
     + '<div class="filters-right">'
-    + '<span class="last-update">' + (state.lastUpdate ? 'Обновлено: ' + state.lastUpdate.toLocaleTimeString('ru-RU') : '') + '</span>'
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
