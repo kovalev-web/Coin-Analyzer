@@ -86,11 +86,14 @@ async function loadAlertsOnStartup() {
 setInterval(loadAlertsOnStartup, 30000);
 
 // Called on every price update (ticker or kline) — no polling delay
-function checkAlertsForSym(fullSym, cur) {
+// hi/lo: candle high and low — if provided, wicks trigger alerts too
+function checkAlertsForSym(fullSym, cur, hi, lo) {
   var sym = fullSym.replace(/USDT$/, '').toLowerCase();
   var prev = prevPrices[sym];
   prevPrices[sym] = cur;
-  if (prev == null || prev === cur) return;
+  if (prev == null) return;
+  var high = (hi != null) ? hi : cur;
+  var low  = (lo != null) ? lo : cur;
   var codes = Object.keys(alertsMemory);
   codes.forEach(function (code) {
     var entry = alertsMemory[code];
@@ -98,7 +101,8 @@ function checkAlertsForSym(fullSym, cur) {
     var dirty = false;
     (entry.data[sym] || []).forEach(function (a) {
       if (a.triggered) return;
-      var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
+      // Trigger if candle range [low..high] touches the alert price from either side
+      var crossed = (prev < a.price && high >= a.price) || (prev > a.price && low <= a.price);
       if (!crossed) return;
       a.triggered = true;
       dirty = true;
@@ -285,8 +289,8 @@ function startKlineWS() {
 
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
-      // Real-time alert check on every trade (kline updates per-trade)
-      checkAlertsForSym(k.s, parseFloat(k.c));
+      // Real-time alert check on every trade — pass high/low so wicks trigger too
+      checkAlertsForSym(k.s, parseFloat(k.c), parseFloat(k.h), parseFloat(k.l));
       // Буферизуем последнее состояние свечи — флашим раз в 200мс
       // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
       klinePending[sym + '_' + k.i] = {
