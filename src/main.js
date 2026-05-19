@@ -93,36 +93,8 @@ document.body.addEventListener('click', function (e) {
       render();
       break;
     }
-    case 'vol-pick': {
-      e.stopPropagation();
-      var dd2 = document.getElementById('vol-dd');
-      if (dd2) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-        dd2.style.display = dd2.style.display === 'none' ? 'block' : 'none';
-      }
-      break;
-    }
-    case 'pick-vol': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-      state.minVolume = parseFloat(target.dataset.val);
-      render();
-      fetchAllNATR(filteredCoins());
-      break;
-    }
-    case 'change-pick': {
-      e.stopPropagation();
-      var dd3 = document.getElementById('change-dd');
-      if (dd3) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-        dd3.style.display = dd3.style.display === 'none' ? 'block' : 'none';
-      }
-      break;
-    }
-    case 'pick-change': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-      state.minChange = parseFloat(target.dataset.val);
+    case 'pick-tier': {
+      state.volTier = target.dataset.val;
       render();
       fetchAllNATR(filteredCoins());
       break;

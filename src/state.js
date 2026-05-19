@@ -15,7 +15,7 @@ export const state = {
   cacheExpires: 0,
   loading: false,
   error: null,
-  minVolume: 100,
+  volTier: 'high',
   minChange: 1,
   sortCol: 'price_change_percentage_24h',
   sortDir: 'desc',
@@ -25,10 +25,15 @@ export const state = {
 };
 
 export function filteredCoins() {
-  var minVol = (state.minVolume || 0) * 1e6, minChg = state.minChange || 0;
+  var tier = state.volTier || 'high';
+  var minVol = tier === 'high' ? 100e6 : tier === 'mid' ? 50e6 : 12e6;
+  var maxVol = tier === 'high' ? Infinity : tier === 'mid' ? 100e6 : 50e6;
+  var minChg = state.minChange || 0;
   var coins = state.coins.filter(function (c) {
+    var vol = c.total_volume || 0;
     return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()) &&
-      (c.total_volume || 0) >= minVol &&
+      vol >= minVol &&
+      (tier === 'high' || vol < maxVol) &&
       (c.price_change_percentage_24h || 0) >= minChg;
   });
   coins = [].concat(coins).sort(function (a, b) {

@@ -1261,23 +1261,11 @@ export function render() {
 
   app.innerHTML =
     '<div class="topbar"><div class="filters">'
-    + '<div class="filter-group vol-desktop"><label>Объём:</label>'
-    + [20, 30, 50, 100, 200].map(function (v) { return '<button class="filter-pill' + (state.minVolume === v ? ' active' : '') + '" data-action="pick-vol" data-val="' + v + '">' + v + 'M</button>'; }).join('')
-    + '</div>'
-    + '<div class="filter-group change-desktop"><label>Рост:</label>'
-    + [1, 2, 5, 10].map(function (v) { return '<button class="filter-pill' + (state.minChange === v ? ' active' : '') + '" data-action="pick-change" data-val="' + v + '">' + v + '%</button>'; }).join('')
+    + '<div class="filter-group">'
+    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
     + '</div>'
     + '<div class="mobile-filters-row">'
-    + '<div class="tf-picker">'
-    + '<button class="tf-pill" data-action="vol-pick">' + state.minVolume + 'M</button>'
-    + '<div class="tf-dd" id="vol-dd" style="display:none">'
-    + [20, 30, 50, 100, 200].map(function (v) { return '<button class="' + (v === state.minVolume ? 'active' : '') + '" data-action="pick-vol" data-val="' + v + '">' + v + 'M</button>'; }).join('')
-    + '</div></div>'
-    + '<div class="tf-picker">'
-    + '<button class="tf-pill" data-action="change-pick">' + state.minChange + '%</button>'
-    + '<div class="tf-dd" id="change-dd" style="display:none">'
-    + [1, 2, 5, 10].map(function (v) { return '<button class="' + (v === state.minChange ? 'active' : '') + '" data-action="pick-change" data-val="' + v + '">' + v + '%</button>'; }).join('')
-    + '</div></div>'
+    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...') + '"></span>'
     + '<button class="btn-settings btn-settings-mob" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">'

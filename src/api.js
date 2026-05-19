@@ -163,7 +163,7 @@ function processTickerPush(arr) {
       if (!t.s.endsWith('USDT') || STABLE_SYMBOLS.has(sym) || sym === 'usdt') return;
       var qv = Math.round(parseFloat(t.q));
       var pc = ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
-      if (qv < ((state.minVolume || 0) * 1e6) || pc < (state.minChange || 0)) return;
+      if (qv < 12e6 || pc < (state.minChange || 0)) return;
       state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.c), total_volume: qv, price_change_percentage_24h: pc });
       newCoins++;
       return;
