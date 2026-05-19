@@ -82,6 +82,9 @@ async function loadAlertsOnStartup() {
   }
 }
 
+// Reload alerts from Redis every 30 seconds to pick up changes saved via Vercel
+setInterval(loadAlertsOnStartup, 30000);
+
 function checkAlerts() {
   var codes = Object.keys(alertsMemory);
   codes.forEach(function (code) {
