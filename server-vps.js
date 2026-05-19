@@ -3,6 +3,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
 var BINANCE_WS_URL = 'wss://fstream.binance.com/ws';
+var BINANCE_KLINE_WS_URL = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
 
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
@@ -157,7 +158,7 @@ function subscribeKline(streamName) {
 }
 
 function startKlineWS() {
-  klineWS = new WebSocket(BINANCE_WS_URL);
+  klineWS = new WebSocket(BINANCE_KLINE_WS_URL);
 
   klineWS.on('open', function () {
     console.log('[KlineWS] Connected');

@@ -162,7 +162,6 @@ function processTickerPush(arr) {
 
   if (newCoins) { emit('cards:sync'); fetchAllNATR(filteredCoins()); return; }
   applyLivePriceUpdates();
-  applyLiveChartUpdates();
   emit('cards:sync');
 }
 
@@ -418,10 +417,8 @@ export function startChartPolling() {
   if (_chartTimer) clearInterval(_chartTimer);
   if (_liveTimer) clearInterval(_liveTimer);
   // Sync кlines каждые 10с — только для восстановления после разрыва WS.
-  // Основной источник обновлений теперь kline_update push (processKlineUpdate).
+  // Основной источник обновлений — kline_update push (processKlineUpdate).
   _chartTimer = setInterval(function () { pollCharts(); }, 10000);
-  // Update live close price every 1s — independent of ticker push path
-  _liveTimer = setInterval(function () { applyLiveChartUpdates(); }, 1000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
