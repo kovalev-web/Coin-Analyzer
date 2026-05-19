@@ -788,7 +788,6 @@ export function render() {
     + '<span class="last-update">' + (state.lastUpdate ? 'Обновлено: ' + state.lastUpdate.toLocaleTimeString('ru-RU') : '') + '</span>'
     + '<span class="ws-indicator ' + (wsConnected ? 'connected' : 'disconnected') + '" title="' + (wsConnected ? 'WebSocket подключен' : 'WebSocket отключен') + '"></span>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
-    + '<button class="btn-refresh" data-action="refresh">Обновить</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">'
     + (isDark()
       ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'

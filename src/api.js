@@ -334,6 +334,8 @@ export function applyLiveChartUpdates() {
     if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
     var ts = tvSeries[coin.symbol];
     if (ts) { try { ts.update(updated); } catch (e) { } }
+    var tvvs = (window.__tvChartVolSeries || {})[coin.symbol];
+    if (tvvs) { try { tvvs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }); } catch (e) { } }
   });
 }
 
@@ -402,11 +404,15 @@ export async function pollCharts() {
         try { s.setData(arr); } catch (e) { }
         var vs2 = (window.__chartVolSeries || {})[c.symbol];
         if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }; })); } catch (e) { } }
+        var tvs2 = (window.__tvChartVolSeries || {})[c.symbol];
+        if (tvs2) { try { tvs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(26,26,26,0.35)' : 'rgba(153,153,153,0.35)' }; })); } catch (e) { } }
         if (chart && visibleRange) { try { chart.timeScale().setVisibleRange(visibleRange); } catch (e) { } }
       } else {
         try { s.update(lastCandle); } catch (e) { }
         var vs = (window.__chartVolSeries || {})[c.symbol];
         if (vs) { try { vs.update(lastVol); } catch (e) { } }
+        var tvvs2 = (window.__tvChartVolSeries || {})[c.symbol];
+        if (tvvs2) { try { tvvs2.update(lastVol); } catch (e) { } }
       }
     } catch (e) { }
   }
@@ -618,5 +624,5 @@ export async function fetchMarketStrength(force) {
 }
 
 export function startMSPolling() {
-  setInterval(function () { fetchMarketStrength(true); }, 5 * 60 * 1000);
+  setInterval(function () { fetchMarketStrength(false); }, 5 * 60 * 1000);
 }
