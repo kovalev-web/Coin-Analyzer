@@ -4,7 +4,7 @@ import {
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal,
 } from './ui.js';
 import { initRouter, registerRoute } from './router.js';
 import './styles.css';
@@ -190,5 +190,8 @@ registerRoute('/404', function () {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 loadCache();
+
+// Show code modal on first visit (no code set yet)
+if (!localStorage.getItem('pa_user_code')) showCodeModal();
 
 initRouter('/');

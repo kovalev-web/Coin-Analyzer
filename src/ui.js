@@ -128,22 +128,112 @@ window.__charts = _charts;
 // ── Levels ─────────────────────────────────────────────────────────────────
 
 var _levels = {}; // symbol → [{price, line}]
+var _userCode = localStorage.getItem('pa_user_code') || null;
+var _syncTimer = null;
 
-function saveLevels() {
+function levelsData() {
   var data = {};
   Object.keys(_levels).forEach(function (sym) {
     if (_levels[sym] && _levels[sym].length) data[sym] = _levels[sym].map(function (l) { return l.price; });
   });
+  return data;
+}
+
+function syncToServer() {
+  if (!_userCode) return;
+  fetch('/api/levels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save', code: _userCode, levels: levelsData() }),
+  }).catch(function () {});
+}
+
+function saveLevels() {
+  try { localStorage.setItem('pa_levels', JSON.stringify(levelsData())); } catch (e) {}
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(syncToServer, 1000);
+}
+
+function reattachAllLevels() {
+  Object.keys(_levels).forEach(function (sym) {
+    var s = _fullSeries[sym];
+    (_levels[sym] || []).forEach(function (l) {
+      if (l.line) { try { if (s) s.removePriceLine(l.line); } catch (e) {} l.line = null; }
+    });
+    (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
+    updateLevelsBtn(sym);
+  });
+}
+
+function applyServerLevels(data) {
+  _levels = {};
+  Object.keys(data).forEach(function (sym) {
+    _levels[sym] = data[sym].map(function (p) { return { price: p, line: null }; });
+  });
   try { localStorage.setItem('pa_levels', JSON.stringify(data)); } catch (e) {}
+  reattachAllLevels();
+}
+
+function fetchServerLevels(code) {
+  fetch('/api/levels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'get', code: code }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d && d.levels) applyServerLevels(d.levels);
+  }).catch(function () {});
 }
 
 export function loadLevels() {
   try {
-    var data = JSON.parse(localStorage.getItem('pa_levels') || '{}');
-    Object.keys(data).forEach(function (sym) {
-      _levels[sym] = data[sym].map(function (p) { return { price: p, line: null }; });
+    var local = JSON.parse(localStorage.getItem('pa_levels') || '{}');
+    Object.keys(local).forEach(function (sym) {
+      _levels[sym] = local[sym].map(function (p) { return { price: p, line: null }; });
     });
   } catch (e) {}
+  if (_userCode) fetchServerLevels(_userCode);
+}
+
+export function showCodeModal() {
+  if (document.getElementById('code-modal-backdrop')) return;
+  var backdrop = document.createElement('div');
+  backdrop.id = 'code-modal-backdrop';
+  backdrop.className = 'code-modal-backdrop';
+  backdrop.innerHTML =
+    '<div class="code-modal">' +
+      '<h2>Синхронизация уровней</h2>' +
+      '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
+      '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
+      '<div class="code-modal-actions">' +
+        '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
+        '<button class="code-modal-skip" id="code-modal-skip">Пропустить</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(backdrop);
+
+  var input = document.getElementById('code-modal-input');
+  var saveBtn = document.getElementById('code-modal-save');
+  var skipBtn = document.getElementById('code-modal-skip');
+
+  if (_userCode) input.value = _userCode;
+
+  function save() {
+    var code = input.value.trim();
+    if (!/^[a-zA-Z0-9_\-]{2,40}$/.test(code)) {
+      input.style.borderColor = 'var(--danger)';
+      input.focus();
+      return;
+    }
+    _userCode = code;
+    localStorage.setItem('pa_user_code', code);
+    backdrop.remove();
+    fetchServerLevels(code);
+  }
+
+  saveBtn.addEventListener('click', save);
+  skipBtn.addEventListener('click', function () { backdrop.remove(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
+  input.focus();
 }
 
 function attachLevel(sym, lvl) {
