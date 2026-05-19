@@ -124,10 +124,13 @@ var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = n
 
 // Pre-render Lucide bell as SVG image for canvas drawing
 var _bellImg = (function () {
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">' +
+  // Bell paths scaled to ~60% and centered — leaves visible padding inside the circle
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">' +
     '<circle cx="12" cy="12" r="11" fill="#ef4444"/>' +
-    '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<g transform="translate(12,12) scale(0.58) translate(-12,-11)">' +
+    '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</g>' +
     '</svg>';
   var img = new Image();
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -621,7 +624,7 @@ function drawAlertIcons(sym, ctx, rc) {
   var s = _fullSeries[sym]; if (!s) return;
   if (!_bellImg || !_bellImg.complete) return;
   var alerts = _alerts[sym] || [];
-  var sz = 22;
+  var sz = 18;
   alerts.forEach(function (a) {
     // During drag use exact mouse Y so icon tracks cursor without lag
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
