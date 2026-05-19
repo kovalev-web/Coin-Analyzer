@@ -48,7 +48,7 @@ function renderCard(coin) {
     '</div>' +
     '</div>' +
     '<div class="card-head-right">' +
-    '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + ' ур ×</button>' +
+    '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
     tfPicker +
     badge +
     '</div>' +
@@ -282,7 +282,7 @@ function updateLevelsBtn(sym) {
   if (!btn) return;
   var count = (_levels[sym] || []).length;
   btn.style.display = count ? 'inline-flex' : 'none';
-  btn.textContent = count + ' ур ×';
+  btn.textContent = count;
 }
 
 function isDark() {
@@ -312,7 +312,7 @@ function getChartColors() {
   return {
     bg: getCSSVar('--canvas'),
     text: getCSSVar('--graphite'),
-    grid: getCSSVar('--hairline'),
+    grid: isDark() ? 'rgba(255,255,255,0.04)' : getCSSVar('--hairline'),
     border: getCSSVar('--hairline'),
   };
 }

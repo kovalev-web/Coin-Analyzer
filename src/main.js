@@ -145,7 +145,7 @@ document.body.addEventListener('click', function (e) {
       closeTVMode();
       break;
     case 'clear-levels':
-      clearLevels(sym);
+      if (confirm('Удалить все уровни для ' + sym.toUpperCase() + '?')) clearLevels(sym);
       break;
   }
 });
