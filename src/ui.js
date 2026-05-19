@@ -418,7 +418,7 @@ function reattachAllAlerts() {
 function applyServerAlerts(entry) {
   Object.keys(_alerts).forEach(function (sym) {
     var s = _fullSeries[sym];
-    (_alerts[sym] || []).forEach(function (a) { if (a.line && s) { try { s.removePriceLine(a.line); } catch (e) {} } });
+    (_alerts[sym] || []).forEach(function (a) { if (a.line && s) { try { s.removePriceLine(a.line); } catch (e) {} } if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} } });
   });
   _alerts = {};
   if (entry && entry.data) {
