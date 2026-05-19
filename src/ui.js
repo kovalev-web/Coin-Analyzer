@@ -119,7 +119,7 @@ export function updateCardBadge(symbol) {
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 
-var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {};
+var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null;
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
@@ -364,7 +364,8 @@ function initCharts() {
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
 
     (function (sym, container, cs) {
-      container.addEventListener('dblclick', function (e) {
+      // Right-click: add level or remove if within 8px
+      container.addEventListener('contextmenu', function (e) {
         e.preventDefault();
         var rect = container.getBoundingClientRect();
         var y = e.clientY - rect.top;
@@ -377,7 +378,24 @@ function initCharts() {
         }
         addLevel(sym, price);
       });
+      // Left mousedown: start drag if near a level, else ruler (middle)
       container.addEventListener('mousedown', function (e) {
+        if (e.button === 0) {
+          var rect = container.getBoundingClientRect();
+          var y = e.clientY - rect.top;
+          var levels = _levels[sym] || [];
+          for (var i = 0; i < levels.length; i++) {
+            var ly = cs.priceToCoordinate(levels[i].price);
+            if (ly != null && Math.abs(ly - y) < 8) {
+              e.stopPropagation();
+              e.preventDefault();
+              _dragging = { sym: sym, idx: i, lvl: levels[i] };
+              container.style.cursor = 'ns-resize';
+              return;
+            }
+          }
+          return;
+        }
         if (e.button !== 1) return;
         e.preventDefault();
         var rect = container.getBoundingClientRect();
@@ -386,14 +404,45 @@ function initCharts() {
         if (pr != null) _rulers[sym].start = { pt: pt, price: pr };
       }, { capture: true });
       container.addEventListener('mousemove', function (e) {
+        var rect = container.getBoundingClientRect();
+        var y = e.clientY - rect.top;
+        // Drag level
+        if (_dragging && _dragging.sym === sym && (e.buttons & 1)) {
+          var price = cs.coordinateToPrice(y);
+          if (price != null && _dragging.lvl.line) {
+            _dragging.lvl.price = price;
+            _dragging.lvl.line.applyOptions({ price: price });
+          }
+          return;
+        }
+        // Cursor hint near level
+        var levels = _levels[sym] || [];
+        var near = false;
+        for (var j = 0; j < levels.length; j++) {
+          var ly2 = cs.priceToCoordinate(levels[j].price);
+          if (ly2 != null && Math.abs(ly2 - y) < 8) { near = true; break; }
+        }
+        container.style.cursor = near ? 'ns-resize' : '';
+        // Ruler
         var ruler = _rulers[sym];
         if (!ruler.start || !(e.buttons & 4)) return;
-        var rect = container.getBoundingClientRect();
-        var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        drawRuler(sym, ruler.start.pt, pt, ruler.start.price, cs.coordinateToPrice(pt.y));
+        var pt = { x: e.clientX - rect.left, y: y };
+        drawRuler(sym, ruler.start.pt, pt, ruler.start.price, cs.coordinateToPrice(y));
       });
-      container.addEventListener('mouseup', function (e) { if (e.button === 1) clearRuler(sym); });
-      container.addEventListener('mouseleave', function () { clearRuler(sym); });
+      container.addEventListener('mouseup', function (e) {
+        if (e.button === 0 && _dragging && _dragging.sym === sym) {
+          _dragging = null;
+          container.style.cursor = '';
+          saveLevels();
+          return;
+        }
+        if (e.button === 1) clearRuler(sym);
+      });
+      container.addEventListener('mouseleave', function () {
+        if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
+        container.style.cursor = '';
+        clearRuler(sym);
+      });
       new ResizeObserver(function () {
         if (_charts[sym]) _charts[sym].resize(container.offsetWidth, 300);
         if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
