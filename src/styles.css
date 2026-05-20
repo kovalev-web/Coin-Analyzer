@@ -245,16 +245,24 @@
       .cards-area{padding:0 12px 32px;}
       .cards-grid{grid-template-columns:1fr;}
       .error-banner{margin:12px 12px 0;}
-      .fv-chart-wrap{margin:8px 12px 12px;}
-      #fv-briefing-drawer.open{margin:8px 8px 12px 0;}
+      .fv-chart-wrap{margin:8px 12px 0;}
+      .fv-body{flex-direction:column;}
+      #fv-briefing-drawer{width:auto !important;height:0;transition:height 0.2s ease;}
+      #fv-briefing-drawer.open{height:45vh;width:auto !important;margin:8px 12px 12px;border-radius:12px;overflow-y:auto;box-shadow:var(--shadow-soft);}
+      .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{margin-right:12px;flex:1;min-height:0;}
       .fv-info-stats .stat-val{font-size:13px;}
       .fv-sym-label{font-size:14px;}
       .fv-back-btn{width:28px;height:28px;}
       .fv-info-top .tf-picker .tf-pill{height:28px;font-size:12px;}
+      .btn-fv-briefing-mob{display:inline-flex !important;}
+      .mobile-filters-row .btn-briefing-mob{display:inline-flex;width:36px;height:36px;}
       #bp-popup{border-radius:12px;}
     }
 
     /* ── Briefing button ─────────────────────────────────────────────────── */
+    .btn-fv-briefing-mob{display:none;background:var(--fog);color:var(--ink);border:none;padding:0;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;}
+    .btn-fv-briefing-mob:hover,.btn-fv-briefing-mob.active{color:#f59e0b;}
+    .btn-fv-briefing-mob.active svg{fill:#f59e0b;}
     .btn-briefing{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;}
     .btn-briefing:hover{color:var(--primary);}
     .btn-briefing.active{background:#f59e0b;color:#fff;}
