@@ -1393,16 +1393,19 @@ function _fvCoinInfoHTML(sym, tf) {
   var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
   var nd = natrDisplay(sym);
   return '<div class="fv-coin-info">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
-    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
-    + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
-    + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
-    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
+    + '<div class="fv-info-top">'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span></button>'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
     + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="fv-info-stats">'
+    + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+    + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
+    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
     + '</div>'
     + '</div>';
 }
