@@ -1277,12 +1277,12 @@ function _topbarHTML() {
     + '<button class="btn-settings btn-settings-mob" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
     + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">' + icon('refresh-cw', 16) + '</button>'
     + '<button class="btn-theme btn-theme-mob" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
-    + '<button class="btn-briefing btn-briefing-mob" data-action="open-briefing" title="Брифинг">' + icon('star', 15) + '</button>'
+    + '<button class="btn-briefing btn-briefing-mob" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '</div>'
     + '<div class="filters-right">'
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<button class="btn-settings" data-action="open-settings" title="Настройки: код синхронизации и Telegram">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-briefing" data-action="open-briefing" title="Брифинг">' + icon('star', 15) + '</button>'
+    + '<button class="btn-briefing" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
     + '</div>'
@@ -1651,7 +1651,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
-    + '<button class="btn-fv-briefing-mob" data-action="toggle-fv-briefing" title="Брифинг">' + icon('star', 14) + '</button>'
+    + '<button class="btn-fv-briefing-mob' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
     + '</div>'
     + '<div class="fv-info-stats">'
     + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
@@ -1995,16 +1995,12 @@ export function openFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   drawer.classList.add('open');
-  var btn = document.querySelector('.btn-fv-briefing-mob');
-  if (btn) btn.classList.add('active');
   renderFVBriefingDrawer();
 }
 
 export function closeFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer) drawer.classList.remove('open');
-  var btn = document.querySelector('.btn-fv-briefing-mob');
-  if (btn) btn.classList.remove('active');
 }
 
 export function toggleFVBriefingDrawer() {
@@ -2012,3 +2008,4 @@ export function toggleFVBriefingDrawer() {
   if (!drawer) return;
   if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
 }
+                                                         

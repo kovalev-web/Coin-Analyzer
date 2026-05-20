@@ -661,5 +661,4 @@ export async function fetchMarketStrength(force) {
 }
 
 export function startMSPolling() {
-  setInterval(function () { fetchMarketStrength(false); }, 5 * 60 * 1000);
-}
+  setInterval(function () { fetchMarketStrength(false); }, 5
