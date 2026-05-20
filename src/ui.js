@@ -280,8 +280,14 @@ export function showCodeModal() {
 
 function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
-  if (s) lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
-  if (_fvSeries && _fvSym === sym) lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  if (s) {
+    if (lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
+    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  }
+  if (_fvSeries && _fvSym === sym) {
+    if (lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
+    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+  }
 }
 
 function addLevel(sym, price) {
@@ -345,8 +351,14 @@ function alertLineOpts(triggered) {
 
 function attachAlert(sym, a) {
   var s = _fullSeries[sym];
-  if (s) a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
-  if (_fvSeries && _fvSym === sym) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  if (s) {
+    if (a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
+    a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  }
+  if (_fvSeries && _fvSym === sym) {
+    if (a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
+    a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+  }
 }
 
 function addAlert(sym, price) {
@@ -1995,6 +2007,7 @@ export function closeFVBriefingDrawer() {
   if (btn) btn.classList.remove('active');
 }
 
+export function toggleFVBriefingDrawer() {
 export function toggleFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
