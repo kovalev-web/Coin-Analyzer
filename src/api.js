@@ -2,6 +2,12 @@ import { state, STABLE_SYMBOLS, CACHE_TTL_MS, ANALYZE_DELAY_MS, filteredCoins } 
 import { fmt, sleep } from './utils.js';
 import { emit } from './events.js';
 
+// API base URL — derived from VITE_WS_URL so Vercel frontend hits the VPS
+var _wsEnv = import.meta.env.VITE_WS_URL || '';
+export var API_BASE = _wsEnv
+  ? _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '')
+  : '';
+
 // Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
 var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
 
@@ -522,7 +528,7 @@ export async function analyzeCoin(coin) {
   var nd = state.natrData[coin.symbol];
   var natrVal = nd && nd !== 'loading' && nd !== 'error' ? nd.value : null;
   try {
-    var res = await fetch('/api/analyze', {
+    var res = await fetch(API_BASE + '/api/analyze', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: coin.name, symbol: coin.symbol.toUpperCase(),

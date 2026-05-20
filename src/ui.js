@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS } from './api.js';
+import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ function levelsData() {
 
 function syncToServer() {
   if (!_userCode) return;
-  fetch('/api/levels', {
+  fetch(API_BASE + '/api/levels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'save', code: _userCode, levels: levelsData() }),
@@ -200,7 +200,7 @@ function applyServerLevels(data) {
 }
 
 function fetchServerLevels(code) {
-  fetch('/api/levels', {
+  fetch(API_BASE + '/api/levels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'get', code: code }),
@@ -397,7 +397,7 @@ function syncAlertsToServer() {
   // Notify VPS directly via WS for instant alertsMemory update
   sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: data });
   // Also persist to Redis via Vercel for cross-device sync and VPS restart recovery
-  fetch('/api/alerts', {
+  fetch(API_BASE + '/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'save', code: _userCode, chatId: _chatId, data: data }),
@@ -433,7 +433,7 @@ function applyServerAlerts(entry) {
 }
 
 function fetchServerAlerts(code) {
-  fetch('/api/alerts', {
+  fetch(API_BASE + '/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'get', code: code }),
@@ -1429,7 +1429,7 @@ function saveBriefingLocal() {
 function syncBriefingToServer() {
   var code = _briefingUserCode || localStorage.getItem('pa_user_code');
   if (!code) return;
-  fetch('/api/briefing', {
+  fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
@@ -1444,7 +1444,7 @@ export function loadBriefing() {
   var code = localStorage.getItem('pa_user_code');
   if (!code) return;
   _briefingUserCode = code;
-  fetch('/api/briefing', {
+  fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'get', code: code }),
