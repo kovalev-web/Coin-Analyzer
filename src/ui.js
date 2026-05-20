@@ -43,7 +43,7 @@ function renderCard(coin) {
     '<div class="card-inline-stats">' +
     '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="Изменение за 24ч">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
     '<span class="stat-val ' + natr.cls + '" title="NATR — волатильность (5m × 30 свечей)">' + natr.val + '</span>' +
-    '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume) + '</span>' +
+    '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume).replace('$', '') + '</span>' +
     '</div>' +
     '<div class="card-head-right">' +
     '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + coin.symbol + '" title="Алерты (Shift+ПКМ для добавления)" style="display:' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) || 0) + '</button>' +
@@ -1656,7 +1656,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '<div class="fv-info-stats">'
     + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
     + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
-    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0) + '</span>'
+    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0).replace('$', '') + '</span>'
     + '</div>'
     + '</div>';
 }
