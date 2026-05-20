@@ -5,6 +5,9 @@ import {
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
+  toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
+  briefingNavDate, briefingCycleStatus, briefingRemove,
+  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -24,6 +27,10 @@ document.body.addEventListener('click', function (e) {
     var msPopup = document.getElementById('ms-popup');
     if (msPopup && msPopup.style.display !== 'none' && !msPopup.contains(e.target) && !e.target.closest('#ms-card') && !e.target.closest('[data-action="open-ms"]')) {
       msPopup.style.display = 'none';
+    }
+    var bpPopup = document.getElementById('bp-popup');
+    if (bpPopup && bpPopup.style.display !== 'none' && !bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
+      bpPopup.style.display = 'none';
     }
     if (!e.target.closest('.tf-picker')) {
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
@@ -149,6 +156,65 @@ document.body.addEventListener('click', function (e) {
     case 'open-settings':
       showCodeModal();
       break;
+    case 'toggle-briefing':
+      toggleBriefing(sym);
+      break;
+    case 'open-briefing':
+      openBriefingPanel();
+      break;
+    case 'close-briefing':
+      closeBriefingPanel();
+      break;
+    case 'bp-prev-date':
+      briefingNavDate(-1);
+      break;
+    case 'bp-next-date':
+      briefingNavDate(+1);
+      break;
+    case 'bp-cycle-status': {
+      var bStatusDate = target.dataset.date;
+      briefingCycleStatus(sym, bStatusDate);
+      break;
+    }
+    case 'bp-open':
+      closeBriefingPanel();
+      openCoinFullView(sym);
+      break;
+    case 'go-briefing': {
+      var today = new Date().toISOString().slice(0, 10);
+      var first = (state.briefing || []).find(function (e) { return e.date === today; });
+      if (first) {
+        closeBriefingPanel();
+        openCoinFullView(first.sym);
+        setTimeout(function () { openFVBriefingDrawer(); }, 50);
+      }
+      break;
+    }
+    case 'close-fv-briefing':
+      closeFVBriefingDrawer();
+      break;
+    case 'bp-remove': {
+      var bRemoveDate = target.dataset.date;
+      briefingRemove(sym, bRemoveDate);
+      break;
+    }
+    case 'bp-toggle-note': {
+      // Use DOM sibling instead of getElementById to avoid collision between popup and drawer
+      var bpRow = target.closest('.bp-row');
+      var noteEl = bpRow ? bpRow.nextElementSibling : null;
+      if (noteEl && noteEl.classList.contains('bp-note-row')) {
+        var showing = noteEl.style.display !== 'none';
+        noteEl.style.display = showing ? 'none' : 'block';
+        if (!showing) { var ta = noteEl.querySelector('textarea'); if (ta) ta.focus(); }
+      }
+      break;
+    }
+    case 'toggle-fv-briefing':
+      toggleFVBriefingDrawer();
+      break;
+    case 'fvbd-open':
+      openCoinFullView(sym);
+      break;
   }
 });
 
@@ -199,6 +265,7 @@ registerRoute('/404', function () {
 
 loadCache();
 loadAlerts();
+loadBriefing();
 
 // Show code modal on first visit (no code set yet)
 if (!localStorage.getItem('pa_user_code')) showCodeModal();

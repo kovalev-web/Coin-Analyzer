@@ -22,6 +22,8 @@ export const state = {
   analyzingAll: false,
   analyzeAllAbort: false,
   marketStrength: null,
+  briefing: [],        // [{sym, date, addedAt, status, note}]
+  briefingViewDate: null, // currently viewed date in panel (null = today)
 };
 
 export function filteredCoins() {

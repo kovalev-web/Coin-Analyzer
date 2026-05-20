@@ -403,6 +403,39 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/api/briefing') {
+    var bodyBr = '';
+    req.on('data', function (chunk) { bodyBr += chunk; });
+    req.on('end', async function () {
+      try {
+        var parsed = JSON.parse(bodyBr);
+        var action = parsed.action, code = parsed.code, entries = parsed.entries;
+        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid code' }));
+          return;
+        }
+        var key = 'briefing:' + code.toLowerCase();
+        if (action === 'get') {
+          var r = await redis(['GET', key]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ entries: r.result ? JSON.parse(r.result) : [] }));
+        } else if (action === 'save') {
+          await redis(['SET', key, JSON.stringify(entries || [])]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown action' }));
+        }
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404); res.end();
 });
 

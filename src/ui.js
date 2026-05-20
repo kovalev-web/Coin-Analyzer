@@ -50,6 +50,7 @@ function renderCard(coin) {
     '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
     tfPicker +
     badge +
+    '<button class="btn-star" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="В брифинг">' + icon('star', 13) + '</button>' +
     '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize-2', 13) + '</button>' +
     '</div>' +
     '</div>' +
@@ -1261,6 +1262,7 @@ function _topbarHTML() {
     + '<div class="filters-right">'
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<button class="btn-settings" data-action="open-settings" title="Настройки: код синхронизации и Telegram">' + icon('bell', 15) + '</button>'
+    + '<button class="btn-briefing" data-action="open-briefing" title="Брифинг">' + icon('star', 15) + '</button>'
     + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
     + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
     + '</div>'
@@ -1388,6 +1390,232 @@ on('ws:status', function () {
 
 var _fvRuler = null;
 
+// ── Briefing ───────────────────────────────────────────────────────────────
+
+var _briefingUserCode = localStorage.getItem('pa_user_code') || null;
+var _briefingSyncTimer = null;
+
+function todayDate() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function fmtBriefingDate(iso) {
+  var parts = iso.split('-');
+  return parts[2] + '.' + parts[1] + '.' + parts[0];
+}
+
+function briefingDates() {
+  var dates = {};
+  (state.briefing || []).forEach(function (e) { dates[e.date] = true; });
+  return Object.keys(dates).sort().reverse();
+}
+
+function briefingForDate(date) {
+  return (state.briefing || []).filter(function (e) { return e.date === date; });
+}
+
+function isInBriefing(sym) {
+  var today = todayDate();
+  return (state.briefing || []).some(function (e) { return e.sym === sym && e.date === today; });
+}
+
+function saveBriefingLocal() {
+  try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {}
+  clearTimeout(_briefingSyncTimer);
+  _briefingSyncTimer = setTimeout(syncBriefingToServer, 1000);
+}
+
+function syncBriefingToServer() {
+  var code = _briefingUserCode || localStorage.getItem('pa_user_code');
+  if (!code) return;
+  fetch('/api/briefing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
+  }).catch(function () {});
+}
+
+export function loadBriefing() {
+  try {
+    var local = JSON.parse(localStorage.getItem('pa_briefing') || '[]');
+    if (Array.isArray(local)) state.briefing = local;
+  } catch (e) {}
+  var code = localStorage.getItem('pa_user_code');
+  if (!code) return;
+  _briefingUserCode = code;
+  fetch('/api/briefing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'get', code: code }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d && Array.isArray(d.entries)) {
+      state.briefing = d.entries;
+      saveBriefingLocal();
+      renderBriefingPanel();
+      updateAllStarButtons();
+    }
+  }).catch(function () {});
+}
+
+export function toggleBriefing(sym) {
+  var today = todayDate();
+  var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === today; });
+  if (idx >= 0) {
+    state.briefing.splice(idx, 1);
+  } else {
+    if (!state.briefing) state.briefing = [];
+    var coin = state.coins.find(function (c) { return c.symbol === sym; });
+    state.briefing.push({ sym: sym, date: today, addedAt: Date.now(), status: 'watching', note: '' });
+  }
+  saveBriefingLocal();
+  updateStarButton(sym);
+  renderBriefingPanel();
+}
+
+function briefingStatusLabel(status) {
+  if (status === 'watching') return 'Наблюдаю';
+  if (status === 'worked')   return 'Отработала';
+  if (status === 'skip')     return 'Отмена';
+  return '—';
+}
+
+function briefingStatusClass(status) {
+  if (status === 'watching') return 'bp-s-watching';
+  if (status === 'worked')   return 'bp-s-worked';
+  if (status === 'skip')     return 'bp-s-skip';
+  return 'bp-s-none';
+}
+
+function cycleBriefingStatus(sym, date) {
+  var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
+  if (!entry) return;
+  var order = ['watching', 'worked', 'skip'];
+  var cur = order.indexOf(entry.status);
+  entry.status = order[(cur + 1) % order.length];
+  saveBriefingLocal();
+  renderBriefingPanel();
+  var _fvd = document.getElementById('fv-briefing-drawer');
+  if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
+}
+
+function updateStarButton(sym) {
+  var btn = document.querySelector('.btn-star[data-sym="' + sym + '"]');
+  if (!btn) return;
+  var active = isInBriefing(sym);
+  btn.classList.toggle('active', active);
+  btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+}
+
+function updateAllStarButtons() {
+  document.querySelectorAll('.btn-star').forEach(function (btn) {
+    var sym = btn.dataset.sym;
+    var active = isInBriefing(sym);
+    btn.classList.toggle('active', active);
+    btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+  });
+}
+
+// ── Briefing Panel ─────────────────────────────────────────────────────────
+
+export function openBriefingPanel() {
+  if (!state.briefingViewDate) state.briefingViewDate = todayDate();
+  var fvOverlay = document.getElementById('fv-overlay');
+  var btn = (fvOverlay && fvOverlay.style.display !== 'none'
+    ? fvOverlay.querySelector('.btn-briefing')
+    : null) || document.querySelector('.btn-briefing');
+
+  var popup = document.getElementById('bp-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'bp-popup';
+    popup.className = 'bp-popup';
+    document.body.appendChild(popup);
+  } else if (!popup.parentNode || popup.parentNode !== document.body) {
+    document.body.appendChild(popup);
+  }
+  popup.style.display = 'block';
+  renderBriefingPanel();
+
+  if (btn) {
+    var btnRect = btn.getBoundingClientRect();
+    // If inside a fixed overlay (full view), use fixed positioning — no scrollY needed
+    var inFixed = !!btn.closest('#fv-overlay');
+    popup.style.position = inFixed ? 'fixed' : 'absolute';
+    popup.style.top = (btnRect.bottom + (inFixed ? 0 : window.scrollY) + 6) + 'px';
+    if (window.innerWidth <= 768) {
+      popup.style.left = '8px';
+      popup.style.right = '8px';
+      popup.style.width = 'auto';
+    } else {
+      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
+      popup.style.left = 'auto';
+      popup.style.width = '360px';
+    }
+  }
+}
+
+export function closeBriefingPanel() {
+  var popup = document.getElementById('bp-popup');
+  if (popup) popup.style.display = 'none';
+}
+
+export function renderBriefingPanel() {
+  var popup = document.getElementById('bp-popup');
+  if (!popup || popup.style.display === 'none') return;
+  var viewDate = state.briefingViewDate || todayDate();
+  var today = todayDate();
+  var entries = briefingForDate(viewDate);
+  var dates = briefingDates();
+  if (dates.indexOf(today) < 0) dates.unshift(today);
+  if (dates.indexOf(viewDate) < 0) dates.unshift(viewDate);
+  var dateIdx = dates.indexOf(viewDate);
+  var canPrev = dateIdx < dates.length - 1;
+  var canNext = dateIdx > 0;
+  var isToday = viewDate === today;
+  var todayEntries = briefingForDate(today);
+
+  var rowsHTML = entries.length ? entries.map(function (e) {
+    var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
+    var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
+    var price = coin ? fmtPrice(coin.current_price) : '—';
+    var vol = coin ? fmt(coin.total_volume) : '—';
+    return '<div class="bp-row">' +
+      '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
+      '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
+      (isToday
+        ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
+        : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
+      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 13) + '</button>' +
+      (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 12) + '</button>' : '') +
+      '</div>' +
+      '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
+        '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
+      '</div>';
+  }).join('') : '<div class="bp-empty">На сегодня монет нет — отметь звёздочкой на дашборде</div>';
+
+  popup.innerHTML =
+    '<div class="bp-header">' +
+      '<span class="bp-title">Брифинг</span>' +
+      '<button class="bp-close-btn" data-action="close-briefing">' + icon('x', 15) + '</button>' +
+    '</div>' +
+    '<div class="bp-list">' + rowsHTML + '</div>' +
+    '<div class="bp-footer">' +
+      '<button class="bp-go-btn" data-action="go-briefing"' + (todayEntries.length ? '' : ' disabled') + '>Режим брифинг</button>' +
+    '</div>';
+
+  // Re-attach note textarea listeners
+  popup.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
+    ta.addEventListener('input', function () {
+      var sym = ta.dataset.sym, date = ta.dataset.date;
+      var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
+      if (entry) { entry.note = ta.value; saveBriefingLocal(); }
+      var noteBtn = popup.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
+      if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
+    });
+  });
+}
+
 function _fvCoinInfoHTML(sym, tf) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
@@ -1459,11 +1687,26 @@ export function openCoinFullView(sym) {
   if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; document.body.appendChild(overlay); }
 
   var tf = state.chartTF[sym] || '5m';
-  overlay.innerHTML = _topbarHTML()
-    + '<div class="fv-chart-wrap">'
-    + _fvCoinInfoHTML(sym, tf)
-    + '<div id="fv-chart"></div>'
-    + '</div>';
+  var switchingCoins = overlay.style.display === 'flex';
+  if (!switchingCoins) {
+    // First open — build full structure including drawer
+    overlay.innerHTML = _topbarHTML()
+      + '<div class="fv-body">'
+      + '<div class="fv-chart-wrap">'
+      + _fvCoinInfoHTML(sym, tf)
+      + '<div id="fv-chart"></div>'
+      + '</div>'
+      + '<div id="fv-briefing-drawer"></div>'
+      + '</div>';
+  } else {
+    // Switching coins — update only topbar and chart-wrap, leave drawer untouched
+    var _tmpDiv = document.createElement('div');
+    _tmpDiv.innerHTML = _topbarHTML();
+    var _oldTopbar = overlay.querySelector('.topbar');
+    if (_oldTopbar) overlay.replaceChild(_tmpDiv.firstChild, _oldTopbar);
+    var _chartWrap = overlay.querySelector('.fv-chart-wrap');
+    if (_chartWrap) _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
+  }
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
@@ -1648,4 +1891,98 @@ export function setFVChartTF(tf) {
   (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
   _fvSeries.setData([]);
   _loadFVData(_fvSym, tf);
+}
+
+export function briefingNavDate(dir) {
+  var today = todayDate();
+  var dates = briefingDates();
+  if (dates.indexOf(today) < 0) dates.unshift(today);
+  var cur = state.briefingViewDate || today;
+  var ci = dates.indexOf(cur);
+  var ni = ci - dir; // dir=+1 means next (newer), dir=-1 means prev (older)
+  if (ni >= 0 && ni < dates.length) state.briefingViewDate = dates[ni];
+  renderBriefingPanel();
+}
+
+export function briefingCycleStatus(sym, date) {
+  cycleBriefingStatus(sym, date);
+}
+
+export function briefingRemove(sym, date) {
+  var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === date; });
+  if (idx >= 0) {
+    state.briefing.splice(idx, 1);
+    saveBriefingLocal();
+    updateStarButton(sym);
+    renderBriefingPanel();
+    var _fvd2 = document.getElementById('fv-briefing-drawer');
+    if (_fvd2 && _fvd2.classList.contains('open')) renderFVBriefingDrawer();
+  }
+}
+
+export function renderFVBriefingDrawer() {
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (!drawer) return;
+  var today = todayDate();
+  var allEntries = state.briefing || [];
+  if (!allEntries.length) {
+    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div><div class="fvbd-empty">Брифинг пуст</div>';
+    return;
+  }
+  // Group by date descending
+  var dateMap = {};
+  allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
+  var dates = Object.keys(dateMap).sort().reverse();
+  var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>';
+  dates.forEach(function (date) {
+    var isToday = date === today;
+    var label = isToday ? 'Сегодня' : fmtBriefingDate(date);
+    html += '<div class="fvbd-date-label">' + label + '</div>';
+    dateMap[date].forEach(function (e) {
+      var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
+      var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
+      var isCurrent = _fvSym === e.sym;
+      html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '">'
+        + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
+        + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+        + (isToday
+          ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
+          : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 13) + '</button>'
+        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 12) + '</button>' : '')
+        + '</div>'
+        + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
+        + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
+        + '</div>';
+    });
+  });
+  drawer.innerHTML = html;
+  // Re-attach textarea listeners
+  drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
+    ta.addEventListener('input', function () {
+      var sym = ta.dataset.sym, date = ta.dataset.date;
+      var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
+      if (entry) { entry.note = ta.value; saveBriefingLocal(); }
+      var noteBtn = drawer.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
+      if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
+    });
+  });
+}
+
+export function openFVBriefingDrawer() {
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (!drawer) return;
+  drawer.classList.add('open');
+  renderFVBriefingDrawer();
+}
+
+export function closeFVBriefingDrawer() {
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (drawer) drawer.classList.remove('open');
+}
+
+export function toggleFVBriefingDrawer() {
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (!drawer) return;
+  if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
 }
