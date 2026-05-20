@@ -179,9 +179,17 @@ function processTickerPush(arr) {
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
-  if (newCoins) { emit('cards:sync'); fetchAllNATR(filteredCoins()); return; }
-  applyLivePriceUpdates();
-  emit('cards:sync');
+  if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
+
+  // Compare current DOM card order vs new sorted order — re-render only if order changed
+  var _sortedOrder = filteredCoins().map(function (c) { return c.symbol; }).join(',');
+  var _domOrder = Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (el) { return el.dataset.sym; }).join(',');
+  if (_domOrder && _domOrder !== _sortedOrder) {
+    emit('render');
+  } else {
+    applyLivePriceUpdates();
+    emit('cards:sync');
+  }
 }
 
 // ── Individual ticker update (from per-coin WS subscriptions) ────────────
