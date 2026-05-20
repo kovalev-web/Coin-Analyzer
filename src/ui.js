@@ -1524,7 +1524,7 @@ export function openBriefingPanel() {
   var fvOverlay = document.getElementById('fv-overlay');
   var btn = (fvOverlay && fvOverlay.style.display !== 'none'
     ? fvOverlay.querySelector('.btn-briefing')
-    : null) || document.querySelector('.btn-briefing');
+    : null) || Array.from(document.querySelectorAll('[data-action="open-briefing"]')).find(function (b) { return b.offsetParent !== null; });
 
   var popup = document.getElementById('bp-popup');
   if (!popup) {
