@@ -2008,7 +2008,6 @@ export function closeFVBriefingDrawer() {
 }
 
 export function toggleFVBriefingDrawer() {
-export function toggleFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
