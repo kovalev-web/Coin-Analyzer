@@ -245,11 +245,11 @@
       .cards-area{padding:0 12px 32px;}
       .cards-grid{grid-template-columns:1fr;}
       .error-banner{margin:12px 12px 0;}
-      .fv-chart-wrap{margin:8px 12px 0;}
-      .fv-body{flex-direction:column;}
+      .fv-body{flex-direction:column;padding:8px 12px 12px;}
+      .fv-chart-wrap{margin:0;flex:2;}
       #fv-briefing-drawer{width:auto !important;height:0;transition:height 0.2s ease;}
-      #fv-briefing-drawer.open{height:45vh;width:auto !important;margin:8px 12px 12px;border-radius:12px;overflow-y:auto;box-shadow:var(--shadow-soft);}
-      .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{margin-right:12px;flex:1;min-height:0;}
+      #fv-briefing-drawer.open{height:33vh;width:auto !important;margin:8px 0 0;border-radius:12px;overflow-y:auto;box-shadow:var(--shadow-soft);}
+      .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{flex:2;min-height:0;}
       .fv-info-stats .stat-val{font-size:13px;}
       .fv-sym-label{font-size:14px;}
       .fv-back-btn{width:28px;height:28px;}
