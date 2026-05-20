@@ -245,6 +245,9 @@
       .cards-grid{grid-template-columns:1fr;}
       .error-banner{margin:12px 12px 0;}
       .fv-chart-wrap{margin:8px 12px 12px;}
-      .fv-info-stats{display:none;}
+      .fv-info-stats .stat-val{font-size:13px;}
+      .fv-sym-label{font-size:14px;}
+      .fv-back-btn{width:28px;height:28px;}
+      .fv-info-top .tf-picker .tf-pill{height:28px;font-size:12px;}
     }
   
