@@ -104,19 +104,21 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       if (a.triggered) return;
       // Grace period: ignore alerts set less than 5 seconds ago to prevent immediate firing
       if (a.createdAt && (now - a.createdAt) < 5000) return;
-      // Directional check: only fire in the direction away from the price at creation time
+      // Use close price only (cur), not candle hi/lo wicks — prevents false triggers
+      // when alert is placed inside the current candle's already-traded range.
+      // Directional: only fire in the direction away from the price at creation time.
       var crossed;
       if (a.originPrice != null) {
         if (a.originPrice <= a.price) {
-          // Alert is at or above origin price → only fire on upward crossing
-          crossed = prev <= a.price && high >= a.price;
+          // Alert at or above origin price → fire only on upward close crossing
+          crossed = prev < a.price && cur >= a.price;
         } else {
-          // Alert is below origin price → only fire on downward crossing
-          crossed = prev >= a.price && low <= a.price;
+          // Alert below origin price → fire only on downward close crossing
+          crossed = prev > a.price && cur <= a.price;
         }
       } else {
-        // Legacy alert without originPrice: bidirectional crossing
-        crossed = (prev < a.price && high >= a.price) || (prev > a.price && low <= a.price);
+        // Legacy alert without originPrice: bidirectional close crossing
+        crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
       }
       if (!crossed) return;
       a.triggered = true;
