@@ -50,7 +50,7 @@ function renderCard(coin) {
     '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
     tfPicker +
     badge +
-    '<button class="btn-star" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="В брифинг">' + icon('star', 13) + '</button>' +
+    '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 13) + '</button>' +
     '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize-2', 13) + '</button>' +
     '</div>' +
     '</div>' +
