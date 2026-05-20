@@ -1,5 +1,6 @@
 const http = require('http');
 const { WebSocketServer, WebSocket } = require('ws');
+const { analyzeCoin } = require('./shared/analyze');
 
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
@@ -334,6 +335,25 @@ var httpServer = http.createServer(async function (req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+  if (req.method === 'POST' && req.url === '/api/analyze') {
+    var analyzeBody = '';
+    req.on('data', function (chunk) { analyzeBody += chunk; });
+    req.on('end', async function () {
+      try {
+        var p = JSON.parse(analyzeBody);
+        if (!p.name || !p.symbol) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Missing required fields' })); return; }
+        var result = await analyzeCoin({ name: p.name, symbol: p.symbol, change24h: p.change24h, volume: p.volume, price: p.price, natr: p.natr });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (e) {
+        var code = (e.message || '').includes('API_KEY') ? 500 : 502;
+        res.writeHead(code, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message || 'Internal error' }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'POST' && req.url === '/api/levels') {
     var body = '';
