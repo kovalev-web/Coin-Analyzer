@@ -1394,7 +1394,8 @@ function _fvCoinInfoHTML(sym, tf) {
   var nd = natrDisplay(sym);
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span></button>'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'

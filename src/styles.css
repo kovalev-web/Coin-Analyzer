@@ -215,12 +215,12 @@
     .fv-chart-wrap{flex:1;overflow:hidden;margin:12px 32px 16px;border-radius:16px;background:var(--paper);box-shadow:var(--shadow-soft);position:relative;}
     #fv-chart{position:absolute;inset:0;}
     .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
-    .fv-coin-info{position:absolute;top:12px;left:12px;z-index:10;display:flex;flex-direction:column;gap:6px;}
-    .fv-info-top{display:flex;align-items:center;gap:6px;}
-    .fv-info-stats{display:flex;align-items:center;gap:8px;padding-left:2px;}
-    .fv-info-stats .stat-val{font-size:13px;font-weight:600;padding:0;}
-    .fv-sym-label{font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
-    .fv-back-btn{background:var(--fog);color:var(--ink);border:1px solid var(--hairline);padding:0 10px 0 8px;height:30px;display:inline-flex;align-items:center;gap:6px;border-radius:8px;cursor:pointer;flex-shrink:0;box-shadow:var(--shadow-soft);}
+    .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:8px;}
+    .fv-info-top{display:flex;align-items:center;gap:10px;}
+    .fv-info-stats{display:flex;align-items:center;gap:14px;padding-left:2px;}
+    .fv-info-stats .stat-val{font-size:15px;font-weight:600;padding:0;}
+    .fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
+    .fv-back-btn{background:var(--fog);color:var(--ink);border:1px solid var(--hairline);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;box-shadow:var(--shadow-soft);}
     .fv-back-btn:hover{border-color:var(--steel);}
 
     @media(max-width:768px){
