@@ -1522,9 +1522,10 @@ function updateAllStarButtons() {
 export function openBriefingPanel() {
   if (!state.briefingViewDate) state.briefingViewDate = todayDate();
   var fvOverlay = document.getElementById('fv-overlay');
-  var btn = (fvOverlay && fvOverlay.style.display !== 'none'
-    ? fvOverlay.querySelector('.btn-briefing')
-    : null) || Array.from(document.querySelectorAll('[data-action="open-briefing"]')).find(function (b) { return b.offsetParent !== null; });
+  var _btns = fvOverlay && fvOverlay.style.display !== 'none'
+    ? Array.from(fvOverlay.querySelectorAll('[data-action="open-briefing"]'))
+    : Array.from(document.querySelectorAll('[data-action="open-briefing"]'));
+  var btn = _btns.find(function (b) { return b.offsetParent !== null; });
 
   var popup = document.getElementById('bp-popup');
   if (!popup) {
@@ -1988,7 +1989,4 @@ export function closeFVBriefingDrawer() {
 }
 
 export function toggleFVBriefingDrawer() {
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (!drawer) return;
-  if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
-}
+  var drawer = document.getElementById('fv-briefing-drawer'
