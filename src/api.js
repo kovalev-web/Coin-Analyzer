@@ -322,7 +322,7 @@ export function applyLivePriceUpdates() {
       var newNat = v.toFixed(2);
       if (spans[1].textContent !== newNat) { spans[1].textContent = newNat; spans[1].className = 'stat-val ' + (v < 1 ? 'dn' : v < 2.5 ? 'warn' : 'up'); }
     }
-    var newVol = fmt(Math.round(coin.total_volume || 0));
+    var newVol = fmt(Math.round(coin.total_volume || 0)).replace('$', '');
     if (spans[2].textContent !== newVol) spans[2].textContent = newVol;
   });
 
