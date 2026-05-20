@@ -333,7 +333,7 @@ function alertsData() {
   var data = {};
   Object.keys(_alerts).forEach(function (sym) {
     if (_alerts[sym] && _alerts[sym].length) {
-      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered, createdAt: a.createdAt, originPrice: a.originPrice }; });
+      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered, createdAt: a.createdAt }; });
     }
   });
   return data;
@@ -351,8 +351,7 @@ function attachAlert(sym, a) {
 
 function addAlert(sym, price) {
   if (!_alerts[sym]) _alerts[sym] = [];
-  var _coin = state.coins.find(function (x) { return x.symbol === sym; });
-  var a = { price: price, triggered: false, line: null, fvLine: null, createdAt: Date.now(), originPrice: _coin ? _coin.current_price : null };
+  var a = { price: price, triggered: false, line: null, fvLine: null, createdAt: Date.now() };
   _alerts[sym].push(a);
   attachAlert(sym, a);
   saveAlerts();
@@ -431,7 +430,7 @@ function applyServerAlerts(entry) {
   _alerts = {};
   if (entry && entry.data) {
     Object.keys(entry.data).forEach(function (sym) {
-      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt, originPrice: a.originPrice }; });
+      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
     });
   }
   if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
@@ -457,7 +456,7 @@ export function loadAlerts() {
   try {
     var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
     Object.keys(local).forEach(function (sym) {
-      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt, originPrice: a.originPrice }; });
+      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
     });
   } catch (e) {}
   if (_userCode) fetchServerAlerts(_userCode);
