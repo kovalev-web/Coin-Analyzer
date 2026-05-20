@@ -306,7 +306,10 @@ function removeLevel(sym, idx) {
 
 export function clearLevels(sym) {
   var s = _fullSeries[sym];
-  (_levels[sym] || []).forEach(function (l) { if (s && l.line) { try { s.removePriceLine(l.line); } catch (e) {} } });
+  (_levels[sym] || []).forEach(function (l) {
+    if (s && l.line) { try { s.removePriceLine(l.line); } catch (e) {} }
+    if (_fvSeries && _fvSym === sym && l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} }
+  });
   _levels[sym] = [];
   saveLevels();
   updateLevelsBtn(sym);
@@ -330,7 +333,7 @@ function alertsData() {
   var data = {};
   Object.keys(_alerts).forEach(function (sym) {
     if (_alerts[sym] && _alerts[sym].length) {
-      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered }; });
+      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered, createdAt: a.createdAt, originPrice: a.originPrice }; });
     }
   });
   return data;
@@ -348,7 +351,8 @@ function attachAlert(sym, a) {
 
 function addAlert(sym, price) {
   if (!_alerts[sym]) _alerts[sym] = [];
-  var a = { price: price, triggered: false, line: null, fvLine: null };
+  var _coin = state.coins.find(function (x) { return x.symbol === sym; });
+  var a = { price: price, triggered: false, line: null, fvLine: null, createdAt: Date.now(), originPrice: _coin ? _coin.current_price : null };
   _alerts[sym].push(a);
   attachAlert(sym, a);
   saveAlerts();
@@ -370,7 +374,10 @@ function removeAlert(sym, idx) {
 
 export function clearAlerts(sym) {
   var s = _fullSeries[sym];
-  (_alerts[sym] || []).forEach(function (a) { if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} } });
+  (_alerts[sym] || []).forEach(function (a) {
+    if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
+    if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
+  });
   _alerts[sym] = [];
   saveAlerts();
   updateAlertsBtn(sym);
@@ -424,7 +431,7 @@ function applyServerAlerts(entry) {
   _alerts = {};
   if (entry && entry.data) {
     Object.keys(entry.data).forEach(function (sym) {
-      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null }; });
+      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt, originPrice: a.originPrice }; });
     });
   }
   if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
@@ -450,7 +457,7 @@ export function loadAlerts() {
   try {
     var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
     Object.keys(local).forEach(function (sym) {
-      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null }; });
+      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt, originPrice: a.originPrice }; });
     });
   } catch (e) {}
   if (_userCode) fetchServerAlerts(_userCode);
@@ -462,6 +469,7 @@ export function handleAlertTriggered(sym, price) {
       a.triggered = true;
       var s = _fullSeries[sym];
       if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} a.line = null; }
+      if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} a.fvLine = null; }
       attachAlert(sym, a);
     }
   });
@@ -1889,9 +1897,9 @@ export function setFVChartTF(tf) {
   if (pill) pill.textContent = tf;
   var dd = document.querySelector('#fv-overlay .fv-tf-dd');
   if (dd) dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
-  // Clear fvLines before reload
-  (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
-  (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+  // Remove price lines from series before reload to prevent duplicate orphaned lines
+  (_levels[_fvSym] || []).forEach(function (l) { if (l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} l.fvLine = null; } });
+  (_alerts[_fvSym] || []).forEach(function (a) { if (a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} a.fvLine = null; } });
   _fvSeries.setData([]);
   _loadFVData(_fvSym, tf);
 }
