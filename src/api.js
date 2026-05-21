@@ -145,12 +145,14 @@ function processTickerPush(arr) {
       return t.s.endsWith('USDT') && !STABLE_SYMBOLS.has(t.s.replace('USDT', '').toLowerCase()) && t.s !== 'USDTUSDT';
     }).map(function (t) {
       var sym = t.s.replace('USDT', '').toLowerCase();
+      var o = parseFloat(t.o);
       return {
         symbol: sym,
         name: sym.toUpperCase(),
         current_price: parseFloat(t.c),
+        open24h: o,  // цена 24ч назад — для rolling % как на Binance
         total_volume: Math.round(parseFloat(t.q)),
-        price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
+        price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - o) / o) * 100,
       };
     }).sort(function (a, b) { return b.total_volume - a.total_volume; });
     state.lastUpdate = new Date();
@@ -178,12 +180,10 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    // Для динамического обновления % используем D1 UTC open если доступен,
-    // иначе Binance rolling 24h t.P. D1 обновляется sub-second от kline WS.
-    var d1 = state.dailyOpen[sym];
-    coin.price_change_percentage_24h = d1
-      ? (parseFloat(t.c) - d1) / d1 * 100
-      : (t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100);
+    coin.open24h = parseFloat(t.o);  // обновляем 24h open каждую секунду
+    // Rolling 24h % — точно как Binance. open24h тоже обновился, поэтому
+    // следующий kline-event даст актуальный % от правильной базы.
+    coin.price_change_percentage_24h = (parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o) * 100;
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
@@ -282,13 +282,13 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Синхронизируем coin.current_price и пересчитываем % от D1 open sub-second
+  // Обновляем цену sub-second и пересчитываем rolling 24h % от open24h
+  // open24h = t.o из тикера (цена ровно 24ч назад) — та же база что Binance
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    var d1 = state.dailyOpen[sym];
-    if (d1) {
-      coin.price_change_percentage_24h = (k.close - d1) / d1 * 100;
+    if (coin.open24h) {
+      coin.price_change_percentage_24h = (k.close - coin.open24h) / coin.open24h * 100;
       var cardEl = document.querySelector('.coin-card[data-sym="' + sym + '"]');
       if (cardEl) {
         var spans = cardEl.querySelectorAll('.card-chart-stats .stat-val');
