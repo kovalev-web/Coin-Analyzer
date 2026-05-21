@@ -37,24 +37,28 @@ function renderCard(coin) {
     '</div>' +
     '</div>';
 
-  return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
-    '<div class="card-head">' +
-    '<span class="card-sym">' + coin.symbol.toUpperCase() + '</span>' +
-    '<div class="card-inline-stats">' +
+  var statsHtml = '<div class="card-chart-stats">' +
     '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="Изменение за 24ч">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
     '<span class="stat-val ' + natr.cls + '" title="NATR — волатильность (5m × 30 свечей)">' + natr.val + '</span>' +
     '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume).replace('$', '') + '</span>' +
+    '</div>';
+
+  return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
+    '<div class="card-head">' +
+    '<div class="card-sym-row">' +
+    '<span class="card-sym">' + coin.symbol.toUpperCase() + '</span>' +
+    tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
     '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + coin.symbol + '" title="Алерты (Shift+ПКМ для добавления)" style="display:' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) || 0) + '</button>' +
     '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
-    tfPicker +
     badge +
-    '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 13) + '</button>' +
-    '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize-2', 13) + '</button>' +
+    '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 15) + '</button>' +
+    '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize-2', 15) + '</button>' +
     '</div>' +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
+    statsHtml +
     '</div>';
 }
 
@@ -64,6 +68,8 @@ export function renderCards() {
   var coins = filteredCoins();
   var existing = {};
   grid.querySelectorAll('.coin-card').forEach(function (el) { existing[el.dataset.sym] = el; });
+
+  // Добавляем новые карточки
   var seen = {};
   coins.forEach(function (coin) {
     seen[coin.symbol] = true;
@@ -72,6 +78,8 @@ export function renderCards() {
     card.innerHTML = renderCard(coin);
     grid.appendChild(card.firstElementChild);
   });
+
+  // Удаляем исчезнувшие монеты
   Object.keys(existing).forEach(function (sym) {
     if (!seen[sym]) {
       var el = existing[sym]; if (el) el.remove();
@@ -81,6 +89,16 @@ export function renderCards() {
       window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
     }
   });
+
+  // Переставляем карточки в правильный порядок без уничтожения чартов.
+  // insertBefore перемещает существующий DOM-узел — chart canvas едет вместе с ним.
+  coins.forEach(function (coin, i) {
+    var el = grid.querySelector('.coin-card[data-sym="' + coin.symbol + '"]');
+    if (!el) return;
+    var current = grid.children[i];
+    if (current !== el) grid.insertBefore(el, current || null);
+  });
+
   initCharts();
 }
 
@@ -270,6 +288,7 @@ export function showCodeModal() {
     backdrop.remove();
     fetchServerLevels(code);
     fetchServerAlerts(code);
+    loadBriefing();
   }
 
   saveBtn.addEventListener('click', save);
@@ -915,9 +934,37 @@ export function openAnalysisPopup(sym, btn) {
   if (popup.parentNode) popup.parentNode.removeChild(popup);
 
   popup._popupCard = card;
-  card.style.overflow = 'visible';
-  card.style.position = 'relative';
-  card.appendChild(popup);
+
+  if (card) {
+    // Normal card mode
+    card.style.overflow = 'visible';
+    card.style.position = 'relative';
+    card.appendChild(popup);
+    var cardRect = card.getBoundingClientRect();
+    var btnRect = btn.getBoundingClientRect();
+    var topOffset = (btnRect.bottom - cardRect.top) + 8;
+    popup.style.position = 'absolute';
+    popup.style.top = topOffset + 'px';
+    popup.style.right = '0';
+    popup.style.left = 'auto';
+    popup.style.width = '67%';
+    popup.style.maxWidth = 'none';
+    popup.style.zIndex = '1000';
+  } else {
+    // Full View mode — fixed above fv-overlay (z-index:400)
+    document.body.appendChild(popup);
+    var btnRect2 = btn.getBoundingClientRect();
+    popup.style.position = 'fixed';
+    popup.style.top = (btnRect2.bottom + 8) + 'px';
+    popup.style.right = '16px';
+    popup.style.left = 'auto';
+    popup.style.width = 'min(380px, calc(100vw - 32px))';
+    popup.style.maxWidth = 'none';
+    popup.style.zIndex = '99999';
+  }
+
+  popup.style.transform = 'none';
+  popup.style.margin = '0';
 
   var cache = state.analysisCache[sym];
   var spinner = popup.querySelector('.ao-spinner');
@@ -926,19 +973,6 @@ export function openAnalysisPopup(sym, btn) {
   content.style.display = 'none';
   popup.style.display = 'block';
   popup.dataset.sym = sym;
-
-  var cardRect = card.getBoundingClientRect();
-  var btnRect = btn.getBoundingClientRect();
-  var topOffset = (btnRect.bottom - cardRect.top) + 8;
-  popup.style.position = 'absolute';
-  popup.style.transform = 'none';
-  popup.style.top = topOffset + 'px';
-  popup.style.right = '0';
-  popup.style.left = 'auto';
-  popup.style.width = '67%';
-  popup.style.maxWidth = 'none';
-  popup.style.zIndex = '1000';
-  popup.style.margin = '0';
   if (cache && cache.status === 'loading') return;
   if (cache && (cache.status === 'ok' || cache.status === 'error')) { updateAnalysisPopup(sym); return; }
   analyzeCoinBySymbol(sym);
@@ -1073,19 +1107,11 @@ function msPopupInner() {
 }
 
 export function openMSPopup() {
-  // Close any existing analysis popup
   var existingAp = document.getElementById('analysis-overlay');
-  if (existingAp && existingAp._popupCard) {
-    existingAp._popupCard.style.overflow = '';
-    existingAp._popupCard = null;
-  }
+  if (existingAp && existingAp._popupCard) { existingAp._popupCard.style.overflow = ''; existingAp._popupCard = null; }
   if (existingAp) existingAp.style.display = 'none';
-  var existingMs = document.getElementById('ms-popup');
-  if (existingMs) existingMs.style.display = 'none';
 
   if (!state.marketStrength) fetchMarketStrength();
-  var card = document.getElementById('ms-card');
-  var metrics = card ? card.parentElement : null;
 
   var popup = document.getElementById('ms-popup');
   if (!popup) {
@@ -1094,47 +1120,33 @@ export function openMSPopup() {
     popup.className = 'ms-popup';
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
-
-  if (metrics) {
-    metrics.style.overflow = 'visible';
-    metrics.style.position = 'relative';
-    metrics.appendChild(popup);
-  }
+  document.body.appendChild(popup);
 
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
   popup.style.position = 'absolute';
-  popup.style.width = '400px';
-  popup.style.maxWidth = 'none';
 
-  var rect = card.getBoundingClientRect();
-  var metricsRect = metrics.getBoundingClientRect();
-  var topOffset = rect.bottom - metricsRect.top + 6;
-  popup.style.top = topOffset + 'px';
-
-  if (window.innerWidth <= 768) {
-    // На мобильных — растягиваем на всю ширину контейнера
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.width = 'auto';
-  } else {
-    // На десктопе — правый край попапа совпадает с правым краем ms-card
-    var rightOffset = metricsRect.right - rect.right;
-    popup.style.right = rightOffset + 'px';
-    popup.style.left = 'auto';
-    popup.style.width = '400px';
+  var btn = document.querySelector('.mob-ms-chip');
+  if (btn) {
+    var btnRect = btn.getBoundingClientRect();
+    popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
+    if (window.innerWidth <= 768) {
+      popup.style.left = '8px';
+      popup.style.right = '8px';
+      popup.style.width = 'auto';
+      popup.style.maxWidth = 'none';
+    } else {
+      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
+      popup.style.left = 'auto';
+      popup.style.width = '400px';
+      popup.style.maxWidth = 'none';
+    }
   }
 }
 
 export function closeMSPopup() {
   var el = document.getElementById('ms-popup');
   if (el) el.style.display = 'none';
-  var card = document.getElementById('ms-card');
-  var metrics = card ? card.parentElement : null;
-  if (metrics) {
-    metrics.style.overflow = '';
-    metrics.style.position = '';
-  }
 }
 
 // ── TV Mode ────────────────────────────────────────────────────────────────
@@ -1241,6 +1253,8 @@ document.addEventListener('fullscreenchange', function () {
 
 function updateMetricCards() {
   var coins = filteredCoins();
+  var sortCount = document.querySelector('.sort-coin-count');
+  if (sortCount) sortCount.textContent = coins.length + ' монет';
   var c1 = document.querySelector('.metric-card:nth-child(1) .value');
   if (c1) c1.textContent = coins.length;
   if (!coins.length) return;
@@ -1256,37 +1270,56 @@ function updateMetricCards() {
 }
 
 export function updateMSPanel() {
-  var card = document.getElementById('ms-card');
-  if (card) card.innerHTML = msCardInner();
   var popup = document.getElementById('ms-popup');
   if (popup && popup.style.display !== 'none') popup.innerHTML = msPopupInner();
+  var ms = state.marketStrength;
+  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый');
+  var chip = document.querySelector('.mob-ms-chip');
+  if (chip) chip.textContent = msLabel;
 }
 
 // ── Topbar HTML (shared between main render and full view) ─────────────────
 
+var _LOGO_SVG = '<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.25519 4.37208C5.8536 5.29726 5.97716 6.4839 6.59499 7.69065C6.75974 8.01245 6.9245 8.38453 6.95539 8.52532C7.04806 8.84712 7.52173 9.34993 8.3249 10.0036C8.82945 10.4058 9.06629 10.5265 9.45757 10.5768C10.8374 10.7578 10.7447 10.7176 10.58 11.0293C10.374 11.4316 9.79738 11.8238 8.57203 12.407C7.9748 12.6886 7.39816 13.0205 7.29519 13.1411C7.18192 13.2518 6.99657 13.3523 6.87301 13.3523C6.73915 13.3523 6.27578 13.5333 5.82271 13.7546C4.88568 14.2071 3.91775 15.1122 3.50587 15.9167C3.16606 16.5603 2.87775 17.7771 3.0528 17.7771C3.21755 17.7771 3.70151 17.2441 4.19577 16.5402C4.70033 15.7859 5.48291 15.1122 6.47142 14.5591C7.03776 14.2473 7.35697 14.1267 7.6041 14.1367C7.94391 14.1669 8.73678 13.835 9.33401 13.4227L9.63262 13.2115L9.57084 13.4629C9.52965 13.5937 9.44728 13.9456 9.3752 14.2373C9.28252 14.6496 9.12807 14.911 8.72648 15.3535C7.5938 16.6005 6.82152 17.6866 6.82152 18.0486C6.82152 18.1693 6.65677 18.5313 6.46113 18.8531C5.46231 20.5023 5.1328 22.5639 5.62706 24.1628C5.71974 24.4444 5.8536 24.7561 5.92568 24.8567C6.06984 25.0478 6.08014 25.0478 6.18311 24.8567C6.23459 24.7561 6.31697 24.1427 6.35816 23.5092C6.44053 22.0912 6.62588 21.2767 7.15103 19.909C7.41875 19.2051 7.64529 18.7928 7.83064 18.6319C7.98509 18.5011 8.29401 18.0888 8.52054 17.7167L8.93242 17.0329L8.95302 17.4251C9.04569 18.9034 9.50906 20.442 10.1681 21.4476C11.2287 23.0667 12.8968 23.9315 14.9562 23.9215C16.717 23.9215 17.8909 23.4689 19.0339 22.3627C20.1871 21.2465 20.8255 19.7481 21.0109 17.7871L21.083 17.0329L21.5669 17.8475C21.8347 18.3 22.1436 18.6922 22.2465 18.7224C22.3701 18.7626 22.5554 19.1246 22.8232 19.8386C23.4204 21.4577 23.5131 21.8499 23.5955 23.3382C23.6675 24.3941 23.7293 24.7762 23.8426 24.8969C24.0279 25.0779 24.0588 25.0277 24.3986 23.9416C24.862 22.4231 24.4089 20.1303 23.3174 18.5011C23.2351 18.3704 23.1527 18.1391 23.1424 17.9883C23.1115 17.6363 22.5143 16.7715 21.5463 15.6753C20.877 14.9211 20.7638 14.7401 20.5578 14.0362C20.4343 13.6037 20.3519 13.2518 20.3725 13.2518C20.3828 13.2518 20.7123 13.4428 21.0933 13.6741C21.6287 14.006 21.8964 14.1065 22.298 14.1166C22.6996 14.1367 22.9776 14.2473 23.6263 14.6295C24.6561 15.2329 25.3871 15.9167 25.9947 16.8419C26.4374 17.5156 26.839 17.8776 26.9729 17.7369C27.0965 17.6262 26.7772 16.5603 26.4271 15.8765C26.1903 15.4038 25.8711 15.0016 25.4592 14.6295C24.8723 14.0965 23.5543 13.3523 23.2042 13.3523C23.1012 13.3523 22.8644 13.2317 22.6687 13.0909C22.4731 12.9501 21.8552 12.6082 21.2889 12.3366C20.0327 11.7333 19.5796 11.4215 19.4148 11.0394C19.2707 10.7176 19.2707 10.7075 20.4343 10.5869C20.8976 10.5366 21.1139 10.4461 21.4125 10.2047C22.1539 9.60134 22.9879 8.7365 22.9879 8.5756C22.9879 8.49515 23.1527 8.10296 23.3483 7.72082C24.0176 6.42356 24.1309 5.46821 23.7396 4.42236C23.4719 3.72848 23.2659 3.92961 23.1527 4.98551C23.0188 6.30289 22.4937 7.83144 22.123 8.00239C21.9891 8.06273 21.6905 8.38453 21.464 8.7365L21.0418 9.35999L20.3416 9.39016C19.9606 9.41027 19.5281 9.43038 19.384 9.44044C18.9927 9.46055 18.3645 9.18903 18.1792 8.91751C17.8703 8.46498 17.2731 7.90183 16.8921 7.71076C16.5523 7.53981 16.5008 7.46941 16.5008 7.16772C16.5008 6.42356 15.7182 5.00563 15.3063 5.00563C15.1313 5.00563 15.1107 5.62911 15.2754 5.9308C15.3681 6.10176 15.3475 6.17215 15.1827 6.33305C14.9768 6.53418 14.9768 6.53418 14.7812 6.34311C14.5958 6.1621 14.5855 6.11182 14.7091 5.90063C14.9047 5.55872 14.8944 5.00563 14.6988 5.00563C14.2766 5.00563 13.6176 6.14198 13.5352 6.97665C13.494 7.4493 13.4528 7.51969 13.113 7.71076C12.6291 7.99234 12.4128 8.17335 11.9289 8.74656C11.7126 9.01808 11.4861 9.22926 11.4346 9.22926C11.3728 9.22926 11.1772 9.29965 10.9815 9.39016C10.7035 9.52089 10.58 9.53095 10.2813 9.43038C10.0754 9.37005 9.69441 9.32982 9.42668 9.33988L8.94272 9.37005L8.43816 8.64599C8.17044 8.24374 7.88212 7.92194 7.79975 7.92194C7.54232 7.92194 6.82152 5.74979 6.82152 4.94529C6.82152 4.46259 6.67737 4 6.51261 4C6.46113 4 6.33756 4.17096 6.25519 4.37208Z" fill="currentColor"/></svg>';
+
 function _topbarHTML() {
-  var ws = wsConnected;
-  var wsTitle = ws ? 'WebSocket: подключен — данные обновляются в реальном времени' : 'WebSocket: отключен — переподключение...';
+  var tierPills = [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) {
+    return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>';
+  }).join('');
   return '<div class="topbar"><div class="filters">'
-    + '<div class="filter-group tier-desktop">'
-    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
+    + '<span class="topbar-logo">' + _LOGO_SVG + '</span>'
+    + '<div class="filter-group">' + tierPills + '</div>'
+    + '<div class="topbar-actions">'
+    + '<button class="btn-topbar" data-action="refresh" title="Обновить">' + icon('refresh-cw', 15) + '</button>'
+    + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
+    + '<div class="burger-wrap">'
+    + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 15) + '</button>'
+    + '<div class="burger-dd" id="burger-dd">'
+    + '<button class="burger-dd-item" data-action="open-settings">' + icon('bell', 14) + 'Настройки</button>'
+    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
+    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
     + '</div>'
-    + '<div class="mobile-filters-row">'
-    + [['high', 'High'], ['mid', 'Mid'], ['low', 'Low']].map(function (t) { return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>'; }).join('')
-    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
-    + '<button class="btn-settings btn-settings-mob" data-action="open-settings" title="Настройки">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-refresh-icon" data-action="refresh" title="Обновить">' + icon('refresh-cw', 16) + '</button>'
-    + '<button class="btn-theme btn-theme-mob" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
-    + '<button class="btn-briefing btn-briefing-mob" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '</div>'
-    + '<div class="filters-right">'
-    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
-    + '<button class="btn-settings" data-action="open-settings" title="Настройки: код синхронизации и Telegram">' + icon('bell', 15) + '</button>'
-    + '<button class="btn-briefing" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
-    + '<button class="btn-tv" data-action="tv" title="TV режим — сетка 6 графиков">TV</button>'
-    + '<button class="btn-theme" data-action="toggle-theme" title="Переключить тему">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + '</button>'
     + '</div>'
     + '</div></div>';
+}
+
+// ── Sort Bar ───────────────────────────────────────────────────────────────
+
+function _sortBarHTML(coins) {
+  var ws = wsConnected;
+  var wsTitle = ws ? 'WebSocket: подключен' : 'WebSocket: отключен';
+  var ms = state.marketStrength;
+  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый');
+  return '<div class="sort-bar">'
+    + '<div class="sort-bar-btns">'
+    + '<button class="btn-topbar' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 15) + '</button>'
+    + '<button class="btn-topbar' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 15) + '</button>'
+    + '</div>'
+    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
+    + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
+    + '<button class="mob-ms-chip" data-action="open-ms">' + msLabel + '</button>'
+    + '</div>';
 }
 
 // ── Main Render ────────────────────────────────────────────────────────────
@@ -1303,30 +1336,14 @@ export function render() {
   destroyCharts();
   var coinsHtml = coins.length
     ? '<div class="cards-area">'
-      + '<div class="cards-sort">'
-      + '<button class="sort-pill' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h">По росту</button>'
-      + '<button class="sort-pill' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume">По объёму</button>'
-      + '<button class="sort-pill' + (state.sortCol === 'symbol' ? ' active' : '') + '" data-action="sort" data-col="symbol">По тикеру</button>'
-      + '</div><div class="cards-grid" id="cards-grid">'
+      + '<div class="cards-grid" id="cards-grid">'
       + coins.map(function (c) { return renderCard(c); }).join('')
       + '</div></div>'
     : '<div class="empty-state">Нет монет, соответствующих фильтру.</div>';
 
-  var bc = coins.filter(function (c) { return state.analysisCache[c.symbol] && state.analysisCache[c.symbol].result && state.analysisCache[c.symbol].result.signal === 'bullish'; }).length;
-  var maxRise = coins.length ? Math.max.apply(null, coins.map(function (c) { return c.price_change_percentage_24h || 0; })).toFixed(2) : '—';
-  var mv = coins.length ? Math.max.apply(null, coins.map(function (c) { return c.total_volume || 0; })) : 0;
-
   app.innerHTML =
     _topbarHTML()
-    + '<div class="metrics">'
-    + '<div class="metric-card"><div class="label">Монет в фильтре</div><div class="value">' + coins.length + '</div></div>'
-    + '<div class="metric-card"><div class="label">Максимальный рост</div><div class="value green">+' + maxRise + '%</div></div>'
-    + '<div class="metric-card"><div class="label">Максимальный объем</div><div class="value">' + (function () { if (mv >= 1e9) return '$' + (mv / 1e9).toFixed(1) + 'B'; if (mv >= 1e6) return '$' + (mv / 1e6).toFixed(1) + 'M'; return '$' + (mv / 1e3).toFixed(1) + 'K'; })() + '</div></div>'
-    + '<div class="metric-card"><div class="label">Bullish AI</div><div class="value green">' + bc + '</div></div>'
-    + '<div class="metric-card ms-card" id="ms-card" data-action="open-ms">'
-    + msCardInner()
-    + '</div>'
-    + '</div>'
+    + _sortBarHTML(coins)
     + coinsHtml;
   initCharts();
 }
@@ -1482,10 +1499,13 @@ export function toggleBriefing(sym) {
   var today = todayDate();
   var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === today; });
   if (idx >= 0) {
+    var entry = state.briefing[idx];
+    if (entry.note && entry.note.trim()) {
+      if (!confirm('Удалить ' + sym + ' из брифинга?')) return;
+    }
     state.briefing.splice(idx, 1);
   } else {
     if (!state.briefing) state.briefing = [];
-    var coin = state.coins.find(function (c) { return c.symbol === sym; });
     state.briefing.push({ sym: sym, date: today, addedAt: Date.now(), status: 'watching', note: '' });
   }
   saveBriefingLocal();
@@ -1520,11 +1540,11 @@ function cycleBriefingStatus(sym, date) {
 }
 
 function updateStarButton(sym) {
-  var btn = document.querySelector('.btn-star[data-sym="' + sym + '"]');
-  if (!btn) return;
   var active = isInBriefing(sym);
-  btn.classList.toggle('active', active);
-  btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+  document.querySelectorAll('.btn-star[data-sym="' + sym + '"]').forEach(function (btn) {
+    btn.classList.toggle('active', active);
+    btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+  });
 }
 
 function updateAllStarButtons() {
@@ -1556,6 +1576,8 @@ export function openBriefingPanel() {
     document.body.appendChild(popup);
   }
   popup.style.display = 'block';
+  var _fvStar = document.querySelector('.btn-fv-star');
+  if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
 
   if (btn) {
@@ -1579,6 +1601,8 @@ export function openBriefingPanel() {
 export function closeBriefingPanel() {
   var popup = document.getElementById('bp-popup');
   if (popup) popup.style.display = 'none';
+  var _fvStar = document.querySelector('.btn-fv-star');
+  if (_fvStar) _fvStar.style.display = '';
 }
 
 export function renderBriefingPanel() {
@@ -1641,6 +1665,19 @@ function _fvCoinInfoHTML(sym, tf) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
   var nd = natrDisplay(sym);
+
+  var cache = state.analysisCache[sym];
+  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var signal = hasA ? cache.result.signal : null;
+  var fvBadge = '';
+  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
+  else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
+  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 14) + '</button>';
+
+  var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
+  var levelCount = (_levels[sym] && _levels[sym].length) || 0;
+
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
@@ -1651,7 +1688,10 @@ function _fvCoinInfoHTML(sym, tf) {
     + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
-    + '<button class="btn-fv-briefing-mob' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
+    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
+    + '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + sym + '" title="Алерты" style="display:' + (alertCount ? 'inline-flex' : 'none') + '">' + alertCount + '</button>'
+    + '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + sym + '" title="Уровни" style="display:' + (levelCount ? 'inline-flex' : 'none') + '">' + levelCount + '</button>'
+    + fvBadge
     + '</div>'
     + '<div class="fv-info-stats">'
     + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
@@ -1697,7 +1737,7 @@ export function openCoinFullView(sym) {
   // Destroy previous
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
-  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   // Clear fvLines from previous session
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
@@ -1727,7 +1767,18 @@ export function openCoinFullView(sym) {
     var _oldTopbar = overlay.querySelector('.topbar');
     if (_oldTopbar) overlay.replaceChild(_tmpDiv.firstChild, _oldTopbar);
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
-    if (_chartWrap) _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
+    if (_chartWrap) {
+      _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
+      // If briefing popup or drawer is open — hide the new star and re-highlight current coin
+      var _bpPopup = document.getElementById('bp-popup');
+      var _fvdEl = document.getElementById('fv-briefing-drawer');
+      var briefingOpen = (_bpPopup && _bpPopup.style.display !== 'none') || (_fvdEl && _fvdEl.classList.contains('open'));
+      if (briefingOpen) {
+        var _newStar = _chartWrap.querySelector('.btn-fv-star');
+        if (_newStar) _newStar.style.display = 'none';
+      }
+      if (_fvdEl && _fvdEl.classList.contains('open')) renderFVBriefingDrawer();
+    }
   }
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -1750,6 +1801,7 @@ export function openCoinFullView(sym) {
   window.__fvSeries = _fvSeries;
   window.__fvVolSeries = _fvVolSeries;
   window.__fvSymbol = sym;
+  window.__fvTF = tf;
 
   // Canvas overlay for alert bells + ruler
   var wrap = document.querySelector('.fv-chart-wrap');
@@ -1890,7 +1942,7 @@ export function closeCoinFullView() {
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
-  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null;
+  window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
     (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
@@ -1904,6 +1956,7 @@ export function closeCoinFullView() {
 export function setFVChartTF(tf) {
   if (!_fvSym || !_fvSeries) return;
   state.chartTF[_fvSym] = tf;
+  window.__fvTF = tf;
   var pill = document.querySelector('#fv-overlay .tf-pill');
   if (pill) pill.textContent = tf;
   var dd = document.querySelector('#fv-overlay .fv-tf-dd');
@@ -1933,6 +1986,10 @@ export function briefingCycleStatus(sym, date) {
 export function briefingRemove(sym, date) {
   var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === date; });
   if (idx >= 0) {
+    var entry = state.briefing[idx];
+    if (entry.note && entry.note.trim()) {
+      if (!confirm('Удалить ' + sym + ' из брифинга?')) return;
+    }
     state.briefing.splice(idx, 1);
     saveBriefingLocal();
     updateStarButton(sym);
@@ -1995,12 +2052,16 @@ export function openFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   drawer.classList.add('open');
+  var star = document.querySelector('.btn-fv-star');
+  if (star) star.style.display = 'none';
   renderFVBriefingDrawer();
 }
 
 export function closeFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer) drawer.classList.remove('open');
+  var star = document.querySelector('.btn-fv-star');
+  if (star) star.style.display = '';
 }
 
 export function toggleFVBriefingDrawer() {
@@ -2008,4 +2069,3 @@ export function toggleFVBriefingDrawer() {
   if (!drawer) return;
   if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
 }
-                                                         

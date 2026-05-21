@@ -168,8 +168,11 @@ function processTickerPush(arr) {
     if (!coin) {
       if (!t.s.endsWith('USDT') || STABLE_SYMBOLS.has(sym) || sym === 'usdt') return;
       var qv = Math.round(parseFloat(t.q));
-      var pc = ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
-      if (qv < 12e6 || pc < (state.minChange || 0)) return;
+      // Используем t.P (Binance прерасчитанный priceChangePercent) если есть, иначе вычисляем
+      var pc = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+      // Не фильтруем по объёму здесь — filteredCoins() применяет тир-фильтр для отображения.
+      // Фильтруем только явно нулевые объёмы (монеты не торгуются).
+      if (qv < 1e6 || pc < (state.minChange || 0)) return;
       state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.c), total_volume: qv, price_change_percentage_24h: pc });
       newCoins++;
       return;
@@ -184,12 +187,11 @@ function processTickerPush(arr) {
   // Compare current DOM card order vs new sorted order — re-render only if order changed
   var _sortedOrder = filteredCoins().map(function (c) { return c.symbol; }).join(',');
   var _domOrder = Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (el) { return el.dataset.sym; }).join(',');
-  if (_domOrder && _domOrder !== _sortedOrder) {
-    emit('render');
-  } else {
-    applyLivePriceUpdates();
-    emit('cards:sync');
-  }
+  // При смене порядка: переставляем карточки через renderCards (cards:sync),
+  // а не полный render() — render() уничтожает все чарты и пересоздаёт их,
+  // что вызывало флик раз в 1-2 минуты при изменении рейтинга по объёму.
+  applyLivePriceUpdates();
+  emit('cards:sync');
 }
 
 // ── Individual ticker update (from per-coin WS subscriptions) ────────────
@@ -208,10 +210,23 @@ function processSingleUpdate(msg) {
 
 // ── Real-time kline update (fires on every trade from server kline WS) ──
 
+// Трекер последнего kline WS обновления по символу — используется в pollCharts
+// чтобы не перетирать актуальные данные стейл-данными из REST.
+var _lastKlineAt = {}; // sym → timestamp ms
+
+function isValidCandle(k) {
+  if (!k || !k.time) return false;
+  if (!(k.open > 0) || !(k.high > 0) || !(k.low > 0) || !(k.close > 0)) return false;
+  if (k.low > k.open || k.low > k.close || k.low > k.high) return false;
+  if (k.high < k.open || k.high < k.close) return false;
+  return true;
+}
+
 function processKlineUpdate(msg) {
   var sym = msg.symbol;
   var tf = msg.tf;
   var k = msg.candle;
+  if (!isValidCandle(k)) return;
   var key = sym + '_' + tf;
   var cd = state.chartData[key];
   if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
@@ -220,10 +235,10 @@ function processKlineUpdate(msg) {
   var last = arr[arr.length - 1];
 
   if (last && last.time === k.time) {
-    // Обновляем текущую свечу. H/L берём максимум: стрим иногда присылает
-    // промежуточные значения, не хотим откатывать уже нарисованные экстремумы.
-    k.high = k.high > last.high ? k.high : last.high;
-    k.low  = k.low  < last.low  ? k.low  : last.low;
+    // Binance kline WS уже присылает кумулятивные H/L за весь период свечи —
+    // каждый пакет содержит правильный max/min начиная с открытия.
+    // Накопление max/min на клиенте было лишним и вызывало ghost wicks:
+    // один аномальный пакет (k.high=0.160) замораживался навсегда.
     arr[arr.length - 1] = k;
   } else if (!last || k.time > last.time) {
     arr.push(k);
@@ -232,16 +247,21 @@ function processKlineUpdate(msg) {
     return; // старая свеча — игнорируем
   }
 
-  // Обновляем график напрямую — никаких интервалов, сразу на экран
+  _lastKlineAt[sym] = Date.now();
+
+  // Обновляем chart только если tf совпадает с текущим TF карточки.
+  // Сервер не отписывается от старых TF — если монета была на 5m, потом переключили
+  // на 1m, сервер шлёт оба потока. Без проверки 5m-свеча с чужим time перезапишет 1m-chart.
+  var currentTF = state.chartTF[sym] || '5m';
+  if (tf !== currentTF) return;
+
   var s = (window.__chartSeries || {})[sym];
   if (s) { try { s.update(k); } catch (e) {} }
 
+  var vc = volClrs();
+  var volClr = k.close >= k.open ? vc.up : vc.dn;
   var vs = (window.__chartVolSeries || {})[sym];
-  if (vs) {
-    var vc = volClrs();
-    var volClr = k.close >= k.open ? vc.up : vc.dn;
-    try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {}
-  }
+  if (vs) { try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
   // TV-режим тоже обновляем
   var ts = (window.__tvChartSeries || {})[sym];
@@ -249,8 +269,8 @@ function processKlineUpdate(msg) {
   var tvs = (window.__tvChartVolSeries || {})[sym];
   if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
-  // Full view обновляем если открыт для этой монеты
-  if (window.__fvSymbol === sym) {
+  // Full view обновляем если открыт для этой монеты и совпадает таймфрейм
+  if (window.__fvSymbol === sym && window.__fvTF === tf) {
     var fvs = window.__fvSeries;
     if (fvs) { try { fvs.update(k); } catch (e) {} }
     var fvvs = window.__fvVolSeries;
@@ -311,7 +331,7 @@ export function applyLivePriceUpdates() {
     var sym = el.dataset.sym;
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
     if (!coin) return;
-    var spans = el.querySelectorAll('.card-inline-stats .stat-val');
+    var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
     var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
@@ -344,9 +364,6 @@ export function applyLivePriceUpdates() {
 // ── Live chart updates from ticker (каждый пуш обновляет последнюю свечу) ─
 
 export function applyLiveChartUpdates() {
-  var series = window.__chartSeries || {};
-  var tvSeries = window.__tvChartSeries || {};
-  var volSeries = window.__chartVolSeries || {};
   filteredCoins().forEach(function (coin) {
     var tf = state.chartTF[coin.symbol] || '5m';
     var key = coin.symbol + '_' + tf;
@@ -358,17 +375,17 @@ export function applyLiveChartUpdates() {
     var updated = {
       time: last.time,
       open: last.open,
-      high: price > last.high ? price : last.high,
-      low: price < last.low ? price : last.low,
+      high: last.high,
+      low: last.low,
       close: price,
       volume: last.volume,
     };
     cd.candles[cd.candles.length - 1] = updated;
-    var s = series[coin.symbol];
+    var s = (window.__chartSeries || {})[coin.symbol];
     if (s) { try { s.update(updated); } catch (e) { } }
-    var vs = volSeries[coin.symbol];
+    var vs = (window.__chartVolSeries || {})[coin.symbol];
     if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
-    var ts = tvSeries[coin.symbol];
+    var ts = (window.__tvChartSeries || {})[coin.symbol];
     if (ts) { try { ts.update(updated); } catch (e) { } }
     var tvvs = (window.__tvChartVolSeries || {})[coin.symbol];
     if (tvvs) { try { tvvs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
@@ -393,10 +410,19 @@ export async function pollCharts() {
       var arr = cd.candles;
       var hadNewCandle = false;
 
+      // Вычисляем klineRecent ДО цикла — нужен внутри цикла для пропуска последней свечи.
+      // Пока kline WS активен (<5с), последняя (формирующаяся) свеча не должна
+      // обновляться из REST+current_price: open из REST + close из тикера = фейковое тело.
+      var klineRecent = (Date.now() - (_lastKlineAt[c.symbol] || 0)) < 5000;
+
       // Process all returned candles in order — fixes missing/wrong closed candles during pumps
       for (var j = 0; j < data.length; j++) {
         var k = data[j];
         var isLast = j === data.length - 1;
+        // Когда kline WS активен — не трогаем последнюю свечу в state вообще.
+        // kline WS поддерживает её точно; REST присылает данные с задержкой ~1с,
+        // а current_price — из тикера другого момента времени → открытие расходится с ценой.
+        if (isLast && klineRecent) continue;
         var candle = {
           time: Math.floor(parseInt(k[0]) / 1000),
           open: parseFloat(k[1]),
@@ -405,17 +431,10 @@ export async function pollCharts() {
           close: parseFloat(k[4]),
           volume: parseFloat(k[5]),
         };
-        // Apply live price only to the current (last, still-forming) candle
-        if (isLast && c.current_price) {
-          candle.close = c.current_price;
-          candle.high = c.current_price > candle.high ? c.current_price : candle.high;
-          candle.low = c.current_price < candle.low ? c.current_price : candle.low;
-        }
+        if (!isValidCandle(candle)) continue;
         var last = arr[arr.length - 1];
         if (last && last.time === candle.time) {
-          // Update existing candle — keep max H/L so live-tracked values aren't erased
-          candle.high = candle.high > last.high ? candle.high : last.high;
-          candle.low = candle.low < last.low ? candle.low : last.low;
+          // REST — источник истины для закрытых свечей.
           arr[arr.length - 1] = candle;
         } else if (!last || candle.time > last.time) {
           arr.push(candle);
@@ -424,7 +443,11 @@ export async function pollCharts() {
         }
       }
 
-      // Re-read series after await
+      // pollCharts обновляет chart только если kline WS молчит >5с (разрыв соединения).
+      // Пока kline WS активен — он единственный рендерер графика.
+      if (klineRecent) continue;
+
+      // Kline WS неактивен — используем pollCharts как fallback
       var s = (window.__chartSeries || {})[c.symbol];
       if (!s) continue;
 
@@ -433,8 +456,6 @@ export async function pollCharts() {
       var lastVol = { time: lastCandle.time, value: lastCandle.volume, color: lastCandle.close >= lastCandle.open ? _vc.up : _vc.dn };
 
       if (hadNewCandle) {
-        // New closed candles were added — setData to ensure chart history is correct
-        // Save + restore visible range so chart doesn't jump
         var chart = (window.__charts || {})[c.symbol];
         var visibleRange = null;
         if (chart) { try { visibleRange = chart.timeScale().getVisibleRange(); } catch (e) { } }
@@ -661,4 +682,5 @@ export async function fetchMarketStrength(force) {
 }
 
 export function startMSPolling() {
-  setInterval(function () { fetchMarketStrength(false); }, 5
+  setInterval(function () { fetchMarketStrength(false); }, 5 * 60 * 1000);
+}

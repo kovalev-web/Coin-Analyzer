@@ -16,6 +16,12 @@ import './styles.css';
 // ── Event delegation ───────────────────────────────────────────────────────
 
 document.body.addEventListener('click', function (e) {
+  // Close burger dropdown on any click outside .burger-wrap
+  var burgerDd = document.getElementById('burger-dd');
+  if (burgerDd && burgerDd.classList.contains('open') && !e.target.closest('.burger-wrap')) {
+    burgerDd.classList.remove('open');
+  }
+
   var target = e.target.closest('[data-action]');
   if (!target) {
     // Close popups on outside click
@@ -25,7 +31,7 @@ document.body.addEventListener('click', function (e) {
       popup.style.display = 'none';
     }
     var msPopup = document.getElementById('ms-popup');
-    if (msPopup && msPopup.style.display !== 'none' && !msPopup.contains(e.target) && !e.target.closest('#ms-card') && !e.target.closest('[data-action="open-ms"]')) {
+    if (msPopup && msPopup.style.display !== 'none' && !msPopup.contains(e.target) && !e.target.closest('[data-action="open-ms"]')) {
       msPopup.style.display = 'none';
     }
     var bpPopup = document.getElementById('bp-popup');
@@ -42,7 +48,19 @@ document.body.addEventListener('click', function (e) {
   var sym = target.dataset.sym;
   var tf = target.dataset.tf;
 
+  // Close burger on any action except its own toggle
+  if (action !== 'toggle-burger') {
+    var _bdd = document.getElementById('burger-dd');
+    if (_bdd) _bdd.classList.remove('open');
+  }
+
   switch (action) {
+    case 'toggle-burger': {
+      e.stopPropagation();
+      var bDd = document.getElementById('burger-dd');
+      if (bDd) bDd.classList.toggle('open');
+      break;
+    }
     case 'analyze': {
       var c = state.coins.find(function (x) { return x.symbol === sym; });
       if (c) { openAnalysisPopup(sym, target); }
