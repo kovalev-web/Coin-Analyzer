@@ -181,7 +181,11 @@ function processTickerPush(arr) {
     coin.current_price = parseFloat(t.c);
     coin.open_24h = parseFloat(t.o);
     coin.total_volume = Math.round(parseFloat(t.q));
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (coin.current_price - coin.open_24h) / coin.open_24h * 100;
+    // Используем Binance pre-calculated P — единственный корректный источник % изменения.
+    // Пересчёт из (close - open) / open на клиенте даёт расхождение когда close из kline WS
+    // более свежий чем open из тикера (разные временны́е срезы).
+    if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
+    else if (coin.open_24h > 0) coin.price_change_percentage_24h = (coin.current_price - coin.open_24h) / coin.open_24h * 100;
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -281,7 +285,8 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
+    // % намеренно НЕ обновляем из kline: kline.close и ticker.open_24h — разные временны́е срезы,
+    // их смешение даёт число отличное от Binance P. % обновляется только из ticker push (t.P).
   }
 }
 
@@ -336,9 +341,10 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    var ch = (coin.open_24h && coin.open_24h > 0 && coin.current_price)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
+    // Берём % напрямую из state — он установлен из Binance P (ticker push).
+    // Не пересчитываем из current_price/open_24h: текущая цена из kline WS свежее чем
+    // open_24h из тикера, их смешение даёт расхождение с Binance до 2-4% при волатильности.
+    var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
     var nd = state.natrData[sym];
@@ -568,7 +574,7 @@ export async function fetchNATR(symbol) {
     var v = calculateNATR(candles);
     state.natrData[symbol] = v !== null ? { value: v } : 'error';
 
-    // d1Open сохраняем в state но не используем для % — % считается из open_24h (rolling 24h) в applyLivePriceUpdates
+    // d1Open сохраняем в state но не используем для % — % берётся из Binance P (ticker push, поле t.P)
     if (msg.d1Open != null) {
       var d1 = parseFloat(msg.d1Open);
       if (d1 > 0) state.dailyOpen[symbol] = d1;
