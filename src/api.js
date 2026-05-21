@@ -356,6 +356,29 @@ export function applyLivePriceUpdates() {
     if (spans[2].textContent !== newVol) spans[2].textContent = newVol;
   });
 
+  // Update full view stats (когда монета развёрнута)
+  var fvSym = window.__fvSymbol;
+  if (fvSym) {
+    var fvCoin = state.coins.find(function (c) { return c.symbol === fvSym; });
+    var fvStatsEl = document.querySelector('.fv-info-stats');
+    if (fvCoin && fvStatsEl) {
+      var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
+      if (fvSpans.length >= 3) {
+        var fvCh = fvCoin.price_change_percentage_24h || 0;
+        var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
+        if (fvSpans[0].textContent !== newFvChg) { fvSpans[0].textContent = newFvChg; fvSpans[0].className = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn'); }
+        var fvNd = state.natrData[fvSym];
+        if (fvNd && fvNd !== 'loading' && fvNd !== 'error') {
+          var fvV = fvNd.value;
+          var newFvNat = fvV.toFixed(2);
+          if (fvSpans[1].textContent !== newFvNat) { fvSpans[1].textContent = newFvNat; fvSpans[1].className = 'stat-val ' + (fvV < 1 ? 'dn' : fvV < 2.5 ? 'warn' : 'up'); }
+        }
+        var newFvVol = fmt(Math.round(fvCoin.total_volume || 0)).replace('$', '');
+        if (fvSpans[2].textContent !== newFvVol) fvSpans[2].textContent = newFvVol;
+      }
+    }
+  }
+
   // Update TV slot headers
   document.querySelectorAll('[data-tv-sym]').forEach(function (el) {
     var sym = el.dataset.tvSym;
