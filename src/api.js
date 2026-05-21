@@ -181,6 +181,9 @@ function processTickerPush(arr) {
     coin.current_price = parseFloat(t.c);
     coin.open_24h = parseFloat(t.o);  // 24h rolling open — для расчёта % в applyLivePriceUpdates
     coin.total_volume = Math.round(parseFloat(t.q));
+    // Синхронизируем price_change_percentage_24h с формулой, чтобы renderCard и applyLivePriceUpdates
+    // всегда давали одно и то же значение (иначе cards:sync перезаписывал бы живой % стейлом из t.P).
+    if (coin.open_24h > 0) coin.price_change_percentage_24h = (coin.current_price - coin.open_24h) / coin.open_24h * 100;
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -277,9 +280,12 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Только обновляем current_price — % берётся из t.P тикера раз в секунду
+  // Обновляем current_price и синхронизируем price_change_percentage_24h с формулой
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) coin.current_price = k.close;
+  if (coin) {
+    coin.current_price = k.close;
+    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
+  }
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
