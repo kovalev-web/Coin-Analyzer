@@ -510,6 +510,10 @@ export function startChartPolling() {
   // Sync кlines каждые 10с — только для восстановления после разрыва WS.
   // Основной источник обновлений — kline_update push (processKlineUpdate).
   _chartTimer = setInterval(function () { pollCharts(); }, 10000);
+  // Гарантированный 1с-таймер для обновления % и объёма в DOM.
+  // processTickerPush тоже вызывает applyLivePriceUpdates, но может пропускаться
+  // при newCoins > 0. Таймер — страховочный механизм.
+  _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 1000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
