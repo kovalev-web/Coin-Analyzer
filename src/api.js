@@ -178,9 +178,12 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    // Используем Binance rolling 24h priceChangePercent (t.P) — именно это показывает
-    // Binance в списке гейнеров. D1 UTC open даёт другое значение.
-    coin.price_change_percentage_24h = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+    // Для динамического обновления % используем D1 UTC open если доступен,
+    // иначе Binance rolling 24h t.P. D1 обновляется sub-second от kline WS.
+    var d1 = state.dailyOpen[sym];
+    coin.price_change_percentage_24h = d1
+      ? (parseFloat(t.c) - d1) / d1 * 100
+      : (t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100);
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
@@ -279,9 +282,27 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Синхронизируем coin.current_price — % обновляется из ticker push (t.P)
+  // Синхронизируем coin.current_price и пересчитываем % от D1 open sub-second
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) coin.current_price = k.close;
+  if (coin) {
+    coin.current_price = k.close;
+    var d1 = state.dailyOpen[sym];
+    if (d1) {
+      coin.price_change_percentage_24h = (k.close - d1) / d1 * 100;
+      var cardEl = document.querySelector('.coin-card[data-sym="' + sym + '"]');
+      if (cardEl) {
+        var spans = cardEl.querySelectorAll('.card-chart-stats .stat-val');
+        if (spans.length >= 1) {
+          var ch = coin.price_change_percentage_24h;
+          var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+          if (spans[0].textContent !== newChg) {
+            spans[0].textContent = newChg;
+            spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
+          }
+        }
+      }
+    }
+  }
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
