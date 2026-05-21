@@ -181,7 +181,11 @@ function processTickerPush(arr) {
     coin.current_price = parseFloat(t.c);
     coin.open_24h = parseFloat(t.o);
     coin.total_volume = Math.round(parseFloat(t.q));
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (coin.current_price - coin.open_24h) / coin.open_24h * 100;
+    // Используем D1 open (полночь UTC) если доступен — совпадает с Binance stats panel.
+    // Fallback на rolling 24h open пока dailyOpen не загружен (первые секунды после старта).
+    var _d1t = state.dailyOpen[sym];
+    var _bot = (_d1t && _d1t > 0) ? _d1t : coin.open_24h;
+    if (_bot > 0) coin.price_change_percentage_24h = (coin.current_price - _bot) / _bot * 100;
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -281,7 +285,9 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
+    var _d1k = state.dailyOpen[sym];
+    var _bok = (_d1k && _d1k > 0) ? _d1k : coin.open_24h;
+    if (_bok > 0) coin.price_change_percentage_24h = (k.close - _bok) / _bok * 100;
   }
 }
 
@@ -336,9 +342,9 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    var ch = (coin.open_24h && coin.open_24h > 0 && coin.current_price)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
+    // price_change_percentage_24h обновляется из kline (~200мс) и ticker (~1с),
+    // оба используют d1Open (полночь UTC) — совпадает с Binance stats panel.
+    var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
     var nd = state.natrData[sym];
@@ -513,10 +519,20 @@ export function startChartPolling() {
   // Sync кlines каждые 10с — только для восстановления после разрыва WS.
   // Основной источник обновлений — kline_update push (processKlineUpdate).
   _chartTimer = setInterval(function () { pollCharts(); }, 10000);
-  // Гарантированный 1с-таймер для обновления % и объёма в DOM.
-  // processTickerPush тоже вызывает applyLivePriceUpdates, но может пропускаться
-  // при newCoins > 0. Таймер — страховочный механизм.
+  // Гарантированный 2с-таймер для обновления % и объёма в DOM.
   _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 2000);
+  // Сброс d1Open при смене UTC-дня: dailyOpen хранит open полуночи UTC,
+  // при смене суток он устаревает и % начинает расходиться с Binance.
+  var _lastDay = new Date().toISOString().slice(0, 10);
+  setInterval(function () {
+    var today = new Date().toISOString().slice(0, 10);
+    if (today !== _lastDay) {
+      _lastDay = today;
+      Object.keys(state.dailyOpen).forEach(function (k) { delete state.dailyOpen[k]; });
+      Object.keys(state.natrData).forEach(function (k) { delete state.natrData[k]; });
+      fetchAllNATR(filteredCoins());
+    }
+  }, 60000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
