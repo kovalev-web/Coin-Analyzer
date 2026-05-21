@@ -191,7 +191,6 @@ function processTickerPush(arr) {
   // При смене порядка: переставляем карточки через renderCards (cards:sync),
   // а не полный render() — render() уничтожает все чарты и пересоздаёт их,
   // что вызывало флик раз в 1-2 минуты при изменении рейтинга по объёму.
-  applyLivePriceUpdates();
   emit('cards:sync');
 }
 
@@ -493,7 +492,7 @@ export function startChartPolling() {
   // Гарантированный 1с-таймер для обновления % и объёма в DOM.
   // processTickerPush тоже вызывает applyLivePriceUpdates, но может пропускаться
   // при newCoins > 0. Таймер — страховочный механизм.
-  _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 1000);
+  _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 2000);
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
