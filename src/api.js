@@ -178,12 +178,13 @@ function processTickerPush(arr) {
       newCoins++;
       return;
     }
-    coin.current_price = parseFloat(t.c);
+    var tc = parseFloat(t.c), to = parseFloat(t.o);
+    coin.current_price = tc;
+    coin.open_24h = to;
     coin.total_volume = Math.round(parseFloat(t.q));
-    // t.P — точный priceChangePercent от Binance, считается на их стороне из одного источника.
-    // Формула (current_price - open_24h) / open_24h давала расхождения до 4% из-за смешения
-    // kline WS и ticker WS которые обновляются в разные моменты времени.
-    if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
+    // % считается из t.c и t.o одного ticker-события — совпадает с Binance.
+    // Kline current_price не используется для % (kline и ticker обновляются в разные моменты → расхождение).
+    if (to > 0) coin.price_change_percentage_24h = (tc - to) / to * 100;
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -280,7 +281,8 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Обновляем только current_price — % берётся из t.P тикера (точное значение Binance)
+  // Kline обновляет только цену для чарта и прайс-тега — % не трогаем,
+  // он приходит из ticker (t.c + t.o из одного снимка) и обновляется раз в ~1с.
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) coin.current_price = k.close;
 }
@@ -336,7 +338,6 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    // t.P от Binance — единственный источник истины для %. Точно совпадает с их UI.
     var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
