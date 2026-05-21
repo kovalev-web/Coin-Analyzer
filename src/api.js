@@ -284,7 +284,27 @@ function processKlineUpdate(msg) {
 
   // Синхронизируем coin.current_price чтобы карточки тоже показывали актуальную цену
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) coin.current_price = k.close;
+  if (coin) {
+    coin.current_price = k.close;
+    // Пересчитываем суточный % от D1 open на каждом kline-событии (sub-second)
+    // чтобы % обновлялся вместе с графиком, не ждать тикер-пуш раз в 1с
+    var d1 = state.dailyOpen[sym];
+    if (d1) {
+      coin.price_change_percentage_24h = (k.close - d1) / d1 * 100;
+      var cardEl = document.querySelector('.coin-card[data-sym="' + sym + '"]');
+      if (cardEl) {
+        var spans = cardEl.querySelectorAll('.card-chart-stats .stat-val');
+        if (spans.length >= 1) {
+          var ch = coin.price_change_percentage_24h;
+          var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+          if (spans[0].textContent !== newChg) {
+            spans[0].textContent = newChg;
+            spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
+          }
+        }
+      }
+    }
+  }
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
