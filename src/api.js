@@ -145,14 +145,12 @@ function processTickerPush(arr) {
       return t.s.endsWith('USDT') && !STABLE_SYMBOLS.has(t.s.replace('USDT', '').toLowerCase()) && t.s !== 'USDTUSDT';
     }).map(function (t) {
       var sym = t.s.replace('USDT', '').toLowerCase();
-      var o = parseFloat(t.o);
       return {
         symbol: sym,
         name: sym.toUpperCase(),
         current_price: parseFloat(t.c),
-        open24h: o,  // цена 24ч назад — для rolling % как на Binance
         total_volume: Math.round(parseFloat(t.q)),
-        price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - o) / o) * 100,
+        price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
       };
     }).sort(function (a, b) { return b.total_volume - a.total_volume; });
     state.lastUpdate = new Date();
@@ -180,10 +178,8 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.open24h = parseFloat(t.o);  // обновляем 24h open каждую секунду
-    // Rolling 24h % — точно как Binance. open24h тоже обновился, поэтому
-    // следующий kline-event даст актуальный % от правильной базы.
-    coin.price_change_percentage_24h = (parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o) * 100;
+    // t.P = Binance priceChangePercent (rolling 24h, точно как в UI Binance)
+    coin.price_change_percentage_24h = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
@@ -282,27 +278,9 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Обновляем цену sub-second и пересчитываем rolling 24h % от open24h
-  // open24h = t.o из тикера (цена ровно 24ч назад) — та же база что Binance
+  // Только обновляем current_price — % берётся из t.P тикера раз в секунду
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) {
-    coin.current_price = k.close;
-    if (coin.open24h) {
-      coin.price_change_percentage_24h = (k.close - coin.open24h) / coin.open24h * 100;
-      var cardEl = document.querySelector('.coin-card[data-sym="' + sym + '"]');
-      if (cardEl) {
-        var spans = cardEl.querySelectorAll('.card-chart-stats .stat-val');
-        if (spans.length >= 1) {
-          var ch = coin.price_change_percentage_24h;
-          var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-          if (spans[0].textContent !== newChg) {
-            spans[0].textContent = newChg;
-            spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
-          }
-        }
-      }
-    }
-  }
+  if (coin) coin.current_price = k.close;
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
