@@ -100,6 +100,10 @@ export function renderCards() {
   });
 
   initCharts();
+  // Синхронизируем display с текущим state после каждого ре-ордера.
+  // Без этого sort использует свежие значения state, а DOM показывает значения
+  // из _liveTimer (2с-давности) — карточки визуально стоят "не по порядку".
+  applyLivePriceUpdates();
 }
 
 export function updateCardBadge(symbol) {
