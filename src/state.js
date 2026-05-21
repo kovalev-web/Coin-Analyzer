@@ -29,10 +29,10 @@ export const state = {
 
 export function filteredCoins() {
   var tier = state.volTier || 'high';
-  // low-тир: 1M–50M — показывает небольшие альткоины включая новые листинги
+  // low-тир: 12M–50M — показывает небольшие альткоины включая новые листинги
   // mid-тир: 50M–100M — средние монеты
   // high-тир: 100M+ — крупные монеты
-  var minVol = tier === 'high' ? 100e6 : tier === 'mid' ? 50e6 : 1e6;
+  var minVol = tier === 'high' ? 100e6 : tier === 'mid' ? 50e6 : 12e6;
   var maxVol = tier === 'high' ? Infinity : tier === 'mid' ? 100e6 : 50e6;
   var minChg = state.minChange || 0;
   var coins = state.coins.filter(function (c) {
