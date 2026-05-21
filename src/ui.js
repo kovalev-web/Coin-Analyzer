@@ -565,6 +565,25 @@ function calcPriceFormat(price) {
   return { type: 'price', precision: 0, minMove: 1 };
 }
 
+// Форматирует Unix timestamp (секунды) в локальное время устройства
+function _localTimeFmt(ts) {
+  var d = new Date(ts * 1000);
+  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+
+// Форматирует метки на оси времени с учётом уровня детализации
+function _tickMarkFmt(ts, type) {
+  var d = new Date(ts * 1000);
+  var h = d.getHours().toString().padStart(2, '0');
+  var m = d.getMinutes().toString().padStart(2, '0');
+  var day = d.getDate().toString().padStart(2, '0');
+  var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  // type: 0=Year, 1=Month, 2=DayOfMonth, 3=Time, 4=TimeWithSeconds
+  if (type <= 1) return mon + ' ' + d.getFullYear();
+  if (type === 2) return day + ' ' + mon;
+  return h + ':' + m;
+}
+
 function getChartOpts(width, height) {
   var c = getChartColors();
   return {
@@ -573,7 +592,8 @@ function getChartOpts(width, height) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
-    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt },
+    localization: { timeFormatter: _localTimeFmt },
     handleScroll: true, handleScale: true,
   };
 }
@@ -1792,7 +1812,8 @@ export function openCoinFullView(sym) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
-    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt },
+    localization: { timeFormatter: _localTimeFmt },
     handleScroll: true, handleScale: true,
   });
   _fvSeries = _fvChart.addCandlestickSeries(getSeriesColors());
