@@ -88,10 +88,7 @@
     .stat-val.dim{color:var(--steel);}
     .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;}
     .card-chart-stats{position:absolute;top:calc(36px + 6px);left:14px;z-index:2;display:flex;align-items:center;gap:8px;pointer-events:none;}
-    .card-chart-stats .stat-val{display:inline-block;text-align:right;}
-    .card-chart-stats .stat-val:nth-child(1){min-width:58px;}
-    .card-chart-stats .stat-val:nth-child(2){min-width:36px;}
-    .card-chart-stats .stat-val:nth-child(3){min-width:46px;}
+    .card-chart-stats .stat-val:nth-child(1){display:inline-block;min-width:58px;text-align:right;}
     .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;}
     .tf-picker{position:relative;display:inline-block;}
     .tf-pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
@@ -242,10 +239,8 @@
     .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:8px;}
     .fv-info-top{display:flex;align-items:center;gap:10px;}
     .fv-info-stats{display:flex;align-items:center;gap:14px;padding-left:2px;}
-    .fv-info-stats .stat-val{font-size:15px;font-weight:600;padding:0;display:inline-block;text-align:right;}
-    .fv-info-stats .stat-val:nth-child(1){min-width:72px;}
-    .fv-info-stats .stat-val:nth-child(2){min-width:44px;}
-    .fv-info-stats .stat-val:nth-child(3){min-width:56px;}
+    .fv-info-stats .stat-val{font-size:15px;font-weight:600;padding:0;}
+    .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:72px;text-align:right;}
     .fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
     .fv-back-btn{background:var(--fog);color:var(--ink);border:1px solid var(--hairline);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;box-shadow:var(--shadow-soft);}
     .fv-back-btn:hover{border-color:var(--steel);}
