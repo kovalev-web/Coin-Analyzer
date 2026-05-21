@@ -149,6 +149,7 @@ function processTickerPush(arr) {
         symbol: sym,
         name: sym.toUpperCase(),
         current_price: parseFloat(t.c),
+        open_24h: parseFloat(t.o),
         total_volume: Math.round(parseFloat(t.q)),
         price_change_percentage_24h: t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100,
       };
@@ -178,8 +179,7 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    // t.P = Binance priceChangePercent (rolling 24h, точно как в UI Binance)
-    coin.price_change_percentage_24h = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+    coin.open_24h = parseFloat(t.o);  // 24h rolling open — для расчёта % в applyLivePriceUpdates
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
@@ -334,7 +334,11 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    var ch = coin.price_change_percentage_24h || 0;
+    // Считаем % из live-цены (обновляется от kline WS каждую сделку) и 24h rolling open от тикера.
+    // Это даёт видимые обновления при любом движении цены и точно соответствует логике Binance.
+    var ch = (coin.open_24h && coin.open_24h > 0 && coin.current_price)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
     var nd = state.natrData[sym];
@@ -541,18 +545,10 @@ export async function fetchNATR(symbol) {
     var v = calculateNATR(candles);
     state.natrData[symbol] = v !== null ? { value: v } : 'error';
 
-    // Суточный open (D1 UTC) — именно такой % показывает Binance в списке монет.
-    // priceChangePercent из тикера = rolling 24h, что отличается от "изменения за сегодня".
+    // d1Open сохраняем в state но не используем для % — % считается из open_24h (rolling 24h) в applyLivePriceUpdates
     if (msg.d1Open != null) {
       var d1 = parseFloat(msg.d1Open);
-      if (d1 > 0) {
-        state.dailyOpen[symbol] = d1;
-        // Обновляем % в coin немедленно
-        var coin = state.coins.find(function (c) { return c.symbol === symbol; });
-        if (coin && coin.current_price) {
-          coin.price_change_percentage_24h = (coin.current_price - d1) / d1 * 100;
-        }
-      }
+      if (d1 > 0) state.dailyOpen[symbol] = d1;
     }
   } catch (e) { state.natrData[symbol] = 'error'; }
 }
