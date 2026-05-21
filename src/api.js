@@ -178,7 +178,12 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.price_change_percentage_24h = t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100;
+    // Если есть суточный open (D1 UTC) — считаем от него, как показывает Binance.
+    // Иначе используем Binance rolling 24h priceChangePercent.
+    var d1 = state.dailyOpen[sym];
+    coin.price_change_percentage_24h = d1
+      ? (parseFloat(t.c) - d1) / d1 * 100
+      : (t.P != null ? parseFloat(t.P) : ((parseFloat(t.c) - parseFloat(t.o)) / parseFloat(t.o)) * 100);
     coin.total_volume = Math.round(parseFloat(t.q));
   });
 
@@ -535,6 +540,20 @@ export async function fetchNATR(symbol) {
     var candles = data.map(function (k) { return { high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]) }; });
     var v = calculateNATR(candles);
     state.natrData[symbol] = v !== null ? { value: v } : 'error';
+
+    // Суточный open (D1 UTC) — именно такой % показывает Binance в списке монет.
+    // priceChangePercent из тикера = rolling 24h, что отличается от "изменения за сегодня".
+    if (msg.d1Open != null) {
+      var d1 = parseFloat(msg.d1Open);
+      if (d1 > 0) {
+        state.dailyOpen[symbol] = d1;
+        // Обновляем % в coin немедленно
+        var coin = state.coins.find(function (c) { return c.symbol === symbol; });
+        if (coin && coin.current_price) {
+          coin.price_change_percentage_24h = (coin.current_price - d1) / d1 * 100;
+        }
+      }
+    }
   } catch (e) { state.natrData[symbol] = 'error'; }
 }
 

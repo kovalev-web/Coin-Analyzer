@@ -499,9 +499,14 @@ wss.on('connection', function (ws) {
       }
 
       else if (msg.type === 'fetch_natr') {
-        var url2 = BINANCE_REST + '/fapi/v1/klines?symbol=' + msg.symbol.toUpperCase() + 'USDT&interval=5m&limit=30';
-        var data2 = await fetchBinance(url2);
-        ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: data2 }));
+        var natrSym = msg.symbol.toUpperCase() + 'USDT';
+        // Параллельно: 5m для NATR + 1d для суточного % (от открытия UTC-дня, как на Binance)
+        var [natrKlines, d1Klines] = await Promise.all([
+          fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=5m&limit=30'),
+          fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=1d&limit=1'),
+        ]);
+        var d1Open = (Array.isArray(d1Klines) && d1Klines.length) ? d1Klines[0][1] : null;
+        ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: natrKlines, d1Open: d1Open }));
       }
 
       else if (msg.type === 'save_alerts') {
