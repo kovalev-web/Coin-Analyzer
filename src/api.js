@@ -179,11 +179,11 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.open_24h = parseFloat(t.o);  // 24h rolling open — для расчёта % в applyLivePriceUpdates
     coin.total_volume = Math.round(parseFloat(t.q));
-    // Синхронизируем price_change_percentage_24h с формулой, чтобы renderCard и applyLivePriceUpdates
-    // всегда давали одно и то же значение (иначе cards:sync перезаписывал бы живой % стейлом из t.P).
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (coin.current_price - coin.open_24h) / coin.open_24h * 100;
+    // t.P — точный priceChangePercent от Binance, считается на их стороне из одного источника.
+    // Формула (current_price - open_24h) / open_24h давала расхождения до 4% из-за смешения
+    // kline WS и ticker WS которые обновляются в разные моменты времени.
+    if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -280,12 +280,9 @@ function processKlineUpdate(msg) {
     if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
-  // Обновляем current_price и синхронизируем price_change_percentage_24h с формулой
+  // Обновляем только current_price — % берётся из t.P тикера (точное значение Binance)
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) {
-    coin.current_price = k.close;
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
-  }
+  if (coin) coin.current_price = k.close;
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
@@ -339,11 +336,8 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    // Считаем % из live-цены (обновляется от kline WS каждую сделку) и 24h rolling open от тикера.
-    // Это даёт видимые обновления при любом движении цены и точно соответствует логике Binance.
-    var ch = (coin.open_24h && coin.open_24h > 0 && coin.current_price)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
+    // t.P от Binance — единственный источник истины для %. Точно совпадает с их UI.
+    var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
     var nd = state.natrData[sym];
