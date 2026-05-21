@@ -88,7 +88,7 @@
     .stat-val.dim{color:var(--steel);}
     .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;}
     .card-chart-stats{position:absolute;top:calc(36px + 6px);left:14px;z-index:2;display:flex;align-items:center;gap:8px;pointer-events:none;}
-    .card-chart-stats .stat-val:nth-child(1){display:inline-block;min-width:58px;text-align:right;}
+    .card-chart-stats .stat-val:nth-child(1){display:inline-block;min-width:58px;text-align:left;}
     .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;}
     .tf-picker{position:relative;display:inline-block;}
     .tf-pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
@@ -168,7 +168,7 @@
     .ms-bar-fill.strong{background:var(--bullish);}
     .ms-bar-fill.medium{background:var(--caution);}
     .ms-bar-fill.weak{background:var(--bloom-coral);}
-    .ms-bar-pct{font-size:11px;font-weight:700;color:var(--charcoal);min-width:24px;text-align:right;}
+    .ms-bar-pct{font-size:11px;font-weight:700;color:var(--charcoal);min-width:24px;text-align:left;}
     .ms-oi-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;}
     .ms-oi-badge.up{background:var(--bullish-bg);color:var(--bullish);}
     .ms-oi-badge.down{background:var(--retry-bg);color:var(--bloom-deep);}
@@ -240,7 +240,7 @@
     .fv-info-top{display:flex;align-items:center;gap:10px;}
     .fv-info-stats{display:flex;align-items:center;gap:14px;padding-left:2px;}
     .fv-info-stats .stat-val{font-size:15px;font-weight:600;padding:0;}
-    .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:72px;text-align:right;}
+    .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:72px;text-align:left;}
     .fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
     .fv-back-btn{background:var(--fog);color:var(--ink);border:1px solid var(--hairline);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;box-shadow:var(--shadow-soft);}
     .fv-back-btn:hover{border-color:var(--steel);}
