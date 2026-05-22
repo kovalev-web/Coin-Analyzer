@@ -286,7 +286,7 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    // price_change_percentage_24h не трогаем — он обновляется только из t.P (тикер, 1с).
+    applyLivePriceUpdates();
   }
 }
 
@@ -357,7 +357,9 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    var ch = coin.price_change_percentage_24h || 0;
+    var ch = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
     var nd = state.natrData[sym];
@@ -378,7 +380,9 @@ export function applyLivePriceUpdates() {
     if (fvCoin && fvStatsEl) {
       var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
       if (fvSpans.length >= 3) {
-        var fvCh = fvCoin.price_change_percentage_24h || 0;
+        var fvCh = (fvCoin.open_24h > 0 && fvCoin.current_price > 0)
+          ? (fvCoin.current_price - fvCoin.open_24h) / fvCoin.open_24h * 100
+          : (fvCoin.price_change_percentage_24h || 0);
         var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
         if (fvSpans[0].textContent !== newFvChg) { fvSpans[0].textContent = newFvChg; fvSpans[0].className = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn'); }
         var fvNd = state.natrData[fvSym];
@@ -398,7 +402,9 @@ export function applyLivePriceUpdates() {
     var sym = el.dataset.tvSym;
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
     if (!coin) return;
-    var ch = coin.price_change_percentage_24h || 0;
+    var ch = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
     var chgEl = el.querySelector('.tv-chg');
     if (chgEl) { chgEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; chgEl.className = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn'); }
     var prEl = el.querySelector('.tv-price');
