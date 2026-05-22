@@ -110,9 +110,16 @@ document.body.addEventListener('click', function (e) {
       else { analyzeAll(); }
       break;
     }
-    case 'refresh':
-      location.reload();
+    case 'refresh': {
+      var _logo = e.target.closest('.topbar-logo');
+      if (_logo) {
+        _logo.classList.add('logo-wiggle');
+        setTimeout(function () { location.reload(); }, 450);
+      } else {
+        location.reload();
+      }
       break;
+    }
     case 'sort': {
       var col = target.dataset.col;
       if (state.sortCol === col) { state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; }
