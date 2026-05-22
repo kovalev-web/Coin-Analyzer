@@ -2036,6 +2036,7 @@ export function openCoinFullView(sym) {
     clearTimeout(_fvTD.deleteTimer); _fvTD.deleteTimer = null;
     clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
     _fvTMHideMenu();
+    var _addBtn = document.getElementById('fv-add-btn'); if (_addBtn) _addBtn.style.display = 'none';
 
     // Ignore touches on the price scale area (rightmost ~75px)
     var psW = (_fvChart && _fvChart.priceScale('right').width) ? _fvChart.priceScale('right').width() : 75;
