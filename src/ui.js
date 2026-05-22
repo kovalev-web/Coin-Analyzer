@@ -513,17 +513,19 @@ function _mergeServerAlerts(entry) {
       _syncAlerts(symLc);
     } else if (localArr.length > 0) {
       // Merge: apply triggered=true from server to matching local alerts only
+      var changed = false;
       serverArr.forEach(function (sa) {
         if (!sa.triggered) return;
         for (var i = 0; i < localArr.length; i++) {
           var la = localArr[i];
           if (!la.triggered && Math.abs(la.price - sa.price) <= Math.max(Math.abs(la.price) * 1e-6, 1e-9)) {
             la.triggered = true;
-            _syncAlertLine(symLc, la);
+            changed = true;
             break;
           }
         }
       });
+      if (changed) _syncAlerts(symLc);
     }
   });
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}

@@ -64,6 +64,31 @@ setInterval(pollTelegram, 3000);
 var alertsMemory = {}; // code → {chatId, data: {sym: [{price, triggered}]}}
 var prevPrices = {};   // sym (lowercase, no USDT) → last price
 
+// Merge incoming alert data with existing, preserving triggered=true.
+// Once an alert is triggered on the server it can never be un-triggered by a client save.
+function mergeAlertData(existing, incoming) {
+  var normData = {};
+  Object.keys(incoming).forEach(function (s) {
+    var symLc = s.toLowerCase();
+    var existingSym = existing[symLc] || [];
+    normData[symLc] = (incoming[s] || []).map(function (newA) {
+      var prev = null;
+      for (var i = 0; i < existingSym.length; i++) {
+        var e = existingSym[i];
+        var tol = Math.max(Math.abs(e.price) * 1e-6, 1e-9);
+        if (Math.abs(e.price - newA.price) <= tol) { prev = e; break; }
+      }
+      return {
+        id: newA.id,
+        price: newA.price,
+        triggered: newA.triggered || (prev ? prev.triggered : false),
+        createdAt: newA.createdAt,
+      };
+    });
+  });
+  return normData;
+}
+
 async function saveAlertsToRedis(code) {
   try {
     await redis(['SET', 'alerts:' + code, JSON.stringify(alertsMemory[code])]);
@@ -467,10 +492,7 @@ var httpServer = http.createServer(async function (req, res) {
           if (!alertsMemory[codeKey]) alertsMemory[codeKey] = { chatId: '', data: {} };
           if (chatId !== undefined) alertsMemory[codeKey].chatId = String(chatId);
           if (data !== undefined) {
-            // Normalize sym keys to lowercase before storing
-            var normData = {};
-            Object.keys(data).forEach(function (s) { normData[s.toLowerCase()] = data[s]; });
-            alertsMemory[codeKey].data = normData;
+            alertsMemory[codeKey].data = mergeAlertData(alertsMemory[codeKey].data, data);
           }
           await saveAlertsToRedis(codeKey);
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -586,9 +608,7 @@ wss.on('connection', function (ws) {
           if (!alertsMemory[ck]) alertsMemory[ck] = { chatId: '', data: {} };
           if (msg.chatId) alertsMemory[ck].chatId = String(msg.chatId); // never overwrite with empty
           if (msg.data !== undefined) {
-            var normD = {};
-            Object.keys(msg.data).forEach(function (s) { normD[s.toLowerCase()] = msg.data[s]; });
-            alertsMemory[ck].data = normD;
+            alertsMemory[ck].data = mergeAlertData(alertsMemory[ck].data, msg.data);
           }
         }
       }
