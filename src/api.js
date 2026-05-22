@@ -565,7 +565,7 @@ export async function fetchChartData(symbol, tf) {
     return;
   }
   try {
-    var msg = await wsRequest({ type: 'fetch_klines', symbol: symbol, tf: tf, limit: 300 });
+    var msg = await wsRequest({ type: 'fetch_klines', symbol: symbol, tf: tf, limit: 1000 });
     var data = msg.data;
     if (!Array.isArray(data) || !data.length) throw new Error('No data');
     state.chartData[key] = {
