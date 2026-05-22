@@ -2323,8 +2323,14 @@ function _renderSearchList(popup, query) {
     ? coins.filter(function (c) {
         return c.symbol.toLowerCase().indexOf(q) !== -1 ||
                (c.name && c.name.toLowerCase().indexOf(q) !== -1);
+      }).sort(function (a, b) {
+        // Starts-with match ranks above contains
+        var aStarts = a.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+        var bStarts = b.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return (b.total_volume || 0) - (a.total_volume || 0);
       })
-    : coins;
+    : coins.slice().sort(function (a, b) { return (b.total_volume || 0) - (a.total_volume || 0); });
   if (!filtered.length) {
     listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
     return;
