@@ -2039,7 +2039,7 @@ export function openCoinFullView(sym) {
           _fvTMHideHandle(); _fvTD.pending = false;
           var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
           if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'level', _fvTD.pendingIdx);
-        }, 500);
+        }, 600);
         return;
       }
     }
@@ -2055,7 +2055,7 @@ export function openCoinFullView(sym) {
           _fvTMHideHandle(); _fvTD.pending = false;
           var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
           if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'alert', _fvTD.pendingIdx);
-        }, 500);
+        }, 600);
         return;
       }
     }
