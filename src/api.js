@@ -286,9 +286,7 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    // % пересчитываем от coin.open_24h (rolling 24h open, обновляется тикером каждую секунду).
-    // Это то же значение что t.P, но обновляется каждые 200ms — даёт плавную динамику.
-    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
+    // price_change_percentage_24h не трогаем — он обновляется только из t.P (тикер, 1с).
   }
 }
 
@@ -359,8 +357,6 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    // price_change_percentage_24h обновляется из kline (~200мс) и ticker (~1с),
-    // оба используют d1Open (полночь UTC) — совпадает с Binance stats panel.
     var ch = coin.price_change_percentage_24h || 0;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
