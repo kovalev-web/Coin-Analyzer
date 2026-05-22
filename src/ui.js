@@ -1789,8 +1789,7 @@ export function openCoinFullView(sym) {
   var switchingCoins = overlay.style.display === 'flex';
   if (!switchingCoins) {
     // First open — build full structure including drawer
-    overlay.innerHTML = _topbarHTML()
-      + '<div class="fv-body">'
+    overlay.innerHTML = '<div class="fv-body">'
       + '<div class="fv-chart-wrap">'
       + _fvCoinInfoHTML(sym, tf)
       + '<div id="fv-chart"></div>'
@@ -1798,11 +1797,7 @@ export function openCoinFullView(sym) {
       + '<div id="fv-briefing-drawer"></div>'
       + '</div>';
   } else {
-    // Switching coins — update only topbar and chart-wrap, leave drawer untouched
-    var _tmpDiv = document.createElement('div');
-    _tmpDiv.innerHTML = _topbarHTML();
-    var _oldTopbar = overlay.querySelector('.topbar');
-    if (_oldTopbar) overlay.replaceChild(_tmpDiv.firstChild, _oldTopbar);
+    // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
     if (_chartWrap) {
       _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
