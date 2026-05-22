@@ -257,13 +257,15 @@ export function showCodeModal() {
   backdrop.className = 'code-modal-backdrop';
   backdrop.innerHTML =
     '<div class="code-modal">' +
-      '<h2>Синхронизация</h2>' +
-      '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
-      '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
-      '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
-      '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
-      '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
-      '<div class="code-modal-actions">' +
+      '<div class="popup-header"><span class="popup-title">Синхронизация</span></div>' +
+      '<div class="popup-body">' +
+        '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
+        '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
+        '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
+        '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
+        '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
+      '</div>' +
+      '<div class="popup-footer code-modal-actions">' +
         '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
         '<button class="code-modal-skip" id="code-modal-skip">Пропустить</button>' +
       '</div>' +
@@ -921,11 +923,13 @@ function getOverlay() {
     el.id = 'analysis-overlay';
     el.className = 'analysis-overlay';
     el.innerHTML =
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;">' +
-        '<button class="ms-popup-close" data-action="close-analysis">✕</button>' +
+      '<div class="popup-header"><span class="popup-title">Анализ</span>' +
+        '<button class="popup-close" data-action="close-analysis">' + icon('x', 15) + '</button>' +
       '</div>' +
-      '<div class="ao-spinner"><span class="spinner"></span></div>' +
-      '<div class="ao-content"></div>';
+      '<div class="popup-body">' +
+        '<div class="ao-spinner"><span class="spinner"></span></div>' +
+        '<div class="ao-content"></div>' +
+      '</div>';
     getPopupHost().appendChild(el);
   }
   return el;
@@ -949,11 +953,13 @@ export function openAnalysisPopup(sym, btn) {
     popup.id = 'analysis-overlay';
     popup.className = 'analysis-overlay';
     popup.innerHTML =
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;">' +
-        '<button class="ms-popup-close" data-action="close-analysis">✕</button>' +
+      '<div class="popup-header"><span class="popup-title">Анализ</span>' +
+        '<button class="popup-close" data-action="close-analysis">' + icon('x', 15) + '</button>' +
       '</div>' +
-      '<div class="ao-spinner"><span class="spinner"></span></div>' +
-      '<div class="ao-content"></div>';
+      '<div class="popup-body">' +
+        '<div class="ao-spinner"><span class="spinner"></span></div>' +
+        '<div class="ao-content"></div>' +
+      '</div>';
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
 
@@ -1079,17 +1085,15 @@ function msCardInner() {
 function msPopupInner() {
   var ms = state.marketStrength;
   var phase = getMSKPhase();
-  var closeBtn = '<button class="ms-popup-close" data-action="close-ms">✕</button>';
+  var closeBtn = '<button class="popup-close" data-action="close-ms">' + icon('x', 15) + '</button>';
   if (!ms || ms.status === 'loading') {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div class="ms-title">Сила рынка</div>' + closeBtn + '</div>' +
-      '<div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div>';
+    return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
+      '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div></div>';
   }
   if (ms.status === 'error') {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div class="ms-title">Сила рынка</div>' + closeBtn + '</div>' +
-      '<div style="color:var(--bloom-deep);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div>' +
-      '<button style="width:100%;height:36px;background:var(--ink);color:var(--on-ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" data-action="refresh-ms">Повторить</button>';
+    return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
+      '<div class="popup-body"><div style="color:var(--bloom-deep);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div></div>' +
+      '<div class="popup-footer"><button class="popup-btn" data-action="refresh-ms">Повторить</button></div>';
   }
   var m = ms.metrics;
   var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
@@ -1115,19 +1119,16 @@ function msPopupInner() {
     oi: '▲ Подтверждён — цена растёт и открытых позиций больше: реальные покупатели заходят, движение надёжное. ▼ Ликвидации — цена растёт, но OI падает: выносят шортистов. Рост резкий, но может не удержаться. — Нейтрально — картина неоднозначная, сигнала нет.',
   };
 
-  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-    '<div class="ms-phase" style="font-size:13px;">' + phase.label + ' · ' + phase.time + ' МСК</div>' +
-    closeBtn +
-    '</div>' +
-    '<div class="ms-metrics-grid">' +
+  return '<div class="popup-header"><span class="ms-phase">' + phase.label + ' · ' + phase.time + ' МСК</span>' + closeBtn + '</div>' +
+    '<div class="popup-body"><div class="ms-metrics-grid">' +
     '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Волатильность' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Open Interest' + tip(tips.oi) + '</div>' + oiHtml + '</div>' +
     '</div>' +
     inPlayHtml +
-    '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-20 по объёму · ' + ts + '</div>' +
-    '<button style="width:100%;height:36px;margin-top:12px;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;font-family:\'Manrope\',Arial,sans-serif;font-size:14px;cursor:pointer;" data-action="refresh-ms">Обновить</button>';
+    '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-20 по объёму · ' + ts + '</div></div>' +
+    '<div class="popup-footer"><button class="popup-btn" data-action="refresh-ms">Обновить</button></div>';
 }
 
 export function openMSPopup() {
@@ -1667,13 +1668,13 @@ export function renderBriefingPanel() {
   }).join('') : '<div class="bp-empty">На сегодня монет нет — отметь звёздочкой на дашборде</div>';
 
   popup.innerHTML =
-    '<div class="bp-header">' +
-      '<span class="bp-title">Брифинг</span>' +
-      '<button class="bp-close-btn" data-action="close-briefing">' + icon('x', 15) + '</button>' +
+    '<div class="popup-header">' +
+      '<span class="popup-title">Брифинг</span>' +
+      '<button class="popup-close" data-action="close-briefing">' + icon('x', 15) + '</button>' +
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
-    '<div class="bp-footer">' +
-      '<button class="bp-go-btn" data-action="go-briefing"' + (todayEntries.length ? '' : ' disabled') + '>Режим брифинг</button>' +
+    '<div class="popup-footer">' +
+      '<button class="popup-btn" data-action="go-briefing"' + (todayEntries.length ? '' : ' disabled') + '>Режим брифинг</button>' +
     '</div>';
 
   // Re-attach note textarea listeners
