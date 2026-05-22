@@ -179,13 +179,11 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.open_24h = parseFloat(t.o);
     coin.total_volume = Math.round(parseFloat(t.q));
-    // Используем D1 open (полночь UTC) если доступен — совпадает с Binance stats panel.
-    // Fallback на rolling 24h open пока dailyOpen не загружен (первые секунды после старта).
+    // % пересчитываем только если d1Open (UTC-полночь) уже загружен.
+    // Без d1Open не трогаем % — иначе rolling-open тикера (t.o меняется каждую секунду) вызывает мерцание.
     var _d1t = state.dailyOpen[sym];
-    var _bot = (_d1t && _d1t > 0) ? _d1t : coin.open_24h;
-    if (_bot > 0) coin.price_change_percentage_24h = (coin.current_price - _bot) / _bot * 100;
+    if (_d1t > 0) coin.price_change_percentage_24h = (coin.current_price - _d1t) / _d1t * 100;
   });
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
@@ -208,8 +206,9 @@ function processSingleUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (!coin) return; // coin not in our filtered list
   coin.current_price = parseFloat(t.c);
-  coin.price_change_percentage_24h = parseFloat(t.P);
   coin.total_volume = Math.round(parseFloat(t.q));
+  var _d1s = state.dailyOpen[sym];
+  if (_d1s > 0) coin.price_change_percentage_24h = (parseFloat(t.c) - _d1s) / _d1s * 100;
   applyLivePriceUpdates();
 }
 
@@ -286,8 +285,7 @@ function processKlineUpdate(msg) {
   if (coin) {
     coin.current_price = k.close;
     var _d1k = state.dailyOpen[sym];
-    var _bok = (_d1k && _d1k > 0) ? _d1k : coin.open_24h;
-    if (_bok > 0) coin.price_change_percentage_24h = (k.close - _bok) / _bok * 100;
+    if (_d1k > 0) coin.price_change_percentage_24h = (k.close - _d1k) / _d1k * 100;
   }
 }
 
@@ -555,6 +553,28 @@ export async function fetchChartData(symbol, tf) {
         return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
       }),
     };
+
+    // Резервный источник d1Open — из загруженных свечей (если fetchNATR не отработал для этой монеты).
+    // 5m×300=25ч, 15m×300=75ч и выше гарантированно покрывают UTC-полночь.
+    // Проверяем что первая свеча старше полуночи — тогда находим первую свечу после полуночи и берём её open.
+    if (!state.dailyOpen[symbol] && data.length > 0) {
+      var _utcMidSec = Math.floor(Date.now() / 86400000) * 86400;
+      var _firstTime = Math.floor(parseInt(data[0][0]) / 1000);
+      if (_firstTime < _utcMidSec) {
+        var _midK = data.find(function (k) { return Math.floor(parseInt(k[0]) / 1000) >= _utcMidSec; });
+        if (_midK) {
+          var _d1c = parseFloat(_midK[1]);
+          if (_d1c > 0) {
+            state.dailyOpen[symbol] = _d1c;
+            var _coinC = state.coins.find(function (c) { return c.symbol === symbol; });
+            if (_coinC && _coinC.current_price > 0) {
+              _coinC.price_change_percentage_24h = (_coinC.current_price - _d1c) / _d1c * 100;
+            }
+          }
+        }
+      }
+    }
+
     // Подписываемся на real-time kline стрим — обновления будут приходить через processKlineUpdate
     wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: tf });
   } catch (e) {
@@ -578,17 +598,26 @@ export async function fetchNATR(symbol) {
   state.natrData[symbol] = 'loading';
   try {
     var msg = await wsRequest({ type: 'fetch_natr', symbol: symbol });
+
+    // d1Open сохраняем ДО проверки klines — он нужен для % независимо от успешности расчёта NATR.
+    // Раньше ранний throw скипал это сохранение → монета навсегда оставалась на rolling-open fallback.
+    if (msg.d1Open != null) {
+      var d1 = parseFloat(msg.d1Open);
+      if (d1 > 0) {
+        state.dailyOpen[symbol] = d1;
+        // Сразу пересчитываем % — не ждём следующего тикера
+        var coin = state.coins.find(function (c) { return c.symbol === symbol; });
+        if (coin && coin.current_price > 0) {
+          coin.price_change_percentage_24h = (coin.current_price - d1) / d1 * 100;
+        }
+      }
+    }
+
     var data = msg.data;
     if (!Array.isArray(data) || data.length < 15) throw new Error();
     var candles = data.map(function (k) { return { high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]) }; });
     var v = calculateNATR(candles);
     state.natrData[symbol] = v !== null ? { value: v } : 'error';
-
-    // d1Open сохраняем в state но не используем для % — % считается из open_24h (rolling 24h) в applyLivePriceUpdates
-    if (msg.d1Open != null) {
-      var d1 = parseFloat(msg.d1Open);
-      if (d1 > 0) state.dailyOpen[symbol] = d1;
-    }
   } catch (e) { state.natrData[symbol] = 'error'; }
 }
 
