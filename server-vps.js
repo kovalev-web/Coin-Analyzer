@@ -25,7 +25,7 @@ async function redis(cmd) {
 // ── Telegram ─────────────────────────────────────────────────────────────
 
 var TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-var APP_URL = (process.env.APP_URL || '').replace(/\/$/, ''); // e.g. https://yourdomain.com
+var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
 var tgOffset = 0;
 
 async function sendTG(chatId, text, replyMarkup) {
