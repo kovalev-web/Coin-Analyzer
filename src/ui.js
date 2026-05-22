@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE } from './api.js';
+import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
