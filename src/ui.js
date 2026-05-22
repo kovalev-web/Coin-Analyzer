@@ -1897,16 +1897,20 @@ export function openCoinFullView(sym) {
     }
   });
   el.addEventListener('mousedown', function (e) {
+    var rect = el.getBoundingClientRect();
+    // Ignore clicks on the price axis (right side) — let chart handle vertical zoom natively
+    var priceAxisW = 0;
+    try { priceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
+    if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+
     if (e.button === 1) {
       e.preventDefault();
-      var rect = el.getBoundingClientRect();
       var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       var pr = _fvSeries.coordinateToPrice(pt.y);
       if (pr != null) _fvRuler.start = { pt: pt, price: pr };
       return;
     }
     if (e.button !== 0) return;
-    var rect = el.getBoundingClientRect();
     var y = e.clientY - rect.top;
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
