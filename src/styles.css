@@ -74,6 +74,7 @@
     .sort-pill{background:var(--canvas);color:var(--charcoal);border:1px solid var(--steel);padding:0 14px;height:28px;font-size:11px;font-weight:500;border-radius:9999px;}
     .sort-pill.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
     .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+    @media(min-width:1900px){.cards-grid{grid-template-columns:repeat(4,1fr);}}
     @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
     .coin-card{background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);overflow:hidden;display:flex;flex-direction:column;position:relative;}
     .card-head{padding:0 14px;height:36px;display:flex;align-items:center;gap:10px;background:var(--canvas);}
