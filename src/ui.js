@@ -547,7 +547,7 @@ function getChartColors() {
   return {
     bg: getCSSVar('--canvas'),
     text: getCSSVar('--graphite'),
-    grid: isDark() ? 'rgba(255,255,255,0.04)' : getCSSVar('--hairline'),
+    grid: isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(232,232,232,0.5)',
     border: getCSSVar('--hairline'),
   };
 }
