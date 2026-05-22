@@ -2258,7 +2258,7 @@ export function renderFVBriefingDrawer() {
   var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>';
   dates.forEach(function (date) {
     var isToday = date === today;
-    var label = isToday ? 'Сегодня' : fmtBriefingDate(date);
+    var label = fmtBriefingDate(date);
     html += '<div class="fvbd-date-label">' + label + '</div>';
     dateMap[date].forEach(function (e) {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
