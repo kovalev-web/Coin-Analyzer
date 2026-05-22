@@ -2084,7 +2084,7 @@ export function openCoinFullView(sym) {
     _fvTD.lpTimer = setTimeout(function () {
       var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
       if (pr != null) { _fvTD.lpFired = true; _fvTMShowBtn(_fvTD.startY, pr); }
-    }, 500);
+    }, 300);
   }, { passive: false });
 
   el.addEventListener('touchmove', function (e) {
