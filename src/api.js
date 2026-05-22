@@ -184,10 +184,10 @@ function processTickerPush(arr) {
     coin.current_price = parseFloat(t.c);
     coin.open_24h = parseFloat(t.o);   // rolling 24h open — держим свежим для kline-расчётов
     coin.total_volume = Math.round(parseFloat(t.q));
-    // t.P = priceChangePercent от Binance (rolling 24h). Ставим напрямую — без ручного вычисления.
-    // kline_update (200ms) тоже обновляет %, используя тот же coin.open_24h — нет конфликта.
     if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
   });
+
+  applyLivePriceUpdates();
 
   if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
 
