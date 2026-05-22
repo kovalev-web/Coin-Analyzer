@@ -37,7 +37,6 @@
     @media(max-width:1024px){.btn-refresh-topbar{display:inline-flex;}}
     .desktop-nav-btn{display:none;}
     @media(min-width:1025px){.desktop-nav-btn{display:inline-flex;}}
-    @media(min-width:1025px){.burger-wrap{display:none;}}
     .btn-topbar:hover{opacity:0.8;}
     /* Sort buttons base (light mode): active=darker bg+dark icon, inactive=lighter bg+light icon */
     .sort-bar-btns .btn-topbar{color:var(--steel);background:var(--fog);}
@@ -257,6 +256,7 @@
 
     /* ── Burger menu ── */
     .burger-wrap{position:relative;display:block;}
+    @media(min-width:1025px){.burger-wrap{display:none;}}
     .btn-burger{background:var(--fog);color:var(--ink);border:none;padding:0;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;cursor:pointer;flex-shrink:0;}
     .btn-burger:hover{opacity:0.8;}
     .burger-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 8px 24px rgba(26,26,26,0.14);overflow:hidden;min-width:160px;z-index:500;}
