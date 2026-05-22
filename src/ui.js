@@ -2031,9 +2031,9 @@ export function openCoinFullView(sym) {
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
       var ly = _fvSeries.priceToCoordinate(levels[i].price);
-      if (ly != null && Math.abs(ly - y) < 16) {
+      if (ly != null && Math.abs(ly - y) < 10) {
         _fvTD.pending = true; _fvTD.pendingMode = 'level'; _fvTD.pendingItem = levels[i]; _fvTD.pendingIdx = i;
-        _fvTMShowHandle(y);
+        _fvTMShowHandle(ly);
         if (e.cancelable) e.preventDefault();
         _fvTD.lpTimer = setTimeout(function () {
           _fvTMHideHandle(); _fvTD.pending = false;
@@ -2047,9 +2047,9 @@ export function openCoinFullView(sym) {
     var alerts = _alerts[sym] || [];
     for (var j = 0; j < alerts.length; j++) {
       var ay = _fvSeries.priceToCoordinate(alerts[j].price);
-      if (ay != null && Math.abs(ay - y) < 16) {
+      if (ay != null && Math.abs(ay - y) < 10) {
         _fvTD.pending = true; _fvTD.pendingMode = 'alert'; _fvTD.pendingItem = alerts[j]; _fvTD.pendingIdx = j;
-        _fvTMShowHandle(y);
+        _fvTMShowHandle(ay);
         if (e.cancelable) e.preventDefault();
         _fvTD.lpTimer = setTimeout(function () {
           _fvTMHideHandle(); _fvTD.pending = false;
