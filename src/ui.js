@@ -1325,6 +1325,7 @@ function _topbarHTML() {
     + '<button class="topbar-logo" data-action="refresh" title="Обновить">' + _LOGO_SVG + '</button>'
     + '<div class="filter-group">' + tierPills + '</div>'
     + '<div class="topbar-actions">'
+    + '<button class="btn-topbar" data-action="open-search" title="Поиск">' + icon('search', 15) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 15) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 15) : icon('moon', 15)) + '</button>'
@@ -2309,4 +2310,83 @@ export function toggleFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
+}
+
+// ── Search Popup ───────────────────────────────────────────────────────────
+
+function _renderSearchList(popup, query) {
+  var listEl = popup.querySelector('.search-popup-list');
+  if (!listEl) return;
+  var q = (query || '').trim().toLowerCase();
+  var coins = state.coins;
+  var filtered = q
+    ? coins.filter(function (c) {
+        return c.symbol.toLowerCase().indexOf(q) !== -1 ||
+               (c.name && c.name.toLowerCase().indexOf(q) !== -1);
+      })
+    : coins;
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(function (c) {
+    var change = c.price_change_percentage_24h || 0;
+    var chgCls = change >= 0 ? 'up' : 'dn';
+    var chgStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+    return '<button class="search-popup-row" data-action="search-pick" data-sym="' + c.symbol + '">' +
+      '<span class="search-row-sym">' + c.symbol.toUpperCase() + '</span>' +
+      '<span class="search-row-name">' + escHtml(c.name || '') + '</span>' +
+      '<span class="search-row-chg ' + chgCls + '">' + chgStr + '</span>' +
+      '</button>';
+  }).join('');
+}
+
+export function openSearchPopup() {
+  var popup = document.getElementById('search-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'search-popup';
+    popup.className = 'search-popup';
+  }
+  if (popup.parentNode) popup.parentNode.removeChild(popup);
+
+  var isMobile = window.innerWidth <= 768;
+
+  popup.innerHTML =
+    '<div class="search-popup-header">' +
+      '<span class="search-popup-title">Поиск монеты</span>' +
+      '<button class="search-popup-close" data-action="close-search">' + icon('x', 15) + '</button>' +
+    '</div>' +
+    '<div class="search-popup-input-wrap">' +
+      '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
+    '</div>' +
+    '<div class="search-popup-list"></div>';
+
+  document.body.appendChild(popup);
+  _renderSearchList(popup, '');
+
+  var input = popup.querySelector('.search-popup-input');
+  input.addEventListener('input', function () {
+    _renderSearchList(popup, input.value);
+  });
+
+  popup.style.display = 'flex';
+
+  // Position on desktop below the search button
+  if (!isMobile) {
+    var btn = document.querySelector('[data-action="open-search"]');
+    if (btn) {
+      var btnRect = btn.getBoundingClientRect();
+      popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
+      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
+      popup.style.left = 'auto';
+    }
+  }
+
+  setTimeout(function () { if (input) input.focus(); }, 60);
+}
+
+export function closeSearchPopup() {
+  var popup = document.getElementById('search-popup');
+  if (popup) popup.style.display = 'none';
 }

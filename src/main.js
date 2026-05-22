@@ -8,6 +8,7 @@ import {
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
+  openSearchPopup, closeSearchPopup,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -36,6 +37,10 @@ document.body.addEventListener('click', function (e) {
   var _bpPopup = document.getElementById('bp-popup');
   if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
     _bpPopup.style.display = 'none';
+  }
+  var _searchPopup = document.getElementById('search-popup');
+  if (_searchPopup && _searchPopup.style.display !== 'none' && !_searchPopup.contains(e.target) && !e.target.closest('[data-action="open-search"]')) {
+    _searchPopup.style.display = 'none';
   }
 
   var target = e.target.closest('[data-action]');
@@ -179,6 +184,16 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'clear-alerts':
       if (confirm('Удалить все алерты для ' + sym.toUpperCase() + '?')) clearAlerts(sym);
+      break;
+    case 'open-search':
+      openSearchPopup();
+      break;
+    case 'close-search':
+      closeSearchPopup();
+      break;
+    case 'search-pick':
+      closeSearchPopup();
+      openCoinFullView(sym);
       break;
     case 'open-settings':
       showCodeModal();
