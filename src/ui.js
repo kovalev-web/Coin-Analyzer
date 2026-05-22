@@ -359,77 +359,105 @@ function updateLevelsBtn(sym) {
 }
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
+//
+// Architecture: pure data in _alerts, chart references in _aLines (keyed by alert id).
+// Lines are updated via applyOptions() — never removed+recreated — so no visual jumps.
+//
+// _alerts  : sym → [{ id, price, triggered, createdAt }]
+// _aLines  : alertId → { card: PriceLine|null, fv: PriceLine|null }
 
-var _alerts = {}; // symbol → [{price, triggered, line}]
+var _alerts = {};
+var _aLines = {};       // alertId → { card, fv }
+var _aIdSeed = 0;
+
 var _chatId = localStorage.getItem('pa_chat_id') || '';
 var _alertSyncTimer = null;
 
+function _aNewId() { return 'a' + (++_aIdSeed) + '_' + Date.now(); }
+
+// Serialize alerts for storage / server (no chart refs).
 function alertsData() {
-  var data = {};
+  var out = {};
   Object.keys(_alerts).forEach(function (sym) {
-    if (_alerts[sym] && _alerts[sym].length) {
-      data[sym] = _alerts[sym].map(function (a) { return { price: a.price, triggered: a.triggered, createdAt: a.createdAt }; });
+    var arr = _alerts[sym];
+    if (arr && arr.length) {
+      out[sym] = arr.map(function (a) {
+        return { id: a.id, price: a.price, triggered: a.triggered, createdAt: a.createdAt };
+      });
     }
   });
-  return data;
+  return out;
 }
 
 function alertLineOpts(triggered) {
-  return { color: triggered ? 'rgba(239,68,68,0.3)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
+  return { color: triggered ? 'rgba(239,68,68,0.35)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
-function attachAlert(sym, a) {
+// Create or update the price lines for a single alert (idempotent).
+// Uses applyOptions() when the line already exists — no flickering, no coordinate jumps.
+function _syncAlertLine(sym, a) {
+  if (!_aLines[a.id]) _aLines[a.id] = { card: null, fv: null };
+  var refs = _aLines[a.id];
+  var opts = Object.assign({ price: a.price }, alertLineOpts(a.triggered));
+
+  // Card chart line
   var s = _fullSeries[sym];
   if (s) {
-    if (a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
-    a.line = s.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+    if (refs.card) {
+      try { refs.card.applyOptions(opts); } catch (e) { refs.card = null; }
+    }
+    if (!refs.card) {
+      try { refs.card = s.createPriceLine(opts); } catch (e) {}
+    }
+  } else {
+    refs.card = null;
   }
+
+  // FV chart line
   if (_fvSeries && _fvSym === sym) {
-    if (a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
-    a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
+    if (refs.fv) {
+      try { refs.fv.applyOptions(opts); } catch (e) { refs.fv = null; }
+    }
+    if (!refs.fv) {
+      try { refs.fv = _fvSeries.createPriceLine(opts); } catch (e) {}
+    }
   }
 }
 
-function addAlert(sym, price) {
-  if (!_alerts[sym]) _alerts[sym] = [];
-  var a = { price: price, triggered: false, line: null, fvLine: null, createdAt: Date.now() };
-  _alerts[sym].push(a);
-  attachAlert(sym, a);
-  saveAlerts();
-  updateAlertsBtn(sym);
-  redrawAlerts(sym);
-}
-
-function removeAlert(sym, idx) {
-  if (!_alerts[sym] || _alerts[sym][idx] == null) return;
-  var a = _alerts[sym][idx];
+// Permanently remove both chart lines for an alert and delete its entry.
+function _removeAlertLine(sym, a) {
+  var refs = _aLines[a.id];
+  if (!refs) return;
   var s = _fullSeries[sym];
-  if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
-  if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
-  _alerts[sym].splice(idx, 1);
-  saveAlerts();
-  updateAlertsBtn(sym);
+  if (refs.card && s) { try { s.removePriceLine(refs.card); } catch (e) {} }
+  if (refs.fv && _fvSeries && _fvSym === sym) { try { _fvSeries.removePriceLine(refs.fv); } catch (e) {} }
+  delete _aLines[a.id];
+}
+
+// Remove FV line only (called when FV switches to a different coin).
+function _detachFvLine(a) {
+  var refs = _aLines[a.id];
+  if (refs && refs.fv && _fvSeries) { try { _fvSeries.removePriceLine(refs.fv); } catch (e) {} refs.fv = null; }
+}
+
+// Sync all lines for a sym (call after data changes or chart becomes ready).
+function _syncAlerts(sym) {
+  (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
+  _updateAlertsBtn(sym);
   redrawAlerts(sym);
 }
 
-export function clearAlerts(sym) {
-  var s = _fullSeries[sym];
-  (_alerts[sym] || []).forEach(function (a) {
-    if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} }
-    if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} }
-  });
-  _alerts[sym] = [];
-  saveAlerts();
-  updateAlertsBtn(sym);
-  redrawAlerts(sym);
+// Sync all syms (after applyServerAlerts or full reattach).
+function _syncAllAlerts() {
+  Object.keys(_alerts).forEach(function (sym) { _syncAlerts(sym); });
 }
 
-function updateAlertsBtn(sym) {
-  var btn = document.querySelector('.btn-clear-alerts[data-sym="' + sym + '"]');
-  if (!btn) return;
+function _updateAlertsBtn(sym) {
   var count = (_alerts[sym] || []).length;
-  btn.style.display = count ? 'inline-flex' : 'none';
-  btn.textContent = count;
+  document.querySelectorAll('.btn-clear-alerts[data-sym="' + sym + '"]').forEach(function (btn) {
+    btn.style.display = count ? 'inline-flex' : 'none';
+    btn.textContent = count;
+  });
 }
 
 function saveAlerts() {
@@ -441,9 +469,7 @@ function saveAlerts() {
 function syncAlertsToServer() {
   if (!_userCode) return;
   var data = alertsData();
-  // Notify VPS directly via WS for instant alertsMemory update
   sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: data });
-  // Also persist to Redis via Vercel for cross-device sync and VPS restart recovery
   fetch(API_BASE + '/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -451,36 +477,26 @@ function syncAlertsToServer() {
   }).catch(function () {});
 }
 
-function reattachAllAlerts() {
-  Object.keys(_alerts).forEach(function (sym) {
-    var s = _fullSeries[sym];
-    (_alerts[sym] || []).forEach(function (a) {
-      if (a.line) { try { if (s) s.removePriceLine(a.line); } catch (e) {} a.line = null; }
-    });
-    (_alerts[sym] || []).forEach(function (a) { attachAlert(sym, a); });
-    updateAlertsBtn(sym);
-    redrawAlerts(sym);
-  });
-}
-
 function applyServerAlerts(entry) {
-  // Safety guard: if server returned no alert data, don't wipe local state.
-  // Only update chatId if present and bail out early.
+  // Guard: server returned nothing — preserve local state, only update chatId.
   if (!entry || !entry.data || Object.keys(entry.data).length === 0) {
     if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
     return;
   }
+  // Remove chart lines for every current alert before replacing data.
   Object.keys(_alerts).forEach(function (sym) {
-    var s = _fullSeries[sym];
-    (_alerts[sym] || []).forEach(function (a) { if (a.line && s) { try { s.removePriceLine(a.line); } catch (e) {} } if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} } });
+    (_alerts[sym] || []).forEach(function (a) { _removeAlertLine(sym, a); });
   });
   _alerts = {};
   Object.keys(entry.data).forEach(function (sym) {
-    _alerts[sym.toLowerCase()] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
+    var symLc = sym.toLowerCase();
+    _alerts[symLc] = entry.data[sym].map(function (a) {
+      return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
+    });
   });
   if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
-  reattachAllAlerts();
+  _syncAllAlerts();
 }
 
 function fetchServerAlerts(code) {
@@ -494,7 +510,7 @@ function fetchServerAlerts(code) {
     var localHasData = Object.keys(alertsData()).length > 0;
     if (!serverHasData && localHasData) { syncAlertsToServer(); }
     else if (serverHasData) { applyServerAlerts(d); }
-    // If both empty: do nothing — preserve whatever local state exists
+    // Both empty → do nothing, preserve state
   }).catch(function () {});
 }
 
@@ -502,25 +518,60 @@ export function loadAlerts() {
   try {
     var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
     Object.keys(local).forEach(function (sym) {
-      _alerts[sym.toLowerCase()] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
+      _alerts[sym.toLowerCase()] = local[sym].map(function (a) {
+        return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
+      });
     });
   } catch (e) {}
   if (_userCode) fetchServerAlerts(_userCode);
 }
 
-export function handleAlertTriggered(sym, price) {
-  (_alerts[sym] || []).forEach(function (a) {
-    if (a.price === price && !a.triggered) {
-      a.triggered = true;
-      var s = _fullSeries[sym];
-      if (s && a.line) { try { s.removePriceLine(a.line); } catch (e) {} a.line = null; }
-      if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} a.fvLine = null; }
-      attachAlert(sym, a);
-    }
-  });
-  redrawAlerts(sym);
-  // Cancel any pending debounced save that might have stale triggered:false state
+function addAlert(sym, price) {
+  if (!_alerts[sym]) _alerts[sym] = [];
+  var a = { id: _aNewId(), price: price, triggered: false, createdAt: Date.now() };
+  _alerts[sym].push(a);
+  _syncAlertLine(sym, a);
   saveAlerts();
+  _updateAlertsBtn(sym);
+  redrawAlerts(sym);
+}
+
+function removeAlert(sym, idx) {
+  if (!_alerts[sym] || !_alerts[sym][idx]) return;
+  _removeAlertLine(sym, _alerts[sym][idx]);
+  _alerts[sym].splice(idx, 1);
+  saveAlerts();
+  _updateAlertsBtn(sym);
+  redrawAlerts(sym);
+}
+
+export function clearAlerts(sym) {
+  (_alerts[sym] || []).forEach(function (a) { _removeAlertLine(sym, a); });
+  _alerts[sym] = [];
+  saveAlerts();
+  _updateAlertsBtn(sym);
+  redrawAlerts(sym);
+}
+
+// Triggered by WS event from server. Matches by price with a small tolerance
+// to handle any floating-point round-trip differences.
+export function handleAlertTriggered(sym, price) {
+  var arr = _alerts[sym] || [];
+  for (var i = 0; i < arr.length; i++) {
+    var a = arr[i];
+    if (a.triggered) continue;
+    var tol = Math.max(Math.abs(a.price) * 1e-9, 1e-12);
+    if (Math.abs(a.price - price) <= tol) {
+      a.triggered = true;
+      _syncAlertLine(sym, a); // updates existing line via applyOptions — no coordinate jump
+      redrawAlerts(sym);
+      saveAlerts();
+      return; // only mark the first matching untriggered alert
+    }
+  }
+  // Price didn't match any known alert (can happen if opened in new window after trigger).
+  // Don't call saveAlerts() here — don't overwrite server state with stale local data.
+  redrawAlerts(sym);
 }
 
 function isDark() {
@@ -656,7 +707,10 @@ export function setChartTF(symbol, tf) {
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
-  Object.keys(_alerts).forEach(function (sym) { if (_alerts[sym]) _alerts[sym].forEach(function (a) { a.line = null; }); });
+  // Nullify card-chart line refs in _aLines (chart is gone, refs are stale).
+  Object.keys(_alerts).forEach(function (sym) {
+    (_alerts[sym] || []).forEach(function (a) { if (_aLines[a.id]) _aLines[a.id].card = null; });
+  });
   _charts = {}; _fullSeries = {}; _volSeries = {}; _rulers = {};
   window.__chartSeries = _fullSeries;
   window.__chartVolSeries = _volSeries;
@@ -755,7 +809,7 @@ function initCharts() {
     _rulers[c.symbol] = { start: null, canvas: rc };
     // Restore saved levels and alerts
     (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
-    (_alerts[c.symbol] || []).forEach(function (a) { attachAlert(c.symbol, a); });
+    _syncAlerts(c.symbol);
     // Keep alert bell icons in sync with chart on every frame
     (function alertIconLoop(sym) {
       if (!_charts[sym]) return; // chart was destroyed, stop loop
@@ -854,9 +908,14 @@ function initCharts() {
         // Drag alert (shift + right button)
         if (_alertDragging && _alertDragging.sym === sym && (e.buttons & 2)) {
           var alertPrice = cs.coordinateToPrice(y);
-          if (alertPrice != null && _alertDragging.alert.line) {
+          if (alertPrice != null) {
             _alertDragging.alert.price = alertPrice;
-            _alertDragging.alert.line.applyOptions({ price: alertPrice });
+            // Update both card and FV lines via _aLines so neither jumps
+            var _dragRefs = _aLines[_alertDragging.alert.id];
+            if (_dragRefs) {
+              if (_dragRefs.card) { try { _dragRefs.card.applyOptions({ price: alertPrice }); } catch (e) {} }
+              if (_dragRefs.fv)   { try { _dragRefs.fv.applyOptions({ price: alertPrice }); } catch (e) {} }
+            }
             _alertDragging.dragY = y;
             _alertDragMoved = true;
             redrawAlerts(sym);
@@ -1766,9 +1825,8 @@ function _setFVData(sym, cd) {
   (_levels[sym] || []).forEach(function (l) {
     if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
-  (_alerts[sym] || []).forEach(function (a) {
-    if (a.price && !a.fvLine) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
-  });
+  // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
+  (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
 }
 
 function _loadFVData(sym, tf) {
@@ -1787,10 +1845,10 @@ export function openCoinFullView(sym) {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
-  // Clear fvLines from previous session
+  // Detach FV lines from the previous coin (chart is being destroyed above)
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
-    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = sym;
 
@@ -2202,7 +2260,7 @@ export function closeCoinFullView() {
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
-    (_alerts[_fvSym] || []).forEach(function (a) { a.fvLine = null; });
+    (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = null;
   var overlay = document.getElementById('fv-overlay');
@@ -2222,7 +2280,7 @@ export function setFVChartTF(tf) {
   if (dd) dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
   // Remove price lines from series before reload to prevent duplicate orphaned lines
   (_levels[_fvSym] || []).forEach(function (l) { if (l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} l.fvLine = null; } });
-  (_alerts[_fvSym] || []).forEach(function (a) { if (a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} a.fvLine = null; } });
+  (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   _fvSeries.setData([]);
   _loadFVData(_fvSym, tf);
 }
