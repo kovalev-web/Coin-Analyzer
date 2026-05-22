@@ -205,6 +205,8 @@ function reattachAllLevels() {
 }
 
 function applyServerLevels(data) {
+  // Safety guard: if server returned no level data, don't wipe local state.
+  if (!data || Object.keys(data).length === 0) return;
   // Remove all existing price lines from charts before replacing _levels
   Object.keys(_levels).forEach(function (sym) {
     var s = _fullSeries[sym];
@@ -234,9 +236,10 @@ function fetchServerLevels(code) {
     // If server is empty but we have local levels, push them up
     if (serverEmpty && localHasData) {
       syncToServer();
-    } else {
+    } else if (!serverEmpty) {
       applyServerLevels(d.levels);
     }
+    // If both empty: do nothing — preserve local state
   }).catch(function () {});
 }
 
@@ -461,17 +464,21 @@ function reattachAllAlerts() {
 }
 
 function applyServerAlerts(entry) {
+  // Safety guard: if server returned no alert data, don't wipe local state.
+  // Only update chatId if present and bail out early.
+  if (!entry || !entry.data || Object.keys(entry.data).length === 0) {
+    if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
+    return;
+  }
   Object.keys(_alerts).forEach(function (sym) {
     var s = _fullSeries[sym];
     (_alerts[sym] || []).forEach(function (a) { if (a.line && s) { try { s.removePriceLine(a.line); } catch (e) {} } if (_fvSeries && _fvSym === sym && a.fvLine) { try { _fvSeries.removePriceLine(a.fvLine); } catch (e) {} } });
   });
   _alerts = {};
-  if (entry && entry.data) {
-    Object.keys(entry.data).forEach(function (sym) {
-      _alerts[sym.toLowerCase()] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
-    });
-  }
-  if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
+  Object.keys(entry.data).forEach(function (sym) {
+    _alerts[sym.toLowerCase()] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
+  });
+  if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
   reattachAllAlerts();
 }
@@ -486,7 +493,8 @@ function fetchServerAlerts(code) {
     var serverHasData = d.data && Object.keys(d.data).length > 0;
     var localHasData = Object.keys(alertsData()).length > 0;
     if (!serverHasData && localHasData) { syncAlertsToServer(); }
-    else { applyServerAlerts(d); }
+    else if (serverHasData) { applyServerAlerts(d); }
+    // If both empty: do nothing — preserve whatever local state exists
   }).catch(function () {});
 }
 
