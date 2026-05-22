@@ -1308,9 +1308,9 @@ export function updateMSPanel() {
   var popup = document.getElementById('ms-popup');
   if (popup && popup.style.display !== 'none') popup.innerHTML = msPopupInner();
   var ms = state.marketStrength;
-  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый');
+  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '<span>💪</span><span>Сильный</span>' : ms.verdict === 'medium' ? '<span>😐</span><span>Средний</span>' : '<span>😵</span><span>Слабый</span>');
   var chip = document.querySelector('.mob-ms-chip');
-  if (chip) chip.textContent = msLabel;
+  if (chip) chip.innerHTML = msLabel;
 }
 
 // ── Topbar HTML (shared between main render and full view) ─────────────────
@@ -1348,7 +1348,7 @@ function _sortBarHTML(coins) {
   var ws = wsConnected;
   var wsTitle = ws ? 'WebSocket: подключен' : 'WebSocket: отключен';
   var ms = state.marketStrength;
-  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый');
+  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '<span>💪</span><span>Сильный</span>' : ms.verdict === 'medium' ? '<span>😐</span><span>Средний</span>' : '<span>😵</span><span>Слабый</span>');
   return '<div class="sort-bar">'
     + '<div class="sort-bar-btns">'
     + '<button class="btn-topbar' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 15) + '</button>'

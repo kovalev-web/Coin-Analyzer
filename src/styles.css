@@ -26,7 +26,7 @@
     .btn-tv{background:var(--fog);color:var(--ink);border:none;padding:0 16px;font-size:13px;font-weight:600;letter-spacing:0.3px;}
     .btn-theme{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
     .btn-refresh-icon{display:none;width:36px;height:36px;padding:0;border-radius:9999px;background:transparent;border:1px solid var(--steel);color:var(--ink);align-items:center;justify-content:center;flex-shrink:0;}
-    .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px;}
+    .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px 0 0;}
     .ws-indicator.connected{background:var(--ws-on);}
     .ws-indicator.disconnected{background:var(--ws-off);}
 
@@ -279,7 +279,7 @@
     .sort-bar{display:flex;align-items:center;padding:12px 32px;}
     .sort-bar-btns{display:flex;align-items:center;gap:8px;margin-right:12px;}
     .sort-coin-count{font-size:12px;font-weight:700;color:var(--charcoal);white-space:nowrap;}
-    .mob-ms-chip{margin-left:auto;background:var(--fog);border:none;border-radius:9999px;padding:0 12px;height:30px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
+    .mob-ms-chip{margin-left:auto;background:var(--fog);border:none;border-radius:9999px;padding:0 12px;height:30px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
     .mob-ms-chip:hover{opacity:0.8;}
 
     /* ── FV mobile actions ── */
