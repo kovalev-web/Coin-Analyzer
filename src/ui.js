@@ -734,7 +734,7 @@ function initCharts() {
     var el = document.getElementById('chart-' + c.symbol);
     if (!el) return;
     if (_charts[c.symbol]) return;
-    var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 400));
+    var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 400, el.offsetHeight || 300));
     var s = chart.addCandlestickSeries(getSeriesColors());
     var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
