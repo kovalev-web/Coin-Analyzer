@@ -1322,10 +1322,9 @@ function _topbarHTML() {
     return '<button class="filter-pill' + (state.volTier === t[0] ? ' active' : '') + '" data-action="pick-tier" data-val="' + t[0] + '">' + t[1] + '</button>';
   }).join('');
   return '<div class="topbar"><div class="filters">'
-    + '<span class="topbar-logo">' + _LOGO_SVG + '</span>'
+    + '<button class="topbar-logo" data-action="refresh" title="Обновить">' + _LOGO_SVG + '</button>'
     + '<div class="filter-group">' + tierPills + '</div>'
     + '<div class="topbar-actions">'
-    + '<button class="btn-topbar btn-refresh-topbar" data-action="refresh" title="Обновить">' + icon('refresh-cw', 15) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 15) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 15) : icon('moon', 15)) + '</button>'
