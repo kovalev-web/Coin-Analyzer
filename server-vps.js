@@ -124,6 +124,7 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
 
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
+var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена текущего UTC-дня (1d kline)
 
 // ── REST helper ──────────────────────────────────────────────────────────
 
@@ -159,6 +160,51 @@ async function bootstrapTicker() {
     console.error('[Bootstrap] Failed:', e.message);
   }
 }
+
+// ── D1 Opens: суточный open (UTC-полночь) для всех символов ─────────────
+// Батч-загрузка: 10 запросов параллельно, 500мс пауза между батчами.
+// 600 монет / 10 = 60 батчей × 500мс ≈ 30с. Запускается один раз при старте,
+// повторно — в полночь UTC для нового дня.
+
+async function bootstrapD1Opens() {
+  var symbols = Object.keys(tickerCache).filter(function(s) { return s.endsWith('USDT'); });
+  if (!symbols.length) { console.log('[D1Opens] No symbols yet, skip'); return; }
+  console.log('[D1Opens] Bootstrapping', symbols.length, 'symbols...');
+  var loaded = 0;
+  for (var i = 0; i < symbols.length; i += 10) {
+    var batch = symbols.slice(i, i + 10);
+    await Promise.all(batch.map(async function(sym) {
+      try {
+        var data = await fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + sym + '&interval=1d&limit=1');
+        if (Array.isArray(data) && data.length && data[0][1]) {
+          d1OpenCache[sym] = data[0][1]; // строка — формат Binance
+          loaded++;
+        }
+      } catch(e) {}
+    }));
+    if (i + 10 < symbols.length) await new Promise(function(r) { setTimeout(r, 500); });
+  }
+  console.log('[D1Opens] Loaded', loaded, '/', symbols.length);
+  pushD1Opens();
+}
+
+function pushD1Opens() {
+  if (!Object.keys(d1OpenCache).length) return;
+  var msg = JSON.stringify({ type: 'd1opens', data: d1OpenCache });
+  clients.forEach(function(c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+}
+
+// Сброс кэша в полночь UTC — fetchAllNATR на клиенте и re-bootstrap дадут свежие значения
+var _d1Day = new Date().toISOString().slice(0, 10);
+setInterval(function() {
+  var today = new Date().toISOString().slice(0, 10);
+  if (today !== _d1Day) {
+    _d1Day = today;
+    d1OpenCache = {};
+    console.log('[D1Opens] New UTC day — re-bootstrapping...');
+    bootstrapD1Opens();
+  }
+}, 60000);
 
 // ── Binance WS: индивидуальные @ticker подписки (работают на VPS) ────────
 
@@ -481,6 +527,10 @@ wss.on('connection', function (ws) {
   if (arr.length) {
     ws.send(JSON.stringify({ type: 'ticker', data: arr }));
   }
+  // Сразу шлём d1Opens если bootstrap уже завершён
+  if (Object.keys(d1OpenCache).length) {
+    ws.send(JSON.stringify({ type: 'd1opens', data: d1OpenCache }));
+  }
 
   ws.on('message', async function (raw) {
     var msg;
@@ -500,12 +550,19 @@ wss.on('connection', function (ws) {
 
       else if (msg.type === 'fetch_natr') {
         var natrSym = msg.symbol.toUpperCase() + 'USDT';
-        // Параллельно: 5m для NATR + 1d для суточного % (от открытия UTC-дня, как на Binance)
-        var [natrKlines, d1Klines] = await Promise.all([
-          fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=5m&limit=30'),
-          fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=1d&limit=1'),
-        ]);
-        var d1Open = (Array.isArray(d1Klines) && d1Klines.length) ? d1Klines[0][1] : null;
+        // d1Open берём из кэша если уже есть (bootstrapD1Opens уже запустился) — экономим 1 REST вызов.
+        // Если кэша нет (монета появилась позже, VPS только запустился) — фетчим 1d свечу.
+        var cachedD1 = d1OpenCache[natrSym] || null;
+        var fetches = [fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=5m&limit=30')];
+        if (!cachedD1) fetches.push(fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + natrSym + '&interval=1d&limit=1'));
+        var results = await Promise.all(fetches);
+        var natrKlines = results[0];
+        var d1Open = cachedD1;
+        if (!d1Open && results[1]) {
+          var d1Klines = results[1];
+          d1Open = (Array.isArray(d1Klines) && d1Klines.length) ? d1Klines[0][1] : null;
+          if (d1Open) d1OpenCache[natrSym] = d1Open; // добавляем в кэш если пропустил bootstrap
+        }
         ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: natrKlines, d1Open: d1Open }));
       }
 
@@ -556,7 +613,10 @@ wss.on('connection', function (ws) {
 
 // ── Старт ────────────────────────────────────────────────────────────────
 
-bootstrapTicker();      // сразу: REST → кэш → push клиентам
+bootstrapTicker().then(function() {
+  // 2с задержка: не конкурируем с тикер-бутстрапом за rate limit
+  setTimeout(bootstrapD1Opens, 2000);
+});
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
 loadAlertsOnStartup();  // загрузить алерты из Redis в память

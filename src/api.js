@@ -70,6 +70,9 @@ function connectWS() {
       case 'ticker':
         processTickerPush(msg.data);
         break;
+      case 'd1opens':
+        processD1Opens(msg.data);
+        break;
       case 'ticker_update':
         processSingleUpdate(msg);
         break;
@@ -287,6 +290,26 @@ function processKlineUpdate(msg) {
     var _d1k = state.dailyOpen[sym];
     if (_d1k > 0) coin.price_change_percentage_24h = (k.close - _d1k) / _d1k * 100;
   }
+}
+
+// ── D1 opens: суточный % от UTC-полуночи ─────────────────────────────────
+// VPS шлёт { type:'d1opens', data:{ BTCUSDT:'65000.00', ... } } при старте и в полночь UTC.
+// Это единственный источник state.dailyOpen — клиент никогда не вычисляет d1Open сам.
+
+function processD1Opens(d1Map) {
+  if (!d1Map || typeof d1Map !== 'object') return;
+  Object.keys(d1Map).forEach(function(fullSym) {
+    var sym = fullSym.replace('USDT', '').toLowerCase();
+    if (STABLE_SYMBOLS.has(sym) || sym === 'usdt') return;
+    var d1 = parseFloat(d1Map[fullSym]);
+    if (!(d1 > 0)) return;
+    state.dailyOpen[sym] = d1;
+    var coin = state.coins.find(function(c) { return c.symbol === sym; });
+    if (coin && coin.current_price > 0) {
+      coin.price_change_percentage_24h = (coin.current_price - d1) / d1 * 100;
+    }
+  });
+  applyLivePriceUpdates();
 }
 
 // ── Coin fetching ────────────────────────────────────────────────────────
@@ -553,27 +576,6 @@ export async function fetchChartData(symbol, tf) {
         return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
       }),
     };
-
-    // Резервный источник d1Open — из загруженных свечей (если fetchNATR не отработал для этой монеты).
-    // 5m×300=25ч, 15m×300=75ч и выше гарантированно покрывают UTC-полночь.
-    // Проверяем что первая свеча старше полуночи — тогда находим первую свечу после полуночи и берём её open.
-    if (!state.dailyOpen[symbol] && data.length > 0) {
-      var _utcMidSec = Math.floor(Date.now() / 86400000) * 86400;
-      var _firstTime = Math.floor(parseInt(data[0][0]) / 1000);
-      if (_firstTime < _utcMidSec) {
-        var _midK = data.find(function (k) { return Math.floor(parseInt(k[0]) / 1000) >= _utcMidSec; });
-        if (_midK) {
-          var _d1c = parseFloat(_midK[1]);
-          if (_d1c > 0) {
-            state.dailyOpen[symbol] = _d1c;
-            var _coinC = state.coins.find(function (c) { return c.symbol === symbol; });
-            if (_coinC && _coinC.current_price > 0) {
-              _coinC.price_change_percentage_24h = (_coinC.current_price - _d1c) / _d1c * 100;
-            }
-          }
-        }
-      }
-    }
 
     // Подписываемся на real-time kline стрим — обновления будут приходить через processKlineUpdate
     wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: tf });
