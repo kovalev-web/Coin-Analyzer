@@ -1119,8 +1119,8 @@ function msPopupInner() {
     oi: '▲ Подтверждён — цена растёт и открытых позиций больше: реальные покупатели заходят, движение надёжное. ▼ Ликвидации — цена растёт, но OI падает: выносят шортистов. Рост резкий, но может не удержаться. — Нейтрально — картина неоднозначная, сигнала нет.',
   };
 
-  return '<div class="popup-header"><span class="ms-phase">' + phase.label + ' · ' + phase.time + ' МСК</span>' + closeBtn + '</div>' +
-    '<div class="popup-body"><div class="ms-metrics-grid">' +
+  return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
+    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:10px;">' + phase.label + ' · ' + phase.time + ' МСК</div><div class="ms-metrics-grid">' +
     '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Волатильность' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
