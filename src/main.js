@@ -22,22 +22,24 @@ document.body.addEventListener('click', function (e) {
     burgerDd.classList.remove('open');
   }
 
+  // Close popups on any outside click — runs before data-action check so clicking
+  // any button outside a popup (e.g. "expand", "open-ms") also closes it.
+  var _aoPopup = document.getElementById('analysis-overlay');
+  if (_aoPopup && _aoPopup.style.display === 'block' && !_aoPopup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
+    if (_aoPopup._popupCard) { _aoPopup._popupCard.style.overflow = ''; _aoPopup._popupCard = null; }
+    _aoPopup.style.display = 'none';
+  }
+  var _msPopup = document.getElementById('ms-popup');
+  if (_msPopup && _msPopup.style.display !== 'none' && !_msPopup.contains(e.target) && !e.target.closest('[data-action="open-ms"]')) {
+    _msPopup.style.display = 'none';
+  }
+  var _bpPopup = document.getElementById('bp-popup');
+  if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
+    _bpPopup.style.display = 'none';
+  }
+
   var target = e.target.closest('[data-action]');
   if (!target) {
-    // Close popups on outside click
-    var popup = document.getElementById('analysis-overlay');
-    if (popup && popup.style.display === 'block' && !popup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
-      if (popup._popupCard) { popup._popupCard.style.overflow = ''; popup._popupCard = null; }
-      popup.style.display = 'none';
-    }
-    var msPopup = document.getElementById('ms-popup');
-    if (msPopup && msPopup.style.display !== 'none' && !msPopup.contains(e.target) && !e.target.closest('[data-action="open-ms"]')) {
-      msPopup.style.display = 'none';
-    }
-    var bpPopup = document.getElementById('bp-popup');
-    if (bpPopup && bpPopup.style.display !== 'none' && !bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
-      bpPopup.style.display = 'none';
-    }
     if (!e.target.closest('.tf-picker')) {
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
     }
