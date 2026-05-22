@@ -504,29 +504,27 @@ function _mergeServerAlerts(entry) {
   Object.keys(entry.data).forEach(function (sym) {
     var symLc = sym.toLowerCase();
     var serverArr = entry.data[sym] || [];
-    var localArr = _alerts[symLc] || [];
-    if (localArr.length === 0 && serverArr.length > 0) {
-      // No local alerts for this sym — use server's
-      _alerts[symLc] = serverArr.map(function (a) {
-        return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
-      });
-      _syncAlerts(symLc);
-    } else if (localArr.length > 0) {
-      // Merge: apply triggered=true from server to matching local alerts only
-      var changed = false;
-      serverArr.forEach(function (sa) {
-        if (!sa.triggered) return;
-        for (var i = 0; i < localArr.length; i++) {
-          var la = localArr[i];
-          if (!la.triggered && Math.abs(la.price - sa.price) <= Math.max(Math.abs(la.price) * 1e-6, 1e-9)) {
-            la.triggered = true;
-            changed = true;
-            break;
-          }
-        }
-      });
-      if (changed) _syncAlerts(symLc);
-    }
+    if (serverArr.length === 0) return;
+    if (!_alerts[symLc]) _alerts[symLc] = [];
+    var localArr = _alerts[symLc];
+    var changed = false;
+    serverArr.forEach(function (sa) {
+      var tol = Math.max(Math.abs(sa.price) * 1e-6, 1e-9);
+      var matchIdx = -1;
+      for (var i = 0; i < localArr.length; i++) {
+        if (Math.abs(localArr[i].price - sa.price) <= tol) { matchIdx = i; break; }
+      }
+      if (matchIdx === -1) {
+        // Server has an alert missing from local (added on another device) — add it
+        localArr.push({ id: sa.id || _aNewId(), price: sa.price, triggered: sa.triggered || false, createdAt: sa.createdAt });
+        changed = true;
+      } else if (sa.triggered && !localArr[matchIdx].triggered) {
+        // Merge triggered=true from server into matching local alert
+        localArr[matchIdx].triggered = true;
+        changed = true;
+      }
+    });
+    if (changed) _syncAlerts(symLc);
   });
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
   syncAlertsToServer();
