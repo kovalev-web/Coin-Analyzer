@@ -25,15 +25,18 @@ async function redis(cmd) {
 // ── Telegram ─────────────────────────────────────────────────────────────
 
 var TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+var APP_URL = (process.env.APP_URL || '').replace(/\/$/, ''); // e.g. https://yourdomain.com
 var tgOffset = 0;
 
-async function sendTG(chatId, text) {
+async function sendTG(chatId, text, replyMarkup) {
   if (!TELEGRAM_TOKEN || !chatId) return;
   try {
+    var body = { chat_id: chatId, text: text, parse_mode: 'HTML' };
+    if (replyMarkup) body.reply_markup = replyMarkup;
     await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' }),
+      body: JSON.stringify(body),
     });
   } catch (e) {}
 }
@@ -114,7 +117,8 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       dirty = true;
       var fmtPrice = parseFloat(parseFloat(a.price).toPrecision(6));
       console.log('[Alert] ' + sym.toUpperCase() + ' crossed ' + fmtPrice + ' | chatId=' + (entry.chatId || 'EMPTY'));
-      sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>');
+      var alertMarkup = APP_URL ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + sym.toUpperCase() }]] } : undefined;
+      sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>', alertMarkup);
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
       clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
     });
