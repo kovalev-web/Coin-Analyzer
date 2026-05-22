@@ -1975,8 +1975,9 @@ export function openCoinFullView(sym) {
   document.addEventListener('keydown', _onEscKey);
   _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
-  // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level)
+  // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level/alert)
   var _fvDragging = null;
+  var _fvAlertDragging = null, _fvAlertDragMoved = false;
   el.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     var rect = el.getBoundingClientRect();
@@ -1984,6 +1985,7 @@ export function openCoinFullView(sym) {
     var price = _fvSeries.coordinateToPrice(y);
     if (price == null) return;
     if (e.shiftKey) {
+      if (_fvAlertDragMoved) { _fvAlertDragMoved = false; return; }
       var alerts = _alerts[sym] || [];
       for (var i = 0; i < alerts.length; i++) {
         var ay = _fvSeries.priceToCoordinate(alerts[i].price);
@@ -2013,6 +2015,21 @@ export function openCoinFullView(sym) {
       if (pr != null) _fvRuler.start = { pt: pt, price: pr };
       return;
     }
+    // Alert drag: shift + right-button (button 2)
+    if (e.button === 2 && e.shiftKey) {
+      var ay2 = e.clientY - rect.top;
+      var alertArr = _alerts[sym] || [];
+      for (var ai = 0; ai < alertArr.length; ai++) {
+        var aCoord = _fvSeries.priceToCoordinate(alertArr[ai].price);
+        if (aCoord != null && Math.abs(aCoord - ay2) < 10) {
+          e.stopPropagation(); e.preventDefault();
+          _fvAlertDragging = { idx: ai, alert: alertArr[ai] };
+          _fvAlertDragMoved = false;
+          el.style.cursor = 'ns-resize';
+          return;
+        }
+      }
+    }
     if (e.button !== 0) return;
     var y = e.clientY - rect.top;
     var levels = _levels[sym] || [];
@@ -2030,6 +2047,20 @@ export function openCoinFullView(sym) {
         _fvDragging.lvl.price = price;
         if (_fvDragging.lvl.fvLine) _fvDragging.lvl.fvLine.applyOptions({ price: price });
         if (_fvDragging.lvl.line) _fvDragging.lvl.line.applyOptions({ price: price });
+      }
+      return;
+    }
+    // Alert drag (shift + right button)
+    if (_fvAlertDragging && (e.buttons & 2)) {
+      var alertPrice = _fvSeries.coordinateToPrice(y);
+      if (alertPrice != null) {
+        _fvAlertDragging.alert.price = alertPrice;
+        var _fvARefs = _aLines[_fvAlertDragging.alert.id];
+        if (_fvARefs) {
+          if (_fvARefs.fv)   { try { _fvARefs.fv.applyOptions({ price: alertPrice }); } catch (_e) {} }
+          if (_fvARefs.card) { try { _fvARefs.card.applyOptions({ price: alertPrice }); } catch (_e) {} }
+        }
+        _fvAlertDragMoved = true;
       }
       return;
     }
@@ -2070,9 +2101,11 @@ export function openCoinFullView(sym) {
   el.addEventListener('mouseup', function (e) {
     if (e.button === 1 && _fvRuler) _fvRuler.start = null;
     if (_fvDragging) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
+    if (e.button === 2 && _fvAlertDragging) { saveAlerts(); _fvAlertDragging = null; el.style.cursor = ''; }
   });
   el.addEventListener('mouseleave', function () {
     if (_fvDragging) { _fvDragging = null; saveLevels(); }
+    if (_fvAlertDragging) { _fvAlertDragging = null; saveAlerts(); }
     if (_fvRuler) _fvRuler.start = null;
     el.style.cursor = '';
   });
@@ -2238,9 +2271,17 @@ export function openCoinFullView(sym) {
       if (price == null) return;
       var item = _fvTD.item;
       item.price = price;
-      if (item.fvLine) item.fvLine.applyOptions({ price: price });
-      if (item.line) item.line.applyOptions({ price: price });
-      if (_fvTD.mode === 'alert') redrawAlerts(sym);
+      if (_fvTD.mode === 'level') {
+        if (item.fvLine) item.fvLine.applyOptions({ price: price });
+        if (item.line)   item.line.applyOptions({ price: price });
+      } else {
+        var _trefs = _aLines[item.id];
+        if (_trefs) {
+          if (_trefs.fv)   { try { _trefs.fv.applyOptions({ price: price }); } catch (_e) {} }
+          if (_trefs.card) { try { _trefs.card.applyOptions({ price: price }); } catch (_e) {} }
+        }
+        redrawAlerts(sym);
+      }
       _fvTMMoveHandle(y);
       return;
     }
