@@ -1950,7 +1950,7 @@ export function openCoinFullView(sym) {
   var _fvTD = {
     active: false, mode: null, item: null,  // dragging
     pending: false, pendingMode: null, pendingItem: null, pendingIdx: null, // touched near item
-    lpTimer: null, startX: 0, startY: 0,
+    lpTimer: null, lpFired: false, startX: 0, startY: 0,
   };
 
   function _fvTMShowBtn(y, price) {
@@ -2062,7 +2062,7 @@ export function openCoinFullView(sym) {
     // Empty space — long-press to add
     _fvTD.lpTimer = setTimeout(function () {
       var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
-      if (pr != null) _fvTMShowBtn(_fvTD.startY, pr);
+      if (pr != null) { _fvTD.lpFired = true; _fvTMShowBtn(_fvTD.startY, pr); }
     }, 500);
   }, { passive: false });
 
@@ -2090,12 +2090,26 @@ export function openCoinFullView(sym) {
       _fvTMMoveHandle(y);
       return;
     }
+    // + button visible — follow the finger (update Y and stored price)
+    if (_fvTD.lpFired) {
+      var btn = document.getElementById('fv-add-btn');
+      if (btn && btn.style.display !== 'none') {
+        var pr = _fvSeries.coordinateToPrice(y);
+        if (pr != null) {
+          btn.style.top = Math.max(4, y - 14) + 'px';
+          btn._p = pr; btn._y = y;
+          btn.onclick = function () { btn.style.display = 'none'; _fvTMShowMenu(y, pr, null, null); };
+        }
+      }
+      return;
+    }
     // Cancel long-press if finger moved too much
     if (moved > 8) { clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null; }
   }, { passive: false });
 
   el.addEventListener('touchend', function () {
     clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
+    _fvTD.lpFired = false;
     if (_fvTD.active) {
       if (_fvTD.mode === 'level') saveLevels();
       else saveAlerts();
