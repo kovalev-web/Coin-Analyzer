@@ -760,7 +760,7 @@ function initCharts() {
       requestAnimationFrame(function () { alertIconLoop(sym); });
     }(c.symbol));
 
-    (function (sym, container, cs) {
+    (function (sym, container, cs, ch) {
       // Right-click: add/remove level; Shift+right-click: add/remove alert
       container.addEventListener('contextmenu', function (e) {
         e.preventDefault();
@@ -788,8 +788,13 @@ function initCharts() {
       });
       // Left mousedown: start drag if near a level, else ruler (middle)
       container.addEventListener('mousedown', function (e) {
+        // Ignore clicks on price axis (right side) — let chart handle vertical zoom natively
+        var rect = container.getBoundingClientRect();
+        var priceAxisW = 0;
+        try { priceAxisW = ch.priceScale('right').width(); } catch (_) {}
+        if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+
         if (e.button === 0) {
-          var rect = container.getBoundingClientRect();
           var y = e.clientY - rect.top;
           var levels = _levels[sym] || [];
           for (var i = 0; i < levels.length; i++) {
@@ -806,8 +811,7 @@ function initCharts() {
         }
         // Alert drag: shift + right-click (button 2)
         if (e.button === 2 && e.shiftKey) {
-          var alertRect = container.getBoundingClientRect();
-          var alertY = e.clientY - alertRect.top;
+          var alertY = e.clientY - rect.top;
           var alertArr = _alerts[sym] || [];
           for (var ai = 0; ai < alertArr.length; ai++) {
             var aCoord = cs.priceToCoordinate(alertArr[ai].price);
@@ -823,7 +827,6 @@ function initCharts() {
         }
         if (e.button !== 1) return;
         e.preventDefault();
-        var rect = container.getBoundingClientRect();
         var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         var pr = cs.coordinateToPrice(pt.y);
         if (pr != null) _rulers[sym].start = { pt: pt, price: pr };
@@ -900,7 +903,7 @@ function initCharts() {
         if (_charts[sym]) _charts[sym].resize(container.offsetWidth, container.offsetHeight || 300);
         if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
       }).observe(container);
-    })(c.symbol, el, s);
+    })(c.symbol, el, s, chart);
     fetchChart(c.symbol, state.chartTF[c.symbol] || '5m');
   });
 }
