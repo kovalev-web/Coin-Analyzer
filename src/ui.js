@@ -308,11 +308,11 @@ function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
   if (s) {
     if (lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
-    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
   if (_fvSeries && _fvSym === sym) {
     if (lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
-    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
 }
 
@@ -553,7 +553,7 @@ function getChartColors() {
 }
 
 function getSeriesColors() {
-  var up = getCSSVar('--ink'), dn = getCSSVar('--steel');
+  var up = getCSSVar('--candle-up'), dn = getCSSVar('--steel');
   var grey = getCSSVar('--graphite');
   return { upColor: up, downColor: dn, borderUpColor: up, borderDownColor: dn, wickUpColor: up, wickDownColor: dn, priceLineColor: grey };
 }
@@ -1752,7 +1752,7 @@ function _setFVData(sym, cd) {
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
-    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: '' });
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
   (_alerts[sym] || []).forEach(function (a) {
     if (a.price && !a.fvLine) a.fvLine = _fvSeries.createPriceLine(Object.assign({ price: a.price }, alertLineOpts(a.triggered)));
