@@ -2359,9 +2359,9 @@ export function openSearchPopup() {
   var isMobile = window.innerWidth <= 768;
 
   popup.innerHTML =
-    '<div class="search-popup-header">' +
-      '<span class="search-popup-title">Поиск монеты</span>' +
-      '<button class="search-popup-close" data-action="close-search">' + icon('x', 15) + '</button>' +
+    '<div class="popup-header">' +
+      '<span class="popup-title">Поиск монеты</span>' +
+      '<button class="popup-close" data-action="close-search">' + icon('x', 15) + '</button>' +
     '</div>' +
     '<div class="search-popup-input-wrap">' +
       '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
