@@ -626,7 +626,8 @@ function updateChart(symbol) {
     var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn'); return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
   }));
   var total = cd.candles.length;
-  chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 80), to: total - 1 });
+  var visibleCandles = window.innerWidth <= 768 ? 40 : 80;
+  chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total - 1 });
   redrawAlerts(symbol);
 }
 
