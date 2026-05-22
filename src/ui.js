@@ -2000,13 +2000,14 @@ export function openCoinFullView(sym) {
       else if (a === 'del-alert') removeAlert(sym, idx);
       _fvTMHideMenu();
     });
-    setTimeout(function () {
-      function _cTM(ev) {
-        var m2 = document.getElementById('fv-touch-menu');
-        if (m2 && !m2.contains(ev.target)) { _fvTMHideMenu(); document.removeEventListener('touchend', _cTM); }
-      }
-      document.addEventListener('touchend', _cTM);
-    }, 80);
+    // Close on next touchstart outside the menu (not touchend — that fires
+    // when the user lifts from the long-press before they can tap a menu item)
+    function _cTM(ev) {
+      var m2 = document.getElementById('fv-touch-menu');
+      if (!m2) { document.removeEventListener('touchstart', _cTM); return; }
+      if (!m2.contains(ev.target)) { _fvTMHideMenu(); document.removeEventListener('touchstart', _cTM); }
+    }
+    document.addEventListener('touchstart', _cTM);
   }
 
   function _fvTMHideMenu() { var m = document.getElementById('fv-touch-menu'); if (m) m.remove(); }
