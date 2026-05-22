@@ -182,9 +182,10 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
+    coin.open_24h = parseFloat(t.o);   // rolling 24h open — держим свежим для kline-расчётов
     coin.total_volume = Math.round(parseFloat(t.q));
-    // t.P = priceChangePercent от Binance — rolling 24h, готовый, пересчитывается каждую секунду.
-    // Это именно то что показывает Binance screener. Берём напрямую, ничего не вычисляем сами.
+    // t.P = priceChangePercent от Binance (rolling 24h). Ставим напрямую — без ручного вычисления.
+    // kline_update (200ms) тоже обновляет %, используя тот же coin.open_24h — нет конфликта.
     if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
   });
 
@@ -285,7 +286,9 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    // % не трогаем в kline updates — его обновляет ticker каждую секунду через t.P.
+    // % пересчитываем от coin.open_24h (rolling 24h open, обновляется тикером каждую секунду).
+    // Это то же значение что t.P, но обновляется каждые 200ms — даёт плавную динамику.
+    if (coin.open_24h > 0) coin.price_change_percentage_24h = (k.close - coin.open_24h) / coin.open_24h * 100;
   }
 }
 
