@@ -371,7 +371,7 @@
     .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{margin-right:16px;}
     .fvbd-header{display:flex;align-items:center;padding:14px 16px 12px;flex-shrink:0;}
     .fvbd-title{font-size:15px;font-weight:700;color:var(--ink);flex:1;}
-    .fvbd-date-label{font-size:11px;font-weight:700;color:var(--graphite);padding:8px 16px 4px;letter-spacing:0.04em;text-transform:uppercase;}
+    .fvbd-date-label{font-size:11px;font-weight:700;color:var(--graphite);padding:8px 12px 4px;letter-spacing:0.04em;text-transform:uppercase;}
     .fvbd-current .bp-sym-btn{color:var(--primary);}
     .fvbd-empty{padding:24px 16px;color:var(--graphite);font-size:13px;text-align:center;}
 
