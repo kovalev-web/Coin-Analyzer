@@ -33,6 +33,8 @@
     .topbar-logo{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink);}
     .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
     .btn-topbar{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;font-family:'Manrope',Arial,sans-serif;}
+    .btn-refresh-topbar{display:none;}
+    @media(max-width:1024px){.btn-refresh-topbar{display:inline-flex;}}
     .btn-topbar:hover{opacity:0.8;}
     /* Sort buttons base (light mode): active=darker bg+dark icon, inactive=lighter bg+light icon */
     .sort-bar-btns .btn-topbar{color:var(--steel);background:var(--fog);}

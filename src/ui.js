@@ -1314,7 +1314,7 @@ function _topbarHTML() {
     + '<span class="topbar-logo">' + _LOGO_SVG + '</span>'
     + '<div class="filter-group">' + tierPills + '</div>'
     + '<div class="topbar-actions">'
-    + '<button class="btn-topbar" data-action="refresh" title="Обновить">' + icon('refresh-cw', 15) + '</button>'
+    + '<button class="btn-topbar btn-refresh-topbar" data-action="refresh" title="Обновить">' + icon('refresh-cw', 15) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 15) + '</button>'
