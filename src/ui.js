@@ -499,6 +499,37 @@ function applyServerAlerts(entry) {
   _syncAllAlerts();
 }
 
+function _mergeServerAlerts(entry) {
+  if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
+  Object.keys(entry.data).forEach(function (sym) {
+    var symLc = sym.toLowerCase();
+    var serverArr = entry.data[sym] || [];
+    var localArr = _alerts[symLc] || [];
+    if (localArr.length === 0 && serverArr.length > 0) {
+      // No local alerts for this sym — use server's
+      _alerts[symLc] = serverArr.map(function (a) {
+        return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
+      });
+      _syncAlerts(symLc);
+    } else if (localArr.length > 0) {
+      // Merge: apply triggered=true from server to matching local alerts only
+      serverArr.forEach(function (sa) {
+        if (!sa.triggered) return;
+        for (var i = 0; i < localArr.length; i++) {
+          var la = localArr[i];
+          if (!la.triggered && Math.abs(la.price - sa.price) <= Math.max(Math.abs(la.price) * 1e-6, 1e-9)) {
+            la.triggered = true;
+            _syncAlertLine(symLc, la);
+            break;
+          }
+        }
+      });
+    }
+  });
+  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  syncAlertsToServer();
+}
+
 function fetchServerAlerts(code) {
   fetch(API_BASE + '/api/alerts', {
     method: 'POST',
@@ -509,7 +540,8 @@ function fetchServerAlerts(code) {
     var serverHasData = d.data && Object.keys(d.data).length > 0;
     var localHasData = Object.keys(alertsData()).length > 0;
     if (!serverHasData && localHasData) { syncAlertsToServer(); }
-    else if (serverHasData) { applyServerAlerts(d); }
+    else if (serverHasData && !localHasData) { applyServerAlerts(d); }
+    else if (serverHasData && localHasData) { _mergeServerAlerts(d); }
     // Both empty → do nothing, preserve state
   }).catch(function () {});
 }
