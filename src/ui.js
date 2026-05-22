@@ -896,7 +896,7 @@ function initCharts() {
         clearRuler(sym);
       });
       new ResizeObserver(function () {
-        if (_charts[sym]) _charts[sym].resize(container.offsetWidth, 300);
+        if (_charts[sym]) _charts[sym].resize(container.offsetWidth, container.offsetHeight || 300);
         if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
       }).observe(container);
     })(c.symbol, el, s);
