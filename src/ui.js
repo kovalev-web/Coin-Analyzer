@@ -1541,10 +1541,10 @@ export function toggleBriefing(sym) {
 }
 
 function briefingStatusLabel(status) {
-  if (status === 'watching') return 'Наблюдаю';
-  if (status === 'worked')   return 'Отработала';
-  if (status === 'skip')     return 'Отмена';
-  return '—';
+  if (status === 'watching') return icon('eye', 15);
+  if (status === 'worked')   return icon('check', 15);
+  if (status === 'skip')     return icon('ban', 15);
+  return icon('circle', 15);
 }
 
 function briefingStatusClass(status) {
@@ -1658,8 +1658,8 @@ export function renderBriefingPanel() {
       (isToday
         ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
         : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
-      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 13) + '</button>' +
-      (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 12) + '</button>' : '') +
+      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 15) + '</button>' +
+      (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 15) + '</button>' : '') +
       '</div>' +
       '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
         '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
@@ -2055,8 +2055,8 @@ export function renderFVBriefingDrawer() {
         + (isToday
           ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
           : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
-        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 13) + '</button>'
-        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 12) + '</button>' : '')
+        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('file-text', 15) + '</button>'
+        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('x', 15) + '</button>' : '')
         + '</div>'
         + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
