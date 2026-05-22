@@ -252,6 +252,16 @@
     .fv-chart-wrap{flex:1;min-width:0;overflow:hidden;margin:12px 32px 16px;border-radius:16px;background:var(--paper);box-shadow:var(--shadow-soft);position:relative;transition:margin-right 0.2s ease;}
     #fv-chart{position:absolute;inset:0;}
     .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
+    /* FV touch UI: add button, context menu, drag handle */
+    .fv-add-btn{position:absolute;right:70px;width:28px;height:28px;border-radius:50%;background:var(--level);color:#fff;border:none;display:none;align-items:center;justify-content:center;z-index:20;padding:0;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;}
+    .fv-touch-menu{position:absolute;left:16px;right:76px;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:30;overflow:hidden;}
+    .fv-touch-menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:transparent;border:none;border-bottom:1px solid var(--hairline);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;height:auto;border-radius:0;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
+    .fv-touch-menu-item:last-child{border-bottom:none;}
+    .fv-touch-menu-item:active{background:var(--fog);}
+    .fv-tmi-icon{flex-shrink:0;color:var(--graphite);}
+    .fv-tmi-danger{color:var(--danger);}
+    .fv-tmi-danger .fv-tmi-icon{color:var(--danger);}
+    .fv-drag-handle{position:absolute;right:74px;width:16px;height:16px;border-radius:3px;background:var(--level);border:2px solid #fff;z-index:20;display:none;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
     .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:8px;}
     .fv-info-top{display:flex;align-items:center;gap:10px;}
     .fv-info-stats{display:flex;align-items:center;gap:14px;padding-left:2px;}

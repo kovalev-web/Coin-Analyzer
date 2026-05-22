@@ -1946,6 +1946,163 @@ export function openCoinFullView(sym) {
     el.style.cursor = '';
   });
 
+  // ── Touch: drag levels/alerts + long-press to add/delete ─────────────────
+  var _fvTD = {
+    active: false, mode: null, item: null,  // dragging
+    pending: false, pendingMode: null, pendingItem: null, pendingIdx: null, // touched near item
+    lpTimer: null, startX: 0, startY: 0,
+  };
+
+  function _fvTMShowBtn(y, price) {
+    var btn = document.getElementById('fv-add-btn');
+    if (!btn) { btn = document.createElement('button'); btn.id = 'fv-add-btn'; btn.className = 'fv-add-btn'; wrap.appendChild(btn); }
+    btn.innerHTML = icon('plus', 14);
+    btn.style.top = Math.max(4, y - 14) + 'px';
+    btn.style.display = 'flex';
+    btn._p = price; btn._y = y;
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function () { btn.style.display = 'none'; }, 3000);
+    btn.onclick = function () { btn.style.display = 'none'; _fvTMShowMenu(y, price, null, null); };
+  }
+
+  function _fvTMShowMenu(y, price, delMode, delIdx) {
+    _fvTMHideMenu();
+    var p = fmtPrice(price);
+    var m = document.createElement('div');
+    m.id = 'fv-touch-menu';
+    m.className = 'fv-touch-menu';
+    var html;
+    if (delMode === 'level') {
+      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
+        '<span class="fv-tmi-icon">' + icon('trash-2', 15) + '</span><span>Удалить уровень · ' + p + '</span></button>';
+    } else if (delMode === 'alert') {
+      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
+        '<span class="fv-tmi-icon">' + icon('trash-2', 15) + '</span><span>Удалить алерт · ' + p + '</span></button>';
+    } else {
+      html = '<button class="fv-touch-menu-item" data-tm="level">' +
+          '<span class="fv-tmi-icon">' + icon('minus', 15) + '</span><span>Горизонтальный уровень · ' + p + '</span></button>' +
+        '<button class="fv-touch-menu-item" data-tm="alert">' +
+          '<span class="fv-tmi-icon">' + icon('bell', 15) + '</span><span>Добавить алерт · ' + p + '</span></button>';
+    }
+    m.innerHTML = html;
+    var menuH = delMode ? 54 : 108;
+    var chartH = wrap.offsetHeight;
+    var top = (y + 10 + menuH > chartH) ? Math.max(4, y - menuH - 10) : y + 10;
+    m.style.top = top + 'px';
+    wrap.appendChild(m);
+    m.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-tm]');
+      if (!btn) { _fvTMHideMenu(); return; }
+      var a = btn.dataset.tm, idx = parseInt(btn.dataset.idx);
+      if (a === 'level') addLevel(sym, price);
+      else if (a === 'alert') addAlert(sym, price);
+      else if (a === 'del-level') removeLevel(sym, idx);
+      else if (a === 'del-alert') removeAlert(sym, idx);
+      _fvTMHideMenu();
+    });
+    setTimeout(function () {
+      function _cTM(ev) {
+        var m2 = document.getElementById('fv-touch-menu');
+        if (m2 && !m2.contains(ev.target)) { _fvTMHideMenu(); document.removeEventListener('touchend', _cTM); }
+      }
+      document.addEventListener('touchend', _cTM);
+    }, 80);
+  }
+
+  function _fvTMHideMenu() { var m = document.getElementById('fv-touch-menu'); if (m) m.remove(); }
+  function _fvTMShowHandle(y) {
+    var h = document.getElementById('fv-drag-handle');
+    if (!h) { h = document.createElement('div'); h.id = 'fv-drag-handle'; h.className = 'fv-drag-handle'; wrap.appendChild(h); }
+    h.style.top = (y - 8) + 'px'; h.style.display = 'block';
+  }
+  function _fvTMMoveHandle(y) { var h = document.getElementById('fv-drag-handle'); if (h) h.style.top = (y - 8) + 'px'; }
+  function _fvTMHideHandle() { var h = document.getElementById('fv-drag-handle'); if (h) h.style.display = 'none'; }
+
+  el.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0], rect = el.getBoundingClientRect();
+    var x = t.clientX - rect.left, y = t.clientY - rect.top;
+    _fvTD.startX = x; _fvTD.startY = y;
+    _fvTD.active = false; _fvTD.pending = false; _fvTD.mode = null; _fvTD.item = null;
+    clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
+    _fvTMHideMenu();
+    // Check proximity to existing levels
+    var levels = _levels[sym] || [];
+    for (var i = 0; i < levels.length; i++) {
+      var ly = _fvSeries.priceToCoordinate(levels[i].price);
+      if (ly != null && Math.abs(ly - y) < 16) {
+        _fvTD.pending = true; _fvTD.pendingMode = 'level'; _fvTD.pendingItem = levels[i]; _fvTD.pendingIdx = i;
+        _fvTMShowHandle(y);
+        e.preventDefault();
+        _fvTD.lpTimer = setTimeout(function () {
+          _fvTMHideHandle(); _fvTD.pending = false;
+          var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
+          if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'level', _fvTD.pendingIdx);
+        }, 500);
+        return;
+      }
+    }
+    // Check proximity to existing alerts
+    var alerts = _alerts[sym] || [];
+    for (var j = 0; j < alerts.length; j++) {
+      var ay = _fvSeries.priceToCoordinate(alerts[j].price);
+      if (ay != null && Math.abs(ay - y) < 16) {
+        _fvTD.pending = true; _fvTD.pendingMode = 'alert'; _fvTD.pendingItem = alerts[j]; _fvTD.pendingIdx = j;
+        _fvTMShowHandle(y);
+        e.preventDefault();
+        _fvTD.lpTimer = setTimeout(function () {
+          _fvTMHideHandle(); _fvTD.pending = false;
+          var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
+          if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'alert', _fvTD.pendingIdx);
+        }, 500);
+        return;
+      }
+    }
+    // Empty space — long-press to add
+    _fvTD.lpTimer = setTimeout(function () {
+      var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
+      if (pr != null) _fvTMShowBtn(_fvTD.startY, pr);
+    }, 500);
+  }, { passive: false });
+
+  el.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0], rect = el.getBoundingClientRect();
+    var y = t.clientY - rect.top;
+    var dx = t.clientX - rect.left - _fvTD.startX, dy = y - _fvTD.startY;
+    var moved = Math.sqrt(dx * dx + dy * dy);
+    // Pending near item + moved enough → activate drag
+    if (_fvTD.pending && moved > 4) {
+      clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
+      _fvTD.active = true; _fvTD.mode = _fvTD.pendingMode; _fvTD.item = _fvTD.pendingItem;
+      _fvTD.pending = false;
+    }
+    if (_fvTD.active) {
+      e.preventDefault();
+      var price = _fvSeries.coordinateToPrice(y);
+      if (price == null) return;
+      var item = _fvTD.item;
+      item.price = price;
+      if (item.fvLine) item.fvLine.applyOptions({ price: price });
+      if (item.line) item.line.applyOptions({ price: price });
+      if (_fvTD.mode === 'alert') redrawAlerts(sym);
+      _fvTMMoveHandle(y);
+      return;
+    }
+    // Cancel long-press if finger moved too much
+    if (moved > 8) { clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null; }
+  }, { passive: false });
+
+  el.addEventListener('touchend', function () {
+    clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
+    if (_fvTD.active) {
+      if (_fvTD.mode === 'level') saveLevels();
+      else saveAlerts();
+    }
+    if (_fvTD.active || _fvTD.pending) _fvTMHideHandle();
+    _fvTD.active = false; _fvTD.pending = false; _fvTD.mode = null; _fvTD.item = null;
+  });
+
   // rAF loop: alert bell icons on canvas
   (function fvBellLoop() {
     if (!_fvChart) return;
