@@ -257,7 +257,7 @@ export function showCodeModal() {
   backdrop.className = 'code-modal-backdrop';
   backdrop.innerHTML =
     '<div class="code-modal">' +
-      '<div class="popup-header"><span class="popup-title">Синхронизация</span></div>' +
+      '<div class="popup-header"><span class="popup-title">Синхронизация</span><button class="popup-close" id="code-modal-close">' + icon('x', 15) + '</button></div>' +
       '<div class="popup-body">' +
         '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
         '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
@@ -299,6 +299,7 @@ export function showCodeModal() {
 
   saveBtn.addEventListener('click', save);
   skipBtn.addEventListener('click', function () { backdrop.remove(); });
+  document.getElementById('code-modal-close').addEventListener('click', function () { backdrop.remove(); });
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
   input.focus();
 }
@@ -984,13 +985,20 @@ export function openAnalysisPopup(sym, btn) {
     // Full View mode — fixed above fv-overlay (z-index:400)
     document.body.appendChild(popup);
     var btnRect2 = btn.getBoundingClientRect();
-    var rightOffset = Math.max(8, document.documentElement.clientWidth - btnRect2.right);
+    var viewportW = document.documentElement.clientWidth;
+    var popupW = Math.min(380, viewportW - 16);
+    var leftIfRightAligned = btnRect2.right - popupW;
     popup.style.position = 'fixed';
     popup.style.top = (btnRect2.bottom + 6) + 'px';
-    popup.style.right = rightOffset + 'px';
-    popup.style.left = 'auto';
-    popup.style.width = 'min(380px, calc(100vw - 32px))';
+    popup.style.width = popupW + 'px';
     popup.style.maxWidth = 'none';
+    if (leftIfRightAligned < 8) {
+      popup.style.left = '8px';
+      popup.style.right = 'auto';
+    } else {
+      popup.style.right = Math.max(8, viewportW - btnRect2.right) + 'px';
+      popup.style.left = 'auto';
+    }
     popup.style.zIndex = '99999';
   }
 
@@ -1980,6 +1988,8 @@ export function closeCoinFullView() {
   _fvSym = null;
   var overlay = document.getElementById('fv-overlay');
   if (overlay) overlay.style.display = 'none';
+  var ap = document.getElementById('analysis-overlay');
+  if (ap) { ap.style.display = 'none'; if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; } }
   document.body.style.overflow = '';
 }
 
