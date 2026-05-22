@@ -1967,7 +1967,7 @@ export function openCoinFullView(sym) {
 
   function _fvTMShowMenu(y, price, delMode, delIdx) {
     _fvTMHideMenu();
-    var p = fmtPrice(price);
+    var p = price.toFixed(calcPriceFormat(price).precision);
     var m = document.createElement('div');
     m.id = 'fv-touch-menu';
     m.className = 'fv-touch-menu';
