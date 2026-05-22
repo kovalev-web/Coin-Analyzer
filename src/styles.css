@@ -297,6 +297,7 @@
       .metric-card .value{font-size:20px;}
       .cards-area{padding:0 12px 32px;}
       .cards-grid{grid-template-columns:1fr;}
+      .chart-container{height:190px;}
       .error-banner{margin:12px 12px 0;}
       .fv-body{flex-direction:column;padding:0;}
       .fv-chart-wrap{margin:8px 12px 0 !important;flex:2;min-height:0;}
