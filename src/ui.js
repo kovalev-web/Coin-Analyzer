@@ -1948,8 +1948,9 @@ export function openCoinFullView(sym) {
 
   // ── Touch: drag levels/alerts + long-press to add/delete ─────────────────
   var _fvTD = {
-    active: false, mode: null, item: null,  // dragging
-    pending: false, pendingMode: null, pendingItem: null, pendingIdx: null, // touched near item
+    active: false, mode: null, item: null,           // step 2: dragging
+    pending: false, pendingMode: null, pendingItem: null, pendingIdx: null, // step 1: first touch near item
+    selected: false, selMode: null, selItem: null, selIdx: null, // between taps: item selected, handle visible
     lpTimer: null, lpFired: false, startX: 0, startY: 0,
   };
 
@@ -2027,38 +2028,50 @@ export function openCoinFullView(sym) {
     _fvTD.active = false; _fvTD.pending = false; _fvTD.mode = null; _fvTD.item = null;
     clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
     _fvTMHideMenu();
-    // Ignore touches on the price scale area (rightmost ~75px) — zooming there
-    // must not accidentally grab levels whose label sits on the scale.
+    // Ignore touches on the price scale area (rightmost ~75px)
     var psW = (_fvChart && _fvChart.priceScale('right').width) ? _fvChart.priceScale('right').width() : 75;
-    if (x > el.offsetWidth - psW) return;
-    // Check proximity to existing levels
+    if (x > el.offsetWidth - psW) { _fvTD.selected = false; _fvTD.selItem = null; _fvTMHideHandle(); return; }
+
+    // ── Step 2: item already selected → this touch starts the drag ───────────
+    if (_fvTD.selected && _fvTD.selItem) {
+      var selY = _fvSeries.priceToCoordinate(_fvTD.selItem.price);
+      if (selY != null && Math.abs(selY - y) < 20) {
+        // Touch near the selected handle → start drag
+        _fvTD.active = true; _fvTD.mode = _fvTD.selMode; _fvTD.item = _fvTD.selItem;
+        _fvTD.selected = false; _fvTD.selItem = null;
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+      // Touch elsewhere → deselect
+      _fvTD.selected = false; _fvTD.selItem = null; _fvTMHideHandle();
+    }
+
+    // ── Step 1: first touch near a level/alert → mark pending (no drag yet) ──
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
       var ly = _fvSeries.priceToCoordinate(levels[i].price);
       if (ly != null && Math.abs(ly - y) < 10) {
         _fvTD.pending = true; _fvTD.pendingMode = 'level'; _fvTD.pendingItem = levels[i]; _fvTD.pendingIdx = i;
-        _fvTMShowHandle(ly);
-        if (e.cancelable) e.preventDefault();
+        _fvTMShowHandle(ly); // visual feedback — hides if finger moves
+        // Long-press → delete menu (no drag)
         _fvTD.lpTimer = setTimeout(function () {
           _fvTMHideHandle(); _fvTD.pending = false;
-          var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
-          if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'level', _fvTD.pendingIdx);
+          var item = _fvTD.pendingItem, idx = _fvTD.pendingIdx;
+          if (item) _fvTMShowMenu(_fvTD.startY, item.price, 'level', idx);
         }, 600);
         return;
       }
     }
-    // Check proximity to existing alerts
     var alerts = _alerts[sym] || [];
     for (var j = 0; j < alerts.length; j++) {
       var ay = _fvSeries.priceToCoordinate(alerts[j].price);
       if (ay != null && Math.abs(ay - y) < 10) {
         _fvTD.pending = true; _fvTD.pendingMode = 'alert'; _fvTD.pendingItem = alerts[j]; _fvTD.pendingIdx = j;
         _fvTMShowHandle(ay);
-        if (e.cancelable) e.preventDefault();
         _fvTD.lpTimer = setTimeout(function () {
           _fvTMHideHandle(); _fvTD.pending = false;
-          var pr = _fvSeries.coordinateToPrice(_fvTD.startY);
-          if (pr != null) _fvTMShowMenu(_fvTD.startY, pr, 'alert', _fvTD.pendingIdx);
+          var item = _fvTD.pendingItem, idx = _fvTD.pendingIdx;
+          if (item) _fvTMShowMenu(_fvTD.startY, item.price, 'alert', idx);
         }, 600);
         return;
       }
@@ -2076,11 +2089,11 @@ export function openCoinFullView(sym) {
     var y = t.clientY - rect.top;
     var dx = t.clientX - rect.left - _fvTD.startX, dy = y - _fvTD.startY;
     var moved = Math.sqrt(dx * dx + dy * dy);
-    // Pending near item + moved enough → activate drag
+    // Pending (first touch near item) + moved → it's a scroll, cancel selection
     if (_fvTD.pending && moved > 4) {
       clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
-      _fvTD.active = true; _fvTD.mode = _fvTD.pendingMode; _fvTD.item = _fvTD.pendingItem;
-      _fvTD.pending = false;
+      _fvTD.pending = false; _fvTD.pendingItem = null;
+      _fvTMHideHandle();
     }
     if (_fvTD.active) {
       if (e.cancelable) e.preventDefault();
@@ -2115,11 +2128,20 @@ export function openCoinFullView(sym) {
     clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
     _fvTD.lpFired = false;
     if (_fvTD.active) {
+      // Drag finished — save and clean up
       if (_fvTD.mode === 'level') saveLevels();
       else saveAlerts();
+      _fvTMHideHandle();
+      _fvTD.active = false; _fvTD.mode = null; _fvTD.item = null;
+    } else if (_fvTD.pending) {
+      // Quick tap on level/alert → enter SELECTED state, keep handle visible
+      _fvTD.selected = true;
+      _fvTD.selMode = _fvTD.pendingMode;
+      _fvTD.selItem = _fvTD.pendingItem;
+      _fvTD.selIdx = _fvTD.pendingIdx;
+      _fvTD.pending = false; _fvTD.pendingItem = null;
+      // handle stays visible until next touchstart elsewhere
     }
-    if (_fvTD.active || _fvTD.pending) _fvTMHideHandle();
-    _fvTD.active = false; _fvTD.pending = false; _fvTD.mode = null; _fvTD.item = null;
   });
 
   // rAF loop: alert bell icons on canvas
