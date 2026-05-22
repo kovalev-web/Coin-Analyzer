@@ -2027,6 +2027,10 @@ export function openCoinFullView(sym) {
     _fvTD.active = false; _fvTD.pending = false; _fvTD.mode = null; _fvTD.item = null;
     clearTimeout(_fvTD.lpTimer); _fvTD.lpTimer = null;
     _fvTMHideMenu();
+    // Ignore touches on the price scale area (rightmost ~75px) — zooming there
+    // must not accidentally grab levels whose label sits on the scale.
+    var psW = (_fvChart && _fvChart.priceScale('right').width) ? _fvChart.priceScale('right').width() : 75;
+    if (x > el.offsetWidth - psW) return;
     // Check proximity to existing levels
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
