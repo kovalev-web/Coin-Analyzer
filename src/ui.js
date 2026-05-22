@@ -215,7 +215,7 @@ function applyServerLevels(data) {
   });
   _levels = {};
   Object.keys(data).forEach(function (sym) {
-    _levels[sym] = data[sym].map(function (p) { return { price: p, line: null }; });
+    _levels[sym.toLowerCase()] = data[sym].map(function (p) { return { price: p, line: null }; });
   });
   try { localStorage.setItem('pa_levels', JSON.stringify(data)); } catch (e) {}
   reattachAllLevels();
@@ -244,7 +244,7 @@ export function loadLevels() {
   try {
     var local = JSON.parse(localStorage.getItem('pa_levels') || '{}');
     Object.keys(local).forEach(function (sym) {
-      _levels[sym] = local[sym].map(function (p) { return { price: p, line: null }; });
+      _levels[sym.toLowerCase()] = local[sym].map(function (p) { return { price: p, line: null }; });
     });
   } catch (e) {}
   if (_userCode) fetchServerLevels(_userCode);
@@ -468,7 +468,7 @@ function applyServerAlerts(entry) {
   _alerts = {};
   if (entry && entry.data) {
     Object.keys(entry.data).forEach(function (sym) {
-      _alerts[sym] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
+      _alerts[sym.toLowerCase()] = entry.data[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
     });
   }
   if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
@@ -494,7 +494,7 @@ export function loadAlerts() {
   try {
     var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
     Object.keys(local).forEach(function (sym) {
-      _alerts[sym] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
+      _alerts[sym.toLowerCase()] = local[sym].map(function (a) { return { price: a.price, triggered: a.triggered || false, line: null, createdAt: a.createdAt }; });
     });
   } catch (e) {}
   if (_userCode) fetchServerAlerts(_userCode);

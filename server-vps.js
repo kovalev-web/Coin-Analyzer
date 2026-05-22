@@ -425,7 +425,10 @@ var httpServer = http.createServer(async function (req, res) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ levels: r.result ? JSON.parse(r.result) : {} }));
         } else if (action === 'save') {
-          await redis(['SET', key, JSON.stringify(levels || {})]);
+          // Normalize sym keys to lowercase before storing
+          var normLevels = {};
+          Object.keys(levels || {}).forEach(function (s) { normLevels[s.toLowerCase()] = levels[s]; });
+          await redis(['SET', key, JSON.stringify(normLevels)]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else {
@@ -463,7 +466,12 @@ var httpServer = http.createServer(async function (req, res) {
         } else if (action === 'save') {
           if (!alertsMemory[codeKey]) alertsMemory[codeKey] = { chatId: '', data: {} };
           if (chatId !== undefined) alertsMemory[codeKey].chatId = String(chatId);
-          if (data !== undefined) alertsMemory[codeKey].data = data;
+          if (data !== undefined) {
+            // Normalize sym keys to lowercase before storing
+            var normData = {};
+            Object.keys(data).forEach(function (s) { normData[s.toLowerCase()] = data[s]; });
+            alertsMemory[codeKey].data = normData;
+          }
           await saveAlertsToRedis(codeKey);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -577,7 +585,11 @@ wss.on('connection', function (ws) {
           var ck = code.toLowerCase();
           if (!alertsMemory[ck]) alertsMemory[ck] = { chatId: '', data: {} };
           if (msg.chatId) alertsMemory[ck].chatId = String(msg.chatId); // never overwrite with empty
-          if (msg.data !== undefined) alertsMemory[ck].data = msg.data;
+          if (msg.data !== undefined) {
+            var normD = {};
+            Object.keys(msg.data).forEach(function (s) { normD[s.toLowerCase()] = msg.data[s]; });
+            alertsMemory[ck].data = normD;
+          }
         }
       }
 
