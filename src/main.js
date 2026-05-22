@@ -270,14 +270,14 @@ on('alert:triggered', function (msg) {
 
 registerRoute('/', function () {
   render();
-  var _autoSym = new URLSearchParams(window.location.search).get('sym');
+  var _autoSym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
   if (state.coins.length === 0) {
     fetchCoins().then(function () {
       render(); startChartPolling(); fetchMarketStrength(false); startMSPolling();
-      if (_autoSym) openCoinFullView(_autoSym.toUpperCase());
+      if (_autoSym) openCoinFullView(_autoSym);
     });
   } else if (_autoSym) {
-    openCoinFullView(_autoSym.toUpperCase());
+    openCoinFullView(_autoSym);
   }
 });
 

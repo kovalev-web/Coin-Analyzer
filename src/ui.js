@@ -1835,6 +1835,7 @@ export function openCoinFullView(sym) {
 
   // ── "+" button tracks crosshair — instant, no timer ──────────────────────
   _fvChart.subscribeCrosshairMove(function (param) {
+    if (window.innerWidth > 768) return;
     var btn = document.getElementById('fv-add-btn');
     if (!param.point || _fvTD.active || _fvTD.near || document.getElementById('fv-touch-menu')) {
       if (btn) btn.style.display = 'none';
