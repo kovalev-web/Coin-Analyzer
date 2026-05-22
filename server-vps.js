@@ -133,10 +133,13 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       if (a.triggered) return;
       // Grace period: ignore alerts set less than 5 seconds ago to prevent immediate firing
       if (a.createdAt && (now - a.createdAt) < 5000) return;
-      // Bidirectional close-price crossing — fire when cur crosses alert from either side.
-      // Using close (cur) only, not candle hi/lo, to avoid false triggers from wicks
-      // that were already in the candle's range at the time the alert was placed.
+      // Crossing check:
+      // - Ticker updates (no hi/lo): prev→cur crossing only (already ~100ms tick precision)
+      // - Kline updates (hi/lo available): also fire when wick touches alert level
       var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
+      if (!crossed && hi != null && lo != null) {
+        crossed = a.price >= low && a.price <= high;
+      }
       if (!crossed) return;
       a.triggered = true;
       dirty = true;
