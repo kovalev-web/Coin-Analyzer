@@ -972,7 +972,7 @@ export function openAnalysisPopup(sym, btn) {
     card.appendChild(popup);
     var cardRect = card.getBoundingClientRect();
     var btnRect = btn.getBoundingClientRect();
-    var topOffset = (btnRect.bottom - cardRect.top) + 8;
+    var topOffset = (btnRect.bottom - cardRect.top) + 6;
     popup.style.position = 'absolute';
     popup.style.top = topOffset + 'px';
     popup.style.right = '0';
@@ -984,9 +984,10 @@ export function openAnalysisPopup(sym, btn) {
     // Full View mode — fixed above fv-overlay (z-index:400)
     document.body.appendChild(popup);
     var btnRect2 = btn.getBoundingClientRect();
+    var rightOffset = Math.max(8, document.documentElement.clientWidth - btnRect2.right);
     popup.style.position = 'fixed';
-    popup.style.top = (btnRect2.bottom + 8) + 'px';
-    popup.style.right = '16px';
+    popup.style.top = (btnRect2.bottom + 6) + 'px';
+    popup.style.right = rightOffset + 'px';
     popup.style.left = 'auto';
     popup.style.width = 'min(380px, calc(100vw - 32px))';
     popup.style.maxWidth = 'none';
