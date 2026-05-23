@@ -1,7 +1,7 @@
 import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
-  fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR,
+  fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR, fetchNATR,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
@@ -11,6 +11,11 @@ import {
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
 } from './ui.js';
 import { on } from './events.js';
+
+function openFV(sym) {
+  openFV(sym);
+  if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
+}
 import { initRouter, registerRoute } from './router.js';
 import './styles.css';
 
@@ -146,7 +151,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'expand': {
-      openCoinFullView(sym);
+      openFV(sym);
       break;
     }
     case 'close-fv': {
@@ -200,7 +205,7 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'search-pick':
       closeSearchPopup();
-      openCoinFullView(sym);
+      openFV(sym);
       break;
     case 'open-settings':
       showCodeModal();
@@ -227,7 +232,7 @@ document.body.addEventListener('click', function (e) {
     }
     case 'bp-open':
       closeBriefingPanel();
-      openCoinFullView(sym);
+      openFV(sym);
       break;
     case 'go-briefing': {
       var today = new Date().toISOString().slice(0, 10);
@@ -240,7 +245,7 @@ document.body.addEventListener('click', function (e) {
       }
       if (first) {
         closeBriefingPanel();
-        openCoinFullView(first.sym);
+        openFV(first.sym);
         setTimeout(function () { openFVBriefingDrawer(); }, 50);
       }
       break;
@@ -268,7 +273,7 @@ document.body.addEventListener('click', function (e) {
       toggleFVBriefingDrawer();
       break;
     case 'fvbd-open':
-      openCoinFullView(sym);
+      openFV(sym);
       break;
     case 'go-main':
       window.location.hash = '#/';
@@ -295,10 +300,10 @@ registerRoute('/', function () {
   if (state.coins.length === 0) {
     fetchCoins().then(function () {
       render(); startChartPolling(); fetchMarketStrength(false); startMSPolling();
-      if (_autoSym) openCoinFullView(_autoSym);
+      if (_autoSym) openFV(_autoSym);
     });
   } else if (_autoSym) {
-    openCoinFullView(_autoSym);
+    openFV(_autoSym);
   }
 });
 
