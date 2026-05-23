@@ -291,9 +291,10 @@
 
     /* ── Sort bar ── */
     .sort-bar{display:flex;align-items:center;gap:8px;padding:10px 32px;}
-    .tier-num-btn{background:var(--fog);color:var(--charcoal);border:none;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .tier-num-group{display:flex;align-items:center;gap:10px;}
+    .tier-num-btn{background:var(--cloud);color:var(--steel);border:none;width:32px;height:32px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
     .tier-num-btn:hover{opacity:0.8;}
-    .tier-num-btn.active{background:var(--ink);color:var(--on-ink);}
+    .tier-num-btn.active{background:var(--fog);color:var(--ink);}
     .sort-bar-btns{display:flex;align-items:center;gap:8px;margin-left:auto;}
     .sort-coin-count{font-size:12px;font-weight:400;color:var(--charcoal);white-space:nowrap;}
     .mob-ms-chip{display:none;}

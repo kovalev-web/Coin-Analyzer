@@ -1429,9 +1429,11 @@ function _sortBarHTML(coins) {
   var ws = wsConnected;
   var wsTitle = ws ? 'WebSocket: подключен' : 'WebSocket: отключен';
   return '<div class="sort-bar">'
+    + '<div class="tier-num-group">'
     + '<button class="tier-num-btn' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high">1</button>'
     + '<button class="tier-num-btn' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid">2</button>'
     + '<button class="tier-num-btn' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low">3</button>'
+    + '</div>'
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
     + '<div class="sort-bar-btns">'
