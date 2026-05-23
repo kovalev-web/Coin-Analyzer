@@ -364,11 +364,11 @@ export function clearLevels(sym) {
 }
 
 function updateLevelsBtn(sym) {
-  var btn = document.querySelector('.btn-clear-levels[data-sym="' + sym + '"]');
-  if (!btn) return;
   var count = (_levels[sym] || []).length;
-  btn.style.display = count ? 'inline-flex' : 'none';
-  btn.textContent = count;
+  document.querySelectorAll('.btn-clear-levels[data-sym="' + sym + '"]').forEach(function (btn) {
+    btn.style.display = count ? 'inline-flex' : 'none';
+    btn.textContent = count;
+  });
 }
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
