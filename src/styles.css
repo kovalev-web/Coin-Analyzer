@@ -277,7 +277,9 @@
     .fv-info-top .btn-star{width:30px;height:30px;border-radius:6px;background:var(--fog);}
     .fv-info-top .btn-analyze-one,.fv-info-top .btn-pressed{width:30px;height:30px;border-radius:6px;}
     .fv-info-top .btn-retry{height:30px;}
-    .fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:30px;}
+    .fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:30px;background:var(--fog);border:none;}
+    .fv-info-top .btn-clear-alerts{color:#ef4444;}
+    .fv-info-top .btn-clear-levels{color:var(--level-deep);}
     .fv-info-top .tf-pill{height:30px;}
 
     /* ── Card sym + TF row ── */
