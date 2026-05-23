@@ -224,8 +224,13 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'go-briefing': {
       var today = new Date().toISOString().slice(0, 10);
-      var first = (state.briefing || []).find(function (e) { return e.date === today; })
-        || (state.briefing && state.briefing[0]);
+      var first = (state.briefing || []).find(function (e) { return e.date === today; });
+      if (!first) {
+        // Find the most recent past date and take its first entry
+        var latestPastDate = '';
+        (state.briefing || []).forEach(function (e) { if (e.date < today && e.date > latestPastDate) latestPastDate = e.date; });
+        if (latestPastDate) first = (state.briefing || []).find(function (e) { return e.date === latestPastDate; });
+      }
       if (first) {
         closeBriefingPanel();
         openCoinFullView(first.sym);
