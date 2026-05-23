@@ -275,7 +275,7 @@
     .fv-tmi-danger{color:var(--danger);}
     .fv-tmi-danger .fv-tmi-icon{color:var(--danger);}
     .fv-drag-handle{position:absolute;right:74px;width:16px;height:16px;border-radius:4px;background:var(--canvas);border:1px solid var(--ink);z-index:20;display:none;pointer-events:none;}
-    .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:8px;}
+    .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:18px;}
     .fv-info-top{display:flex;align-items:center;gap:14px;}
     .fv-info-stats{display:flex;align-items:center;gap:10px;padding-left:2px;}
     .fv-info-stats .stat-val{font-size:15px;font-weight:500;padding:0;}
