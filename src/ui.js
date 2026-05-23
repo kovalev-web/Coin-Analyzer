@@ -65,7 +65,7 @@ function renderCard(coin) {
 export function renderCards() {
   var grid = document.getElementById('cards-grid');
   if (!grid) return;
-  var coins = _screenerMode ? _screenerCoins() : filteredCoins();
+  var coins = _screenerMode ? screenerCoins() : filteredCoins();
   var existing = {};
   grid.querySelectorAll('.coin-card').forEach(function (el) { existing[el.dataset.sym] = el; });
 
@@ -146,7 +146,7 @@ var _screenerMode = false;
 
 export function setScreenerMode(val) { _screenerMode = val; }
 
-function _screenerCoins() {
+export function screenerCoins() {
   return state.coins
     .filter(function (c) { return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()); })
     .sort(function (a, b) { return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0); })
@@ -819,7 +819,7 @@ function clearRuler(sym) {
 
 function initCharts() {
   if (!window.LightweightCharts) return;
-  (_screenerMode ? _screenerCoins() : filteredCoins()).forEach(function (c) {
+  (_screenerMode ? screenerCoins() : filteredCoins()).forEach(function (c) {
     var el = document.getElementById('chart-' + c.symbol);
     if (!el) return;
     if (_charts[c.symbol]) return;
@@ -1467,7 +1467,7 @@ export function render() {
     app.innerHTML = '<div class="loading-overlay"><div class="big-spinner"></div><p>Загружаю данные с Binance Futures...</p></div>';
     return;
   }
-  var coins = _screenerMode ? _screenerCoins() : filteredCoins();
+  var coins = _screenerMode ? screenerCoins() : filteredCoins();
 
   destroyCharts();
   var coinsHtml = coins.length

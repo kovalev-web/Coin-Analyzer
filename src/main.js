@@ -8,7 +8,7 @@ import {
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
-  openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode,
+  openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -304,9 +304,10 @@ registerRoute('/', function () {
 
 registerRoute('/screener', function () {
   if (state.coins.length === 0) {
-    fetchCoins().then(function () { renderScreener(); startChartPolling(); });
+    fetchCoins().then(function () { renderScreener(); startChartPolling(); fetchAllNATR(screenerCoins()); });
   } else {
     renderScreener();
+    fetchAllNATR(screenerCoins());
   }
 });
 
