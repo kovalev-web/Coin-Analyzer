@@ -435,9 +435,12 @@ function _removeAlertLine(sym, a) {
 }
 
 // Remove FV line only (called when FV switches to a different coin).
+// Always nulls refs.fv — even if _fvSeries is already gone (chart destroyed before this call).
 function _detachFvLine(a) {
   var refs = _aLines[a.id];
-  if (refs && refs.fv && _fvSeries) { try { _fvSeries.removePriceLine(refs.fv); } catch (e) {} refs.fv = null; }
+  if (!refs) return;
+  if (refs.fv && _fvSeries) { try { _fvSeries.removePriceLine(refs.fv); } catch (e) {} }
+  refs.fv = null;
 }
 
 // Sync all lines for a sym (call after data changes or chart becomes ready).

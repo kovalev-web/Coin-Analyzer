@@ -114,15 +114,12 @@ async function loadAlertsOnStartup() {
 // Reload alerts from Redis every 30 seconds to pick up changes saved via Vercel
 setInterval(loadAlertsOnStartup, 30000);
 
-// Called on every price update (ticker or kline) — no polling delay
-// hi/lo: candle high and low — if provided, wicks trigger alerts too
-function checkAlertsForSym(fullSym, cur, hi, lo) {
+// Called on every price update (ticker or kline close) — no polling delay
+function checkAlertsForSym(fullSym, cur) {
   var sym = fullSym.replace(/USDT$/, '').toLowerCase();
   var prev = prevPrices[sym];
   prevPrices[sym] = cur;
   if (prev == null) return;
-  var high = (hi != null) ? hi : cur;
-  var low  = (lo != null) ? lo : cur;
   var now = Date.now();
   var codes = Object.keys(alertsMemory);
   codes.forEach(function (code) {
@@ -133,13 +130,7 @@ function checkAlertsForSym(fullSym, cur, hi, lo) {
       if (a.triggered) return;
       // Grace period: ignore alerts set less than 5 seconds ago to prevent immediate firing
       if (a.createdAt && (now - a.createdAt) < 5000) return;
-      // Crossing check:
-      // - Ticker updates (no hi/lo): prev→cur crossing only (already ~100ms tick precision)
-      // - Kline updates (hi/lo available): also fire when wick touches alert level
       var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
-      if (!crossed && hi != null && lo != null) {
-        crossed = a.price >= low && a.price <= high;
-      }
       if (!crossed) return;
       a.triggered = true;
       dirty = true;
@@ -375,8 +366,7 @@ function startKlineWS() {
 
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
-      // Real-time alert check on every trade — pass high/low so wicks trigger too
-      checkAlertsForSym(k.s, parseFloat(k.c), parseFloat(k.h), parseFloat(k.l));
+      checkAlertsForSym(k.s, parseFloat(k.c));
       // Буферизуем последнее состояние свечи — флашим раз в 200мс
       // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
       klinePending[sym + '_' + k.i] = {
