@@ -355,6 +355,7 @@
       .fv-sym-label{font-size:14px;}
       .fv-info-top{display:none;}
       .fv-bottom-bar{display:flex;}
+      #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{padding-bottom:8px;}
       .fv-bb-left .fv-back-btn,.fv-bb-right .btn-analyze-one,.fv-bb-right .btn-pressed,.fv-bb-right .btn-retry{width:30px;height:30px;}
       .fv-bb-right .btn-star{width:30px;height:30px;background:var(--fog);border-radius:6px;}
       .fv-bb-left .tf-pill{height:30px;font-size:12px;}
