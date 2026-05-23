@@ -1512,10 +1512,9 @@ export function render() {
   destroyCharts();
   var emptyHtml;
   if (state.error) {
-    var errIcon = !navigator.onLine ? icon('wifi-off', 15) : icon('server-off', 15);
-    emptyHtml = '<div class="error-banner">' + errIcon + '<span>' + state.error + '</span></div>';
+    emptyHtml = '<div class="error-banner">' + state.error + '</div>';
   } else if (state.coins.length === 0) {
-    emptyHtml = '<div class="error-banner">' + icon('loader', 15) + '<span>Ожидание данных от сервера...</span></div>';
+    emptyHtml = '<div class="error-banner">Ожидание данных от сервера...</div>';
   } else {
     emptyHtml = '<div class="empty-state">Нет монет, соответствующих фильтру.</div>';
   }
