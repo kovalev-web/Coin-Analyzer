@@ -272,8 +272,13 @@
     .fv-info-stats .stat-val{font-size:15px;font-weight:500;padding:0;}
     .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:72px;text-align:left;}
     .fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
-    .fv-back-btn{background:var(--fog);color:var(--ink);border:1px solid var(--hairline);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;box-shadow:var(--shadow-soft);}
-    .fv-back-btn:hover{border-color:var(--steel);}
+    .fv-back-btn{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
+    .fv-back-btn:hover{opacity:0.8;}
+    .fv-info-top .btn-star{width:30px;height:30px;border-radius:6px;background:var(--fog);}
+    .fv-info-top .btn-analyze-one,.fv-info-top .btn-pressed{width:30px;height:30px;border-radius:6px;}
+    .fv-info-top .btn-retry{height:30px;}
+    .fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:30px;}
+    .fv-info-top .tf-pill{height:30px;}
 
     /* ── Card sym + TF row ── */
     .card-sym-row{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
@@ -330,7 +335,10 @@
       .fv-info-stats .stat-val{font-size:13px;}
       .fv-sym-label{font-size:14px;}
       .fv-back-btn{width:28px;height:28px;}
-      .fv-info-top .tf-picker .tf-pill{height:28px;font-size:12px;}
+      .fv-info-top .tf-pill{height:28px;font-size:12px;}
+      .fv-info-top .btn-star{width:28px;height:28px;}
+      .fv-info-top .btn-analyze-one,.fv-info-top .btn-pressed,.fv-info-top .btn-retry{width:28px;height:28px;}
+      .fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:28px;}
       #bp-popup{border-radius:12px;}
 
       .sort-bar{padding:10px 12px;}
