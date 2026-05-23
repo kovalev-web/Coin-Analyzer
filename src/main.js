@@ -310,10 +310,6 @@ registerRoute('/screener', function () {
   }
 });
 
-// Re-render screener on live price updates
-on('metrics:update', function () {
-  if (window.location.hash === '#/screener') render();
-});
 
 registerRoute('/settings', function () {
   var app = document.getElementById('app');
