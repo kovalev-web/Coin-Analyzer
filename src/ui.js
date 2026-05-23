@@ -1288,8 +1288,37 @@ export function closeMSPopup() {
 // ── TV Mode ────────────────────────────────────────────────────────────────
 
 var _tvCharts = {};
+var _tvInterval = null;
 window.__tvChartSeries = {};
 window.__tvChartVolSeries = {};
+
+function _tvRefresh() {
+  var overlay = document.getElementById('tv-overlay');
+  if (!overlay || overlay.style.display === 'none') { clearInterval(_tvInterval); _tvInterval = null; return; }
+
+  var newCoins = filteredCoins().slice(0, 6);
+  var newSyms = newCoins.map(function (c) { return c.symbol; }).join(',');
+  var oldSyms = Array.from(overlay.querySelectorAll('.tv-slot-head')).map(function (el) { return el.dataset.tvSym; }).join(',');
+
+  if (newSyms !== oldSyms) {
+    // Top-6 changed — full rebuild (stays in fullscreen)
+    openTVMode();
+    return;
+  }
+
+  // Same coins — just refresh headers
+  newCoins.forEach(function (c) {
+    var head = overlay.querySelector('.tv-slot-head[data-tv-sym="' + c.symbol + '"]');
+    if (!head) return;
+    var ch = (c.open_24h > 0 && c.current_price > 0)
+      ? (c.current_price - c.open_24h) / c.open_24h * 100
+      : (c.price_change_percentage_24h || 0);
+    var chgEl = head.querySelector('.tv-chg');
+    if (chgEl) { chgEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; chgEl.className = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn'); }
+    var priceEl = head.querySelector('.tv-price');
+    if (priceEl) priceEl.textContent = c.current_price || '';
+  });
+}
 
 export function openTVMode() {
   var coins = filteredCoins().slice(0, 6);
@@ -1320,8 +1349,14 @@ export function openTVMode() {
     '</div>';
 
   overlay.style.display = 'block';
-  if (overlay.requestFullscreen) overlay.requestFullscreen().catch(function () {});
-  else if (overlay.webkitRequestFullscreen) overlay.webkitRequestFullscreen();
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(function () {});
+    else if (overlay.webkitRequestFullscreen) overlay.webkitRequestFullscreen();
+  }
+
+  // Periodic refresh: update headers every 30s, rebuild if top-6 changed
+  if (_tvInterval) clearInterval(_tvInterval);
+  _tvInterval = setInterval(_tvRefresh, 30000);
 
   // destroy previous TV charts
   Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
@@ -1361,6 +1396,7 @@ export function openTVMode() {
 }
 
 export function closeTVMode() {
+  if (_tvInterval) { clearInterval(_tvInterval); _tvInterval = null; }
   var overlay = document.getElementById('tv-overlay');
   if (overlay) overlay.style.display = 'none';
   if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
