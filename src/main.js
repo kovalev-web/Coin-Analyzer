@@ -74,11 +74,13 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'analyze': {
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
       var c = state.coins.find(function (x) { return x.symbol === sym; });
       if (c) { openAnalysisPopup(sym, target); }
       break;
     }
     case 'open-analysis': {
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
       openAnalysisPopup(sym, target);
       break;
     }
