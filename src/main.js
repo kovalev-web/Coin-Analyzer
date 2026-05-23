@@ -138,6 +138,13 @@ document.body.addEventListener('click', function (e) {
       fetchAllNATR(filteredCoins());
       break;
     }
+    case 'cycle-tier': {
+      var _tiers = ['high', 'mid', 'low'];
+      state.volTier = _tiers[(_tiers.indexOf(state.volTier) + 1) % _tiers.length];
+      render();
+      fetchAllNATR(filteredCoins());
+      break;
+    }
     case 'expand': {
       openCoinFullView(sym);
       break;

@@ -285,12 +285,18 @@
     .burger-dd-item{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;font-family:'Manrope',Arial,sans-serif;height:auto;border-radius:0;letter-spacing:0;}
     .burger-dd-item:hover{background:var(--fog);opacity:1;}
 
+    /* ── Tier badge (topbar single button) ── */
+    .tier-badge{background:var(--ink);color:var(--on-ink);border:none;padding:0 14px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;}
+    .tier-badge:hover{opacity:0.8;}
+
     /* ── Sort bar ── */
-    .sort-bar{display:flex;align-items:center;padding:12px 32px;}
-    .sort-bar-btns{display:flex;align-items:center;gap:8px;margin-right:12px;}
+    .sort-bar{display:flex;align-items:center;gap:8px;padding:10px 32px;}
+    .tier-num-btn{background:var(--fog);color:var(--charcoal);border:none;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .tier-num-btn:hover{opacity:0.8;}
+    .tier-num-btn.active{background:var(--ink);color:var(--on-ink);}
+    .sort-bar-btns{display:flex;align-items:center;gap:8px;margin-left:auto;}
     .sort-coin-count{font-size:12px;font-weight:400;color:var(--charcoal);white-space:nowrap;}
-    .mob-ms-chip{margin-left:auto;background:var(--fog);border:none;border-radius:9999px;padding:0 12px;height:30px;font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
-    .mob-ms-chip:hover{opacity:0.8;}
+    .mob-ms-chip{display:none;}
 
     /* ── FV mobile actions ── */
     .fv-mob-actions{display:none;align-items:center;gap:8px;padding:4px 14px 0;}
@@ -320,7 +326,7 @@
       .fv-info-top .tf-picker .tf-pill{height:28px;font-size:12px;}
       #bp-popup{border-radius:12px;}
 
-      .sort-bar{padding:12px 12px;}
+      .sort-bar{padding:10px 12px;}
 
 
       /* FV mobile actions bar */
