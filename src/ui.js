@@ -2578,13 +2578,25 @@ export function closeSearchPopup() {
 
 // ── Clear popup ──────────────────────────────────────────────────────────────
 
+export function closeClearPopup() {
+  var o = document.getElementById('clear-popup-overlay');
+  var p = document.getElementById('clear-popup');
+  if (o) o.remove();
+  if (p) p.remove();
+}
+
 export function openClearPopup(sym, btn) {
-  var old = document.getElementById('clear-popup');
-  if (old) old.remove();
+  closeClearPopup();
 
   var lCount = (_levels[sym] || []).length;
   var aCount = (_alerts[sym] || []).length;
   if (!lCount && !aCount) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'clear-popup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;';
+  overlay.addEventListener('click', closeClearPopup);
+  document.body.appendChild(overlay);
 
   var popup = document.createElement('div');
   popup.id = 'clear-popup';

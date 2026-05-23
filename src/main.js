@@ -9,7 +9,7 @@ import {
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
-  openClearPopup,
+  openClearPopup, closeClearPopup,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -50,7 +50,7 @@ document.body.addEventListener('click', function (e) {
   }
   var _clearPopup = document.getElementById('clear-popup');
   if (_clearPopup && !_clearPopup.contains(e.target) && !e.target.closest('[data-action="open-clear-popup"]')) {
-    _clearPopup.remove();
+    closeClearPopup();
   }
 
   // Close tf-dd on any click outside .tf-picker
@@ -200,18 +200,14 @@ document.body.addEventListener('click', function (e) {
     case 'close-tv':
       closeTVMode();
       break;
-    case 'clear-levels': {
-      var _cp = document.getElementById('clear-popup');
-      if (_cp) _cp.remove();
+    case 'clear-levels':
+      closeClearPopup();
       clearLevels(sym);
       break;
-    }
-    case 'clear-alerts': {
-      var _cp2 = document.getElementById('clear-popup');
-      if (_cp2) _cp2.remove();
+    case 'clear-alerts':
+      closeClearPopup();
       clearAlerts(sym);
       break;
-    }
     case 'open-clear-popup':
       openClearPopup(sym, target);
       break;
