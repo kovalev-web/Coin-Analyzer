@@ -65,7 +65,7 @@ function renderCard(coin) {
 export function renderCards() {
   var grid = document.getElementById('cards-grid');
   if (!grid) return;
-  var coins = filteredCoins();
+  var coins = _screenerMode ? _screenerCoins() : filteredCoins();
   var existing = {};
   grid.querySelectorAll('.coin-card').forEach(function (el) { existing[el.dataset.sym] = el; });
 
