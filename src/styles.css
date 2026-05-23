@@ -420,8 +420,8 @@
     .bp-note-row textarea:focus{border-color:var(--primary);}
 
     /* ── FV Briefing Drawer ──────────────────────────────────────────────── */
-    #fv-briefing-drawer{width:0;overflow:hidden;background:var(--paper);transition:width 0.2s ease;flex-shrink:0;}
-    #fv-briefing-drawer.open{width:360px;margin:12px 32px 16px 0;border-radius:16px;box-shadow:var(--shadow-soft);overflow-y:auto;}
+    #fv-briefing-drawer{width:0;overflow:hidden;background:var(--cloud);transition:width 0.2s ease;flex-shrink:0;}
+    #fv-briefing-drawer.open{width:360px;overflow-y:auto;}
     .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{}
     .fvbd-header{display:flex;align-items:center;padding:14px 12px 12px;flex-shrink:0;}
     .fvbd-title{font-size:15px;font-weight:700;color:var(--ink);flex:1;}
