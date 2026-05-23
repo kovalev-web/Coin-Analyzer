@@ -1768,7 +1768,7 @@ export function renderBriefingPanel() {
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
-      '<button class="popup-btn" data-action="go-briefing"' + (todayEntries.length ? '' : ' disabled') + '>Режим брифинг</button>' +
+      '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' +
     '</div>';
 
   // Re-attach note textarea listeners

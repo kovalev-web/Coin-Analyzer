@@ -224,7 +224,8 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'go-briefing': {
       var today = new Date().toISOString().slice(0, 10);
-      var first = (state.briefing || []).find(function (e) { return e.date === today; });
+      var first = (state.briefing || []).find(function (e) { return e.date === today; })
+        || (state.briefing && state.briefing[0]);
       if (first) {
         closeBriefingPanel();
         openCoinFullView(first.sym);
