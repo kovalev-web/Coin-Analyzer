@@ -462,6 +462,10 @@ function _updateAlertsBtn(sym) {
 
 function saveAlerts() {
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  // Push via WS immediately (no debounce) so server is up-to-date before
+  // any pending fetchServerAlerts response can arrive and overwrite local state.
+  if (_userCode) sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: alertsData() });
+  // Debounced HTTP as backup when WS is unavailable.
   clearTimeout(_alertSyncTimer);
   _alertSyncTimer = setTimeout(syncAlertsToServer, 1000);
 }
@@ -499,37 +503,6 @@ function applyServerAlerts(entry) {
   _syncAllAlerts();
 }
 
-function _mergeServerAlerts(entry) {
-  if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
-  Object.keys(entry.data).forEach(function (sym) {
-    var symLc = sym.toLowerCase();
-    var serverArr = entry.data[sym] || [];
-    if (serverArr.length === 0) return;
-    if (!_alerts[symLc]) _alerts[symLc] = [];
-    var localArr = _alerts[symLc];
-    var changed = false;
-    serverArr.forEach(function (sa) {
-      var tol = Math.max(Math.abs(sa.price) * 1e-6, 1e-9);
-      var matchIdx = -1;
-      for (var i = 0; i < localArr.length; i++) {
-        if (Math.abs(localArr[i].price - sa.price) <= tol) { matchIdx = i; break; }
-      }
-      if (matchIdx === -1) {
-        // Server has an alert missing from local (added on another device) — add it
-        localArr.push({ id: sa.id || _aNewId(), price: sa.price, triggered: sa.triggered || false, createdAt: sa.createdAt });
-        changed = true;
-      } else if (sa.triggered && !localArr[matchIdx].triggered) {
-        // Merge triggered=true from server into matching local alert
-        localArr[matchIdx].triggered = true;
-        changed = true;
-      }
-    });
-    if (changed) _syncAlerts(symLc);
-  });
-  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
-  syncAlertsToServer();
-}
-
 function fetchServerAlerts(code) {
   fetch(API_BASE + '/api/alerts', {
     method: 'POST',
@@ -538,11 +511,16 @@ function fetchServerAlerts(code) {
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d) return;
     var serverHasData = d.data && Object.keys(d.data).length > 0;
-    var localHasData = Object.keys(alertsData()).length > 0;
-    if (!serverHasData && localHasData) { syncAlertsToServer(); }
-    else if (serverHasData && !localHasData) { applyServerAlerts(d); }
-    else if (serverHasData && localHasData) { _mergeServerAlerts(d); }
-    // Both empty → do nothing, preserve state
+    if (serverHasData) {
+      // Server is the source of truth — always apply.
+      // Race condition (local has alerts not yet synced) is handled by the
+      // immediate WS push in saveAlerts(), so server already has them.
+      applyServerAlerts(d);
+    } else {
+      // Server empty: push local data up (e.g. first session on this device).
+      var localHasData = Object.keys(alertsData()).length > 0;
+      if (localHasData) syncAlertsToServer();
+    }
   }).catch(function () {});
 }
 
