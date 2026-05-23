@@ -1471,7 +1471,7 @@ export function render() {
 
   destroyCharts();
   var coinsHtml = coins.length
-    ? '<div class="cards-area">'
+    ? '<div class="cards-area' + (_screenerMode ? ' cards-area--scr' : '') + '">'
       + '<div class="cards-grid" id="cards-grid">'
       + coins.map(function (c) { return renderCard(c); }).join('')
       + '</div></div>'
