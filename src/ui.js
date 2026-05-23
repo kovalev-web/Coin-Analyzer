@@ -1084,12 +1084,20 @@ export function openAnalysisPopup(sym, btn) {
     document.body.appendChild(popup);
     var btnRect2 = btn.getBoundingClientRect();
     var viewportW = document.documentElement.clientWidth;
+    var viewportH = document.documentElement.clientHeight;
     var popupW = Math.min(380, viewportW - 16);
     var leftIfRightAligned = btnRect2.right - popupW;
     popup.style.position = 'fixed';
-    popup.style.top = (btnRect2.bottom + 6) + 'px';
     popup.style.width = popupW + 'px';
     popup.style.maxWidth = 'none';
+    // Open above button if it's in the bottom half of screen
+    if (btnRect2.bottom > viewportH / 2) {
+      popup.style.top = 'auto';
+      popup.style.bottom = (viewportH - btnRect2.top + 6) + 'px';
+    } else {
+      popup.style.top = (btnRect2.bottom + 6) + 'px';
+      popup.style.bottom = 'auto';
+    }
     if (leftIfRightAligned < 8) {
       popup.style.left = '8px';
       popup.style.right = 'auto';

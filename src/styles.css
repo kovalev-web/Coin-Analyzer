@@ -275,6 +275,7 @@
     .fv-bottom-bar{display:none;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper);border-top:1px solid var(--hairline);flex-shrink:0;}
     .fv-bb-left{display:flex;align-items:center;gap:8px;}
     .fv-bb-right{display:flex;align-items:center;gap:8px;}
+    .fv-bottom-bar .tf-dd{top:auto;bottom:calc(100% + 6px);}
     .fv-back-btn{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .fv-back-btn:hover{opacity:0.8;}
     .fv-info-top .btn-star{width:30px;height:30px;border-radius:6px;background:var(--fog);}
