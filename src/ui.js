@@ -50,8 +50,7 @@ function renderCard(coin) {
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
-    '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + coin.symbol + '" title="Алерты (Shift+ПКМ для добавления)" style="display:' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_alerts[coin.symbol] && _alerts[coin.symbol].length) || 0) + '</button>' +
-    '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + coin.symbol + '" style="display:' + ((_levels[coin.symbol] && _levels[coin.symbol].length) ? 'inline-flex' : 'none') + '">' + ((_levels[coin.symbol] && _levels[coin.symbol].length) || 0) + '</button>' +
+    '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + coin.symbol + '" style="display:' + (((_alerts[coin.symbol] && _alerts[coin.symbol].length) || (_levels[coin.symbol] && _levels[coin.symbol].length)) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash-2', 13) + '</button>' +
     badge +
     '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 15) + '</button>' +
     '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 15) + '</button>' +
@@ -363,13 +362,16 @@ export function clearLevels(sym) {
   updateLevelsBtn(sym);
 }
 
-function updateLevelsBtn(sym) {
-  var count = (_levels[sym] || []).length;
-  document.querySelectorAll('.btn-clear-levels[data-sym="' + sym + '"]').forEach(function (btn) {
-    btn.style.display = count ? 'inline-flex' : 'none';
-    btn.textContent = count;
+function updateClearBtn(sym) {
+  var lCount = (_levels[sym] || []).length;
+  var aCount = (_alerts[sym] || []).length;
+  var show = (lCount || aCount) ? 'inline-flex' : 'none';
+  document.querySelectorAll('.btn-clear-both[data-sym="' + sym + '"]').forEach(function (btn) {
+    btn.style.display = show;
   });
 }
+
+function updateLevelsBtn(sym) { updateClearBtn(sym); }
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
 //
@@ -468,13 +470,7 @@ function _syncAllAlerts() {
   Object.keys(_alerts).forEach(function (sym) { _syncAlerts(sym); });
 }
 
-function _updateAlertsBtn(sym) {
-  var count = (_alerts[sym] || []).length;
-  document.querySelectorAll('.btn-clear-alerts[data-sym="' + sym + '"]').forEach(function (btn) {
-    btn.style.display = count ? 'inline-flex' : 'none';
-    btn.textContent = count;
-  });
-}
+function _updateAlertsBtn(sym) { updateClearBtn(sym); }
 
 function saveAlerts() {
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
@@ -1827,8 +1823,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div>'
     + '<div class="fv-bb-right">'
     + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 14) + '</button>'
-    + '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + sym + '" style="display:' + (alertCount ? 'inline-flex' : 'none') + '">' + alertCount + '</button>'
-    + '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + sym + '" style="display:' + (levelCount ? 'inline-flex' : 'none') + '">' + levelCount + '</button>'
+    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash-2', 14) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>';
@@ -1862,8 +1857,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>'
     + '</div>'
     + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
-    + '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + sym + '" title="Алерты" style="display:' + (alertCount ? 'inline-flex' : 'none') + '">' + alertCount + '</button>'
-    + '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + sym + '" title="Уровни" style="display:' + (levelCount ? 'inline-flex' : 'none') + '">' + levelCount + '</button>'
+    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash-2', 14) + '</button>'
     + fvBadge
     + '</div>'
     + '<div class="fv-info-stats">'
@@ -2580,6 +2574,46 @@ export function openSearchPopup() {
 export function closeSearchPopup() {
   var popup = document.getElementById('search-popup');
   if (popup) popup.style.display = 'none';
+}
+
+// ── Clear popup ──────────────────────────────────────────────────────────────
+
+export function openClearPopup(sym, btn) {
+  var old = document.getElementById('clear-popup');
+  if (old) old.remove();
+
+  var lCount = (_levels[sym] || []).length;
+  var aCount = (_alerts[sym] || []).length;
+  if (!lCount && !aCount) return;
+
+  var popup = document.createElement('div');
+  popup.id = 'clear-popup';
+  popup.className = 'clear-popup';
+  popup.dataset.sym = sym;
+
+  var html = '<div class="clear-popup-title">Удалить</div>';
+  if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Горизонтальные уровни<span class="clear-count clear-count--level">' + lCount + '</span></button>';
+  if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Сигнальные уровни<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
+  popup.innerHTML = html;
+  document.body.appendChild(popup);
+
+  var btnRect = btn.getBoundingClientRect();
+  var popupW = 220;
+  var viewportH = window.innerHeight;
+  var viewportW = window.innerWidth;
+
+  // Horizontal: align left edge to button, clamp to viewport
+  var left = Math.min(btnRect.left, viewportW - popupW - 8);
+  popup.style.left = left + 'px';
+
+  // Vertical: open upward if button is in lower half of screen
+  if (btnRect.bottom > viewportH / 2) {
+    popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
+    popup.style.top = 'auto';
+  } else {
+    popup.style.top = (btnRect.bottom + 6) + 'px';
+    popup.style.bottom = 'auto';
+  }
 }
 
 // ── Screener ────────────────────────────────────────────────────────────────

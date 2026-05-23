@@ -9,6 +9,7 @@ import {
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
+  openClearPopup,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -46,6 +47,10 @@ document.body.addEventListener('click', function (e) {
   var _searchPopup = document.getElementById('search-popup');
   if (_searchPopup && _searchPopup.style.display !== 'none' && !_searchPopup.contains(e.target) && !e.target.closest('[data-action="open-search"]')) {
     _searchPopup.style.display = 'none';
+  }
+  var _clearPopup = document.getElementById('clear-popup');
+  if (_clearPopup && !_clearPopup.contains(e.target) && !e.target.closest('[data-action="open-clear-popup"]')) {
+    _clearPopup.remove();
   }
 
   // Close tf-dd on any click outside .tf-picker
@@ -195,11 +200,20 @@ document.body.addEventListener('click', function (e) {
     case 'close-tv':
       closeTVMode();
       break;
-    case 'clear-levels':
-      if (confirm('Удалить все уровни для ' + sym.toUpperCase() + '?')) clearLevels(sym);
+    case 'clear-levels': {
+      var _cp = document.getElementById('clear-popup');
+      if (_cp) _cp.remove();
+      clearLevels(sym);
       break;
-    case 'clear-alerts':
-      if (confirm('Удалить все алерты для ' + sym.toUpperCase() + '?')) clearAlerts(sym);
+    }
+    case 'clear-alerts': {
+      var _cp2 = document.getElementById('clear-popup');
+      if (_cp2) _cp2.remove();
+      clearAlerts(sym);
+      break;
+    }
+    case 'open-clear-popup':
+      openClearPopup(sym, target);
       break;
     case 'open-search':
       openSearchPopup();

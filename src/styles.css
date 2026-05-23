@@ -110,6 +110,15 @@
     .btn-clear-alerts:hover{background:rgba(239,68,68,0.2);}
     .btn-clear-levels{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:rgba(245,158,11,0.12);color:var(--level);border:1px solid rgba(245,158,11,0.35);cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;}
     .btn-clear-levels:hover{background:rgba(245,158,11,0.22);}
+    .btn-clear-both{background:transparent;color:var(--graphite);border:none;padding:0;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
+    .btn-clear-both:hover{background:var(--fog);}
+    .clear-popup{position:fixed;z-index:99999;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:200px;overflow:hidden;}
+    .clear-popup-title{padding:10px 14px 6px;font-size:11px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.5px;}
+    .clear-popup-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:9px 14px;font-size:13px;font-weight:500;color:var(--ink);background:transparent;border:none;cursor:pointer;font-family:'Manrope',Arial,sans-serif;gap:16px;text-align:left;}
+    .clear-popup-row:hover{background:var(--cloud);}
+    .clear-count{border-radius:9999px;padding:1px 7px;font-size:11px;font-weight:700;}
+    .clear-count--level{background:rgba(217,119,6,0.15);color:var(--level-deep);}
+    .clear-count--alert{background:rgba(239,68,68,0.12);color:#ef4444;}
     .btn-analyze-one,.btn-retry,.btn-pressed{text-align:center;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:26px;font-size:12px;font-weight:500;border-radius:6px;}
     .btn-analyze-one,.btn-pressed{width:32px;padding:0;}
     .btn-analyze-one{background:var(--fog);color:var(--charcoal);border:none;cursor:pointer;}
@@ -284,6 +293,7 @@
     .fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:30px;background:var(--fog);border:none;}
     .fv-info-top .btn-clear-alerts{color:#ef4444;}
     .fv-info-top .btn-clear-levels{color:var(--level-deep);}
+    .fv-info-top .btn-clear-both{background:var(--fog);color:var(--ink);width:30px;height:30px;}
     .fv-info-top .tf-pill{height:30px;}
 
     /* ── Card sym + TF row ── */
@@ -345,6 +355,7 @@
       .fv-bb-left .fv-back-btn,.fv-bb-right .btn-star,.fv-bb-right .btn-analyze-one,.fv-bb-right .btn-pressed,.fv-bb-right .btn-retry{width:28px;height:28px;}
       .fv-bb-left .tf-pill{height:28px;font-size:12px;}
       .fv-bb-right .btn-clear-alerts,.fv-bb-right .btn-clear-levels,.fv-bb-right .signal-badge{height:28px;}
+      .fv-bb-right .btn-clear-both{width:28px;height:28px;}
       #bp-popup{border-radius:12px;}
 
       .sort-bar{padding:10px 12px;}
@@ -357,6 +368,7 @@
     /* ── Card header: action buttons only in full view ── */
     .card-head-right .btn-clear-alerts,
     .card-head-right .btn-clear-levels,
+    .card-head-right .btn-clear-both,
     .card-head-right .btn-analyze-one,
     .card-head-right .btn-retry,
     .card-head-right .btn-pressed,
