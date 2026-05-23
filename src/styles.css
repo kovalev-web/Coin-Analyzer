@@ -435,6 +435,8 @@
     .search-row-sym{font-size:14px;font-weight:700;color:var(--ink);min-width:64px;flex-shrink:0;}
     .search-row-name{font-size:13px;font-weight:400;color:var(--graphite);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .search-row-chg{font-size:13px;font-weight:500;flex-shrink:0;}
+    .search-row-chg.up{color:var(--bullish);}
+    .search-row-chg.dn{color:var(--bloom-deep);}
     .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:13px;}
     @media(max-width:768px){
       #search-popup{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;border-radius:0;border:none;box-shadow:none;z-index:2000;}
