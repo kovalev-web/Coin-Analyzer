@@ -318,6 +318,7 @@
       .metric-card{padding:12px 14px;border-radius:12px;}
       .metric-card .value{font-size:20px;}
       .cards-area{padding:0 12px 32px;}
+      .cards-area--scr{padding-top:16px;}
       .cards-grid{grid-template-columns:1fr;}
       .chart-container{height:200px;}
       .error-banner{margin:12px 12px 0;}
