@@ -352,10 +352,11 @@
       .fv-sym-label{font-size:14px;}
       .fv-info-top{display:none;}
       .fv-bottom-bar{display:flex;}
-      .fv-bb-left .fv-back-btn,.fv-bb-right .btn-star,.fv-bb-right .btn-analyze-one,.fv-bb-right .btn-pressed,.fv-bb-right .btn-retry{width:28px;height:28px;}
-      .fv-bb-left .tf-pill{height:28px;font-size:12px;}
-      .fv-bb-right .btn-clear-alerts,.fv-bb-right .btn-clear-levels,.fv-bb-right .signal-badge{height:28px;}
-      .fv-bb-right .btn-clear-both{width:28px;height:28px;}
+      .fv-bb-left .fv-back-btn,.fv-bb-right .btn-analyze-one,.fv-bb-right .btn-pressed,.fv-bb-right .btn-retry{width:30px;height:30px;}
+      .fv-bb-right .btn-star{width:30px;height:30px;background:var(--fog);border-radius:6px;}
+      .fv-bb-left .tf-pill{height:30px;font-size:12px;}
+      .fv-bb-right .btn-clear-alerts,.fv-bb-right .btn-clear-levels,.fv-bb-right .signal-badge{height:30px;background:var(--fog);border:none;}
+      .fv-bb-right .btn-clear-both{width:30px;height:30px;background:var(--fog);}
       #bp-popup{border-radius:12px;}
 
       .sort-bar{padding:10px 12px;}
