@@ -64,6 +64,27 @@
     .filter-pill{background:var(--canvas);color:var(--charcoal);border:1px solid var(--steel);padding:0 12px;height:30px;font-size:12px;font-weight:500;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
     .filter-pill:hover{opacity:0.8;}
     .filter-pill.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
+    .nav-pill{background:transparent;color:var(--graphite);border:none;padding:0 10px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
+    .nav-pill:hover{color:var(--ink);}
+    .nav-pill.active{background:var(--fog);color:var(--ink);}
+    /* ── Screener ── */
+    .scr-wrap{margin:16px 32px;background:var(--paper);border-radius:16px;box-shadow:var(--shadow-soft);overflow:hidden;}
+    .scr-header,.scr-row{display:grid;grid-template-columns:28px 1fr 90px 100px 110px;align-items:center;padding:12px 20px;gap:8px;}
+    .scr-header{font-size:11px;font-weight:600;color:var(--graphite);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--hairline);}
+    .scr-row{border-bottom:1px solid var(--hairline);cursor:pointer;transition:background 0.1s;}
+    .scr-row:last-child{border-bottom:none;}
+    .scr-row:hover{background:var(--canvas);}
+    .scr-rank{font-size:12px;font-weight:600;color:var(--graphite);}
+    .scr-sym{font-size:14px;font-weight:700;color:var(--ink);}
+    .scr-chg{font-size:13px;font-weight:600;}
+    .scr-price{font-size:13px;color:var(--charcoal);}
+    .scr-vol{font-size:12px;color:var(--graphite);}
+    .scr-empty{padding:48px;text-align:center;color:var(--graphite);font-size:14px;}
+    @media(max-width:768px){
+      .scr-wrap{margin:12px 12px;}
+      .scr-header,.scr-row{grid-template-columns:24px 1fr 80px 90px;padding:12px 14px;}
+      .scr-h-vol,.scr-vol{display:none;}
+    }
     .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:24px 32px 0;}
     .metric-card{background:var(--paper);border-radius:16px;padding:20px 24px;box-shadow:var(--shadow-soft);}
     .metric-card .label{font-size:10px;color:var(--graphite);text-transform:uppercase;letter-spacing:1px;font-weight:500;margin-bottom:8px;}

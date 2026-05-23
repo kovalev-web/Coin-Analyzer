@@ -8,7 +8,7 @@ import {
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
-  openSearchPopup, closeSearchPopup,
+  openSearchPopup, closeSearchPopup, renderScreener,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -270,6 +270,9 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-open':
       openCoinFullView(sym);
       break;
+    case 'go-screener':
+      window.location.hash = '#/screener';
+      break;
   }
 });
 
@@ -293,6 +296,19 @@ registerRoute('/', function () {
   } else if (_autoSym) {
     openCoinFullView(_autoSym);
   }
+});
+
+registerRoute('/screener', function () {
+  if (state.coins.length === 0) {
+    fetchCoins().then(function () { renderScreener(); startChartPolling(); });
+  } else {
+    renderScreener();
+  }
+});
+
+// Re-render screener on live price updates
+on('metrics:update', function () {
+  if (window.location.hash === '#/screener') renderScreener();
 });
 
 registerRoute('/settings', function () {
