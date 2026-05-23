@@ -8,7 +8,7 @@ import {
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
-  openSearchPopup, closeSearchPopup, renderScreener,
+  openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode,
 } from './ui.js';
 import { on } from './events.js';
 import { initRouter, registerRoute } from './router.js';
@@ -270,6 +270,9 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-open':
       openCoinFullView(sym);
       break;
+    case 'go-main':
+      window.location.hash = '#/';
+      break;
     case 'go-screener':
       window.location.hash = '#/screener';
       break;
@@ -285,6 +288,7 @@ on('alert:triggered', function (msg) {
 // ── Router ─────────────────────────────────────────────────────────────────
 
 registerRoute('/', function () {
+  setScreenerMode(false);
   render();
   var _autoSym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
   if (_autoSym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
@@ -308,7 +312,7 @@ registerRoute('/screener', function () {
 
 // Re-render screener on live price updates
 on('metrics:update', function () {
-  if (window.location.hash === '#/screener') renderScreener();
+  if (window.location.hash === '#/screener') render();
 });
 
 registerRoute('/settings', function () {
