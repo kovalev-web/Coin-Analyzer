@@ -13,6 +13,11 @@
       --shadow-soft:0 2px 8px rgba(26,26,26,0.08);
     }
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+    *{scrollbar-width:thin;scrollbar-color:var(--steel) transparent;}
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--steel);border-radius:3px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--graphite);}
     body{font-family:'Manrope',Arial,sans-serif;background:var(--cloud);color:var(--ink);min-height:100vh;font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;}
     #app{width:100%;}
     .last-update{font-size:12px;color:var(--graphite);font-weight:400;white-space:nowrap;}
