@@ -160,7 +160,7 @@ document.body.addEventListener('click', function (e) {
     }
     case 'fv-tf-pick': {
       e.stopPropagation();
-      var fvDd = document.querySelector('#fv-overlay .fv-tf-dd');
+      var fvDd = target.closest('.tf-picker').querySelector('.tf-dd');
       if (fvDd) {
         document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
         fvDd.style.display = fvDd.style.display === 'none' ? 'block' : 'none';

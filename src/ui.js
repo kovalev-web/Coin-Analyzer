@@ -1797,6 +1797,35 @@ export function renderBriefingPanel() {
   });
 }
 
+function _fvBottomBarHTML(sym, tf) {
+  var cache = state.analysisCache[sym];
+  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var signal = hasA ? cache.result.signal : null;
+  var fvBadge = '';
+  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
+  else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
+  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 14) + '</button>';
+  var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
+  var levelCount = (_levels[sym] && _levels[sym].length) || 0;
+  return '<div class="fv-bottom-bar">'
+    + '<div class="fv-bb-left">'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
+    + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
+    + '<div class="tf-dd fv-tf-dd" style="display:none">'
+    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
+    + '</div></div>'
+    + '</div>'
+    + '<div class="fv-bb-right">'
+    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 14) + '</button>'
+    + '<button class="btn-clear-alerts" data-action="clear-alerts" data-sym="' + sym + '" style="display:' + (alertCount ? 'inline-flex' : 'none') + '">' + alertCount + '</button>'
+    + '<button class="btn-clear-levels" data-action="clear-levels" data-sym="' + sym + '" style="display:' + (levelCount ? 'inline-flex' : 'none') + '">' + levelCount + '</button>'
+    + fvBadge
+    + '</div>'
+    + '</div>';
+}
+
 function _fvCoinInfoHTML(sym, tf) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
@@ -1893,12 +1922,15 @@ export function openCoinFullView(sym) {
       + '<div id="fv-chart"></div>'
       + '</div>'
       + '<div id="fv-briefing-drawer"></div>'
-      + '</div>';
+      + '</div>'
+      + _fvBottomBarHTML(sym, tf);
   } else {
     // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
     if (_chartWrap) {
       _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
+      var _bb = overlay.querySelector('.fv-bottom-bar');
+      if (_bb) _bb.outerHTML = _fvBottomBarHTML(sym, tf);
       // If briefing popup or drawer is open — hide the new star and re-highlight current coin
       var _bpPopup = document.getElementById('bp-popup');
       var _fvdEl = document.getElementById('fv-briefing-drawer');
