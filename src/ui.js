@@ -891,6 +891,7 @@ function initCharts() {
           for (var ai = 0; ai < alertArr.length; ai++) {
             var aCoord = cs.priceToCoordinate(alertArr[ai].price);
             if (aCoord != null && Math.abs(aCoord - alertY) < 10) {
+              if (alertArr[ai].triggered) return; // triggered alerts are not draggable
               e.stopPropagation();
               e.preventDefault();
               _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
@@ -2001,6 +2002,7 @@ export function openCoinFullView(sym) {
       for (var ai = 0; ai < alertArr.length; ai++) {
         var aCoord = _fvSeries.priceToCoordinate(alertArr[ai].price);
         if (aCoord != null && Math.abs(aCoord - ay2) < 10) {
+          if (alertArr[ai].triggered) return; // triggered alerts are not draggable
           e.stopPropagation(); e.preventDefault();
           _fvAlertDragging = { idx: ai, alert: alertArr[ai] };
           _fvAlertDragMoved = false;
@@ -2239,6 +2241,7 @@ export function openCoinFullView(sym) {
 
     // Drag is ready and finger started moving — begin drag
     if (_fvTD.dragReady && _fvTD.near && !_fvTD.active && moved > 2) {
+      if (_fvTD.nearMode === 'alert' && _fvTD.nearItem && _fvTD.nearItem.triggered) return; // triggered alerts are not draggable
       _fvTD.active = true; _fvTD.mode = _fvTD.nearMode; _fvTD.item = _fvTD.nearItem;
       _fvTD.near = false;
       clearTimeout(_fvTD.deleteTimer); _fvTD.deleteTimer = null;
