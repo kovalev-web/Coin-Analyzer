@@ -2520,7 +2520,7 @@ function _renderSearchList(popup, query) {
     var chgStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
     return '<button class="search-popup-row" data-action="search-pick" data-sym="' + c.symbol + '">' +
       '<span class="search-row-sym">' + c.symbol.toUpperCase() + '</span>' +
-      '<span class="search-row-name">' + escHtml(c.name || '') + '</span>' +
+      '<span class="search-row-vol">' + fmt(c.total_volume || 0).replace('$', '') + '</span>' +
       '<span class="search-row-chg ' + chgCls + '">' + chgStr + '</span>' +
       '</button>';
   }).join('');
