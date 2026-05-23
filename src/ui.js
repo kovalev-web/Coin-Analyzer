@@ -324,11 +324,11 @@ function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
   if (s) {
     if (lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
-    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level-deep'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
   if (_fvSeries && _fvSym === sym) {
     if (lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
-    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level-deep'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
 }
 
@@ -1851,7 +1851,7 @@ function _setFVData(sym, cd) {
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
-    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level-deep'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
   // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
   (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
