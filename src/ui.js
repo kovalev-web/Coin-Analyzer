@@ -819,7 +819,7 @@ function clearRuler(sym) {
 
 function initCharts() {
   if (!window.LightweightCharts) return;
-  filteredCoins().forEach(function (c) {
+  (_screenerMode ? _screenerCoins() : filteredCoins()).forEach(function (c) {
     var el = document.getElementById('chart-' + c.symbol);
     if (!el) return;
     if (_charts[c.symbol]) return;
@@ -1479,7 +1479,7 @@ export function render() {
 
   app.innerHTML =
     _topbarHTML()
-    + _sortBarHTML(coins)
+    + (_screenerMode ? '' : _sortBarHTML(coins))
     + coinsHtml;
   initCharts();
 }
