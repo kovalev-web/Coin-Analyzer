@@ -48,13 +48,13 @@ document.body.addEventListener('click', function (e) {
     _searchPopup.style.display = 'none';
   }
 
-  var target = e.target.closest('[data-action]');
-  if (!target) {
-    if (!e.target.closest('.tf-picker')) {
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-    }
-    return;
+  // Close tf-dd on any click outside .tf-picker
+  if (!e.target.closest('.tf-picker')) {
+    document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
   }
+
+  var target = e.target.closest('[data-action]');
+  if (!target) return;
 
   var action = target.dataset.action;
   var sym = target.dataset.sym;
@@ -160,6 +160,8 @@ document.body.addEventListener('click', function (e) {
     }
     case 'fv-tf-pick': {
       e.stopPropagation();
+      var _ao = document.getElementById('analysis-overlay');
+      if (_ao && _ao.style.display === 'block') { if (_ao._popupCard) { _ao._popupCard.style.overflow = ''; _ao._popupCard = null; } _ao.style.display = 'none'; }
       var fvDd = target.closest('.tf-picker').querySelector('.tf-dd');
       if (fvDd) {
         document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
