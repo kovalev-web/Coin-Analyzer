@@ -13,7 +13,7 @@ import {
 import { on } from './events.js';
 
 function openFV(sym) {
-  openFV(sym);
+  openCoinFullView(sym);
   if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
 }
 import { initRouter, registerRoute } from './router.js';
