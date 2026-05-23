@@ -1923,9 +1923,9 @@ export function openCoinFullView(sym) {
       + _fvCoinInfoHTML(sym, tf)
       + '<div id="fv-chart"></div>'
       + '</div>'
-      + '<div id="fv-briefing-drawer"></div>'
       + '</div>'
-      + _fvBottomBarHTML(sym, tf);
+      + _fvBottomBarHTML(sym, tf)
+      + '<div id="fv-briefing-drawer"></div>';
   } else {
     // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');

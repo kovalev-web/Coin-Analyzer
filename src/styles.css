@@ -263,11 +263,11 @@
     html[data-theme="dark"] .ao-reanalyze{background:var(--fog);}
 
     /* ── Full View ── */
-    #fv-overlay{display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:var(--canvas);}
+    #fv-overlay{display:none;position:fixed;inset:0;z-index:400;flex-direction:row;background:var(--canvas);}
     .btn-expand{background:transparent;color:var(--ink);border:none;padding:0;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .btn-expand:hover{border-color:var(--steel);}
-    .fv-body{flex:1;display:flex;flex-direction:row;overflow:hidden;gap:0;min-height:0;}
-    .fv-chart-wrap{flex:1;min-width:0;overflow:hidden;background:var(--paper);position:relative;}
+    .fv-body{flex:1;display:flex;flex-direction:column;overflow:hidden;gap:0;min-height:0;}
+    .fv-chart-wrap{flex:1;min-width:0;min-height:0;overflow:hidden;background:var(--paper);position:relative;}
     #fv-chart{position:absolute;inset:0;}
     .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
     /* FV touch UI: add button, context menu, drag handle */
@@ -347,11 +347,10 @@
       .cards-grid{grid-template-columns:1fr;}
       .chart-container{height:200px;}
       .error-banner{margin:12px 12px 0;}
-      .fv-body{flex-direction:column;padding:0;}
-      .fv-chart-wrap{flex:2;min-height:0;}
+      #fv-overlay{flex-direction:column;}
+      .fv-chart-wrap{flex:2;}
       #fv-briefing-drawer{width:auto !important;height:0;transition:height 0.2s ease;}
-      #fv-briefing-drawer.open{height:33vh;width:auto !important;overflow-y:auto;border-top:1px solid var(--hairline);}
-      .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{flex:2;}
+      #fv-briefing-drawer.open{height:33vh;width:auto !important;flex-shrink:0;overflow-y:auto;border-top:1px solid var(--hairline);}
       .fv-info-stats .stat-val{font-size:13px;}
       .fv-sym-label{font-size:14px;}
       .fv-info-top{display:none;}
@@ -422,7 +421,6 @@
     /* ── FV Briefing Drawer ──────────────────────────────────────────────── */
     #fv-briefing-drawer{width:0;overflow:hidden;background:var(--paper);transition:width 0.2s ease;flex-shrink:0;}
     #fv-briefing-drawer.open{width:360px;overflow-y:auto;padding-left:10px;border-left:1px solid var(--hairline);}
-    .fv-body:has(#fv-briefing-drawer.open) .fv-chart-wrap{}
     .fvbd-header{display:flex;align-items:center;padding:14px 12px 12px;flex-shrink:0;}
     .fvbd-title{font-size:15px;font-weight:700;color:var(--ink);flex:1;}
     .fvbd-date-label{font-size:11px;font-weight:500;color:var(--graphite);padding:8px 12px 4px;letter-spacing:0.04em;text-transform:uppercase;}
