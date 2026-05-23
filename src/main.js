@@ -304,6 +304,19 @@ on('alert:triggered', function (msg) {
   handleAlertTriggered(msg.sym, msg.price);
 });
 
+// ── Connectivity ────────────────────────────────────────────────────────────
+
+window.addEventListener('offline', function () {
+  state.error = 'Нет подключения к интернету.';
+  render();
+});
+window.addEventListener('online', function () {
+  if (state.error && state.error.startsWith('Нет подключения')) {
+    state.error = null;
+    fetchCoins();
+  }
+});
+
 // ── Router ─────────────────────────────────────────────────────────────────
 
 registerRoute('/', function () {

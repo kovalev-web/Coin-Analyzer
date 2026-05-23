@@ -1510,12 +1510,21 @@ export function render() {
   var coins = _screenerMode ? screenerCoins() : filteredCoins();
 
   destroyCharts();
+  var emptyHtml;
+  if (state.error) {
+    var errIcon = !navigator.onLine ? icon('wifi-off', 15) : icon('server-off', 15);
+    emptyHtml = '<div class="error-banner">' + errIcon + '<span>' + state.error + '</span></div>';
+  } else if (state.coins.length === 0) {
+    emptyHtml = '<div class="error-banner">' + icon('loader', 15) + '<span>Ожидание данных от сервера...</span></div>';
+  } else {
+    emptyHtml = '<div class="empty-state">Нет монет, соответствующих фильтру.</div>';
+  }
   var coinsHtml = coins.length
     ? '<div class="cards-area' + (_screenerMode ? ' cards-area--scr' : '') + '">'
       + '<div class="cards-grid" id="cards-grid">'
       + coins.map(function (c) { return renderCard(c); }).join('')
       + '</div></div>'
-    : '<div class="empty-state">Нет монет, соответствующих фильтру.</div>';
+    : emptyHtml;
 
   app.innerHTML =
     _topbarHTML()

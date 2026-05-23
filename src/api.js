@@ -50,7 +50,12 @@ function connectWS() {
     wsConnected = true;
     console.log('[WS] Connected to', url);
     if (_wsReadyResolve) { _wsReadyResolve(); _wsReadyResolve = null; }
+    // Clear connection errors on successful reconnect
+    if (state.error && (state.error.startsWith('Нет подключения') || state.error.startsWith('Сервер'))) {
+      state.error = null;
+    }
     emit('ws:status');
+    emit('render');
   };
 
   ws.onmessage = function (event) {
@@ -105,6 +110,10 @@ function connectWS() {
     if (!wsConnected && _wsReadyResolve) {
       _wsReadyResolve(); // resolve anyway so app doesn't hang
       _wsReadyResolve = null;
+      state.error = navigator.onLine
+        ? 'Сервер временно недоступен. Переподключаемся...'
+        : 'Нет подключения к интернету.';
+      emit('render');
     }
   };
 }
@@ -314,14 +323,33 @@ export async function fetchCoins() {
   state.loading = true; state.error = null; emit('render');
   try {
     await _wsReady;
+    if (!wsConnected) {
+      state.error = navigator.onLine
+        ? 'Сервер временно недоступен. Переподключаемся...'
+        : 'Нет подключения к интернету.';
+      state.loading = false; emit('render'); return;
+    }
     // If no ticker data yet, request it explicitly
     if (state.coins.length === 0) {
       await wsRequest({ type: 'get_ticker' });
     }
+    if (state.coins.length === 0) {
+      state.error = 'Данные с Binance не получены. Попробуйте обновить страницу.';
+      state.loading = false; emit('render'); return;
+    }
+    state.error = null;
     state.lastUpdate = new Date();
     state.cacheExpires = now + CACHE_TTL_MS;
     fetchAllNATR(filteredCoins());
-  } catch (err) { state.error = 'Ошибка загрузки: ' + err.message; }
+  } catch (err) {
+    if (err.message === 'WS timeout') {
+      state.error = navigator.onLine
+        ? 'Сервер не ответил вовремя. Переподключаемся...'
+        : 'Нет подключения к интернету.';
+    } else {
+      state.error = 'Ошибка загрузки: ' + err.message;
+    }
+  }
   state.loading = false; emit('render');
 }
 
