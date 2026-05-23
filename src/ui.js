@@ -2166,10 +2166,10 @@ export function openCoinFullView(sym) {
     var html;
     if (delMode === 'level') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash-2', 15) + '</span><span>Удалить уровень · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 15) + '</span><span>Удалить уровень · ' + p + '</span></button>';
     } else if (delMode === 'alert') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash-2', 15) + '</span><span>Удалить алерт · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 15) + '</span><span>Удалить алерт · ' + p + '</span></button>';
     } else {
       html = '<button class="fv-touch-menu-item" data-tm="level">' +
           '<span class="fv-tmi-icon">' + icon('minus', 15) + '</span><span>Горизонтальный уровень · ' + p + '</span></button>' +
