@@ -271,6 +271,7 @@ on('alert:triggered', function (msg) {
 registerRoute('/', function () {
   render();
   var _autoSym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
+  if (_autoSym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
   if (state.coins.length === 0) {
     fetchCoins().then(function () {
       render(); startChartPolling(); fetchMarketStrength(false); startMSPolling();
