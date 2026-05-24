@@ -12,7 +12,10 @@
     "atr_1m_period": 14,
     "range_expansion": 20,
     "bb_squeeze": 50,
-    "buffer_size": 100
+    "buffer_size": 100,
+    "cvd_slope_window_ms": 300000,
+    "cvd_zscore_window": 720,
+    "cvd_div_lookback": 20
   },
   "prefilter": {
     "min_quote_volume_24h": 10000000,

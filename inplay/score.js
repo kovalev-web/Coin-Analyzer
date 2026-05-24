@@ -3,6 +3,8 @@
 var cfg = require('./config.json');
 var { getBuffer } = require('./buffers');
 var ind = require('./indicators');
+var tb  = require('./trade-buffers');
+var ms  = require('./microstructure');
 
 // ── Math helpers ──────────────────────────────────────────────────────────
 
@@ -24,12 +26,66 @@ function percentileRank(value, values) {
   return below / values.length;
 }
 
-// ── Raw metrics for one symbol ─────────────────────────────────────────────
-// Takes raw buffer arrays so this function is independently testable.
-// Returns null if pre-filters fail or any required indicator is null.
+// ── Microstructure integration ────────────────────────────────────────────
 
-// refTime: current moment in ms — used to determine today's UTC session for VWAP.
+// Build 1m-resolution CVD series aligned to the last `lookback` 1m candles.
+// For each candle, takes the last CVD snapshot at or before the candle's
+// close time. Returns null if not enough aligned data.
+function alignCVDTo1m(cvdPoints, buf1m, lookback) {
+  if (!cvdPoints || !cvdPoints.length) return null;
+  var n = Math.min(lookback, buf1m.length);
+  var result = [];
+  for (var i = buf1m.length - n; i < buf1m.length; i++) {
+    var closeTs = buf1m[i].time + 60000;
+    var val = null;
+    for (var j = cvdPoints.length - 1; j >= 0; j--) {
+      if (cvdPoints[j].ts <= closeTs) { val = cvdPoints[j].value; break; }
+    }
+    if (val === null) return null;
+    result.push(val);
+  }
+  return result.length >= lookback ? result : null;
+}
+
+// Compute Stage-2 microstructure metrics for one symbol.
+// Returns an object with fields that are merged into rawMetrics.
+// All fields default to null / 0 when trade state is unavailable (warm-up period).
+function buildMicro(sym, buf1m) {
+  var w     = cfg.windows;
+  var state = tb.getTradeState(sym);
+  // When no trade state (backtest, cold start) return nothing — score.js falls
+  // back to Stage-1 formulas when M/P/A fields are undefined.
+  if (!state) return {};
+  var result = { cvdZ: null, aggrRatio: null, largeShare: 0, cvdDiv: 0, cvdSlope: null };
+
+  var agg1m = tb.getAggregates(sym, 60000);
+  var agg5m = tb.getAggregates(sym, 300000);
+
+  result.aggrRatio  = ms.aggressorRatio(agg1m);
+  result.largeShare = ms.largeTradeshare(agg5m);
+
+  var slope = ms.cvdSlope(state.cvdPoints, w.cvd_slope_window_ms);
+  result.cvdSlope = slope;
+  if (slope !== null) {
+    result.cvdZ = ms.cvdZscore(slope, state.cvdSlopeHist, w.cvd_zscore_window);
+  }
+
+  if (buf1m && buf1m.length >= w.cvd_div_lookback) {
+    var prices  = buf1m.slice(-w.cvd_div_lookback).map(function (c) { return c.close; });
+    var cvdAt1m = alignCVDTo1m(state.cvdPoints, buf1m, w.cvd_div_lookback);
+    if (cvdAt1m) {
+      result.cvdDiv = ms.cvdDivergence(prices, cvdAt1m, w.cvd_div_lookback);
+    }
+  }
+
+  return result;
+}
+
+// ── Raw metrics for one symbol ────────────────────────────────────────────
+// refTime: current moment in ms — used for VWAP session boundary.
 // In production: undefined → Date.now(). In backtest: pass T explicitly.
+// Returns null if pre-filters fail or any required Stage-1 indicator is null.
+
 function computeRawMetrics(buf1m, buf5m, refTime) {
   var w = cfg.windows;
 
@@ -46,7 +102,6 @@ function computeRawMetrics(buf1m, buf5m, refTime) {
   var dvwap   = ind.distVwapATR(buf1m, w.atr_1m_period, refTime);
   var bbs     = ind.bbSqueeze(buf5m, w.bb_squeeze);
 
-  // All fields that feed into the score formula must be non-null
   if (vZ5m === null || tZ5m === null || dp5m === null ||
       miatr === null || rexp === null || dvwap === null || bbs === null) return null;
 
@@ -54,28 +109,64 @@ function computeRawMetrics(buf1m, buf5m, refTime) {
 }
 
 // ── A component (raw, before cross-sectional percentile rank) ─────────────
+// Stage 2: adds largeShare term (0.30 weight) when trade state is available.
+// Stage 1 fallback: original 0.4/0.3/0.3 split.
 
 function rawA(m) {
-  return 0.4 * clip(m.vZ5m,  0, 5) / 5
-       + 0.3 * clip(m.tZ5m,  0, 5) / 5
-       + 0.3 * clip(m.rexp / 3, 0, 1);
+  if (m.largeShare !== undefined) {
+    // Stage 2 weights (spec §A update)
+    return 0.30 * clip(m.vZ5m,  0, 5) / 5
+         + 0.20 * clip(m.tZ5m,  0, 5) / 5
+         + 0.20 * clip(m.rexp / 3, 0, 1)
+         + 0.30 * clip(m.largeShare / 0.3, 0, 1);
+  }
+  // Stage 1 fallback
+  return 0.40 * clip(m.vZ5m,  0, 5) / 5
+       + 0.30 * clip(m.tZ5m,  0, 5) / 5
+       + 0.30 * clip(m.rexp / 3, 0, 1);
 }
 
 // ── M component ───────────────────────────────────────────────────────────
+// Stage 2: CVD_zscore replaces some candle momentum weight.
+//          aggrRatio shifts M toward buy/sell pressure direction.
+// Stage 1 fallback used when cvdZ is null (warm-up or no trade data).
 
 function computeM(m, dp5mBaseline) {
-  var base = dp5mBaseline > 0 ? dp5mBaseline : 0.003; // fallback: 0.3%
+  var base         = dp5mBaseline > 0 ? dp5mBaseline : 0.003;
   var momentumTerm = sign(m.dp5m) * Math.sqrt(Math.abs(m.dp5m) / base);
-  return Math.tanh(0.4 * m.miatr + 0.3 * momentumTerm + 0.3 * m.dvwap);
+
+  if (m.cvdZ !== null && m.cvdZ !== undefined) {
+    // Stage 2 formula
+    var aggrTerm = m.aggrRatio !== null ? (2 * m.aggrRatio - 1) : 0;
+    return Math.tanh(
+      0.25 * m.miatr  +
+      0.20 * m.dvwap  +
+      0.30 * m.cvdZ   +
+      0.15 * aggrTerm +
+      0.10 * momentumTerm
+    );
+  }
+
+  // Stage 1 fallback
+  return Math.tanh(0.40 * m.miatr + 0.30 * momentumTerm + 0.30 * m.dvwap);
 }
 
 // ── P component ───────────────────────────────────────────────────────────
+// Stage 2: adds |cvdDiv| term (0.30 weight) when divergence is available.
+// Stage 1 fallback: original 0.6/0.4 split.
 
 function computeP(m) {
-  var squeeze = clip(1 - m.bbs, 0, 1);
+  var squeeze   = clip(1 - m.bbs, 0, 1);
   var rvolAccel = (m.rVol1m !== null && m.rVol5m !== null &&
                    m.rVol5m > 0 && m.rVol1m / m.rVol5m > 1.5) ? 1 : 0;
-  return clip(0.6 * squeeze + 0.4 * rvolAccel, 0, 1);
+
+  if (m.cvdDiv !== undefined && m.cvdDiv !== null) {
+    // Stage 2 weights
+    return clip(0.40 * squeeze + 0.30 * rvolAccel + 0.30 * Math.abs(m.cvdDiv), 0, 1);
+  }
+
+  // Stage 1 fallback
+  return clip(0.60 * squeeze + 0.40 * rvolAccel, 0, 1);
 }
 
 // ── Inplay formula ────────────────────────────────────────────────────────
@@ -87,16 +178,29 @@ function computeInplay(A, M, P) {
 
 // ── Main update: compute scores for all symbols, return sorted top-N ──────
 // getBufferFn is injectable for tests; defaults to buffers.getBuffer.
+// refTime is injectable for backtest; defaults to Date.now().
 
-// getBufferFn and refTime are injectable for backtest; both default to production values.
 function updateAllScores(inplaySymbols, getBufferFn, refTime) {
   var getBuf = getBufferFn || getBuffer;
+  var now    = refTime || Date.now();
+
+  // Snapshot CVD for all symbols before computing scores
+  inplaySymbols.forEach(function (sym) {
+    if (tb.getTradeState(sym)) tb.snapshotCVD(sym, now);
+  });
 
   // Step 1: raw metrics for every passing symbol
   var rawMetrics = {};
   inplaySymbols.forEach(function (sym) {
-    var m = computeRawMetrics(getBuf(sym, '1m'), getBuf(sym, '5m'), refTime);
-    if (m) rawMetrics[sym] = m;
+    var m = computeRawMetrics(getBuf(sym, '1m'), getBuf(sym, '5m'), now);
+    if (!m) return;
+
+    // Merge Stage-2 microstructure (no-op when trade data not yet available)
+    var micro = buildMicro(sym, getBuf(sym, '1m'));
+    if (micro.cvdSlope !== null) tb.pushCVDSlope(sym, micro.cvdSlope);
+    Object.assign(m, micro);
+
+    rawMetrics[sym] = m;
   });
 
   var syms = Object.keys(rawMetrics);
@@ -121,7 +225,7 @@ function updateAllScores(inplaySymbols, getBufferFn, refTime) {
       A:       A,
       M:       M,
       P:       P,
-      // sub-components for logging
+      // Stage-1 sub-components
       _vZ5m:   m.vZ5m,
       _tZ5m:   m.tZ5m,
       _rexp:   m.rexp,
@@ -130,6 +234,11 @@ function updateAllScores(inplaySymbols, getBufferFn, refTime) {
       _bbs:    m.bbs,
       _dp5m:   m.dp5m,
       _rvol5m: m.rVol5m,
+      // Stage-2 sub-components (null during warm-up)
+      _cvdZ:       m.cvdZ,
+      _aggrRatio:  m.aggrRatio,
+      _largeShare: m.largeShare,
+      _cvdDiv:     m.cvdDiv,
     };
   });
 
@@ -144,4 +253,6 @@ module.exports = {
   percentileRank, computeRawMetrics, rawA, computeM, computeP, computeInplay,
   // Main entry point
   updateAllScores,
+  // Exported for unit tests of Stage-2 helpers
+  alignCVDTo1m,
 };

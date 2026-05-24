@@ -13,6 +13,7 @@ try {
 const { analyzeCoin } = require('./shared/analyze');
 const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
 const { updateAllScores } = require('./inplay/score');
+const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
 const inplayCfg = require('./inplay/config.json');
 
 var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
@@ -32,7 +33,8 @@ function logInplay() {
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
 var BINANCE_WS_URL = 'wss://fstream.binance.com/ws';
-var BINANCE_KLINE_WS_URL = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
+var BINANCE_KLINE_WS_URL     = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
+var BINANCE_AGGTRADE_WS_URL = 'wss://fstream.binance.com/market/ws'; // aggTrade also on /market
 
 // ── Redis (Upstash) helper ────────────────────────────────────────────────
 
@@ -444,6 +446,79 @@ function startKlineWS() {
   });
 }
 
+// ── aggTrade WebSocket: поток сделок для микроструктуры ──────────────────
+
+var aggTradeWS         = null;
+var aggTradeSubscribed = new Set();  // 'btcusdt@aggTrade'
+var _aggTradeFirstConnect = true;
+
+function subscribeAggTrade(streamName) {
+  if (aggTradeSubscribed.has(streamName)) return;
+  aggTradeSubscribed.add(streamName);
+  if (aggTradeWS && aggTradeWS.readyState === WebSocket.OPEN) {
+    aggTradeWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
+  }
+}
+
+async function fillAggTradeGap(symbol) {
+  var state = getTradeState(symbol);
+  if (!state || !state.lastTs) return;
+  try {
+    var url = BINANCE_REST + '/fapi/v1/aggTrades?symbol=' + symbol + '&startTime=' + (state.lastTs + 1) + '&limit=1000';
+    var trades = await fetchBinance(url);
+    if (!Array.isArray(trades)) return;
+    trades.forEach(function (t) {
+      processTrade(symbol, { time: t.T, qty: parseFloat(t.q), isBuyerMaker: t.m });
+    });
+    if (trades.length) logInplay('[AggTradeWS] Gap-filled', trades.length, 'trades for', symbol);
+  } catch (e) {
+    logInplay('[AggTradeWS] Gap-fill error for', symbol, ':', e.message);
+  }
+}
+
+function startAggTradeWS() {
+  aggTradeWS = new WebSocket(BINANCE_AGGTRADE_WS_URL);
+
+  aggTradeWS.on('open', function () {
+    logInplay('[AggTradeWS] Connected');
+    // Re-subscribe after reconnect
+    var params = Array.from(aggTradeSubscribed);
+    for (var i = 0; i < params.length; i += 200) {
+      aggTradeWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 200 }));
+    }
+    // Gap-fill on reconnect (skip first connect — buffers start empty)
+    if (!_aggTradeFirstConnect && inplaySymbols.length) {
+      inplaySymbols.forEach(function (sym) {
+        fillAggTradeGap(sym).catch(function () {});
+      });
+    }
+    _aggTradeFirstConnect = false;
+  });
+
+  aggTradeWS.on('message', function (raw) {
+    try {
+      var msg = JSON.parse(raw.toString());
+      if (msg.id != null && msg.result === null) return;  // subscription ack
+      if (msg.e !== 'aggTrade') return;
+      processTrade(msg.s, {
+        time:         msg.T,
+        qty:          parseFloat(msg.q),
+        isBuyerMaker: msg.m,
+      });
+    } catch (e) {}
+  });
+
+  aggTradeWS.on('close', function () {
+    logInplay('[AggTradeWS] Disconnected, reconnecting in 5s...');
+    setTimeout(startAggTradeWS, 5000);
+  });
+
+  aggTradeWS.on('error', function (e) {
+    console.error('[AggTradeWS] Error:', e.message);
+    aggTradeWS.close();
+  });
+}
+
 // ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
 
 var httpServer = http.createServer(async function (req, res) {
@@ -707,6 +782,13 @@ bootstrapTicker().then(function() {
     });
     logInplay('[Inplay] Subscribed klineWS to', inplaySymbols.length * 2, 'streams');
 
+    // Initialise trade state + subscribe aggTrade for each inplay symbol
+    inplaySymbols.forEach(function (sym) {
+      initTradeState(sym);
+      subscribeAggTrade(sym.toLowerCase() + '@aggTrade');
+    });
+    logInplay('[Inplay] Subscribed aggTradeWS to', inplaySymbols.length, 'streams');
+
     // Start score update loop
     setInterval(function () {
       try {
@@ -715,17 +797,17 @@ bootstrapTicker().then(function() {
 
         // Log breakdown for top entries
         top.forEach(function (r) {
+          var cvdPart = r._cvdZ !== null && r._cvdZ !== undefined
+            ? ' cvdZ=' + r._cvdZ.toFixed(2) + ' aggr=' + (r._aggrRatio !== null ? r._aggrRatio.toFixed(2) : 'n/a') + ' lts=' + (r._largeShare || 0).toFixed(2) + ' div=' + (r._cvdDiv || 0)
+            : ' [no microstructure]';
           logInplay('[Inplay]', r.symbol,
             'score=' + r.inplay.toFixed(3),
             'A=' + r.A.toFixed(2),
             'M=' + r.M.toFixed(2),
             'P=' + r.P.toFixed(2),
-            '| vZ=' + (r._vZ5m || 0).toFixed(1),
-            'tZ=' + (r._tZ5m || 0).toFixed(1),
-            'rexp=' + (r._rexp || 0).toFixed(2),
-            'miatr=' + (r._miatr || 0).toFixed(2),
+            '| miatr=' + (r._miatr || 0).toFixed(2),
             'dvwap=' + (r._dvwap || 0).toFixed(2),
-            'bbs=' + (r._bbs || 0).toFixed(2)
+            'bbs=' + (r._bbs || 0).toFixed(2) + cvdPart
           );
         });
 
@@ -753,6 +835,7 @@ bootstrapTicker().then(function() {
 });
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
+startAggTradeWS();      // aggTrade WS для CVD и микроструктуры
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
