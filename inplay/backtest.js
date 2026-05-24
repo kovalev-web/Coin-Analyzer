@@ -14,6 +14,7 @@
  */
 
 const { updateAllScores } = require('./score');
+const ms  = require('./microstructure');
 const cfg = require('./config.json');
 
 const BINANCE_REST   = 'https://fapi.binance.com';
@@ -33,6 +34,7 @@ function getArg(name, def) {
 var DAYS         = parseInt(getArg('days',    '7'));
 var SYMBOL_COUNT = parseInt(getArg('symbols', '30'));
 var TOP_N        = parseInt(getArg('top-n',   String(cfg.top_n)));
+var SKIP_TOP     = parseInt(getArg('skip',    '0'));  // skip N heaviest symbols (BTC, ETH, etc.)
 
 // ── REST helpers ──────────────────────────────────────────────────────────
 
@@ -46,13 +48,14 @@ function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
 function parseCandle(arr) {
   return {
-    time:   arr[0],
-    open:   parseFloat(arr[1]),
-    high:   parseFloat(arr[2]),
-    low:    parseFloat(arr[3]),
-    close:  parseFloat(arr[4]),
-    volume: parseFloat(arr[5]),
-    trades: parseInt(arr[8], 10),
+    time:        arr[0],
+    open:        parseFloat(arr[1]),
+    high:        parseFloat(arr[2]),
+    low:         parseFloat(arr[3]),
+    close:       parseFloat(arr[4]),
+    volume:      parseFloat(arr[5]),
+    trades:      parseInt(arr[8], 10),
+    takerBuyVol: parseFloat(arr[9]),   // taker buy base volume (aggressive buys)
   };
 }
 
@@ -81,15 +84,15 @@ async function fetchAllKlines(symbol, interval, startTime, endTime) {
   return candles;
 }
 
-// Top N USDT perp symbols by 24h quote volume
-async function getTopSymbols(n) {
+// Top N USDT perp symbols by 24h quote volume, optionally skipping the heaviest
+async function getTopSymbols(n, skip) {
   console.log('[Backtest] Fetching symbol list...');
   var tickers = await fetchJSON(BINANCE_REST + '/fapi/v1/ticker/24hr');
-  return tickers
+  var sorted = tickers
     .filter(function (t) { return t.symbol.endsWith('USDT'); })
-    .sort(function (a, b) { return parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume); })
-    .slice(0, n)
-    .map(function (t) { return t.symbol; });
+    .sort(function (a, b) { return parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume); });
+  if (skip > 0) console.log('[Backtest] Skipping top-' + skip + ' heavy caps');
+  return sorted.slice(skip, skip + n).map(function (t) { return t.symbol; });
 }
 
 // Fetch historical data for all symbols (sequential to avoid rate limit burst)
@@ -144,16 +147,95 @@ function median(arr) {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
+// ── CVD proxy (Stage-2 backtest) ──────────────────────────────────────────
+// Since historical aggTrade data isn't available from Binance REST, we approximate
+// CVD from kline data using the Schultz formula:
+//   delta = ((close - low) / (high - low) * 2 - 1) * volume
+// aggrRatio uses the real takerBuyVol field (kline arr[9]).
+// largeShare cannot be approximated without per-trade sizes → always 0.
+
+function utcMidnight(ts) {
+  var d = new Date(ts);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+// Per-symbol slope history, persists across time steps within one simulation run.
+var proxyState = {};
+
+function buildProxyMicro(sym, buf1m, T) {
+  if (!buf1m || buf1m.length < 3) return {};
+  if (!proxyState[sym]) proxyState[sym] = { cvdSlopeHist: [] };
+
+  var w        = cfg.windows;
+  var midnight = utcMidnight(T);
+
+  // Build cumulative proxy CVD since UTC midnight
+  var cvdCum    = 0;
+  var cvdPoints = [];
+  for (var ci = 0; ci < buf1m.length; ci++) {
+    var c  = buf1m[ci];
+    if (c.time < midnight) continue;
+    var hl    = c.high - c.low;
+    var delta = hl > 0 ? ((c.close - c.low) / hl * 2 - 1) * c.volume : 0;
+    cvdCum += delta;
+    cvdPoints.push({ ts: c.time + 60000, value: cvdCum });
+  }
+  if (cvdPoints.length < 3) return {};
+
+  // OLS slope over last 5m + rolling z-score
+  var slope = ms.cvdSlope(cvdPoints, w.cvd_slope_window_ms);
+  var cvdZ  = null;
+  if (slope !== null) {
+    var hist = proxyState[sym].cvdSlopeHist;
+    hist.push(slope);
+    if (hist.length > w.cvd_zscore_window) hist.shift();
+    cvdZ = ms.cvdZscore(slope, hist, w.cvd_zscore_window);
+  }
+
+  // aggrRatio: taker-buy fraction over last 20 1m candles
+  var aggrRatio = null;
+  var lk = Math.min(20, buf1m.length);
+  var totalVol = 0, buyVol = 0;
+  for (var bi = buf1m.length - lk; bi < buf1m.length; bi++) {
+    var cb = buf1m[bi];
+    if (cb.takerBuyVol != null && cb.volume > 0) {
+      buyVol   += cb.takerBuyVol;
+      totalVol += cb.volume;
+    }
+  }
+  if (totalVol > 0) aggrRatio = buyVol / totalVol;
+
+  // largeShare: no per-trade size data in klines → 0 (Stage-2 A formula still fires)
+  var largeShare = 0;
+
+  // cvdDiv: proxy CVD values are 1:1 aligned with buf1m candles since midnight
+  var cvdDiv    = 0;
+  var dLookback = w.cvd_div_lookback;
+  if (cvdPoints.length >= dLookback) {
+    var prices  = buf1m.slice(-cvdPoints.length).map(function (x) { return x.close; }).slice(-dLookback);
+    var cvdVals = cvdPoints.slice(-dLookback).map(function (p) { return p.value; });
+    if (prices.length >= dLookback) {
+      cvdDiv = ms.cvdDivergence(prices, cvdVals, dLookback);
+    }
+  }
+
+  // largeShare omitted intentionally: klines have no per-trade size data,
+  // so we can't compute it reliably. Omitting forces the Stage-1 A formula
+  // (full 0.40/0.30/0.30 weights) which proved discriminative in Stage 1.
+  // In production, buildMicro() provides the real largeShare from aggTrade data.
+  return { cvdZ: cvdZ, aggrRatio: aggrRatio, cvdDiv: cvdDiv, cvdSlope: slope };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
   var endTime   = Date.now();
   var startTime = endTime - DAYS * 24 * 60 * 60 * 1000;
 
-  console.log('[Backtest] Days=' + DAYS + '  Symbols=' + SYMBOL_COUNT + '  Top-N=' + TOP_N);
+  console.log('[Backtest] Days=' + DAYS + '  Symbols=' + SYMBOL_COUNT + '  Skip=' + SKIP_TOP + '  Top-N=' + TOP_N);
   console.log('[Backtest] ' + new Date(startTime).toISOString() + ' → ' + new Date(endTime).toISOString());
 
-  var symbols  = await getTopSymbols(SYMBOL_COUNT);
+  var symbols  = await getTopSymbols(SYMBOL_COUNT, SKIP_TOP);
   var histData = await fetchHistoricalData(symbols, startTime, endTime);
 
   // Simulation starts after warmup (need enough 5m candles for bbSqueeze)
@@ -170,8 +252,8 @@ async function main() {
 
   // Diagnostics: A/|M|/P per hit vs miss, hit-rate by Inplay sign
   var diag = {
-    hits:   { A: [], absM: [], P: [] },
-    misses: { A: [], absM: [], P: [] },
+    hits:   { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [] },
+    misses: { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [] },
     pos: { hits: 0, total: 0 },  // Inplay > 0 (long signal)
     neg: { hits: 0, total: 0 },  // Inplay < 0 (short signal)
   };
@@ -187,7 +269,11 @@ async function main() {
       };
     })(T);
 
-    var top = updateAllScores(symbols, getBuffer, T);
+    var getMicro = (function (currentT) {
+      return function (sym, buf1m) { return buildProxyMicro(sym, buf1m, currentT); };
+    })(T);
+
+    var top = updateAllScores(symbols, getBuffer, T, getMicro);
     if (top.length < 5) { stepsSkipped++; continue; }
 
     stepsDone++;
@@ -220,11 +306,13 @@ async function main() {
       var isHit = outcomes[r.symbol] > basketMedian;
       if (isHit) { totalHits++; dayStats[dayKey].hits++; }
 
-      // Collect A/|M|/P for diagnostic
+      // Collect A/|M|/P + Stage-2 sub-components for diagnostic
       var bucket = isHit ? diag.hits : diag.misses;
       bucket.A.push(r.A);
       bucket.absM.push(Math.abs(r.M));
       bucket.P.push(r.P);
+      if (r._cvdZ    != null) bucket.cvdZ.push(r._cvdZ);
+      if (r._aggrRatio != null) bucket.aggrRatio.push(r._aggrRatio);
 
       // Hit-rate by Inplay sign
       if (r.inplay >= 0) { diag.pos.total++; if (isHit) diag.pos.hits++; }
@@ -245,7 +333,7 @@ async function main() {
   console.log('  Predictions:   ', totalPredictions);
   console.log('  Hits:          ', totalHits);
   console.log('  Hit-rate:      ', (hitRate * 100).toFixed(1) + '%',
-    hitRate >= 0.6 ? '✓ PASS' : '✗ FAIL (<60%)');
+    hitRate >= 0.7 ? '✓ PASS' : hitRate >= 0.6 ? '~ STAGE-1 LEVEL' : '✗ FAIL (<60%)');
 
   // Per-day breakdown
   console.log('\n  Per-day breakdown:');
@@ -258,13 +346,21 @@ async function main() {
   // Component diagnostics: hits vs misses
   function avgArr(arr) { return arr.length ? arr.reduce(function(s,v){return s+v;},0)/arr.length : 0; }
   console.log('\n  Component averages (hits vs misses):');
-  console.log('              hits    misses  ratio');
-  ['A','absM','P'].forEach(function(k) {
-    var h = avgArr(diag.hits[k]), m = avgArr(diag.misses[k]);
-    var ratio = m > 0 ? h/m : 0;
-    var label = k === 'absM' ? '|M|  ' : k + '    ';
-    console.log('    ' + label + '    ' + h.toFixed(3) + '   ' + m.toFixed(3) + '   ' + ratio.toFixed(2) +
-      (ratio > 1.05 ? ' ↑ discriminative' : ratio < 0.95 ? ' ↓ inverse' : ' ~ neutral'));
+  console.log('               hits    misses  ratio');
+  [
+    { key: 'A',         label: 'A       ' },
+    { key: 'absM',      label: '|M|     ' },
+    { key: 'P',         label: 'P       ' },
+    { key: 'cvdZ',      label: 'cvdZ    ' },
+    { key: 'aggrRatio', label: 'aggrRatio' },
+  ].forEach(function(item) {
+    var h = avgArr(diag.hits[item.key]), mv = avgArr(diag.misses[item.key]);
+    var n = diag.hits[item.key].length;
+    if (n === 0) { console.log('    ' + item.label + '  (no data)'); return; }
+    var ratio = mv !== 0 ? h/mv : (h > 0 ? Infinity : 1);
+    console.log('    ' + item.label + '   ' + h.toFixed(3) + '   ' + mv.toFixed(3) + '   ' + ratio.toFixed(2) +
+      (ratio > 1.05 ? ' ↑ discriminative' : ratio < 0.95 ? ' ↓ inverse' : ' ~ neutral') +
+      '  (n=' + n + ')');
   });
 
   // Hit-rate by Inplay sign (positive = long, negative = short)
@@ -291,12 +387,15 @@ async function main() {
 
   console.log('══════════════════════════════════════\n');
 
-  if (hitRate < 0.6) {
+  if (hitRate < 0.7) {
     console.log('Tuning hints (check inplay/config.json weights):');
-    console.log('  1. If A dominates top-10 — try lowering wA, raising wM');
-    console.log('  2. If top-10 barely changes between steps — cross-sectional rank may be stuck');
-    console.log('     → check that buffers update on each step (not all same candles)');
-    console.log('  3. If hit-rate ~50% (random) — dp5m_baseline may be unstable');
+    console.log('  Stage-2 specific:');
+    console.log('  1. If _cvdZ ratio is < 1 — CVD proxy z-score is inverse; try lowering cvdZ weight (0.30→0.20)');
+    console.log('  2. If _aggrRatio ratio is ~ 1 — aggrRatio not discriminating; try wM += 0.05, wA -= 0.05');
+    console.log('  3. If |M| ratio is < 1 — momentum hurts; Stage-2 M weights may need re-balancing');
+    console.log('  General:');
+    console.log('  4. If A dominates top-10 — try lowering wA, raising wM');
+    console.log('  5. If hit-rate ~50% (random) — dp5m_baseline may be unstable');
     console.log('     → try hardcoding dp5mBaseline=0.003 in score.js temporarily\n');
   }
 }
