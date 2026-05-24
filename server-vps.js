@@ -1,6 +1,15 @@
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const { WebSocketServer, WebSocket } = require('ws');
+
+// Load .env from project root if it exists (never committed to git)
+try {
+  fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n').forEach(function (line) {
+    var m = line.match(/^([A-Z0-9_]+)\s*=\s*"?([^"\r\n]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  });
+} catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
 const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
 const { updateAllScores } = require('./inplay/score');
