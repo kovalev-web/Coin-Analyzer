@@ -2423,10 +2423,10 @@ export function setFVChartTF(tf) {
   if (!_fvSym || !_fvSeries) return;
   state.chartTF[_fvSym] = tf;
   window.__fvTF = tf;
-  var pill = document.querySelector('#fv-overlay .tf-pill');
-  if (pill) pill.textContent = tf;
-  var dd = document.querySelector('#fv-overlay .fv-tf-dd');
-  if (dd) dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
+  document.querySelectorAll('#fv-overlay .tf-pill').forEach(function (pill) { pill.textContent = tf; });
+  document.querySelectorAll('#fv-overlay .fv-tf-dd').forEach(function (dd) {
+    dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
+  });
   // Remove price lines from series before reload to prevent duplicate orphaned lines
   (_levels[_fvSym] || []).forEach(function (l) { if (l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} l.fvLine = null; } });
   (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
