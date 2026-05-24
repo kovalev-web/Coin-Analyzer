@@ -2,6 +2,9 @@ export const STABLE_SYMBOLS = new Set([
   'usdt','usdc','busd','dai','tusd','usdp','gusd','frax','lusd','usdd','pyusd',
 ]);
 
+// Major coins excluded from the altcoin screener
+export const SCREENER_EXCLUDE = new Set(['btc','eth','bnb']);
+
 export const CACHE_TTL_MS = 2 * 60 * 1000;
 export const ANALYZE_DELAY_MS = 400;
 

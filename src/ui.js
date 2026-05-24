@@ -1,4 +1,4 @@
-import { state, filteredCoins, STABLE_SYMBOLS } from './state.js';
+import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
@@ -147,7 +147,10 @@ export function setScreenerMode(val) { _screenerMode = val; }
 
 export function screenerCoins() {
   return state.coins
-    .filter(function (c) { return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()); })
+    .filter(function (c) {
+      var sym = c.symbol.toLowerCase();
+      return !STABLE_SYMBOLS.has(sym) && !SCREENER_EXCLUDE.has(sym);
+    })
     .sort(function (a, b) { return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0); })
     .slice(0, 6);
 }
