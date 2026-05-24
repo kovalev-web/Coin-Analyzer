@@ -522,7 +522,7 @@ var httpServer = http.createServer(async function (req, res) {
           res.end(JSON.stringify(alertsMemory[codeKey]));
         } else if (action === 'save') {
           if (!alertsMemory[codeKey]) alertsMemory[codeKey] = { chatId: '', data: {} };
-          if (chatId !== undefined) alertsMemory[codeKey].chatId = String(chatId);
+          if (chatId) alertsMemory[codeKey].chatId = String(chatId); // never overwrite with empty
           if (data !== undefined) {
             alertsMemory[codeKey].data = mergeAlertData(alertsMemory[codeKey].data, data);
           }
