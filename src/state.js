@@ -39,8 +39,10 @@ export function filteredCoins() {
   var maxVol = tier === 'high' ? Infinity : tier === 'mid' ? 100e6 : 50e6;
   var minChg = state.minChange || 0;
   var coins = state.coins.filter(function (c) {
+    var sym = c.symbol.toLowerCase();
     var vol = c.total_volume || 0;
-    return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()) &&
+    return !STABLE_SYMBOLS.has(sym) &&
+      !SCREENER_EXCLUDE.has(sym) &&
       vol >= minVol &&
       (tier === 'high' || vol < maxVol) &&
       (c.price_change_percentage_24h || 0) >= minChg;
