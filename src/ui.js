@@ -1485,9 +1485,9 @@ function _sortBarHTML(coins) {
   return '<div class="sort-bar">'
     + (_screenerMode ? '' :
         '<div class="tier-num-group">'
-        + '<button class="tier-num-btn' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high">1</button>'
-        + '<button class="tier-num-btn' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid">2</button>'
-        + '<button class="tier-num-btn' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low">3</button>'
+        + '<button class="tier-num-btn' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high" title=">100M USDT">&gt;100</button>'
+        + '<button class="tier-num-btn' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid"  title="50M – 100M USDT">&gt;50</button>'
+        + '<button class="tier-num-btn' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low"  title="12M – 50M USDT">&gt;12</button>'
         + '</div>')
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
