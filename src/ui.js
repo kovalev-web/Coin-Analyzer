@@ -1364,12 +1364,14 @@ export function openTVMode() {
   window.__tvChartSeries = {};
   window.__tvChartVolSeries = {};
 
-  // create charts after layout settles
-  setTimeout(function () {
-    coins.forEach(function (c) {
+  // create charts staggered — TV hardware needs time between each init
+  coins.forEach(function (c, idx) {
+    setTimeout(function () {
       var el = document.getElementById('tvchart-' + c.symbol);
       if (!el || !window.LightweightCharts) return;
-      var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 600, el.offsetHeight || 380));
+      var w = el.offsetWidth || 600;
+      var h = el.offsetHeight || 380;
+      var chart = window.LightweightCharts.createChart(el, getChartOpts(w, h));
       var s = chart.addCandlestickSeries(getSeriesColors());
       var volClr = getCSSVar('--vol-up');
       var vs = chart.addHistogramSeries({ color: volClr, priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
@@ -1391,8 +1393,8 @@ export function openTVMode() {
       new ResizeObserver(function () {
         if (_tvCharts[c.symbol]) _tvCharts[c.symbol].resize(el.offsetWidth, el.offsetHeight);
       }).observe(el);
-    });
-  }, 80);
+    }, 300 + idx * 120);
+  });
 }
 
 export function closeTVMode() {
