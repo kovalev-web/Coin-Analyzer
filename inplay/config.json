@@ -1,0 +1,23 @@
+{
+  "weights": {
+    "wA": 0.20,
+    "wM": 0.80,
+    "wP": 0.00
+  },
+  "windows": {
+    "rvol_1m": 20,
+    "rvol_5m": 20,
+    "volZ_5m": 30,
+    "tradesZ_5m": 30,
+    "atr_1m_period": 14,
+    "range_expansion": 20,
+    "bb_squeeze": 50,
+    "buffer_size": 100
+  },
+  "prefilter": {
+    "min_quote_volume_24h": 10000000,
+    "min_buffer_5m": 30
+  },
+  "score_update_interval_ms": 5000,
+  "top_n": 7
+}

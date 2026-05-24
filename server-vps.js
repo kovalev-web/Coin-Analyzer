@@ -1,6 +1,24 @@
 const http = require('http');
+const fs = require('fs');
 const { WebSocketServer, WebSocket } = require('ws');
 const { analyzeCoin } = require('./shared/analyze');
+const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
+const { updateAllScores } = require('./inplay/score');
+const inplayCfg = require('./inplay/config.json');
+
+var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
+
+// File logger — only active when INPLAY_BETA_ENABLED
+var _inplayLog = INPLAY_BETA_ENABLED
+  ? fs.createWriteStream('./inplay.log', { flags: 'a' })
+  : null;
+
+function logInplay() {
+  var args = Array.prototype.slice.call(arguments);
+  var line = new Date().toISOString() + ' ' + args.join(' ') + '\n';
+  if (_inplayLog) _inplayLog.write(line);
+  console.log.apply(console, args);
+}
 
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
@@ -148,6 +166,8 @@ function checkAlertsForSym(fullSym, cur) {
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
 var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена текущего UTC-дня (1d kline)
+var inplaySymbols = []; // symbols passing pre-filter, populated after bootstrapTicker
+var _klineFirstConnect = true; // gap-fill only on reconnect, not initial connect
 
 // ── REST helper ──────────────────────────────────────────────────────────
 
@@ -355,6 +375,13 @@ function startKlineWS() {
     for (var i = 0; i < params.length; i += 200) {
       klineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 100 }));
     }
+    // Gap-fill only on reconnect — initial data comes from bootstrapBuffers
+    if (!_klineFirstConnect && inplaySymbols.length) {
+      fillAllGaps(inplaySymbols).catch(function (e) {
+        logInplay('[Inplay] Gap-fill error:', e.message);
+      });
+    }
+    _klineFirstConnect = false;
   });
 
   klineWS.on('message', function (raw) {
@@ -367,6 +394,18 @@ function startKlineWS() {
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
       checkAlertsForSym(k.s, parseFloat(k.c));
+      // Push closed candle into inplay rolling buffer
+      if (k.x) {
+        pushCandle(k.s, k.i, {
+          time:   k.t,
+          open:   parseFloat(k.o),
+          high:   parseFloat(k.h),
+          low:    parseFloat(k.l),
+          close:  parseFloat(k.c),
+          volume: parseFloat(k.v),
+          trades: k.n,
+        });
+      }
       // Буферизуем последнее состояние свечи — флашим раз в 200мс
       // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
       klinePending[sym + '_' + k.i] = {
@@ -645,6 +684,63 @@ wss.on('connection', function (ws) {
 bootstrapTicker().then(function() {
   // 2с задержка: не конкурируем с тикер-бутстрапом за rate limit
   setTimeout(bootstrapD1Opens, 2000);
+
+  // Derive inplay watchlist and bootstrap rolling kline buffers
+  if (!INPLAY_BETA_ENABLED) return;
+
+  inplaySymbols = getWatchlist(tickerCache);
+  logInplay('[Inplay] Watchlist:', inplaySymbols.length, 'symbols (q > $10M)');
+  bootstrapBuffers(inplaySymbols).then(function () {
+    // Subscribe klineWS to 1m and 5m for all inplay symbols
+    inplaySymbols.forEach(function (sym) {
+      subscribeKline(sym.toLowerCase() + '@kline_1m');
+      subscribeKline(sym.toLowerCase() + '@kline_5m');
+    });
+    logInplay('[Inplay] Subscribed klineWS to', inplaySymbols.length * 2, 'streams');
+
+    // Start score update loop
+    setInterval(function () {
+      try {
+        var top = updateAllScores(inplaySymbols);
+        if (!top.length) return;
+
+        // Log breakdown for top entries
+        top.forEach(function (r) {
+          logInplay('[Inplay]', r.symbol,
+            'score=' + r.inplay.toFixed(3),
+            'A=' + r.A.toFixed(2),
+            'M=' + r.M.toFixed(2),
+            'P=' + r.P.toFixed(2),
+            '| vZ=' + (r._vZ5m || 0).toFixed(1),
+            'tZ=' + (r._tZ5m || 0).toFixed(1),
+            'rexp=' + (r._rexp || 0).toFixed(2),
+            'miatr=' + (r._miatr || 0).toFixed(2),
+            'dvwap=' + (r._dvwap || 0).toFixed(2),
+            'bbs=' + (r._bbs || 0).toFixed(2)
+          );
+        });
+
+        // Push to all connected clients
+        var msg = JSON.stringify({
+          type: 'inplay_top',
+          data: top.map(function (r) {
+            return {
+              symbol: r.symbol, inplay: r.inplay,
+              A: r.A, M: r.M, P: r.P,
+              dp5m: r._dp5m, rvol5m: r._rvol5m,
+            };
+          }),
+          ts: Date.now(),
+        });
+        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+      } catch (e) {
+        logInplay('[Inplay] Score error:', e.message);
+      }
+    }, inplayCfg.score_update_interval_ms);
+
+  }).catch(function (e) {
+    logInplay('[Inplay] Bootstrap error:', e.message);
+  });
 });
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей

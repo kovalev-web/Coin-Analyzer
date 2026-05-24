@@ -1,0 +1,147 @@
+'use strict';
+
+var cfg = require('./config.json');
+var { getBuffer } = require('./buffers');
+var ind = require('./indicators');
+
+// ── Math helpers ──────────────────────────────────────────────────────────
+
+function clip(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function sign(v) { return v > 0 ? 1 : v < 0 ? -1 : 0; }
+
+function median(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function (a, b) { return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 !== 0 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+// Fraction of `values` strictly below `value`. Works correctly for N >= 5.
+function percentileRank(value, values) {
+  if (!values.length) return 0;
+  var below = 0;
+  for (var i = 0; i < values.length; i++) { if (values[i] < value) below++; }
+  return below / values.length;
+}
+
+// ── Raw metrics for one symbol ─────────────────────────────────────────────
+// Takes raw buffer arrays so this function is independently testable.
+// Returns null if pre-filters fail or any required indicator is null.
+
+// refTime: current moment in ms — used to determine today's UTC session for VWAP.
+// In production: undefined → Date.now(). In backtest: pass T explicitly.
+function computeRawMetrics(buf1m, buf5m, refTime) {
+  var w = cfg.windows;
+
+  if (buf5m.length < cfg.prefilter.min_buffer_5m) return null;
+  if (buf1m.length < w.atr_1m_period + 1) return null;
+
+  var rVol1m  = ind.rvol(buf1m, w.rvol_1m);
+  var rVol5m  = ind.rvol(buf5m, w.rvol_5m);
+  var vZ5m    = ind.volZ(buf5m, w.volZ_5m);
+  var tZ5m    = ind.tradesZ(buf5m, w.tradesZ_5m);
+  var dp5m    = ind.deltaPrice(buf1m, 5);
+  var miatr   = ind.moveInATR(buf1m, w.atr_1m_period);
+  var rexp    = ind.rangeExpansion(buf5m, w.range_expansion);
+  var dvwap   = ind.distVwapATR(buf1m, w.atr_1m_period, refTime);
+  var bbs     = ind.bbSqueeze(buf5m, w.bb_squeeze);
+
+  // All fields that feed into the score formula must be non-null
+  if (vZ5m === null || tZ5m === null || dp5m === null ||
+      miatr === null || rexp === null || dvwap === null || bbs === null) return null;
+
+  return { rVol1m, rVol5m, vZ5m, tZ5m, dp5m, miatr, rexp, dvwap, bbs };
+}
+
+// ── A component (raw, before cross-sectional percentile rank) ─────────────
+
+function rawA(m) {
+  return 0.4 * clip(m.vZ5m,  0, 5) / 5
+       + 0.3 * clip(m.tZ5m,  0, 5) / 5
+       + 0.3 * clip(m.rexp / 3, 0, 1);
+}
+
+// ── M component ───────────────────────────────────────────────────────────
+
+function computeM(m, dp5mBaseline) {
+  var base = dp5mBaseline > 0 ? dp5mBaseline : 0.003; // fallback: 0.3%
+  var momentumTerm = sign(m.dp5m) * Math.sqrt(Math.abs(m.dp5m) / base);
+  return Math.tanh(0.4 * m.miatr + 0.3 * momentumTerm + 0.3 * m.dvwap);
+}
+
+// ── P component ───────────────────────────────────────────────────────────
+
+function computeP(m) {
+  var squeeze = clip(1 - m.bbs, 0, 1);
+  var rvolAccel = (m.rVol1m !== null && m.rVol5m !== null &&
+                   m.rVol5m > 0 && m.rVol1m / m.rVol5m > 1.5) ? 1 : 0;
+  return clip(0.6 * squeeze + 0.4 * rvolAccel, 0, 1);
+}
+
+// ── Inplay formula ────────────────────────────────────────────────────────
+
+function computeInplay(A, M, P) {
+  var w = cfg.weights;
+  return sign(M) * (w.wA * A + w.wM * Math.abs(M) + w.wP * P);
+}
+
+// ── Main update: compute scores for all symbols, return sorted top-N ──────
+// getBufferFn is injectable for tests; defaults to buffers.getBuffer.
+
+// getBufferFn and refTime are injectable for backtest; both default to production values.
+function updateAllScores(inplaySymbols, getBufferFn, refTime) {
+  var getBuf = getBufferFn || getBuffer;
+
+  // Step 1: raw metrics for every passing symbol
+  var rawMetrics = {};
+  inplaySymbols.forEach(function (sym) {
+    var m = computeRawMetrics(getBuf(sym, '1m'), getBuf(sym, '5m'), refTime);
+    if (m) rawMetrics[sym] = m;
+  });
+
+  var syms = Object.keys(rawMetrics);
+  if (syms.length < 5) return []; // too few for meaningful cross-sectional rank
+
+  // Step 2: cross-sectional baseline for M (median |Δprice_5m| across basket)
+  var absDp5m = syms.map(function (s) { return Math.abs(rawMetrics[s].dp5m); }).filter(function (v) { return v > 0; });
+  var dp5mBaseline = absDp5m.length ? median(absDp5m) : 0.003;
+
+  // Step 3: raw A values for cross-sectional percentile rank
+  var rawAValues = syms.map(function (s) { return rawA(rawMetrics[s]); });
+
+  // Step 4: assemble final scores
+  var scores = syms.map(function (sym, i) {
+    var m = rawMetrics[sym];
+    var A = percentileRank(rawAValues[i], rawAValues);
+    var M = computeM(m, dp5mBaseline);
+    var P = computeP(m);
+    return {
+      symbol:  sym,
+      inplay:  computeInplay(A, M, P),
+      A:       A,
+      M:       M,
+      P:       P,
+      // sub-components for logging
+      _vZ5m:   m.vZ5m,
+      _tZ5m:   m.tZ5m,
+      _rexp:   m.rexp,
+      _miatr:  m.miatr,
+      _dvwap:  m.dvwap,
+      _bbs:    m.bbs,
+      _dp5m:   m.dp5m,
+      _rvol5m: m.rVol5m,
+    };
+  });
+
+  // Sort by |Inplay| descending
+  scores.sort(function (a, b) { return Math.abs(b.inplay) - Math.abs(a.inplay); });
+
+  return scores.slice(0, cfg.top_n);
+}
+
+module.exports = {
+  // Exported for tests
+  percentileRank, computeRawMetrics, rawA, computeM, computeP, computeInplay,
+  // Main entry point
+  updateAllScores,
+};
