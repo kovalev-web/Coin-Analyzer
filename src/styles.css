@@ -322,7 +322,7 @@
     .sort-bar{display:flex;align-items:center;gap:6px;padding:10px 32px;}
     .sort-bar .ws-indicator{margin-right:0;}
     .tier-num-group{display:flex;align-items:center;gap:10px;margin-right:4px;}
-    .tier-num-btn{background:var(--cloud);color:var(--steel);border:1px solid var(--steel);padding:0 6px;height:26px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;}
+    .tier-num-btn{background:var(--cloud);color:var(--steel);border:1px solid var(--steel);padding:0 8px;height:26px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;}
     .tier-num-btn:hover{opacity:0.8;}
     .tier-num-btn.active{background:var(--fog);color:var(--ink);}
     .sort-bar-btns{display:flex;align-items:center;gap:8px;margin-left:auto;}
