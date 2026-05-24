@@ -2542,23 +2542,9 @@ function _renderSearchList(popup, query) {
   if (!listEl) return;
   var q = (query || '').trim().toLowerCase();
   var coins = state.coins;
-  var filtered = q
-    ? coins.filter(function (c) {
-        return c.symbol.toLowerCase().indexOf(q) !== -1 ||
-               (c.name && c.name.toLowerCase().indexOf(q) !== -1);
-      }).sort(function (a, b) {
-        // Starts-with match ranks above contains
-        var aStarts = a.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-        var bStarts = b.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-        if (aStarts !== bStarts) return aStarts - bStarts;
-        return (b.total_volume || 0) - (a.total_volume || 0);
-      })
-    : coins.slice().sort(function (a, b) { return (b.total_volume || 0) - (a.total_volume || 0); });
-  if (!filtered.length) {
-    listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
-    return;
-  }
-  listEl.innerHTML = filtered.map(function (c) {
+  var PINNED = ['btc', 'eth', 'sol'];
+
+  function rowHTML(c) {
     var change = c.price_change_percentage_24h || 0;
     var chgCls = change >= 0 ? 'up' : 'dn';
     var chgStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
@@ -2567,7 +2553,40 @@ function _renderSearchList(popup, query) {
       '<span class="search-row-vol">' + fmt(c.total_volume || 0).replace('$', '') + '</span>' +
       '<span class="search-row-chg ' + chgCls + '">' + chgStr + '</span>' +
       '</button>';
-  }).join('');
+  }
+
+  if (q) {
+    var filtered = coins.filter(function (c) {
+      return c.symbol.toLowerCase().indexOf(q) !== -1 ||
+             (c.name && c.name.toLowerCase().indexOf(q) !== -1);
+    }).sort(function (a, b) {
+      var aStarts = a.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+      var bStarts = b.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
+    });
+    if (!filtered.length) {
+      listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
+      return;
+    }
+    listEl.innerHTML = filtered.map(rowHTML).join('');
+  } else {
+    var pinned = PINNED.map(function (sym) {
+      return coins.find(function (c) { return c.symbol === sym; });
+    }).filter(Boolean);
+    var rest = coins.filter(function (c) { return PINNED.indexOf(c.symbol) === -1; })
+      .slice().sort(function (a, b) {
+        return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
+      });
+    if (!pinned.length && !rest.length) {
+      listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
+      return;
+    }
+    var html = pinned.map(rowHTML).join('');
+    if (pinned.length && rest.length) html += '<div class="search-divider"></div>';
+    html += rest.map(rowHTML).join('');
+    listEl.innerHTML = html;
+  }
 }
 
 export function openSearchPopup() {

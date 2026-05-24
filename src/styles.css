@@ -442,6 +442,7 @@
     .search-row-chg.up{color:var(--bullish);}
     .search-row-chg.dn{color:var(--bloom-deep);}
     .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:13px;}
+    .search-divider{height:1px;background:var(--hairline);margin:4px 0;}
     @media(max-width:768px){
       #search-popup{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;border-radius:0;border:none;box-shadow:none;z-index:2000;}
       .search-popup-list{max-height:none;flex:1;}
