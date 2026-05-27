@@ -17,10 +17,40 @@
     "cvd_zscore_window": 720,
     "cvd_div_lookback": 20
   },
+  "orderbook": {
+    "obi_ema_period": 30,
+    "wall_multiplier": 3,
+    "vacuum_thin_multiplier": 0.3,
+    "vacuum_threshold_bps": 30
+  },
   "prefilter": {
     "min_quote_volume_24h": 10000000,
-    "min_buffer_5m": 30
+    "min_buffer_5m": 30,
+    "spread_bps_max": 10,
+    "depth_usdt_10bps_min": 50000
   },
   "score_update_interval_ms": 5000,
-  "top_n": 7
+  "top_n": 7,
+  "phase_detector": {
+    "entry": {
+      "rvol_avg_window": 3,
+      "rvol_avg_threshold": 8.0,
+      "rvol_min_threshold": 2.0,
+      "price_change_window_minutes": 15,
+      "price_change_threshold_pct": 8.0,
+      "cvd_alignment": true,
+      "cvd_zscore_min": 0.5
+    },
+    "hold": {
+      "rvol_avg_threshold": 3.0,
+      "price_continues_threshold_pct": 2.0,
+      "cvd_no_reversal": true,
+      "cvd_reversal_threshold": -1.0
+    },
+    "cooling_trigger": {
+      "rvol_avg_threshold": 3.0,
+      "price_stagnant_threshold_pct": 1.0
+    },
+    "cooling_timeout_minutes": 120
+  }
 }

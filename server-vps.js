@@ -13,7 +13,9 @@ try {
 const { analyzeCoin } = require('./shared/analyze');
 const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
 const { updateAllScores } = require('./inplay/score');
+const { updatePhases }   = require('./inplay/phase-detector');
 const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
+const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi } = require('./inplay/orderbook');
 const inplayCfg = require('./inplay/config.json');
 
 var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
@@ -519,6 +521,62 @@ function startAggTradeWS() {
   });
 }
 
+// ── depth20 WebSocket: стакан для OBI и liquidity vacuum ─────────────────
+
+var depthWS         = null;
+var depthSubscribed = new Set();
+var _depthFirstConnect = true;
+
+function subscribeDepth(streamName) {
+  if (depthSubscribed.has(streamName)) return;
+  depthSubscribed.add(streamName);
+  if (depthWS && depthWS.readyState === WebSocket.OPEN) {
+    depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
+  }
+}
+
+function startDepthWS() {
+  depthWS = new WebSocket(BINANCE_AGGTRADE_WS_URL);
+
+  depthWS.on('open', function () {
+    logInplay('[DepthWS] Connected');
+    var params = Array.from(depthSubscribed);
+    for (var i = 0; i < params.length; i += 200) {
+      depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 300 }));
+    }
+    _depthFirstConnect = false;
+  });
+
+  depthWS.on('message', function (raw) {
+    try {
+      var msg = JSON.parse(raw.toString());
+      if (msg.id != null && msg.result === null) return;  // subscription ack
+      // Futures partial depth snapshot: event type 'depthUpdate', fields b/a
+      if (msg.e !== 'depthUpdate' && !msg.lastUpdateId) return;
+      var sym = msg.s || msg.stream;
+      if (!sym) return;
+      sym = sym.toUpperCase().replace(/@.*/, '');
+
+      var bids = (msg.b || msg.bids || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
+      var asks = (msg.a || msg.asks || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
+      // Spec: bids descending, asks ascending (Binance sends them sorted)
+      processDepthUpdate(sym, bids, asks);
+      // EMA update on every snapshot (100ms cadence)
+      updateEmaOBI(sym, obi(bids, asks, 5));
+    } catch (e) {}
+  });
+
+  depthWS.on('close', function () {
+    logInplay('[DepthWS] Disconnected, reconnecting in 5s...');
+    setTimeout(startDepthWS, 5000);
+  });
+
+  depthWS.on('error', function (e) {
+    console.error('[DepthWS] Error:', e.message);
+    depthWS.close();
+  });
+}
+
 // ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
 
 var httpServer = http.createServer(async function (req, res) {
@@ -789,9 +847,26 @@ bootstrapTicker().then(function() {
     });
     logInplay('[Inplay] Subscribed aggTradeWS to', inplaySymbols.length, 'streams');
 
+    // Initialise orderbook state + subscribe depth20@100ms for each inplay symbol
+    inplaySymbols.forEach(function (sym) {
+      initOrderbookState(sym);
+      subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
+    });
+    logInplay('[Inplay] Subscribed depthWS to', inplaySymbols.length, 'streams');
+
     // Start score update loop
     setInterval(function () {
       try {
+        // Phase detector — independent of score, always broadcast
+        var phaseResult = updatePhases(inplaySymbols, null, null, logInplay);
+        var phaseData = phaseResult.phases.map(function (p) {
+          var tc = tickerCache[p.symbol];
+          return Object.assign({}, p, { vol24h: tc ? parseFloat(tc.q) : null });
+        });
+        var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now() });
+        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(phaseMsg); });
+
+        // Legacy score ranking (kept for logging and comparison)
         var top = updateAllScores(inplaySymbols);
         if (!top.length) return;
 
@@ -800,6 +875,13 @@ bootstrapTicker().then(function() {
           var cvdPart = r._cvdZ !== null && r._cvdZ !== undefined
             ? ' cvdZ=' + r._cvdZ.toFixed(2) + ' aggr=' + (r._aggrRatio !== null ? r._aggrRatio.toFixed(2) : 'n/a') + ' lts=' + (r._largeShare || 0).toFixed(2) + ' div=' + (r._cvdDiv || 0)
             : ' [no microstructure]';
+          var bookPart = r._spread !== undefined
+            ? ' spr=' + (r._spread !== null ? r._spread.toFixed(1) : 'n/a') + 'bps' +
+              ' obi=' + (r._emaOBI5 !== null ? r._emaOBI5.toFixed(2) : 'n/a') +
+              ' obiC=' + (r._obiConfirmed !== undefined ? r._obiConfirmed.toFixed(2) : 'n/a') +
+              ' vacU=' + (r._vacuumAbove !== undefined ? r._vacuumAbove.toFixed(0) : '?') + 'bps' +
+              ' vacD=' + (r._vacuumBelow !== undefined ? r._vacuumBelow.toFixed(0) : '?') + 'bps'
+            : '';
           logInplay('[Inplay]', r.symbol,
             'score=' + r.inplay.toFixed(3),
             'A=' + r.A.toFixed(2),
@@ -807,7 +889,7 @@ bootstrapTicker().then(function() {
             'P=' + r.P.toFixed(2),
             '| miatr=' + (r._miatr || 0).toFixed(2),
             'dvwap=' + (r._dvwap || 0).toFixed(2),
-            'bbs=' + (r._bbs || 0).toFixed(2) + cvdPart
+            'bbs=' + (r._bbs || 0).toFixed(2) + cvdPart + bookPart
           );
         });
 
@@ -836,6 +918,7 @@ bootstrapTicker().then(function() {
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
 startAggTradeWS();      // aggTrade WS для CVD и микроструктуры
+startDepthWS();         // depth20@100ms WS для OBI и liquidity vacuum
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления

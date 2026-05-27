@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inplay Phase Detector</title>
+  <style>
+    body  { background: #0d0d0d; color: #e0e0e0; font-family: monospace; margin: 0; padding: 16px; }
+    h2    { margin: 0 0 8px; font-size: 1rem; color: #aaa; }
+    #status { font-size: 0.75rem; color: #666; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+    th    { text-align: right; padding: 5px 10px; color: #777; border-bottom: 1px solid #333;
+            cursor: pointer; user-select: none; white-space: nowrap; }
+    th:first-child { text-align: left; }
+    th:hover { color: #bbb; }
+    th.sort-asc::after  { content: ' ▲'; color: #4caf50; }
+    th.sort-desc::after { content: ' ▼'; color: #4caf50; }
+    td    { text-align: right; padding: 4px 10px; border-bottom: 1px solid #1a1a1a; }
+    td:first-child { text-align: left; color: #fff; font-weight: bold; }
+    .row-long    { background: rgba(76, 175, 80, 0.08); }
+    .row-short   { background: rgba(244, 67, 54, 0.08); }
+    .row-cooling { background: rgba(80, 80, 80, 0.12); color: #777; }
+    .row-cooling td { color: #666; }
+    .row-cooling td:first-child { color: #888; }
+    .long  { color: #4caf50; }
+    .short { color: #f44336; }
+    .muted { color: #555; }
+    #empty { color: #555; font-size: 0.82rem; padding: 20px 0; }
+  </style>
+</head>
+<body>
+  <h2>Inplay — Phase Detector</h2>
+  <div id="status">connecting…</div>
+  <table id="table" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="symbol">Symbol</th>
+        <th data-col="phase_start_time">Phase Time</th>
+        <th data-col="direction">Direction</th>
+        <th data-col="rvol_last">RVOL_5m</th>
+        <th data-col="rvol_avg">avg RVOL(3)</th>
+        <th data-col="delta_price">Δp15m %</th>
+        <th data-col="cvd_z">CVD_z</th>
+        <th data-col="vol24h">24h Vol</th>
+        <th data-col="status">Status</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div id="empty" style="display:none">No coins in phase right now.</div>
+  <script type="module" src="/src/inplay-phase.js"></script>
+</body>
+</html>
