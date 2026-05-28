@@ -311,6 +311,15 @@ on('alert:triggered', function (msg) {
   handleAlertTriggered(msg.sym, msg.price);
 });
 
+// ── Close popups on orientation change (safety net) ───────────────────────
+
+window.addEventListener('orientationchange', function () {
+  closeSearchPopup();
+  closeMSPopup();
+  closeBriefingPanel();
+  closeClearPopup();
+});
+
 // ── Connectivity ────────────────────────────────────────────────────────────
 
 window.addEventListener('offline', function () {

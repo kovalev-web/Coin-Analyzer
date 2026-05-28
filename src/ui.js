@@ -1268,18 +1268,21 @@ export function openMSPopup() {
 
   popup.innerHTML = msPopupInner();
   popup.style.display = 'block';
-  popup.style.position = 'absolute';
 
-  var btn = document.querySelector('.mob-ms-chip');
-  if (btn) {
-    var btnRect = btn.getBoundingClientRect();
-    popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
-    if (window.innerWidth <= 768) {
-      popup.style.left = '8px';
-      popup.style.right = '8px';
-      popup.style.width = 'auto';
-      popup.style.maxWidth = 'none';
-    } else {
+  if (_isTouchDevice) {
+    popup.style.position = 'fixed';
+    popup.style.top = '72px';
+    popup.style.left = '8px';
+    popup.style.right = '8px';
+    popup.style.bottom = 'auto';
+    popup.style.width = 'auto';
+    popup.style.maxWidth = 'none';
+  } else {
+    popup.style.position = 'absolute';
+    var btn = document.querySelector('.mob-ms-chip');
+    if (btn) {
+      var btnRect = btn.getBoundingClientRect();
+      popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
       popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
       popup.style.left = 'auto';
       popup.style.width = '400px';
@@ -1774,21 +1777,21 @@ export function openBriefingPanel() {
   if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
 
-  if (btn) {
+  if (_isTouchDevice) {
+    popup.style.position = 'fixed';
+    popup.style.top = '72px';
+    popup.style.left = '8px';
+    popup.style.right = '8px';
+    popup.style.bottom = 'auto';
+    popup.style.width = 'auto';
+  } else if (btn) {
     var btnRect = btn.getBoundingClientRect();
-    // If inside a fixed overlay (full view), use fixed positioning — no scrollY needed
     var inFixed = !!btn.closest('#fv-overlay');
     popup.style.position = inFixed ? 'fixed' : 'absolute';
     popup.style.top = (btnRect.bottom + (inFixed ? 0 : window.scrollY) + 6) + 'px';
-    if (window.innerWidth <= 768) {
-      popup.style.left = '8px';
-      popup.style.right = '8px';
-      popup.style.width = 'auto';
-    } else {
-      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
-      popup.style.left = 'auto';
-      popup.style.width = '360px';
-    }
+    popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
+    popup.style.left = 'auto';
+    popup.style.width = '360px';
   }
 }
 
@@ -2633,8 +2636,6 @@ export function openSearchPopup() {
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
 
-  var isMobile = window.innerWidth <= 768;
-
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Поиск монеты</span>' +
@@ -2655,8 +2656,18 @@ export function openSearchPopup() {
 
   popup.style.display = 'flex';
 
-  // Position on desktop below the search button
-  if (!isMobile) {
+  if (_isTouchDevice) {
+    popup.style.position = 'fixed';
+    popup.style.top = '0';
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.bottom = '0';
+    popup.style.width = '100%';
+    popup.style.maxWidth = '100%';
+    popup.style.maxHeight = '100%';
+    popup.style.borderRadius = '0';
+    popup.style.border = 'none';
+  } else {
     var btn = document.querySelector('[data-action="open-search"]');
     if (btn) {
       var btnRect = btn.getBoundingClientRect();
@@ -2707,22 +2718,26 @@ export function openClearPopup(sym, btn) {
   popup.innerHTML = html;
   document.body.appendChild(popup);
 
-  var btnRect = btn.getBoundingClientRect();
-  var popupW = 220;
-  var viewportH = window.innerHeight;
-  var viewportW = window.innerWidth;
-
-  // Horizontal: align left edge to button, clamp to viewport
-  var left = Math.min(btnRect.left, viewportW - popupW - 8);
-  popup.style.left = left + 'px';
-
-  // Vertical: open upward if button is in lower half of screen
-  if (btnRect.bottom > viewportH / 2) {
-    popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
-    popup.style.top = 'auto';
-  } else {
-    popup.style.top = (btnRect.bottom + 6) + 'px';
+  if (_isTouchDevice) {
+    popup.style.position = 'fixed';
+    popup.style.top = '72px';
+    popup.style.left = '8px';
+    popup.style.right = '8px';
     popup.style.bottom = 'auto';
+  } else {
+    var btnRect = btn.getBoundingClientRect();
+    var popupW = 220;
+    var viewportH = window.innerHeight;
+    var viewportW = window.innerWidth;
+    var left = Math.min(btnRect.left, viewportW - popupW - 8);
+    popup.style.left = left + 'px';
+    if (btnRect.bottom > viewportH / 2) {
+      popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
+      popup.style.top = 'auto';
+    } else {
+      popup.style.top = (btnRect.bottom + 6) + 'px';
+      popup.style.bottom = 'auto';
+    }
   }
 }
 
