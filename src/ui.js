@@ -31,7 +31,7 @@ function renderCard(coin) {
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
     '<div class="tf-dd" style="display:none">' +
-    ['1m', '5m', '15m', '1h', '4h'].map(function (t) {
+    ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
       return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
     }).join('') +
     '</div>' +
@@ -1872,7 +1872,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
-    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
+    + ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div></div>'
     + '</div>'
     + '<div class="fv-bb-right">'
@@ -1907,7 +1907,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
-    + ['1m', '5m', '15m', '1h', '4h'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
+    + ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
     + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
