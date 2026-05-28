@@ -200,18 +200,18 @@ function processTickerPush(arr) {
 
   if (newCoins) { emit('render'); emit('natr:refresh'); return; }
 
-  // Compare current DOM card order vs new sorted order — re-render only if order changed
-  var _sortedOrder = filteredCoins().map(function (c) { return c.symbol; }).join(',');
-  var _domOrder = Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (el) { return el.dataset.sym; }).join(',');
+  // Snapshot DOM before sync, then find coins that ACTUALLY entered the visible area after sync.
+  // (Don't use filteredCoins() diff — in screener mode that's ~100 coins vs 6 visible = 94 false positives)
+  var _preSync = new Set(Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (el) { return el.dataset.sym; }));
   // При смене порядка: переставляем карточки через renderCards (cards:sync),
   // а не полный render() — render() уничтожает все чарты и пересоздаёт их,
   // что вызывало флик раз в 1-2 минуты при изменении рейтинга по объёму.
-  // Fetch NATR for coins that just entered the visible filter (volume crossed tier threshold)
-  var _newlyFiltered = _sortedOrder.split(',').filter(function (s) {
-    return s && !_domOrder.split(',').includes(s) && (!state.natrData[s] || state.natrData[s] === 'error');
-  });
-  if (_newlyFiltered.length) fetchAllNATR(_newlyFiltered.map(function (s) { return { symbol: s }; }));
   emit('cards:sync');
+  // Fetch NATR only for coins that just appeared in the DOM (1-2 at most)
+  var _addedToDOM = Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (el) { return el.dataset.sym; }).filter(function (s) {
+    return !_preSync.has(s) && (!state.natrData[s] || state.natrData[s] === 'error');
+  });
+  if (_addedToDOM.length) fetchAllNATR(_addedToDOM.map(function (s) { return { symbol: s }; }));
 }
 
 // ── Individual ticker update (from per-coin WS subscriptions) ────────────
