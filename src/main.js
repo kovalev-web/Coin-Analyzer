@@ -315,9 +315,12 @@ on('alert:triggered', function (msg) {
 // ── Close popups on orientation change (safety net) ───────────────────────
 
 window.addEventListener('orientationchange', function () {
+  // Close all non-fullscreen UI (search/briefing/analysis are fullscreen — leave them)
   closeMSPopup();
-  var tm = document.getElementById('fv-touch-menu');
-  if (tm) tm.remove();
+  closeClearPopup();
+  var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
+  ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
+  document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
 });
 
 // ── Connectivity ────────────────────────────────────────────────────────────
