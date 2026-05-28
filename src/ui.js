@@ -1557,7 +1557,7 @@ export function render() {
     _topbarHTML()
     + (_screenerMode ? '' : _sortBarHTML(coins))
     + coinsHtml;
-  requestAnimationFrame(function () { initCharts(); });
+  initCharts();
 }
 
 // ── Tooltip positioning ────────────────────────────────────────────────────
