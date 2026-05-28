@@ -824,7 +824,12 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var lx = p2.x + 12, ly = p2.y - 10;
   if (lx + 170 > rc.width) lx = p2.x - 175; if (lx < 2) lx = 2;
   if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 20) ly = rc.height - 20;
-  ctx.fillText(pctStr, lx, ly);
+  // Hanging punctuation: draw sign offset left so digits align at lx
+  var sign = pctStr[0]; // '+' or '-'
+  var digits = pctStr.slice(1);
+  var signW = ctx.measureText(sign).width;
+  ctx.fillText(sign, lx - signW, ly);
+  ctx.fillText(digits, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + 18);
 }
 
