@@ -2101,27 +2101,6 @@ export function openCoinFullView(sym) {
   _fvVolSeries = _fvChart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
   _fvChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
 
-  // ── "+" button tracks crosshair — instant, no timer ──────────────────────
-  _fvChart.subscribeCrosshairMove(function (param) {
-    if (!_isTouchDevice) return;
-    var btn = document.getElementById('fv-add-btn');
-    if (!param.point || _fvTD.active || _fvTD.near || document.getElementById('fv-touch-menu')) {
-      if (btn) btn.style.display = 'none';
-      return;
-    }
-    var y = param.point.y;
-    var levels = _levels[sym] || [], alerts = _alerts[sym] || [];
-    for (var i = 0; i < levels.length; i++) {
-      var ly = _fvSeries.priceToCoordinate(levels[i].price);
-      if (ly != null && Math.abs(ly - y) < 15) { if (btn) btn.style.display = 'none'; return; }
-    }
-    for (var j = 0; j < alerts.length; j++) {
-      var ay = _fvSeries.priceToCoordinate(alerts[j].price);
-      if (ay != null && Math.abs(ay - y) < 15) { if (btn) btn.style.display = 'none'; return; }
-    }
-    var price = _fvSeries.coordinateToPrice(y);
-    if (price != null) _fvTMShowBtn(y, price);
-  });
 
   window.__fvSeries = _fvSeries;
   window.__fvVolSeries = _fvVolSeries;
@@ -2301,19 +2280,11 @@ export function openCoinFullView(sym) {
     active: false, mode: null, item: null,  // currently dragging
     near: false, nearMode: null, nearItem: null, nearIdx: null, // touched near a level/alert
     dragReady: false,                       // true after 200ms hold — drag unlocked
+    addTimer: null,                         // long-press timer for empty area → show menu
     readyTimer: null, deleteTimer: null,    // 200ms / 600ms timers
     startX: 0, startY: 0,
   };
 
-  function _fvTMShowBtn(y, price) {
-    var btn = document.getElementById('fv-add-btn');
-    if (!btn) { btn = document.createElement('button'); btn.id = 'fv-add-btn'; btn.className = 'fv-add-btn'; wrap.appendChild(btn); }
-    btn.innerHTML = icon('plus', 14);
-    btn.style.top = Math.max(4, y - 14) + 'px';
-    btn.style.display = 'flex';
-    btn.dataset.price = price;
-    btn.onclick = function () { btn.style.display = 'none'; _fvTMShowMenu(y, price, null, null); };
-  }
 
   function _fvTMShowMenu(y, price, delMode, delIdx) {
     _fvTMHideMenu();
@@ -2381,6 +2352,7 @@ export function openCoinFullView(sym) {
     _fvTD.dragReady = false;
     clearTimeout(_fvTD.readyTimer); _fvTD.readyTimer = null;
     clearTimeout(_fvTD.deleteTimer); _fvTD.deleteTimer = null;
+    clearTimeout(_fvTD.addTimer); _fvTD.addTimer = null;
     _fvTMHideMenu();
 
     // Ignore touches on the price scale area (rightmost ~75px)
@@ -2425,6 +2397,13 @@ export function openCoinFullView(sym) {
       }
     }
 
+    // Empty area — 500ms long-press shows add menu directly (no "+" button)
+    _fvTD.addTimer = setTimeout(function () {
+      _fvTD.addTimer = null;
+      var price = _fvSeries ? _fvSeries.coordinateToPrice(_fvTD.startY) : null;
+      if (price != null) _fvTMShowMenu(_fvTD.startY, price, null, null);
+    }, 500);
+
   }, { passive: false });
 
   el.addEventListener('touchmove', function (e) {
@@ -2433,6 +2412,11 @@ export function openCoinFullView(sym) {
     var y = t.clientY - rect.top;
     var dx = t.clientX - rect.left - _fvTD.startX, dy = y - _fvTD.startY;
     var moved = Math.sqrt(dx * dx + dy * dy);
+
+    // Cancel add-menu timer if finger moved (treat as scroll)
+    if (_fvTD.addTimer && moved > 8) {
+      clearTimeout(_fvTD.addTimer); _fvTD.addTimer = null;
+    }
 
     // Near an item but drag not ready yet — if finger moved, cancel (treat as scroll)
     if (_fvTD.near && !_fvTD.dragReady && !_fvTD.active) {
@@ -2479,6 +2463,7 @@ export function openCoinFullView(sym) {
   el.addEventListener('touchend', function () {
     clearTimeout(_fvTD.readyTimer); _fvTD.readyTimer = null;
     clearTimeout(_fvTD.deleteTimer); _fvTD.deleteTimer = null;
+    clearTimeout(_fvTD.addTimer); _fvTD.addTimer = null;
     _fvTD.dragReady = false;
     _fvTD.near = false; _fvTD.nearItem = null;
     if (_fvTD.active) {
