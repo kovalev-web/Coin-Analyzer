@@ -26,6 +26,7 @@ import './styles.css';
 document.body.addEventListener('touchstart', function (e) {
   if (!e.target.closest('.tf-picker')) {
     document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
   }
 }, { passive: true });
 
@@ -63,6 +64,7 @@ document.body.addEventListener('click', function (e) {
   // Close tf-dd on any click outside .tf-picker
   if (!e.target.closest('.tf-picker')) {
     document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
   }
 
   var target = e.target.closest('[data-action]');
@@ -120,13 +122,17 @@ document.body.addEventListener('click', function (e) {
       var dd = target.parentElement.querySelector('.tf-dd');
       if (dd) {
         document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+        document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
         dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        var _card = target.closest('.coin-card');
+        if (_card && dd.style.display === 'block') _card.classList.add('dd-open');
       }
       break;
     }
     case 'tf-opt': {
       e.stopPropagation();
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
       if (sym) setChartTF(sym, tf);
       break;
     }
