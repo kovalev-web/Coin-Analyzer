@@ -283,6 +283,9 @@ export function showCodeModal() {
         '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
         '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
         '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
+        '<div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:16px;">' +
+          '<button id="clear-all-alerts-btn" class="code-modal-danger">Удалить все алерты</button>' +
+        '</div>' +
       '</div>' +
       '<div class="popup-footer code-modal-actions">' +
         '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
@@ -295,6 +298,7 @@ export function showCodeModal() {
   var chatInput = document.getElementById('chat-id-input');
   var saveBtn = document.getElementById('code-modal-save');
   var skipBtn = document.getElementById('code-modal-skip');
+  var clearAllBtn = document.getElementById('clear-all-alerts-btn');
 
   if (_userCode) input.value = _userCode;
   if (_chatId) chatInput.value = _chatId;
@@ -316,11 +320,39 @@ export function showCodeModal() {
     loadBriefing();
   }
 
+  var _clearTimer = null;
+  clearAllBtn.addEventListener('click', function () {
+    if (clearAllBtn.classList.contains('confirm')) {
+      clearTimeout(_clearTimer);
+      clearAllAlerts();
+      clearAllBtn.textContent = 'Удалено ✓';
+      clearAllBtn.disabled = true;
+    } else {
+      clearAllBtn.classList.add('confirm');
+      clearAllBtn.textContent = 'Нажмите ещё раз для подтверждения';
+      clearTimeout(_clearTimer);
+      _clearTimer = setTimeout(function () {
+        clearAllBtn.classList.remove('confirm');
+        clearAllBtn.textContent = 'Удалить все алерты';
+      }, 3000);
+    }
+  });
+
   saveBtn.addEventListener('click', save);
   skipBtn.addEventListener('click', function () { backdrop.remove(); });
   document.getElementById('code-modal-close').addEventListener('click', function () { backdrop.remove(); });
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
   input.focus();
+}
+
+export function clearAllAlerts() {
+  Object.keys(_alerts).forEach(function (sym) {
+    (_alerts[sym] || []).forEach(function (a) { _removeAlertLine(sym, a); });
+    _alerts[sym] = [];
+    _updateAlertsBtn(sym);
+    redrawAlerts(sym);
+  });
+  saveAlerts();
 }
 
 function attachLevel(sym, lvl) {
