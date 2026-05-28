@@ -789,6 +789,21 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.fillText(pctStr, lx, ly);
 }
 
+function drawAlertLabel(ctx, a, y) {
+  if (!a.createdAt) return;
+  var d = new Date(a.createdAt);
+  var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
+              ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  ctx.font = '10px Manrope, Arial, sans-serif';
+  var tw = ctx.measureText(label).width;
+  var px = 4, bh = 14;
+  var bx = 8, by = Math.round(y - bh / 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(bx, by, tw + px * 2, bh);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, bx + px, by + 10);
+}
+
 function drawAlertIcons(sym, ctx, rc) {
   var s = _fullSeries[sym]; if (!s) return;
   if (!_bellImg || !_bellImg.complete) return;
@@ -803,14 +818,7 @@ function drawAlertIcons(sym, ctx, rc) {
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
     ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
-    if (a.createdAt) {
-      var d = new Date(a.createdAt);
-      var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
-                  ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-      ctx.font = '10px Manrope, Arial, sans-serif';
-      ctx.fillStyle = '#ef4444';
-      ctx.fillText(label, rc.width / 2 + sz / 2 + 6, y + 4);
-    }
+    drawAlertLabel(ctx, a, y);
     ctx.restore();
   });
 }
@@ -2459,6 +2467,7 @@ export function openCoinFullView(sym) {
           var sz = 18;
           ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
           ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
+          drawAlertLabel(ctx, a, y);
           ctx.restore();
         });
       }
