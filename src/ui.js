@@ -2257,6 +2257,7 @@ export function openCoinFullView(sym) {
     btn.innerHTML = icon('plus', 14);
     btn.style.top = Math.max(4, y - 14) + 'px';
     btn.style.display = 'flex';
+    btn.dataset.price = price;
     btn.onclick = function () { btn.style.display = 'none'; _fvTMShowMenu(y, price, null, null); };
   }
 
@@ -2765,4 +2766,15 @@ export function openClearPopup(sym, btn) {
 export function renderScreener() {
   _screenerMode = true;
   render();
+}
+
+export function repositionFVAddBtn() {
+  var btn = document.getElementById('fv-add-btn');
+  if (!btn || btn.style.display === 'none') return;
+  var price = parseFloat(btn.dataset.price);
+  if (!_fvSeries || !price) return;
+  setTimeout(function () {
+    var newY = _fvSeries.priceToCoordinate(price);
+    if (newY != null) btn.style.top = Math.max(4, newY - 14) + 'px';
+  }, 150);
 }
