@@ -68,8 +68,9 @@ function computeSignals(sym, buf5m, getMicroFn, pd) {
   var delta_price = (closeNow - closeThen) / closeThen * 100;
 
   // CVD z-score
-  var micro = (getMicroFn || defaultGetMicro)(sym);
-  var cvd_z = micro ? (micro.cvd_z !== undefined ? micro.cvd_z : null) : null;
+  var micro    = (getMicroFn || defaultGetMicro)(sym);
+  var cvd_z    = micro ? (micro.cvd_z !== undefined ? micro.cvd_z : null) : null;
+  var cvd_skip = !!(micro && micro.cvd_skip);
 
   return {
     rvol_avg:    rvol_avg,
@@ -77,6 +78,7 @@ function computeSignals(sym, buf5m, getMicroFn, pd) {
     rvol_last:   rvols[0],
     delta_price: delta_price,
     cvd_z:       cvd_z,
+    cvd_skip:    cvd_skip,
   };
 }
 
@@ -86,7 +88,8 @@ function checkEntry(signals, e) {
   if (signals.rvol_avg < e.rvol_avg_threshold)             return false;
   if (signals.rvol_min < e.rvol_min_threshold)             return false;
   if (Math.abs(signals.delta_price) < e.price_change_threshold_pct) return false;
-  if (e.cvd_alignment) {
+  // Skip CVD check during warmup period (cvd_skip=true when history < cvd_warmup_minutes)
+  if (e.cvd_alignment && !signals.cvd_skip) {
     if (signals.cvd_z === null)                            return false;
     if (Math.abs(signals.cvd_z) < e.cvd_zscore_min)       return false;
     if ((signals.cvd_z > 0) !== (signals.delta_price > 0)) return false;
@@ -221,4 +224,14 @@ function updatePhases(symbols, getBufferFn, getMicroFn, logFn, now, pdOverride) 
 
 function resetState() { _state = {}; }
 
-module.exports = { updatePhases: updatePhases, resetState: resetState };
+// Returns true if symbol is in active or cooling phase (not safe to remove from watchlist)
+function isInPhase(sym) {
+  return !!(_state[sym] && _state[sym].status !== 'not_in_phase');
+}
+
+module.exports = {
+  updatePhases:    updatePhases,
+  resetState:      resetState,
+  isInPhase:       isInPhase,
+  defaultGetMicro: defaultGetMicro,
+};

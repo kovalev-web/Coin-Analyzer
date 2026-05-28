@@ -13,7 +13,7 @@ try {
 const { analyzeCoin } = require('./shared/analyze');
 const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
 const { updateAllScores } = require('./inplay/score');
-const { updatePhases }   = require('./inplay/phase-detector');
+const { updatePhases, defaultGetMicro, isInPhase } = require('./inplay/phase-detector');
 const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
 const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi } = require('./inplay/orderbook');
 const inplayCfg = require('./inplay/config.json');
@@ -30,6 +30,18 @@ function logInplay() {
   var line = new Date().toISOString() + ' ' + args.join(' ') + '\n';
   if (_inplayLog) _inplayLog.write(line);
   console.log.apply(console, args);
+}
+
+// Returns CVD micro for a symbol, but signals cvd_skip=true during warmup window
+// so the phase detector bypasses CVD alignment for freshly-added coins whose
+// aggTrade history is too short to produce a reliable z-score.
+function getMicro(sym) {
+  var warmupMs = (inplayCfg.phase_detector.cvd_warmup_minutes || 60) * 60 * 1000;
+  var joinTime = _joinTimes[sym];
+  if (joinTime && (Date.now() - joinTime) < warmupMs) {
+    return { cvd_z: null, cvd_skip: true };
+  }
+  return defaultGetMicro(sym);
 }
 
 var PORT = process.env.WSS_PORT || 3001;
@@ -180,7 +192,9 @@ function checkAlertsForSym(fullSym, cur) {
 var clients = new Set();
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
 var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена текущего UTC-дня (1d kline)
-var inplaySymbols = []; // symbols passing pre-filter, populated after bootstrapTicker
+var inplaySymbols     = []; // symbols passing pre-filter, populated after bootstrapTicker
+var _joinTimes        = {}; // sym → ms when added to watchlist (for CVD warmup)
+var _bootstrapPending = new Set(); // syms currently being bootstrapped (throttle guard)
 var _klineFirstConnect = true; // gap-fill only on reconnect, not initial connect
 
 // ── REST helper ──────────────────────────────────────────────────────────
@@ -837,6 +851,8 @@ bootstrapTicker().then(function() {
   if (!INPLAY_BETA_ENABLED) return;
 
   inplaySymbols = getWatchlist(tickerCache);
+  var _startTime = Date.now();
+  inplaySymbols.forEach(function (sym) { _joinTimes[sym] = _startTime; });
   logInplay('[Inplay] Watchlist:', inplaySymbols.length, 'symbols (q > $10M)');
   bootstrapBuffers(inplaySymbols).then(function () {
     // Subscribe klineWS to 1m and 5m for all inplay symbols
@@ -864,7 +880,7 @@ bootstrapTicker().then(function() {
     setInterval(function () {
       try {
         // Phase detector — independent of score, always broadcast
-        var phaseResult = updatePhases(inplaySymbols, null, null, logInplay);
+        var phaseResult = updatePhases(inplaySymbols, null, getMicro, logInplay);
         var phaseData = phaseResult.phases.map(function (p) {
           var tc = tickerCache[p.symbol];
           return Object.assign({}, p, { vol24h: tc ? parseFloat(tc.q) : null });
@@ -953,23 +969,50 @@ setInterval(async function () {
 }, 60000);
 
 // ── Dynamic watchlist refresh ─────────────────────────────────────────────
-// Every 60s: pick up coins that crossed the $10M threshold since server start
-// (new listings, low-cap coins that gained volume). Adds them to inplaySymbols
-// and subscribes to all necessary streams — no server restart needed.
+// Every 60s:
+//   1. Remove symbols that dropped below $7M (hysteresis) and aren't in a phase
+//   2. Add new symbols that crossed the $10M threshold
+//   3. Skip symbols already being bootstrapped (_bootstrapPending guard)
+//   4. Tag new symbols with _joinTimes for CVD warmup grace period
 
 setInterval(function () {
   if (!INPLAY_BETA_ENABLED) return;
-  var minVol = inplayCfg.prefilter.min_quote_volume_24h;
-  var currentSet = new Set(inplaySymbols);
 
+  var minVol    = inplayCfg.prefilter.min_quote_volume_24h;        // $10M add
+  var removeVol = inplayCfg.prefilter.watchlist_remove_vol || 7000000; // $7M remove
+
+  // ── 1. Remove coins that fell below removeVol and are not in an active phase
+  var toRemove = inplaySymbols.filter(function (sym) {
+    var t = tickerCache[sym];
+    if (!t || parseFloat(t.q) >= removeVol) return false; // still above threshold
+    if (isInPhase(sym)) return false;                     // keep — phase in progress
+    return true;
+  });
+  if (toRemove.length) {
+    var removeSet = new Set(toRemove);
+    inplaySymbols = inplaySymbols.filter(function (s) { return !removeSet.has(s); });
+    logInplay('[Inplay] Watchlist -' + toRemove.length + ':', toRemove.join(', '));
+  }
+
+  // ── 2. Add new symbols that crossed the $10M threshold
+  var currentSet = new Set(inplaySymbols);
   var newSyms = Object.values(tickerCache)
-    .filter(function (t) { return parseFloat(t.q) >= minVol && !currentSet.has(t.s); })
+    .filter(function (t) {
+      return parseFloat(t.q) >= minVol &&
+             !currentSet.has(t.s) &&
+             !_bootstrapPending.has(t.s); // skip if already bootstrapping
+    })
     .map(function (t) { return t.s; });
 
   if (!newSyms.length) return;
 
   logInplay('[Inplay] Watchlist +' + newSyms.length + ':', newSyms.join(', '));
-  newSyms.forEach(function (sym) { inplaySymbols.push(sym); });
+  var joinNow = Date.now();
+  newSyms.forEach(function (sym) {
+    inplaySymbols.push(sym);
+    _joinTimes[sym] = joinNow;     // CVD warmup starts now
+    _bootstrapPending.add(sym);    // guard against double-bootstrap
+  });
 
   bootstrapBuffers(newSyms).then(function () {
     newSyms.forEach(function (sym) {
@@ -979,9 +1022,11 @@ setInterval(function () {
       subscribeAggTrade(sym.toLowerCase() + '@aggTrade');
       initOrderbookState(sym);
       subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
+      _bootstrapPending.delete(sym);
     });
     logInplay('[Inplay] Watchlist now', inplaySymbols.length, 'symbols');
   }).catch(function (e) {
+    newSyms.forEach(function (sym) { _bootstrapPending.delete(sym); });
     logInplay('[Inplay] Refresh bootstrap error:', e.message);
   });
 }, 60000);

@@ -25,6 +25,7 @@
   },
   "prefilter": {
     "min_quote_volume_24h": 10000000,
+    "watchlist_remove_vol": 7000000,
     "min_buffer_5m": 30,
     "spread_bps_max": 10,
     "depth_usdt_10bps_min": 50000
@@ -51,6 +52,7 @@
       "rvol_avg_threshold": 3.0,
       "price_stagnant_threshold_pct": 1.0
     },
-    "cooling_timeout_minutes": 120
+    "cooling_timeout_minutes": 120,
+    "cvd_warmup_minutes": 60
   }
 }
