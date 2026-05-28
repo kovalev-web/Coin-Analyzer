@@ -2553,7 +2553,7 @@ function _renderSearchList(popup, query) {
   var _qStripped = _qRaw.replace(/usdt$|usdc$|busd$|usd$|us$|u$/, '');
   var q = _qStripped || _qRaw;
   var coins = state.coins;
-  var PINNED = ['btc', 'eth', 'sol'];
+  var PINNED = ['btc', 'eth'];
 
   function rowHTML(c) {
     var change = c.price_change_percentage_24h || 0;
