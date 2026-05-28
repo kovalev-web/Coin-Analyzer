@@ -9,8 +9,9 @@ var statusEl = document.getElementById('status');
 var tableEl  = document.getElementById('table');
 var tbodyEl  = document.getElementById('tbody');
 var emptyEl  = document.getElementById('empty');
-var histTbodyEl = document.getElementById('hist-tbody');
-var histCountEl = document.getElementById('hist-count');
+var histTbodyEl      = document.getElementById('hist-tbody');
+var histCountEl      = document.getElementById('hist-count');
+var watchlistCountEl = document.getElementById('watchlist-count');
 var ws, reconnectTimer;
 
 var lastData = [];
@@ -211,6 +212,8 @@ function onMessage(e) {
   lastData = msg.data || [];
   recordNewPhases(lastData);
   renderRows();
+
+  if (msg.watchlist != null) watchlistCountEl.textContent = msg.watchlist + ' in watchlist';
 
   var age = Math.round((Date.now() - msg.ts) / 1000);
   statusEl.textContent = 'updated ' + new Date(msg.ts).toLocaleTimeString() +

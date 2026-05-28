@@ -869,7 +869,7 @@ bootstrapTicker().then(function() {
           var tc = tickerCache[p.symbol];
           return Object.assign({}, p, { vol24h: tc ? parseFloat(tc.q) : null });
         });
-        var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now() });
+        var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now(), watchlist: inplaySymbols.length });
         clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(phaseMsg); });
 
         // Legacy score ranking (kept for logging and comparison)
