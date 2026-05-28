@@ -577,6 +577,8 @@ export function startChartPolling() {
   _chartTimer = setInterval(function () { pollCharts(); }, 10000);
   // Гарантированный 2с-таймер для обновления % и объёма в DOM.
   _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 2000);
+  // Обновляем NATR раз в 5 минут: каждые 5м закрывается новая свеча, окно смещается.
+  setInterval(function () { fetchAllNATR(filteredCoins(), true); }, 5 * 60 * 1000);
   // Сброс d1Open при смене UTC-дня: dailyOpen хранит open полуночи UTC,
   // при смене суток он устаревает и % начинает расходиться с Binance.
   var _lastDay = new Date().toISOString().slice(0, 10);
@@ -650,10 +652,10 @@ export async function fetchNATR(symbol) {
   } catch (e) { state.natrData[symbol] = 'error'; }
 }
 
-export async function fetchAllNATR(coins) {
+export async function fetchAllNATR(coins, force) {
   for (var i = 0; i < coins.length; i++) {
     var c = coins[i];
-    if (state.natrData[c.symbol] && state.natrData[c.symbol] !== 'error') continue;
+    if (!force && state.natrData[c.symbol] && state.natrData[c.symbol] !== 'error') continue;
     await fetchNATR(c.symbol);
     applyLivePriceUpdates();
     if (i < coins.length - 1) await sleep(80);
