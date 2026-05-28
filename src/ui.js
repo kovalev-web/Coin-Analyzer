@@ -793,9 +793,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.clearRect(0, 0, rc.width, rc.height);
   drawAlertIcons(sym, ctx, rc);
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
-  var isUp = pr2 >= pr1, color = isUp ? getCSSVar('--bullish') : getCSSVar('--danger');
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
-  var pctStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+  var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
   var chart = _charts[sym];
   if (chart) {
     var t1 = chart.timeScale().coordinateToTime(p1.x), t2 = chart.timeScale().coordinateToTime(p2.x);
@@ -805,15 +804,10 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
       pctStr += '  ·  ' + dur;
     }
   }
+  var color = getCSSVar('--charcoal');
   // Fill zone between the two price levels
-  ctx.fillStyle = isUp ? 'rgba(22,163,74,0.07)' : 'rgba(220,38,38,0.07)';
+  ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
-  // Horizontal dashed lines at each price level
-  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-  ctx.beginPath();
-  ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y);
-  ctx.moveTo(0, p2.y); ctx.lineTo(rc.width, p2.y);
-  ctx.stroke(); ctx.setLineDash([]);
   // Diagonal line from start to end point
   ctx.strokeStyle = color; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
