@@ -316,7 +316,6 @@ on('alert:triggered', function (msg) {
 
 window.addEventListener('orientationchange', function () {
   closeMSPopup();
-  closeClearPopup();
   var tm = document.getElementById('fv-touch-menu');
   if (tm) tm.remove();
 });
