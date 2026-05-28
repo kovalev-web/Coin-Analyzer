@@ -2768,21 +2768,3 @@ export function renderScreener() {
   render();
 }
 
-export function repositionFVAddBtn() {
-  var btn = document.getElementById('fv-add-btn');
-  if (!btn || btn.style.display === 'none') return;
-  var price = parseFloat(btn.dataset.price);
-  if (!_fvSeries || !price) return;
-  var done = false;
-  function reposition() {
-    if (done) return;
-    done = true;
-    window.removeEventListener('resize', reposition);
-    requestAnimationFrame(function () {
-      var newY = _fvSeries.priceToCoordinate(price);
-      if (newY != null) btn.style.top = Math.max(4, newY - 14) + 'px';
-    });
-  }
-  window.addEventListener('resize', reposition);
-  setTimeout(function () { done = true; window.removeEventListener('resize', reposition); }, 1000);
-}
