@@ -659,7 +659,11 @@ function calcPriceFormat(price) {
 // Форматирует Unix timestamp (секунды) в локальное время устройства
 function _localTimeFmt(ts) {
   var d = new Date(ts * 1000);
-  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+  var days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  var months = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  var hh = d.getHours().toString().padStart(2, '0');
+  var mm = d.getMinutes().toString().padStart(2, '0');
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ', ' + hh + ':' + mm;
 }
 
 // Форматирует метки на оси времени с учётом уровня детализации
