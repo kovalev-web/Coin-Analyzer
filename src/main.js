@@ -334,6 +334,14 @@ on('natr:refresh', function () {
 window.addEventListener('orientationchange', function () {
   closeMSPopup();
   closeClearPopup();
+  // Close dropdown-mode popups — their positions are stale after viewport resize
+  closeSearchPopup();
+  closeBriefingPanel();
+  var _ao = document.getElementById('analysis-overlay');
+  if (_ao && _ao.style.display !== 'none' && !_ao._lockedScroll) {
+    _ao.style.display = 'none';
+    if (_ao._popupCard) { _ao._popupCard.style.overflow = ''; _ao._popupCard = null; }
+  }
   var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
