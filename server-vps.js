@@ -779,7 +779,8 @@ wss.on('connection', function (ws) {
       }
 
       else if (msg.type === 'save_alerts') {
-        // Frontend pushes alert data directly — instant alertsMemory update, no Redis polling delay
+        // Frontend pushes alert data directly — instant alertsMemory update + Redis persist.
+        // Previously only updated in-memory; if HTTP backup failed, 30s Redis reload erased the alert.
         var code = msg.code;
         if (code && typeof code === 'string' && /^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
           var ck = code.toLowerCase();
@@ -788,6 +789,7 @@ wss.on('connection', function (ws) {
           if (msg.data !== undefined) {
             alertsMemory[ck].data = mergeAlertData(alertsMemory[ck].data, msg.data);
           }
+          saveAlertsToRedis(ck); // persist immediately so 30s reload can't erase it
         }
       }
 
