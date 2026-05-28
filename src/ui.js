@@ -795,16 +795,16 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
   var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+  var durStr = '';
   var chart = _charts[sym];
   if (chart) {
     var t1 = chart.timeScale().coordinateToTime(p1.x), t2 = chart.timeScale().coordinateToTime(p2.x);
     if (t1 != null && t2 != null) {
       var d = Math.abs(t2 - t1);
-      var dur = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
-      pctStr += '  ·  ' + dur;
+      durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
     }
   }
-  var color = getCSSVar('--charcoal');
+  var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
   // Fill zone between the two price levels
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
@@ -819,12 +819,13 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
-  // Label
-  ctx.font = 'bold 16px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
+  // Label — pct and duration on separate lines
+  ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
   var lx = p2.x + 12, ly = p2.y - 10;
   if (lx + 170 > rc.width) lx = p2.x - 175; if (lx < 2) lx = 2;
-  if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 4) ly = rc.height - 4;
+  if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 20) ly = rc.height - 20;
   ctx.fillText(pctStr, lx, ly);
+  if (durStr) ctx.fillText(durStr, lx, ly + 18);
 }
 
 function drawAlertLabel(ctx, a, y) {
