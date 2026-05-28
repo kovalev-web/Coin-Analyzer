@@ -289,7 +289,11 @@ function processKlineUpdate(msg) {
     var fvs = window.__fvSeries;
     if (fvs) { try { fvs.update(k); } catch (e) {} }
     var fvvs = window.__fvVolSeries;
-    if (fvvs) { try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
+    if (fvvs) {
+      try { fvvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {}
+      var _vl = document.getElementById('fv-vol-label');
+      if (_vl && !_vl.dataset.hovered) _vl.textContent = 'vol. ' + fmt(k.volume || 0).replace('$', '');
+    }
   }
 
   var coin = state.coins.find(function (c) { return c.symbol === sym; });

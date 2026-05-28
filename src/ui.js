@@ -2060,8 +2060,10 @@ export function openCoinFullView(sym) {
     if (!lbl) return;
     var volData = param.seriesData && param.seriesData.get(_fvVolSeries);
     if (volData && volData.value != null) {
+      lbl.dataset.hovered = '1';
       lbl.textContent = 'vol. ' + fmt(volData.value).replace('$', '');
     } else {
+      delete lbl.dataset.hovered;
       lbl.textContent = _fvLastVol ? 'vol. ' + fmt(_fvLastVol).replace('$', '') : '';
     }
   });
