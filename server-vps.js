@@ -951,3 +951,37 @@ setInterval(async function () {
     console.error('[REST refresh] Failed:', e.message);
   }
 }, 60000);
+
+// ── Dynamic watchlist refresh ─────────────────────────────────────────────
+// Every 60s: pick up coins that crossed the $10M threshold since server start
+// (new listings, low-cap coins that gained volume). Adds them to inplaySymbols
+// and subscribes to all necessary streams — no server restart needed.
+
+setInterval(function () {
+  if (!INPLAY_BETA_ENABLED) return;
+  var minVol = inplayCfg.prefilter.min_quote_volume_24h;
+  var currentSet = new Set(inplaySymbols);
+
+  var newSyms = Object.values(tickerCache)
+    .filter(function (t) { return parseFloat(t.q) >= minVol && !currentSet.has(t.s); })
+    .map(function (t) { return t.s; });
+
+  if (!newSyms.length) return;
+
+  logInplay('[Inplay] Watchlist +' + newSyms.length + ':', newSyms.join(', '));
+  newSyms.forEach(function (sym) { inplaySymbols.push(sym); });
+
+  bootstrapBuffers(newSyms).then(function () {
+    newSyms.forEach(function (sym) {
+      subscribeKline(sym.toLowerCase() + '@kline_1m');
+      subscribeKline(sym.toLowerCase() + '@kline_5m');
+      initTradeState(sym);
+      subscribeAggTrade(sym.toLowerCase() + '@aggTrade');
+      initOrderbookState(sym);
+      subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
+    });
+    logInplay('[Inplay] Watchlist now', inplaySymbols.length, 'symbols');
+  }).catch(function (e) {
+    logInplay('[Inplay] Refresh bootstrap error:', e.message);
+  });
+}, 60000);
