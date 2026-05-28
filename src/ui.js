@@ -766,6 +766,13 @@ export function setChartTF(symbol, tf) {
   fetchChart(symbol, tf);
 }
 
+export function clearAllCrosshairs() {
+  Object.keys(_charts).forEach(function (sym) {
+    try { _charts[sym].clearCrosshairPosition(); } catch (e) {}
+  });
+  if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
+}
+
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
