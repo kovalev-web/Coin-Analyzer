@@ -1504,12 +1504,23 @@ export function openTVMode() {
   window.__tvChartSeries = {};
   window.__tvChartVolSeries = {};
 
-  // create charts staggered — TV hardware needs time between each init
+  // create charts staggered — TV hardware needs time between each init.
+  // autoSize:false + explicit dims avoids the dual-ResizeObserver conflict that
+  // blanks charts on old TV WebKit (autoSize creates its own RO; ours conflicts).
   coins.forEach(function (c, idx) {
     setTimeout(function () {
       var el = document.getElementById('tvchart-' + c.symbol);
       if (!el || !window.LightweightCharts) return;
-      var chart = window.LightweightCharts.createChart(el, getChartOpts());
+
+      // Explicit dimensions — more reliable than autoSize on TV browsers
+      var w = el.offsetWidth || el.parentElement.offsetWidth || 400;
+      var h = el.offsetHeight || Math.max(el.parentElement.offsetHeight - 34, 120);
+      var opts = getChartOpts();
+      opts.autoSize = false;
+      opts.width = w;
+      opts.height = h;
+
+      var chart = window.LightweightCharts.createChart(el, opts);
       var s = chart.addCandlestickSeries(getSeriesColors());
       var volClr = getCSSVar('--vol-up');
       var vs = chart.addHistogramSeries({ color: volClr, priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
@@ -1528,11 +1539,24 @@ export function openTVMode() {
         chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
       }
 
+      // Single ResizeObserver — safe since autoSize is off
       new ResizeObserver(function () {
-        if (_tvCharts[c.symbol]) _tvCharts[c.symbol].resize(el.offsetWidth, el.offsetHeight);
+        var nw = el.offsetWidth, nh = el.offsetHeight;
+        if (_tvCharts[c.symbol] && nw && nh) _tvCharts[c.symbol].resize(nw, nh);
       }).observe(el);
-    }, 300 + idx * 120);
+    }, 400 + idx * 200);
   });
+
+  // Final forced resize after all charts are created + layout settles (~2.5s total)
+  setTimeout(function () {
+    coins.forEach(function (c) {
+      var el = document.getElementById('tvchart-' + c.symbol);
+      if (el && _tvCharts[c.symbol]) {
+        var nw = el.offsetWidth, nh = el.offsetHeight;
+        if (nw && nh) _tvCharts[c.symbol].resize(nw, nh);
+      }
+    });
+  }, 400 + 6 * 200 + 300);
 }
 
 export function closeTVMode() {
