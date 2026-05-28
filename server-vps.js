@@ -64,12 +64,13 @@ async function sendTG(chatId, text, replyMarkup) {
   try {
     var body = { chat_id: chatId, text: text, parse_mode: 'HTML' };
     if (replyMarkup) body.reply_markup = replyMarkup;
-    await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
+    var r = await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-  } catch (e) {}
+    if (!r.ok) console.error('[TG] sendMessage failed:', r.status, await r.text());
+  } catch (e) { console.error('[TG] sendMessage error:', e.message); }
 }
 
 async function pollTelegram() {
@@ -208,6 +209,9 @@ async function bootstrapTicker() {
           q: t.quoteVolume,
           P: t.priceChangePercent,
         };
+        // Seed prevPrices so the first WS tick can detect alert crossings after restart
+        var symLower = t.symbol.replace(/USDT$/, '').toLowerCase();
+        prevPrices[symLower] = parseFloat(t.lastPrice);
       }
     });
     console.log('[Bootstrap] Loaded', Object.keys(tickerCache).length, 'tickers');
