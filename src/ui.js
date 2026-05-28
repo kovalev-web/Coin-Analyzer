@@ -1541,7 +1541,7 @@ function _topbarHTML() {
     + '<button class="topbar-logo" data-action="refresh" title="Обновить">' + _LOGO_SVG + '</button>'
     + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
     + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Screener</button>'
-    + '<a class="nav-pill nav-pill-beta" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>'
+    + '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>'
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Поиск">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 16) + '</button>'

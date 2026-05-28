@@ -72,8 +72,6 @@
     .nav-pill{background:transparent;color:var(--graphite);border:none;padding:0 10px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
     .nav-pill:hover{color:var(--ink);}
     .nav-pill.active{background:var(--fog);color:var(--ink);}
-    .nav-pill-beta{color:var(--graphite);}
-    .nav-pill-beta:hover{color:var(--ink);}
     .nav-beta-tag{font-size:9px;font-weight:700;color:#e05c5c;letter-spacing:0.03em;text-transform:uppercase;}
     .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:24px 32px 0;}
     .metric-card{background:var(--paper);border-radius:16px;padding:20px 24px;box-shadow:var(--shadow-soft);}
@@ -319,7 +317,7 @@
     .btn-burger:hover{opacity:0.8;}
     .burger-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 8px 24px rgba(26,26,26,0.14);overflow:hidden;min-width:160px;z-index:500;}
     .burger-dd.open{display:block;}
-    .burger-dd-item{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;font-family:'Manrope',Arial,sans-serif;height:auto;border-radius:0;letter-spacing:0;}
+    .burger-dd-item{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;font-family:'Manrope',Arial,sans-serif;height:auto;border-radius:0;letter-spacing:0;text-decoration:none;}
     .burger-dd-item:hover{background:var(--fog);opacity:1;}
 
     /* ── Tier badge (topbar single button) ── */
