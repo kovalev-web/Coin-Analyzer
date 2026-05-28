@@ -403,7 +403,7 @@ export function applyLivePriceUpdates() {
     if (nd && nd !== 'loading' && nd !== 'error') {
       var v = nd.value;
       var newNat = v.toFixed(2);
-      if (spans[1].textContent !== newNat) { spans[1].textContent = newNat; spans[1].className = 'stat-val ' + (v < 1 ? 'dn' : v < 2.5 ? 'warn' : 'up'); }
+      if (spans[1].textContent !== newNat) { spans[1].textContent = newNat; spans[1].className = 'stat-val ' + (v < 1 ? 'hot' : v < 2.0 ? 'warn' : 'up'); }
     }
     var newVol = fmt(Math.round(coin.total_volume || 0)).replace('$', '');
     if (spans[2].textContent !== newVol) spans[2].textContent = newVol;
@@ -426,7 +426,7 @@ export function applyLivePriceUpdates() {
         if (fvNd && fvNd !== 'loading' && fvNd !== 'error') {
           var fvV = fvNd.value;
           var newFvNat = fvV.toFixed(2);
-          if (fvSpans[1].textContent !== newFvNat) { fvSpans[1].textContent = newFvNat; fvSpans[1].className = 'stat-val ' + (fvV < 1 ? 'dn' : fvV < 2.5 ? 'warn' : 'up'); }
+          if (fvSpans[1].textContent !== newFvNat) { fvSpans[1].textContent = newFvNat; fvSpans[1].className = 'stat-val ' + (fvV < 1 ? 'hot' : fvV < 2.0 ? 'warn' : 'up'); }
         }
         var newFvVol = fmt(Math.round(fvCoin.total_volume || 0)).replace('$', '');
         if (fvSpans[2].textContent !== newFvVol) fvSpans[2].textContent = newFvVol;
