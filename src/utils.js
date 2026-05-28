@@ -32,7 +32,7 @@ export function icon(name, size, style) {
   Object.keys(base).forEach(function(k) { attrs[k] = base[k]; });
   attrs.width = size;
   attrs.height = size;
-  attrs['stroke-width'] = 1;
+  attrs['stroke-width'] = 2;
   if (style) attrs.style = style;
   var attrStr = Object.keys(attrs).map(function(k) { return k + '="' + attrs[k] + '"'; }).join(' ');
   function kids(arr) {
