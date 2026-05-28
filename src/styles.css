@@ -94,8 +94,6 @@
     .card-head{padding:0 14px;height:36px;display:flex;align-items:center;gap:10px;background:var(--canvas);border-radius:16px 16px 0 0;}
     .card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;flex:1;}
     .card-head-left{display:flex;align-items:center;gap:10px;min-width:0;}
-    .card-inline-stats{display:flex;align-items:center;gap:10px;order:3;flex:0 0 100%;padding-bottom:2px;}
-    .card-inline-stats .stat-val{font-size:13px;font-weight:500;color:var(--ink);cursor:default;padding:0;}
     .stat-val{font-size:13px;font-weight:500;color:var(--ink);cursor:default;}
     .stat-val.up{color:var(--bullish);}
     .stat-val.dn{color:var(--bloom-deep);}
@@ -288,7 +286,7 @@
     .fv-coin-info{position:absolute;top:14px;left:14px;z-index:10;display:flex;flex-direction:column;gap:18px;}
     .fv-info-top{display:flex;align-items:center;gap:14px;}
     .fv-info-stats{display:flex;align-items:center;gap:10px;padding-left:2px;}
-    .fv-info-stats .stat-val{font-size:13px;font-weight:500;padding:0;}
+    .fv-info-stats .stat-val{font-weight:500;padding:0;}
     .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:60px;text-align:left;}
     .fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
     .fv-bottom-bar{display:none;align-items:center;justify-content:space-between;padding:10px 24px 18px;background:var(--paper);border-top:1px solid var(--hairline);flex-shrink:0;}
