@@ -159,6 +159,7 @@ export function screenerCoins() {
 
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
 var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
+var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
 // Pre-render Lucide bell as SVG image for canvas drawing
 var _bellImg = (function () {
@@ -2022,7 +2023,7 @@ export function openCoinFullView(sym) {
 
   // ── "+" button tracks crosshair — instant, no timer ──────────────────────
   _fvChart.subscribeCrosshairMove(function (param) {
-    if (window.innerWidth > 768) return;
+    if (!_isTouchDevice) return;
     var btn = document.getElementById('fv-add-btn');
     if (!param.point || _fvTD.active || _fvTD.near || document.getElementById('fv-touch-menu')) {
       if (btn) btn.style.display = 'none';
