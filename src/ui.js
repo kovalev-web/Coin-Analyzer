@@ -2748,9 +2748,10 @@ export function openClearPopup(sym, btn) {
   if (_isTouchDevice) {
     popup.style.position = 'fixed';
     popup.style.bottom = '72px';
-    popup.style.left = '8px';
-    popup.style.right = '8px';
+    popup.style.left = '16px';
+    popup.style.right = 'auto';
     popup.style.top = 'auto';
+    popup.style.width = 'fit-content';
   } else {
     var btnRect = btn.getBoundingClientRect();
     var popupW = 220;
