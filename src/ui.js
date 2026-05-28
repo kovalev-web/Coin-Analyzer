@@ -808,6 +808,10 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   // Fill zone between the two price levels
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
+  // Horizontal dashed line at start price level only
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.stroke();
+  ctx.setLineDash([]);
   // Diagonal line from start to end point
   ctx.strokeStyle = color; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
