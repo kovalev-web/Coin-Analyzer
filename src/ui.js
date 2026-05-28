@@ -158,7 +158,7 @@ export function screenerCoins() {
 // ── Charts ─────────────────────────────────────────────────────────────────
 
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
-var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null;
+var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
 
 // Pre-render Lucide bell as SVG image for canvas drawing
 var _bellImg = (function () {
@@ -1932,6 +1932,9 @@ function _setFVData(sym, cd) {
       return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
     }));
   }
+  _fvLastVol = cd.candles[cd.candles.length - 1].volume || 0;
+  var _volLbl = document.getElementById('fv-vol-label');
+  if (_volLbl) _volLbl.textContent = 'vol. ' + fmt(_fvLastVol).replace('$', '');
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
@@ -2044,8 +2047,26 @@ export function openCoinFullView(sym) {
   window.__fvSymbol = sym;
   window.__fvTF = tf;
 
-  // Canvas overlay for alert bells + ruler
+  // Volume label overlay
   var wrap = document.querySelector('.fv-chart-wrap');
+  var volLbl = document.createElement('div');
+  volLbl.id = 'fv-vol-label';
+  volLbl.className = 'fv-vol-label';
+  wrap.appendChild(volLbl);
+
+  // Volume label tracks crosshair
+  _fvChart.subscribeCrosshairMove(function (param) {
+    var lbl = document.getElementById('fv-vol-label');
+    if (!lbl) return;
+    var volData = param.seriesData && param.seriesData.get(_fvVolSeries);
+    if (volData && volData.value != null) {
+      lbl.textContent = 'vol. ' + fmt(volData.value).replace('$', '');
+    } else {
+      lbl.textContent = _fvLastVol ? 'vol. ' + fmt(_fvLastVol).replace('$', '') : '';
+    }
+  });
+
+  // Canvas overlay for alert bells + ruler
   var rc = document.createElement('canvas');
   rc.className = 'fv-canvas';
   wrap.appendChild(rc);
