@@ -773,6 +773,22 @@ export function clearAllCrosshairs() {
   if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
 }
 
+// Called after orientation change: resize card charts to new container dims + clear crosshair.
+// Card charts have no autoSize — canvas stays at old size unless explicitly resized.
+export function resizeAllCharts() {
+  Object.keys(_charts).forEach(function (sym) {
+    var el = document.getElementById('chart-' + sym);
+    if (!el || !_charts[sym]) return;
+    var w = el.offsetWidth, h = el.offsetHeight;
+    if (!w || !h) return;
+    try { _charts[sym].resize(w, h); } catch (e) {}
+    var ruler = _rulers[sym];
+    if (ruler && ruler.canvas) { ruler.canvas.width = w; ruler.canvas.height = h; }
+    try { _charts[sym].clearCrosshairPosition(); } catch (e) {}
+  });
+  if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
+}
+
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
