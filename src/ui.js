@@ -409,13 +409,7 @@ function alertsData() {
 }
 
 function alertLineOpts(a) {
-  var title = '';
-  if (a.createdAt) {
-    var d = new Date(a.createdAt);
-    title = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
-            ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-  }
-  return { color: a.triggered ? 'rgba(239,68,68,0.35)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: title };
+  return { color: a.triggered ? 'rgba(239,68,68,0.35)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 // Create or update the price lines for a single alert (idempotent).
@@ -809,6 +803,14 @@ function drawAlertIcons(sym, ctx, rc) {
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
     ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+    if (a.createdAt) {
+      var d = new Date(a.createdAt);
+      var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
+                  ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+      ctx.font = '10px Manrope, Arial, sans-serif';
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText(label, rc.width / 2 + sz / 2 + 6, y + 4);
+    }
     ctx.restore();
   });
 }
