@@ -206,6 +206,11 @@ function processTickerPush(arr) {
   // При смене порядка: переставляем карточки через renderCards (cards:sync),
   // а не полный render() — render() уничтожает все чарты и пересоздаёт их,
   // что вызывало флик раз в 1-2 минуты при изменении рейтинга по объёму.
+  // Fetch NATR for coins that just entered the visible filter (volume crossed tier threshold)
+  var _newlyFiltered = _sortedOrder.split(',').filter(function (s) {
+    return s && !_domOrder.split(',').includes(s) && (!state.natrData[s] || state.natrData[s] === 'error');
+  });
+  if (_newlyFiltered.length) fetchAllNATR(_newlyFiltered.map(function (s) { return { symbol: s }; }));
   emit('cards:sync');
 }
 
