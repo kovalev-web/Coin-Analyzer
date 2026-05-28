@@ -408,8 +408,14 @@ function alertsData() {
   return out;
 }
 
-function alertLineOpts(triggered) {
-  return { color: triggered ? 'rgba(239,68,68,0.35)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
+function alertLineOpts(a) {
+  var title = '';
+  if (a.createdAt) {
+    var d = new Date(a.createdAt);
+    title = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
+            ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  }
+  return { color: a.triggered ? 'rgba(239,68,68,0.35)' : '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: title };
 }
 
 // Create or update the price lines for a single alert (idempotent).
@@ -417,7 +423,7 @@ function alertLineOpts(triggered) {
 function _syncAlertLine(sym, a) {
   if (!_aLines[a.id]) _aLines[a.id] = { card: null, fv: null };
   var refs = _aLines[a.id];
-  var opts = Object.assign({ price: a.price }, alertLineOpts(a.triggered));
+  var opts = Object.assign({ price: a.price }, alertLineOpts(a));
 
   // Card chart line
   var s = _fullSeries[sym];
