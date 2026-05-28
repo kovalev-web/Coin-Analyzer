@@ -444,5 +444,5 @@
     .search-row-chg.dn{color:var(--bloom-deep);}
     .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:13px;}
     .search-divider{height:1px;background:var(--hairline);margin:4px 0;}
-    .search-popup-list{flex:1;}
+    .search-popup-list{overflow-y:auto;max-height:340px;padding-bottom:8px;}
 

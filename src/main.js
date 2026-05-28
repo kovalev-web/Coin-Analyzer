@@ -110,6 +110,7 @@ document.body.addEventListener('click', function (e) {
       var ap = document.getElementById('analysis-overlay');
       if (ap) {
         if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; }
+        document.body.style.overflow = '';
         ap.style.display = 'none';
       }
       break;
@@ -314,9 +315,7 @@ on('alert:triggered', function (msg) {
 // ── Close popups on orientation change (safety net) ───────────────────────
 
 window.addEventListener('orientationchange', function () {
-  closeSearchPopup();
   closeMSPopup();
-  closeBriefingPanel();
   closeClearPopup();
 });
 

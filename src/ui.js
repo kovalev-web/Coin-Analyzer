@@ -1068,7 +1068,23 @@ export function openAnalysisPopup(sym, btn) {
 
   popup._popupCard = card;
 
-  if (card) {
+  if (_isTouchDevice) {
+    document.body.appendChild(popup);
+    popup.style.position = 'fixed';
+    popup.style.top = '0';
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.bottom = '0';
+    popup.style.width = '100%';
+    popup.style.maxWidth = '100%';
+    popup.style.height = '100%';
+    popup.style.maxHeight = '100%';
+    popup.style.borderRadius = '0';
+    popup.style.border = 'none';
+    popup.style.overflowY = 'auto';
+    popup.style.zIndex = '99999';
+    document.body.style.overflow = 'hidden';
+  } else if (card) {
     // Normal card mode
     card.style.overflow = 'visible';
     card.style.position = 'relative';
@@ -1094,7 +1110,6 @@ export function openAnalysisPopup(sym, btn) {
     popup.style.position = 'fixed';
     popup.style.width = popupW + 'px';
     popup.style.maxWidth = 'none';
-    // Open above button if it's in the bottom half of screen
     if (btnRect2.bottom > viewportH / 2) {
       popup.style.top = 'auto';
       popup.style.bottom = (viewportH - btnRect2.top + 6) + 'px';
@@ -1779,11 +1794,18 @@ export function openBriefingPanel() {
 
   if (_isTouchDevice) {
     popup.style.position = 'fixed';
-    popup.style.top = '72px';
-    popup.style.left = '8px';
-    popup.style.right = '8px';
-    popup.style.bottom = 'auto';
-    popup.style.width = 'auto';
+    popup.style.top = '0';
+    popup.style.left = '0';
+    popup.style.right = '0';
+    popup.style.bottom = '0';
+    popup.style.width = '100%';
+    popup.style.maxWidth = '100%';
+    popup.style.height = '100%';
+    popup.style.maxHeight = '100%';
+    popup.style.borderRadius = '0';
+    popup.style.border = 'none';
+    popup.style.overflowY = 'auto';
+    document.body.style.overflow = 'hidden';
   } else if (btn) {
     var btnRect = btn.getBoundingClientRect();
     var inFixed = !!btn.closest('#fv-overlay');
@@ -1798,6 +1820,7 @@ export function openBriefingPanel() {
 export function closeBriefingPanel() {
   var popup = document.getElementById('bp-popup');
   if (popup) popup.style.display = 'none';
+  document.body.style.overflow = '';
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = '';
 }
@@ -2667,6 +2690,9 @@ export function openSearchPopup() {
     popup.style.maxHeight = '100%';
     popup.style.borderRadius = '0';
     popup.style.border = 'none';
+    var _list = popup.querySelector('.search-popup-list');
+    if (_list) { _list.style.flex = '1'; _list.style.maxHeight = 'none'; _list.style.overflowY = 'auto'; }
+    document.body.style.overflow = 'hidden';
   } else {
     var btn = document.querySelector('[data-action="open-search"]');
     if (btn) {
@@ -2683,6 +2709,7 @@ export function openSearchPopup() {
 export function closeSearchPopup() {
   var popup = document.getElementById('search-popup');
   if (popup) popup.style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 // ── Clear popup ──────────────────────────────────────────────────────────────
