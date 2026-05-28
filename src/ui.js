@@ -670,7 +670,7 @@ function getChartColors() {
 }
 
 function getSeriesColors() {
-  var up = getCSSVar('--candle-up'), dn = getCSSVar('--steel');
+  var up = getCSSVar('--candle-up'), dn = getCSSVar('--candle-dn') || getCSSVar('--steel');
   var grey = getCSSVar('--graphite');
   return { upColor: up, downColor: dn, borderUpColor: up, borderDownColor: dn, wickUpColor: up, wickDownColor: dn, priceLineColor: grey };
 }
