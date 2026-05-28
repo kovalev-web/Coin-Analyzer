@@ -5,6 +5,7 @@ var { getBuffer } = require('./buffers');
 var ind = require('./indicators');
 var tb  = require('./trade-buffers');
 var ms  = require('./microstructure');
+var ob  = require('./orderbook');
 
 // ── Math helpers ──────────────────────────────────────────────────────────
 
@@ -45,6 +46,26 @@ function alignCVDTo1m(cvdPoints, buf1m, lookback) {
     result.push(val);
   }
   return result.length >= lookback ? result : null;
+}
+
+// ── Orderbook integration (Stage 3) ──────────────────────────────────────
+// Returns fields to merge into rawMetrics, or {} when no snapshot yet.
+// aggrRatio is passed in from the already-computed microstructure metrics.
+
+function buildOrderbook(sym, aggrRatio) {
+  var metrics = ob.getOrderbookMetrics(sym);
+  if (!metrics) return {};
+  return {
+    spread:       metrics.spread,
+    emaOBI5:      metrics.emaOBI5,
+    obiConfirmed: ob.obiConfirmed(metrics.emaOBI5, aggrRatio !== undefined ? aggrRatio : null),
+    depthBid:     metrics.depthBid,
+    depthAsk:     metrics.depthAsk,
+    vacuumAbove:  metrics.vacuumAbove,
+    vacuumBelow:  metrics.vacuumBelow,
+    wallBid:      metrics.wallBid,
+    wallAsk:      metrics.wallAsk,
+  };
 }
 
 // Compute Stage-2 microstructure metrics for one symbol.
@@ -136,8 +157,19 @@ function computeM(m, dp5mBaseline) {
   var momentumTerm = sign(m.dp5m) * Math.sqrt(Math.abs(m.dp5m) / base);
 
   if (m.cvdZ !== null && m.cvdZ !== undefined) {
-    // Stage 2 formula
     var aggrTerm = m.aggrRatio !== null ? (2 * m.aggrRatio - 1) : 0;
+    if (m.obiConfirmed !== undefined) {
+      // Stage 3 formula — weights shift to make room for OBI_confirmed
+      return Math.tanh(
+        0.20 * m.miatr        +
+        0.15 * m.dvwap        +
+        0.25 * m.cvdZ         +
+        0.15 * aggrTerm       +
+        0.15 * m.obiConfirmed +
+        0.10 * momentumTerm
+      );
+    }
+    // Stage 2 formula
     return Math.tanh(
       0.25 * m.miatr  +
       0.20 * m.dvwap  +
@@ -155,10 +187,23 @@ function computeM(m, dp5mBaseline) {
 // Stage 2: adds |cvdDiv| term (0.30 weight) when divergence is available.
 // Stage 1 fallback: original 0.6/0.4 split.
 
-function computeP(m) {
+// M is passed in at Stage 3 to compute vacuum_alignment (needs momentum direction).
+function computeP(m, M) {
   var squeeze   = clip(1 - m.bbs, 0, 1);
   var rvolAccel = (m.rVol1m !== null && m.rVol5m !== null &&
                    m.rVol5m > 0 && m.rVol1m / m.rVol5m > 1.5) ? 1 : 0;
+
+  if (m.vacuumAbove !== undefined && M !== undefined) {
+    // Stage 3 weights
+    var va = ob.liquidityVacuumAlignment(m.vacuumAbove, m.vacuumBelow, M);
+    return clip(
+      0.30 * squeeze +
+      0.20 * rvolAccel +
+      0.25 * Math.abs(m.cvdDiv || 0) +
+      0.25 * va,
+      0, 1
+    );
+  }
 
   if (m.cvdDiv !== undefined && m.cvdDiv !== null) {
     // Stage 2 weights
@@ -177,17 +222,22 @@ function computeInplay(A, M, P) {
 }
 
 // ── Main update: compute scores for all symbols, return sorted top-N ──────
-// getBufferFn is injectable for tests; defaults to buffers.getBuffer.
-// refTime is injectable for backtest; defaults to Date.now().
+// getBufferFn  — injectable for tests; defaults to buffers.getBuffer.
+// refTime      — injectable for backtest; defaults to Date.now().
+// getMicroFn   — optional (sym, buf1m) → micro object; when provided,
+//                replaces buildMicro() and skips live CVD snapshotting.
+//                Used by backtest to inject kline-based CVD proxy.
 
-function updateAllScores(inplaySymbols, getBufferFn, refTime) {
+function updateAllScores(inplaySymbols, getBufferFn, refTime, getMicroFn) {
   var getBuf = getBufferFn || getBuffer;
   var now    = refTime || Date.now();
 
-  // Snapshot CVD for all symbols before computing scores
-  inplaySymbols.forEach(function (sym) {
-    if (tb.getTradeState(sym)) tb.snapshotCVD(sym, now);
-  });
+  // Snapshot CVD for all symbols (production only — skipped when proxy provided)
+  if (!getMicroFn) {
+    inplaySymbols.forEach(function (sym) {
+      if (tb.getTradeState(sym)) tb.snapshotCVD(sym, now);
+    });
+  }
 
   // Step 1: raw metrics for every passing symbol
   var rawMetrics = {};
@@ -195,10 +245,27 @@ function updateAllScores(inplaySymbols, getBufferFn, refTime) {
     var m = computeRawMetrics(getBuf(sym, '1m'), getBuf(sym, '5m'), now);
     if (!m) return;
 
-    // Merge Stage-2 microstructure (no-op when trade data not yet available)
-    var micro = buildMicro(sym, getBuf(sym, '1m'));
-    if (micro.cvdSlope !== null) tb.pushCVDSlope(sym, micro.cvdSlope);
+    // Merge microstructure — real trade state (production) or proxy (backtest)
+    var micro = getMicroFn
+      ? getMicroFn(sym, getBuf(sym, '1m'))
+      : buildMicro(sym, getBuf(sym, '1m'));
+
+    // Push CVD slope into production history only (not in backtest)
+    if (!getMicroFn && micro.cvdSlope !== null && micro.cvdSlope !== undefined) {
+      tb.pushCVDSlope(sym, micro.cvdSlope);
+    }
     Object.assign(m, micro);
+
+    // Stage 3: orderbook metrics (no-op when no snapshot received yet)
+    var book = buildOrderbook(sym, m.aggrRatio);
+    Object.assign(m, book);
+
+    // Stage 3 hygiene filters — only applied when orderbook data is present
+    if (book.spread !== undefined && book.spread !== null) {
+      if (book.spread > cfg.prefilter.spread_bps_max) return;
+      var depthAvg = (book.depthBid + book.depthAsk) / 2;
+      if (depthAvg < cfg.prefilter.depth_usdt_10bps_min) return;
+    }
 
     rawMetrics[sym] = m;
   });
@@ -218,7 +285,7 @@ function updateAllScores(inplaySymbols, getBufferFn, refTime) {
     var m = rawMetrics[sym];
     var A = percentileRank(rawAValues[i], rawAValues);
     var M = computeM(m, dp5mBaseline);
-    var P = computeP(m);
+    var P = computeP(m, M);
     return {
       symbol:  sym,
       inplay:  computeInplay(A, M, P),
@@ -239,6 +306,12 @@ function updateAllScores(inplaySymbols, getBufferFn, refTime) {
       _aggrRatio:  m.aggrRatio,
       _largeShare: m.largeShare,
       _cvdDiv:     m.cvdDiv,
+      // Stage-3 sub-components (undefined until orderbook arrives)
+      _spread:       m.spread,
+      _emaOBI5:      m.emaOBI5,
+      _obiConfirmed: m.obiConfirmed,
+      _vacuumAbove:  m.vacuumAbove,
+      _vacuumBelow:  m.vacuumBelow,
     };
   });
 
@@ -253,6 +326,7 @@ module.exports = {
   percentileRank, computeRawMetrics, rawA, computeM, computeP, computeInplay,
   // Main entry point
   updateAllScores,
-  // Exported for unit tests of Stage-2 helpers
+  // Exported for unit tests
   alignCVDTo1m,
+  buildOrderbook,
 };

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const {
   percentileRank, computeRawMetrics, rawA, computeM, computeP, computeInplay,
   updateAllScores,
+  buildOrderbook,
 } = require('./score');
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -216,4 +217,58 @@ test('updateAllScores: each result has required fields', () => {
   result.forEach(function (r) {
     assert.ok('symbol' in r && 'inplay' in r && 'A' in r && 'M' in r && 'P' in r);
   });
+});
+
+// ── Stage 3: computeM with OBI_confirmed ──────────────────────────────────
+
+test('computeM: Stage 3 — positive OBI_confirmed raises M above Stage 2 when base is neutral', () => {
+  // All base signals at zero/neutral → Stage 2 M ≈ 0.
+  // Stage 3 adds 0.15 * obiConfirmed → M3 > 0.
+  const mBase = makeMetrics({ miatr: 0, dvwap: 0, cvdZ: 0, aggrRatio: 0.5, dp5m: 0 });
+  const mWith = makeMetrics({ miatr: 0, dvwap: 0, cvdZ: 0, aggrRatio: 0.5, dp5m: 0,
+                               obiConfirmed: 0.8, vacuumAbove: 20, vacuumBelow: 50 });
+  const M2 = computeM(mBase, 0.003);
+  const M3 = computeM(mWith, 0.003);
+  assert.ok(M3 > M2, 'positive OBI_confirmed should push M higher vs neutral baseline');
+});
+
+test('computeM: Stage 3 — OBI_confirmed=0 does not break output', () => {
+  const m = makeMetrics({ miatr: 1, dvwap: 0.5, cvdZ: 1, aggrRatio: 0.7,
+                           obiConfirmed: 0, vacuumAbove: 20, vacuumBelow: 50 });
+  const M = computeM(m, 0.003);
+  assert.ok(M > -1 && M < 1 && !Number.isNaN(M));
+});
+
+// ── Stage 3: computeP with vacuum_alignment ───────────────────────────────
+
+test('computeP: Stage 3 — vacuum alignment contributes when vacuumAbove present', () => {
+  // M=0.5 (positive), vacuumAbove=15 bps → va = 1 - 15/30 = 0.5
+  // squeeze=1 (bbs=0), rvolAccel=0, cvdDiv=0
+  // P = 0.30*1 + 0.20*0 + 0.25*0 + 0.25*0.5 = 0.425
+  const m = makeMetrics({ bbs: 0, rVol1m: 1, rVol5m: 1, cvdDiv: 0,
+                           vacuumAbove: 15, vacuumBelow: 50 });
+  approx(computeP(m, 0.5), 0.425, 1e-9);
+});
+
+test('computeP: Stage 3 — vacuum in wrong direction gives no bonus', () => {
+  // M=0.5 (positive), vacuumAbove=50 (beyond threshold) → va=0
+  // P = 0.30*1 + 0.20*0 + 0.25*0 + 0.25*0 = 0.30
+  const m = makeMetrics({ bbs: 0, rVol1m: 1, rVol5m: 1, cvdDiv: 0,
+                           vacuumAbove: 50, vacuumBelow: 5 });
+  approx(computeP(m, 0.5), 0.30, 1e-9);
+});
+
+test('computeP: Stage 3 — result stays in [0, 1]', () => {
+  const m = makeMetrics({ bbs: 0, rVol1m: 2, rVol5m: 1, cvdDiv: 1,
+                           vacuumAbove: 0, vacuumBelow: 0 });
+  const P = computeP(m, 0.9);
+  assert.ok(P >= 0 && P <= 1, `P=${P} out of [0,1]`);
+});
+
+test('computeP: Stage 2 formula used when vacuumAbove absent', () => {
+  // No vacuumAbove → falls to Stage 2 branch
+  const m = makeMetrics({ bbs: 0, rVol1m: 2, rVol5m: 1, cvdDiv: 1 });
+  const P2 = computeP(m);            // no M passed → Stage 2
+  const P2m = computeP(m, 0.5);     // M passed but no vacuumAbove → Stage 2
+  approx(P2, P2m);  // should be identical
 });

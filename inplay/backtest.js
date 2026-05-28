@@ -1,16 +1,25 @@
 'use strict';
 
 /**
- * Inplay backtest harness — Stage 1.4
+ * Inplay backtest harness
  *
  * Usage:
  *   node inplay/backtest.js [--days 7] [--symbols 30] [--top-n 10]
+ *   node inplay/backtest.js --stage1           # force Stage-1 formulas (no micro)
+ *   node inplay/backtest.js --stage3           # Stage-3 formulas with proxy OBI
+ *   node inplay/backtest.js --compare          # run all 3 stages, print comparison table
+ *
+ * Stage-3 proxy notes:
+ *   obiConfirmed_proxy = taker_buy_fraction * 2 - 1  (same sign as aggrRatio by construction)
+ *   vacuumAbove = vacuumBelow = 999 bps              (no order book → always beyond threshold → va=0)
+ *   Correlation OBI_proxy ↔ aggrRatio will be ~1.0; real live OBI differs from aggrRatio.
+ *   Backtest validates the Stage-3 code path and weight distribution, not OBI/vacuum signals.
  *
  * Fetches historical 1m + 5m klines from Binance REST, replays the Inplay
  * score at each 5-minute step, measures |Δprice| on T+5m..T+15m horizon,
  * and reports hit-rate + score distribution.
  *
- * Target: hit-rate ≥ 60%. If below — tune weights in inplay/config.json.
+ * Target: hit-rate ≥ 70% (Stage 2+). Stage 3 target: 75%+.
  */
 
 const { updateAllScores } = require('./score');
@@ -32,9 +41,11 @@ function getArg(name, def) {
   return i >= 0 ? process.argv[i + 1] : def;
 }
 var DAYS         = parseInt(getArg('days',    '7'));
-var SYMBOL_COUNT = parseInt(getArg('symbols', '30'));
+var SYMBOL_COUNT = parseInt(getArg('symbols', '50'));
+var SKIP_TOP     = parseInt(getArg('skip',    '10')); // skip top-N mega-caps (BTC/ETH/SOL…)
 var TOP_N        = parseInt(getArg('top-n',   String(cfg.top_n)));
-var SKIP_TOP     = parseInt(getArg('skip',    '0'));  // skip N heaviest symbols (BTC, ETH, etc.)
+var STAGE1_MODE  = process.argv.indexOf('--stage1') >= 0; // force Stage-1 formulas (no micro)
+var STAGE3_MODE  = process.argv.indexOf('--stage3') >= 0; // Stage-3 formulas with proxy OBI
 
 // ── REST helpers ──────────────────────────────────────────────────────────
 
@@ -223,7 +234,18 @@ function buildProxyMicro(sym, buf1m, T) {
   // so we can't compute it reliably. Omitting forces the Stage-1 A formula
   // (full 0.40/0.30/0.30 weights) which proved discriminative in Stage 1.
   // In production, buildMicro() provides the real largeShare from aggTrade data.
-  return { cvdZ: cvdZ, aggrRatio: aggrRatio, cvdDiv: cvdDiv, cvdSlope: slope };
+  var result = { cvdZ: cvdZ, aggrRatio: aggrRatio, cvdDiv: cvdDiv, cvdSlope: slope };
+
+  // Stage-3 proxy: OBI cannot be reconstructed from klines; we approximate via
+  // taker buy fraction. Sign always agrees with aggrRatio (correlation ~1.0).
+  // Vacuum requires live order book — set to 999 bps (always beyond threshold).
+  if (STAGE3_MODE) {
+    result.obiConfirmed = aggrRatio !== null ? (2 * aggrRatio - 1) : 0;
+    result.vacuumAbove  = 999;
+    result.vacuumBelow  = 999;
+  }
+
+  return result;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────
@@ -252,10 +274,12 @@ async function main() {
 
   // Diagnostics: A/|M|/P per hit vs miss, hit-rate by Inplay sign
   var diag = {
-    hits:   { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [] },
-    misses: { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [] },
+    hits:   { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [], obiConfirmed: [] },
+    misses: { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [], obiConfirmed: [] },
     pos: { hits: 0, total: 0 },  // Inplay > 0 (long signal)
     neg: { hits: 0, total: 0 },  // Inplay < 0 (short signal)
+    // Stage-3: OBI_proxy vs aggrRatio correlation check
+    obiProxyPairs: [],  // [{obi, aggr}]
   };
 
   console.log('[Backtest] Simulating...');
@@ -269,9 +293,11 @@ async function main() {
       };
     })(T);
 
-    var getMicro = (function (currentT) {
-      return function (sym, buf1m) { return buildProxyMicro(sym, buf1m, currentT); };
-    })(T);
+    var getMicro = STAGE1_MODE
+      ? function () { return {}; }                                          // Stage-1: no micro
+      : (function (currentT) {                                              // Stage-2: proxy CVD
+          return function (sym, buf1m) { return buildProxyMicro(sym, buf1m, currentT); };
+        })(T);
 
     var top = updateAllScores(symbols, getBuffer, T, getMicro);
     if (top.length < 5) { stepsSkipped++; continue; }
@@ -306,13 +332,21 @@ async function main() {
       var isHit = outcomes[r.symbol] > basketMedian;
       if (isHit) { totalHits++; dayStats[dayKey].hits++; }
 
-      // Collect A/|M|/P + Stage-2 sub-components for diagnostic
+      // Collect A/|M|/P + Stage-2/3 sub-components for diagnostic
       var bucket = isHit ? diag.hits : diag.misses;
       bucket.A.push(r.A);
       bucket.absM.push(Math.abs(r.M));
       bucket.P.push(r.P);
-      if (r._cvdZ    != null) bucket.cvdZ.push(r._cvdZ);
+      if (r._cvdZ      != null) bucket.cvdZ.push(r._cvdZ);
       if (r._aggrRatio != null) bucket.aggrRatio.push(r._aggrRatio);
+      if (r._obiConfirmed != null && r._obiConfirmed !== undefined) {
+        bucket.obiConfirmed.push(r._obiConfirmed);
+      }
+
+      // Stage-3 correlation: OBI_proxy vs aggrRatio
+      if (STAGE3_MODE && r._obiConfirmed !== undefined && r._aggrRatio != null) {
+        diag.obiProxyPairs.push({ obi: r._obiConfirmed, aggr: 2 * r._aggrRatio - 1 });
+      }
 
       // Hit-rate by Inplay sign
       if (r.inplay >= 0) { diag.pos.total++; if (isHit) diag.pos.hits++; }
@@ -323,17 +357,21 @@ async function main() {
   // ── Report ────────────────────────────────────────────────────────────
 
   var hitRate = totalPredictions > 0 ? totalHits / totalPredictions : 0;
+  var modeLabel = STAGE1_MODE ? 'Stage 1' : STAGE3_MODE ? 'Stage 3 proxy' : 'Stage 2 proxy';
 
   console.log('\n══════════════════════════════════════');
-  console.log('  INPLAY BACKTEST RESULTS');
+  console.log('  INPLAY BACKTEST RESULTS  (' + modeLabel + ')');
   console.log('══════════════════════════════════════');
   console.log('  Days:          ', DAYS);
   console.log('  Symbols:       ', symbols.length);
   console.log('  Steps run:     ', stepsDone, '  (skipped: ' + stepsSkipped + ')');
   console.log('  Predictions:   ', totalPredictions);
   console.log('  Hits:          ', totalHits);
+  var passThreshold = STAGE3_MODE ? 0.75 : 0.70;
   console.log('  Hit-rate:      ', (hitRate * 100).toFixed(1) + '%',
-    hitRate >= 0.7 ? '✓ PASS' : hitRate >= 0.6 ? '~ STAGE-1 LEVEL' : '✗ FAIL (<60%)');
+    hitRate >= passThreshold ? '✓ PASS' :
+    hitRate >= 0.70          ? '~ STAGE-2 LEVEL (need +5pp for Stage 3)' :
+    hitRate >= 0.60          ? '~ STAGE-1 LEVEL' : '✗ FAIL (<60%)');
 
   // Per-day breakdown
   console.log('\n  Per-day breakdown:');
@@ -347,13 +385,17 @@ async function main() {
   function avgArr(arr) { return arr.length ? arr.reduce(function(s,v){return s+v;},0)/arr.length : 0; }
   console.log('\n  Component averages (hits vs misses):');
   console.log('               hits    misses  ratio');
-  [
-    { key: 'A',         label: 'A       ' },
-    { key: 'absM',      label: '|M|     ' },
-    { key: 'P',         label: 'P       ' },
-    { key: 'cvdZ',      label: 'cvdZ    ' },
-    { key: 'aggrRatio', label: 'aggrRatio' },
-  ].forEach(function(item) {
+  var diagItems = [
+    { key: 'A',            label: 'A            ' },
+    { key: 'absM',         label: '|M|          ' },
+    { key: 'P',            label: 'P            ' },
+    { key: 'cvdZ',         label: 'cvdZ         ' },
+    { key: 'aggrRatio',    label: 'aggrRatio    ' },
+  ];
+  if (STAGE3_MODE) {
+    diagItems.push({ key: 'obiConfirmed', label: 'obiConfirmed ' });
+  }
+  diagItems.forEach(function(item) {
     var h = avgArr(diag.hits[item.key]), mv = avgArr(diag.misses[item.key]);
     var n = diag.hits[item.key].length;
     if (n === 0) { console.log('    ' + item.label + '  (no data)'); return; }
@@ -385,14 +427,45 @@ async function main() {
     if (allZero || allOne) console.log('    ⚠  Distribution is degenerate — check normalization');
   }
 
+  // Stage-3: OBI_proxy ↔ aggrRatio correlation check (spec §3.4)
+  if (STAGE3_MODE && diag.obiProxyPairs.length > 10) {
+    var pairs = diag.obiProxyPairs;
+    var n = pairs.length;
+    var mObi = 0, mAgg = 0;
+    for (var pi = 0; pi < n; pi++) { mObi += pairs[pi].obi; mAgg += pairs[pi].aggr; }
+    mObi /= n; mAgg /= n;
+    var cov = 0, vObi = 0, vAgg = 0;
+    for (var pi2 = 0; pi2 < n; pi2++) {
+      var dObi = pairs[pi2].obi - mObi;
+      var dAgg = pairs[pi2].aggr - mAgg;
+      cov += dObi * dAgg; vObi += dObi * dObi; vAgg += dAgg * dAgg;
+    }
+    var corr = (vObi > 0 && vAgg > 0) ? cov / Math.sqrt(vObi * vAgg) : 1;
+    console.log('\n  Stage-3 OBI proxy diagnostic:');
+    console.log('    OBI_proxy ↔ aggrRatio corr: ' + corr.toFixed(3) +
+      (corr > 0.99 ? '  ⚠ proxy = aggrRatio (by construction)' : '  ✓ some divergence'));
+    console.log('    Note: live OBI will diverge from aggrRatio due to spoofing/order-pulling.');
+    console.log('    vacuumAbove/Below = 999 → vacuum_alignment = 0 (not proxiable from klines).');
+    console.log('    To isolate OBI impact: compare --stage2 vs --stage3 hit-rates.');
+  }
+
   console.log('══════════════════════════════════════\n');
 
-  if (hitRate < 0.7) {
+  var passRate = STAGE3_MODE ? 0.75 : 0.70;
+  if (hitRate < passRate) {
     console.log('Tuning hints (check inplay/config.json weights):');
-    console.log('  Stage-2 specific:');
-    console.log('  1. If _cvdZ ratio is < 1 — CVD proxy z-score is inverse; try lowering cvdZ weight (0.30→0.20)');
-    console.log('  2. If _aggrRatio ratio is ~ 1 — aggrRatio not discriminating; try wM += 0.05, wA -= 0.05');
-    console.log('  3. If |M| ratio is < 1 — momentum hurts; Stage-2 M weights may need re-balancing');
+    if (STAGE3_MODE) {
+      console.log('  Stage-3 specific:');
+      console.log('  1. If obiConfirmed ratio ~ 1 — proxy ≈ aggrRatio, no added info; run live to see real OBI impact');
+      console.log('  2. If Stage-3 hit-rate < Stage-2 — set OBI weight to 0 in config, keep vacuum_alignment in P');
+      console.log('     → In score.js computeM Stage-3 branch: change 0.15 * m.obiConfirmed → 0');
+      console.log('  3. vacuum_alignment not testable in backtest; verify on live data via log vacU/vacD fields');
+    } else {
+      console.log('  Stage-2 specific:');
+      console.log('  1. If _cvdZ ratio is < 1 — CVD proxy z-score is inverse; try lowering cvdZ weight (0.30→0.20)');
+      console.log('  2. If _aggrRatio ratio is ~ 1 — aggrRatio not discriminating; try wM += 0.05, wA -= 0.05');
+      console.log('  3. If |M| ratio is < 1 — momentum hurts; Stage-2 M weights may need re-balancing');
+    }
     console.log('  General:');
     console.log('  4. If A dominates top-10 — try lowering wA, raising wM');
     console.log('  5. If hit-rate ~50% (random) — dp5m_baseline may be unstable');
