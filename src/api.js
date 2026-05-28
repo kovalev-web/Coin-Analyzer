@@ -484,7 +484,7 @@ export function applyLiveChartUpdates() {
 
 // ── Chart polling ────────────────────────────────────────────────────────
 
-export async function pollCharts() {
+export async function pollCharts(deep) {
   var coins = filteredCoins();
   for (var i = 0; i < coins.length; i++) {
     var c = coins[i], tf = state.chartTF[c.symbol] || '5m', key = c.symbol + '_' + tf;
@@ -493,7 +493,7 @@ export async function pollCharts() {
     // Check series exists before making the network request
     if (!(window.__chartSeries || {})[c.symbol]) continue;
     try {
-      var msg = await wsRequest({ type: 'fetch_klines', symbol: c.symbol, tf: tf, limit: 5 });
+      var msg = await wsRequest({ type: 'fetch_klines', symbol: c.symbol, tf: tf, limit: deep ? 300 : 5 });
       var data = msg.data;
       if (!Array.isArray(data) || !data.length) continue;
 
@@ -591,6 +591,20 @@ export function startChartPolling() {
       fetchAllNATR(filteredCoins());
     }
   }, 60000);
+  // iOS PWA: восстанавливаем данные после разморозки из фона.
+  // WS-соединение рвётся при уходе в бэкграунд — при возврате догружаем свечи и NATR.
+  var _hiddenAt = null;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      _hiddenAt = Date.now();
+    } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000) {
+      _hiddenAt = null;
+      pollCharts(true);
+      fetchAllNATR(filteredCoins(), true);
+    } else {
+      _hiddenAt = null;
+    }
+  });
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
