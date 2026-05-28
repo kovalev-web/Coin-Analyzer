@@ -712,10 +712,10 @@ function _tickMarkFmt(ts, type) {
   return h + ':' + m;
 }
 
-function getChartOpts(width, height) {
+function getChartOpts() {
   var c = getChartColors();
   return {
-    width: width, height: height || 300,
+    autoSize: true,
     layout: { background: { color: c.bg }, textColor: c.text },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
@@ -773,21 +773,6 @@ export function clearAllCrosshairs() {
   if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
 }
 
-// Called after orientation change: resize card charts to new container dims + clear crosshair.
-// Card charts have no autoSize — canvas stays at old size unless explicitly resized.
-export function resizeAllCharts() {
-  Object.keys(_charts).forEach(function (sym) {
-    var el = document.getElementById('chart-' + sym);
-    if (!el || !_charts[sym]) return;
-    var w = el.offsetWidth, h = el.offsetHeight;
-    if (!w || !h) return;
-    try { _charts[sym].resize(w, h); } catch (e) {}
-    var ruler = _rulers[sym];
-    if (ruler && ruler.canvas) { ruler.canvas.width = w; ruler.canvas.height = h; }
-    try { _charts[sym].clearCrosshairPosition(); } catch (e) {}
-  });
-  if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
-}
 
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
@@ -898,7 +883,7 @@ function initCharts() {
     var el = document.getElementById('chart-' + c.symbol);
     if (!el) return;
     if (_charts[c.symbol]) return;
-    var chart = window.LightweightCharts.createChart(el, getChartOpts(el.offsetWidth || 400, el.offsetHeight || 300));
+    var chart = window.LightweightCharts.createChart(el, getChartOpts());
     var s = chart.addCandlestickSeries(getSeriesColors());
     var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
@@ -1466,9 +1451,7 @@ export function openTVMode() {
     setTimeout(function () {
       var el = document.getElementById('tvchart-' + c.symbol);
       if (!el || !window.LightweightCharts) return;
-      var w = el.offsetWidth || 600;
-      var h = el.offsetHeight || 380;
-      var chart = window.LightweightCharts.createChart(el, getChartOpts(w, h));
+      var chart = window.LightweightCharts.createChart(el, getChartOpts());
       var s = chart.addCandlestickSeries(getSeriesColors());
       var volClr = getCSSVar('--vol-up');
       var vs = chart.addHistogramSeries({ color: volClr, priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });

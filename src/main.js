@@ -9,7 +9,7 @@ import {
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
-  openClearPopup, closeClearPopup, clearAllCrosshairs, resizeAllCharts,
+  openClearPopup, closeClearPopup, clearAllCrosshairs,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -320,7 +320,6 @@ on('alert:triggered', function (msg) {
 
 // ── Close popups on orientation change (safety net) ───────────────────────
 
-var _pendingOrientationResize = false;
 window.addEventListener('orientationchange', function () {
   // Close all non-fullscreen UI (search/briefing/analysis are fullscreen — leave them)
   closeMSPopup();
@@ -328,17 +327,7 @@ window.addEventListener('orientationchange', function () {
   var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-  // Clear crosshair immediately so it doesn't linger while viewport is changing
   clearAllCrosshairs();
-  // Flag to resize charts on next resize event (fires after viewport actually settles)
-  _pendingOrientationResize = true;
-});
-
-window.addEventListener('resize', function () {
-  if (_pendingOrientationResize) {
-    _pendingOrientationResize = false;
-    resizeAllCharts();
-  }
 });
 
 // ── Connectivity ────────────────────────────────────────────────────────────
