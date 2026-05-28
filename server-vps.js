@@ -67,7 +67,8 @@ async function redis(cmd) {
 
 // ── Telegram ─────────────────────────────────────────────────────────────
 
-var TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+var TELEGRAM_TOKEN      = process.env.TELEGRAM_BOT_TOKEN;
+var INPLAY_ALERT_CHAT_ID = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
 var tgOffset = 0;
 
@@ -887,6 +888,27 @@ bootstrapTicker().then(function() {
         });
         var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now(), watchlist: inplaySymbols.length });
         clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(phaseMsg); });
+
+        // Telegram alerts for phase transitions (beta — only if INPLAY_ALERT_CHAT_ID is set)
+        if (INPLAY_ALERT_CHAT_ID) {
+          phaseResult.transitions.forEach(function (tr) {
+            if (tr.to !== 'active') return; // only alert on entry/revival
+            var p = phaseData.find(function (x) { return x.symbol === tr.symbol; });
+            var isRevival = tr.from === 'cooling';
+            var dirEmoji  = tr.direction > 0 ? '🟢 LONG ↑' : '🔴 SHORT ↓';
+            var sym       = tr.symbol.replace('USDT', '');
+            var vol       = p && p.vol24h ? (p.vol24h >= 1e9 ? '$' + (p.vol24h / 1e9).toFixed(1) + 'B' : '$' + (p.vol24h / 1e6).toFixed(0) + 'M') : '—';
+            var dp        = p ? (p.delta_price >= 0 ? '+' : '') + p.delta_price.toFixed(2) + '%' : '—';
+            var rvol      = p ? p.rvol_last.toFixed(1) + 'x' : '—';
+            var cvd       = p && p.cvd_z !== null ? p.cvd_z.toFixed(2) : '—';
+            var prefix    = isRevival ? '🔄 Revival' : '🚨 Inplay Phase';
+            var text = prefix + '\n' +
+              '<b>' + sym + '</b> — ' + dirEmoji + '\n' +
+              'RVOL: ' + rvol + ' | Δp15m: ' + dp + ' | CVD_z: ' + cvd + '\n' +
+              '24h Vol: ' + vol;
+            sendTG(INPLAY_ALERT_CHAT_ID, text);
+          });
+        }
 
         // Legacy score ranking (kept for logging and comparison)
         var top = updateAllScores(inplaySymbols);
