@@ -198,7 +198,7 @@ function processTickerPush(arr) {
 
   applyLivePriceUpdates();
 
-  if (newCoins) { emit('render'); fetchAllNATR(filteredCoins()); return; }
+  if (newCoins) { emit('render'); emit('natr:refresh'); return; }
 
   // Compare current DOM card order vs new sorted order — re-render only if order changed
   var _sortedOrder = filteredCoins().map(function (c) { return c.symbol; }).join(',');

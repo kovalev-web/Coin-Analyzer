@@ -318,6 +318,14 @@ on('alert:triggered', function (msg) {
   handleAlertTriggered(msg.sym, msg.price);
 });
 
+// When a new coin appears and triggers a full re-render, fetch NATR for both
+// screenerCoins() and filteredCoins() — they can differ when in screener mode
+// (screener shows top-6 by % change which may not pass the volume tier filter).
+on('natr:refresh', function () {
+  fetchAllNATR(screenerCoins());
+  fetchAllNATR(filteredCoins());
+});
+
 // ── Close popups on orientation change (safety net) ───────────────────────
 
 window.addEventListener('orientationchange', function () {
