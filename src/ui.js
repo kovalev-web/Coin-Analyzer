@@ -2458,12 +2458,12 @@ export function openCoinFullView(sym) {
       }
     }
 
-    // Empty area — 500ms long-press shows add menu directly (no "+" button)
+    // Empty area — 900ms long-press shows add menu directly (no "+" button)
     _fvTD.addTimer = setTimeout(function () {
       _fvTD.addTimer = null;
       var price = _fvSeries ? _fvSeries.coordinateToPrice(_fvTD.startY) : null;
       if (price != null) _fvTMShowMenu(_fvTD.startY, price, null, null);
-    }, 500);
+    }, 900);
 
   }, { passive: false });
 
