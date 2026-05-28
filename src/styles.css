@@ -270,7 +270,7 @@
     .fv-chart-wrap{flex:1;min-width:0;min-height:0;overflow:hidden;background:var(--paper);position:relative;}
     #fv-chart{position:absolute;inset:0;}
     .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
-    .fv-vol-label{position:absolute;left:14px;bottom:24px;font-size:11px;font-weight:500;color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
+    .fv-vol-label{position:absolute;left:14px;bottom:60px;font-size:22px;font-weight:500;color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
     /* FV touch UI: add button, context menu, drag handle */
     .fv-add-btn{position:absolute;right:70px;width:28px;height:28px;border-radius:50%;background:var(--level);color:#fff;border:none;display:none;align-items:center;justify-content:center;z-index:20;padding:0;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;}
     .fv-touch-menu{position:absolute;left:16px;right:76px;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:30;overflow:hidden;}
