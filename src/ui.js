@@ -2549,7 +2549,9 @@ export function toggleFVBriefingDrawer() {
 function _renderSearchList(popup, query) {
   var listEl = popup.querySelector('.search-popup-list');
   if (!listEl) return;
-  var q = (query || '').trim().toLowerCase().replace(/usdt$|busd$|usdc$/, '');
+  var _qRaw = (query || '').trim().toLowerCase();
+  var _qStripped = _qRaw.replace(/usdt$|usdc$|busd$|usd$|us$|u$/, '');
+  var q = _qStripped || _qRaw;
   var coins = state.coins;
   var PINNED = ['btc', 'eth', 'sol'];
 
