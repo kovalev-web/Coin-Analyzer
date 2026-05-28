@@ -773,6 +773,58 @@ export function clearAllCrosshairs() {
   if (_fvChart) { try { _fvChart.clearCrosshairPosition(); } catch (e) {} }
 }
 
+// ── Scroll lock (iOS-safe) ──────────────────────────────────────────────────
+// On iOS, body{overflow:hidden} alone doesn't prevent elastic scroll.
+// The body-freeze pattern (position:fixed + saved scrollY) is reliable.
+var _scrollLockCount = 0;
+var _scrollLockY = 0;
+
+function lockScroll() {
+  _scrollLockCount++;
+  if (_scrollLockCount > 1) return; // already locked
+  _scrollLockY = window.scrollY || 0;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + _scrollLockY + 'px';
+  document.body.style.width = '100%';
+}
+
+function unlockScroll() {
+  _scrollLockCount = Math.max(0, _scrollLockCount - 1);
+  if (_scrollLockCount > 0) return; // another modal still open
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+  _scrollLockY = 0;
+}
+
+// Hard reset — call when closing all modals at once (e.g. back button)
+export function forceUnlockScroll() {
+  _scrollLockCount = 0;
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+}
+
+// Force repaint of all open fixed overlays after orientation change
+export function reapplyOverlayPositions() {
+  var ids = ['fv-overlay', 'bp-popup', 'search-popup', 'analysis-overlay'];
+  ids.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var d = el.style.display;
+    if (!d || d === 'none') return;
+    // Trigger reflow — iOS needs this after viewport resize
+    el.style.transform = 'translateZ(0)';
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetHeight;
+    requestAnimationFrame(function () { el.style.transform = ''; });
+  });
+}
+
 
 export function destroyCharts() {
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
@@ -1142,8 +1194,10 @@ export function openAnalysisPopup(sym, btn) {
     popup.style.borderRadius = '0';
     popup.style.border = 'none';
     popup.style.overflowY = 'auto';
+    popup.style.overscrollBehavior = 'contain';
     popup.style.zIndex = '99999';
-    document.body.style.overflow = 'hidden';
+    popup._lockedScroll = true;
+    lockScroll();
   } else if (card) {
     // Normal card mode
     card.style.overflow = 'visible';
@@ -1865,7 +1919,8 @@ export function openBriefingPanel() {
     popup.style.borderRadius = '0';
     popup.style.border = 'none';
     popup.style.overflowY = 'auto';
-    document.body.style.overflow = 'hidden';
+    popup.style.overscrollBehavior = 'contain';
+    lockScroll();
   } else if (btn) {
     var btnRect = btn.getBoundingClientRect();
     var inFixed = !!btn.closest('#fv-overlay');
@@ -1880,7 +1935,7 @@ export function openBriefingPanel() {
 export function closeBriefingPanel() {
   var popup = document.getElementById('bp-popup');
   if (popup) popup.style.display = 'none';
-  document.body.style.overflow = '';
+  unlockScroll();
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = '';
 }
@@ -2088,7 +2143,7 @@ export function openCoinFullView(sym) {
     }
   }
   overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  lockScroll();
 
   // Init chart
   var el = document.getElementById('fv-chart');
@@ -2522,7 +2577,7 @@ export function closeCoinFullView() {
   if (overlay) overlay.style.display = 'none';
   var ap = document.getElementById('analysis-overlay');
   if (ap) { ap.style.display = 'none'; if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; } }
-  document.body.style.overflow = '';
+  forceUnlockScroll();
 }
 
 export function setFVChartTF(tf) {
@@ -2738,8 +2793,9 @@ export function openSearchPopup() {
     popup.style.borderRadius = '0';
     popup.style.border = 'none';
     var _list = popup.querySelector('.search-popup-list');
-    if (_list) { _list.style.flex = '1'; _list.style.maxHeight = 'none'; _list.style.overflowY = 'auto'; }
-    document.body.style.overflow = 'hidden';
+    if (_list) { _list.style.flex = '1'; _list.style.maxHeight = 'none'; _list.style.overflowY = 'auto'; _list.style.overscrollBehavior = 'contain'; }
+    popup.style.overscrollBehavior = 'contain';
+    lockScroll();
   } else {
     var btn = document.querySelector('[data-action="open-search"]');
     if (btn) {
@@ -2756,7 +2812,7 @@ export function openSearchPopup() {
 export function closeSearchPopup() {
   var popup = document.getElementById('search-popup');
   if (popup) popup.style.display = 'none';
-  document.body.style.overflow = '';
+  unlockScroll();
 }
 
 // ── Clear popup ──────────────────────────────────────────────────────────────

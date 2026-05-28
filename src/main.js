@@ -10,6 +10,7 @@ import {
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
+  forceUnlockScroll, reapplyOverlayPositions,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -112,8 +113,10 @@ document.body.addEventListener('click', function (e) {
       var ap = document.getElementById('analysis-overlay');
       if (ap) {
         if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; }
-        document.body.style.overflow = '';
         ap.style.display = 'none';
+        // Only unlock if this popup called lockScroll (touch-fullscreen mode).
+        // On desktop (positioned popup), _lockedScroll is not set — don't touch the lock.
+        if (ap._lockedScroll) { ap._lockedScroll = false; forceUnlockScroll(); }
       }
       break;
     }
@@ -326,16 +329,19 @@ on('natr:refresh', function () {
   fetchAllNATR(filteredCoins());
 });
 
-// ── Close popups on orientation change (safety net) ───────────────────────
+// ── Orientation change: close transient UI, re-anchor full-screen overlays ─
 
 window.addEventListener('orientationchange', function () {
-  // Close all non-fullscreen UI (search/briefing/analysis are fullscreen — leave them)
   closeMSPopup();
   closeClearPopup();
   var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
   clearAllCrosshairs();
+
+  // iOS needs ~300ms after orientationchange before the new viewport dimensions
+  // are reported. Re-apply fixed positions so overlays fill the new viewport.
+  setTimeout(reapplyOverlayPositions, 300);
 });
 
 // ── Connectivity ────────────────────────────────────────────────────────────
