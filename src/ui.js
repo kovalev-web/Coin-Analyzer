@@ -50,10 +50,10 @@ function renderCard(coin) {
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
-    '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + coin.symbol + '" style="display:' + (((_alerts[coin.symbol] && _alerts[coin.symbol].length) || (_levels[coin.symbol] && _levels[coin.symbol].length)) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 13) + '</button>' +
+    '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + coin.symbol + '" style="display:' + (((_alerts[coin.symbol] && _alerts[coin.symbol].length) || (_levels[coin.symbol] && _levels[coin.symbol].length)) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 14) + '</button>' +
     badge +
-    '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 15) + '</button>' +
-    '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 15) + '</button>' +
+    '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>' +
+    '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 16) + '</button>' +
     '</div>' +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
@@ -276,7 +276,7 @@ export function showCodeModal() {
   backdrop.className = 'code-modal-backdrop';
   backdrop.innerHTML =
     '<div class="code-modal">' +
-      '<div class="popup-header"><span class="popup-title">Синхронизация</span><button class="popup-close" id="code-modal-close">' + icon('x', 15) + '</button></div>' +
+      '<div class="popup-header"><span class="popup-title">Синхронизация</span><button class="popup-close" id="code-modal-close">' + icon('x', 16) + '</button></div>' +
       '<div class="popup-body">' +
         '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
         '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
@@ -1027,7 +1027,7 @@ function getOverlay() {
     el.className = 'analysis-overlay';
     el.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
-        '<button class="popup-close" data-action="close-analysis">' + icon('x', 15) + '</button>' +
+        '<button class="popup-close" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
         '<div class="ao-spinner"><span class="spinner"></span></div>' +
@@ -1057,7 +1057,7 @@ export function openAnalysisPopup(sym, btn) {
     popup.className = 'analysis-overlay';
     popup.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
-        '<button class="popup-close" data-action="close-analysis">' + icon('x', 15) + '</button>' +
+        '<button class="popup-close" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
         '<div class="ao-spinner"><span class="spinner"></span></div>' +
@@ -1219,7 +1219,7 @@ function msCardInner() {
 function msPopupInner() {
   var ms = state.marketStrength;
   var phase = getMSKPhase();
-  var closeBtn = '<button class="popup-close" data-action="close-ms">' + icon('x', 15) + '</button>';
+  var closeBtn = '<button class="popup-close" data-action="close-ms">' + icon('x', 16) + '</button>';
   if (!ms || ms.status === 'loading') {
     return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
       '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div></div>';
@@ -1488,13 +1488,13 @@ function _topbarHTML() {
     + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
     + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Screener</button>'
     + '<div class="topbar-actions">'
-    + '<button class="btn-topbar" data-action="open-search" title="Поиск">' + icon('search', 15) + '</button>'
-    + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 15) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 15) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 15) : icon('moon', 15)) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="open-settings" title="Настройки">' + icon('user-round', 15) + '</button>'
+    + '<button class="btn-topbar" data-action="open-search" title="Поиск">' + icon('search', 16) + '</button>'
+    + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 16) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 16) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="open-settings" title="Настройки">' + icon('user-round', 16) + '</button>'
     + '<div class="burger-wrap">'
-    + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 15) + '</button>'
+    + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd" id="burger-dd">'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
@@ -1520,8 +1520,8 @@ function _sortBarHTML(coins) {
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
     + '<div class="sort-bar-btns">'
-    + '<button class="btn-topbar' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 15) + '</button>'
-    + '<button class="btn-topbar' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 15) + '</button>'
+    + '<button class="btn-topbar' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 16) + '</button>'
+    + '<button class="btn-topbar' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 16) + '</button>'
     + '</div>'
     + '</div>';
 }
@@ -1726,10 +1726,10 @@ export function toggleBriefing(sym) {
 }
 
 function briefingStatusLabel(status) {
-  if (status === 'watching') return icon('eye', 15);
-  if (status === 'worked')   return icon('check', 15);
-  if (status === 'skip')     return icon('ban', 15);
-  return icon('circle', 15);
+  if (status === 'watching') return icon('eye', 16);
+  if (status === 'worked')   return icon('check', 16);
+  if (status === 'skip')     return icon('ban', 16);
+  return icon('circle', 16);
 }
 
 function briefingStatusClass(status) {
@@ -1851,8 +1851,8 @@ export function renderBriefingPanel() {
       (isToday
         ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
         : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
-      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 15) + '</button>' +
-      (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 15) + '</button>' : '') +
+      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>' +
+      (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '') +
       '</div>' +
       '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
         '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
@@ -1862,7 +1862,7 @@ export function renderBriefingPanel() {
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Брифинг</span>' +
-      '<button class="popup-close" data-action="close-briefing">' + icon('x', 15) + '</button>' +
+      '<button class="popup-close" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
@@ -1894,7 +1894,7 @@ function _fvBottomBarHTML(sym, tf) {
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
@@ -1928,7 +1928,7 @@ function _fvCoinInfoHTML(sym, tf) {
 
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 15) + '</button>'
+    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
@@ -2270,15 +2270,15 @@ export function openCoinFullView(sym) {
     var html;
     if (delMode === 'level') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 15) + '</span><span>Удалить уровень · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Удалить уровень · ' + p + '</span></button>';
     } else if (delMode === 'alert') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 15) + '</span><span>Удалить алерт · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Удалить алерт · ' + p + '</span></button>';
     } else {
       html = '<button class="fv-touch-menu-item" data-tm="level">' +
-          '<span class="fv-tmi-icon">' + icon('minus', 15) + '</span><span>Горизонтальный уровень · ' + p + '</span></button>' +
+          '<span class="fv-tmi-icon">' + icon('minus', 16) + '</span><span>Горизонтальный уровень · ' + p + '</span></button>' +
         '<button class="fv-touch-menu-item" data-tm="alert">' +
-          '<span class="fv-tmi-icon">' + icon('bell', 15) + '</span><span>Добавить алерт · ' + p + '</span></button>';
+          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Добавить алерт · ' + p + '</span></button>';
     }
     m.innerHTML = html;
     var menuH = delMode ? 54 : 108;
@@ -2552,8 +2552,8 @@ export function renderFVBriefingDrawer() {
         + (isToday
           ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
           : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
-        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 15) + '</button>'
-        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 15) + '</button>' : '')
+        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>'
+        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '')
         + '</div>'
         + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
@@ -2663,7 +2663,7 @@ export function openSearchPopup() {
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Поиск монеты</span>' +
-      '<button class="popup-close" data-action="close-search">' + icon('x', 15) + '</button>' +
+      '<button class="popup-close" data-action="close-search">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="search-popup-input-wrap">' +
       '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
