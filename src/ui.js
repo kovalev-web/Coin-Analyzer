@@ -663,7 +663,7 @@ function getCSSVar(name) {
 function getChartColors() {
   return {
     bg: getCSSVar('--canvas'),
-    text: isDark() ? getCSSVar('--steel') : getCSSVar('--graphite'),
+    text: getCSSVar('--steel'),
     grid: isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(232,232,232,0.5)',
     border: getCSSVar('--hairline'),
   };
