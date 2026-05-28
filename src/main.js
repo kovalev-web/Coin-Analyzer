@@ -22,6 +22,13 @@ import './styles.css';
 
 // ── Event delegation ───────────────────────────────────────────────────────
 
+// Close tf-dd on touch outside .tf-picker (mobile — click doesn't fire over chart)
+document.body.addEventListener('touchstart', function (e) {
+  if (!e.target.closest('.tf-picker')) {
+    document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+  }
+}, { passive: true });
+
 document.body.addEventListener('click', function (e) {
   // Close burger dropdown on any click outside .burger-wrap
   var burgerDd = document.getElementById('burger-dd');
