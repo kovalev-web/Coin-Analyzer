@@ -160,6 +160,9 @@ export function screenerCoins() {
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
 var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
 var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+// Fullscreen popups only on narrow viewports (phones + small tablets).
+// Checked at open-time so orientation changes are handled correctly.
+function _useFullscreenPopup() { return window.innerWidth < 768; }
 
 // Pre-render Lucide bell as SVG image for canvas drawing
 var _bellImg = (function () {
@@ -1180,7 +1183,7 @@ export function openAnalysisPopup(sym, btn) {
 
   popup._popupCard = card;
 
-  if (_isTouchDevice) {
+  if (_useFullscreenPopup()) {
     document.body.appendChild(popup);
     popup.style.position = 'fixed';
     popup.style.top = '0';
@@ -1930,7 +1933,7 @@ export function openBriefingPanel() {
   if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
 
-  if (_isTouchDevice) {
+  if (_useFullscreenPopup()) {
     popup.style.position = 'fixed';
     popup.style.top = '0';
     popup.style.left = '0';
@@ -2805,7 +2808,7 @@ export function openSearchPopup() {
 
   popup.style.display = 'flex';
 
-  if (_isTouchDevice) {
+  if (_useFullscreenPopup()) {
     popup.style.position = 'fixed';
     popup.style.top = '0';
     popup.style.left = '0';
