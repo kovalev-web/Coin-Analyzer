@@ -2745,27 +2745,18 @@ export function openClearPopup(sym, btn) {
   popup.innerHTML = html;
   document.body.appendChild(popup);
 
-  if (_isTouchDevice) {
-    popup.style.position = 'fixed';
-    popup.style.bottom = '72px';
-    popup.style.left = '16px';
-    popup.style.right = 'auto';
+  var btnRect = btn.getBoundingClientRect();
+  var popupW = 220;
+  var viewportH = window.innerHeight;
+  var viewportW = window.innerWidth;
+  var left = Math.min(btnRect.left, viewportW - popupW - 8);
+  popup.style.left = Math.max(8, left) + 'px';
+  if (btnRect.top > viewportH / 2) {
+    popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
     popup.style.top = 'auto';
-    popup.style.width = 'fit-content';
   } else {
-    var btnRect = btn.getBoundingClientRect();
-    var popupW = 220;
-    var viewportH = window.innerHeight;
-    var viewportW = window.innerWidth;
-    var left = Math.min(btnRect.left, viewportW - popupW - 8);
-    popup.style.left = left + 'px';
-    if (btnRect.bottom > viewportH / 2) {
-      popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
-      popup.style.top = 'auto';
-    } else {
-      popup.style.top = (btnRect.bottom + 6) + 'px';
-      popup.style.bottom = 'auto';
-    }
+    popup.style.top = (btnRect.bottom + 6) + 'px';
+    popup.style.bottom = 'auto';
   }
 }
 
