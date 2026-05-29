@@ -2155,6 +2155,30 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>';
 }
 
+function _applyFVTradeMarkers(sym) {
+  if (!_fvSeries || !sym) return;
+  var briefingEntries = (state.briefing || []).filter(function (e) { return e.sym === sym; });
+  var markers = [];
+  briefingEntries.forEach(function (e) {
+    var t = state.trades[sym + ':' + e.date];
+    if (!t || t.status !== 'ok' || !t.entries || !t.entries.length) return;
+    t.entries.forEach(function (trade) {
+      var ts = Math.floor(parseInt(trade.time, 10) / 1000);
+      markers.push({
+        time: ts,
+        position: trade.side === 'BUY' ? 'belowBar' : 'aboveBar',
+        color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
+        shape: trade.side === 'BUY' ? 'arrowUp' : 'arrowDown',
+        size: 1,
+      });
+    });
+  });
+  markers.sort(function (a, b) { return a.time - b.time; });
+  try { _fvSeries.setMarkers(markers); } catch (e) {}
+}
+
+export function applyFVTradeMarkers() { _applyFVTradeMarkers(_fvSym); }
+
 function _setFVData(sym, cd) {
   if (!_fvSeries || !_fvChart || !cd || cd.status !== 'ok' || !cd.candles.length) return;
   var lastClose = cd.candles[cd.candles.length - 1].close;
@@ -2176,6 +2200,8 @@ function _setFVData(sym, cd) {
   });
   // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
   (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
+  // Trade entry/exit markers from briefing history
+  _applyFVTradeMarkers(sym);
 }
 
 function _loadFVData(sym, tf) {

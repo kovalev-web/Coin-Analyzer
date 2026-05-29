@@ -5,7 +5,7 @@ import {
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
@@ -356,6 +356,7 @@ on('trades:updated', function () {
   if (popup && popup.style.display !== 'none') renderBriefingPanel();
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
+  applyFVTradeMarkers();
 });
 
 // Re-render weekly summary block when week aggregate is ready
