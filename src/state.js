@@ -28,6 +28,9 @@ export const state = {
   marketStrength: null,
   briefing: [],        // [{sym, date, addedAt, status, note}]
   briefingViewDate: null, // currently viewed date in panel (null = today)
+  trades: {},          // 'sym:date' → {status:'ok'|'loading'|'error', pnl, count, entries[]}
+  weekSummary: null,   // агрегат за неделю {pnl, tradeCount, winRate, conversion, ...}
+  aiSummary: null,     // текст от Gemini
 };
 
 export function filteredCoins() {

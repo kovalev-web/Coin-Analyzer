@@ -2,10 +2,11 @@ import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR, fetchNATR,
+  fetchBriefingTrades, fetchWeekTrades, generateWeeklySummary,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
-  toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing,
+  toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
@@ -246,15 +247,18 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'open-briefing':
       openBriefingPanel();
+      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
       break;
     case 'close-briefing':
       closeBriefingPanel();
       break;
     case 'bp-prev-date':
       briefingNavDate(-1);
+      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
       break;
     case 'bp-next-date':
       briefingNavDate(+1);
+      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
       break;
     case 'bp-cycle-status': {
       var bStatusDate = target.dataset.date;
@@ -306,6 +310,19 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-open':
       openFV(sym);
       break;
+    case 'bp-load-week':
+      fetchWeekTrades();
+      break;
+    case 'bp-gen-ai': {
+      var _aiBtn = target;
+      _aiBtn.disabled = true;
+      _aiBtn.textContent = 'Генерирую...';
+      generateWeeklySummary().catch(function (e) { console.error('AI summary:', e); }).finally(function () {
+        _aiBtn.disabled = false;
+        _aiBtn.textContent = 'Обновить';
+      });
+      break;
+    }
     case 'go-main':
       window.location.hash = '#/';
       break;
@@ -330,6 +347,26 @@ on('natr:refresh', function () {
 on('natr:force-refresh', function () {
   fetchAllNATR(screenerCoins(), true);
   fetchAllNATR(filteredCoins(), true);
+});
+
+// Re-render briefing pills when trade data arrives
+on('trades:updated', function () {
+  var popup = document.getElementById('bp-popup');
+  if (popup && popup.style.display !== 'none') renderBriefingPanel();
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
+});
+
+// Re-render weekly summary block when week aggregate is ready
+on('trades:week-updated', function () {
+  var popup = document.getElementById('bp-popup');
+  if (popup && popup.style.display !== 'none') renderBriefingPanel();
+});
+
+// Re-render AI summary text when Gemini responds
+on('trades:ai-updated', function () {
+  var popup = document.getElementById('bp-popup');
+  if (popup && popup.style.display !== 'none') renderBriefingPanel();
 });
 
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─

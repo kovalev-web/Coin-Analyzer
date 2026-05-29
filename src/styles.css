@@ -426,6 +426,36 @@
     .bp-note-row textarea{width:100%;box-sizing:border-box;background:var(--fog);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font-size:12px;padding:8px 10px;resize:vertical;min-height:60px;font-family:inherit;outline:none;}
     .bp-note-row textarea:focus{border-color:var(--primary);}
 
+    /* ── Trade pills ─────────────────────────────────────────────────────── */
+    .bp-trade-pill{font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;flex-shrink:0;white-space:nowrap;cursor:default;}
+    .bp-trade-pos{background:rgba(34,197,94,0.12);color:var(--bullish);}
+    .bp-trade-neg{background:rgba(239,68,68,0.12);color:var(--danger);}
+    .bp-trade-none{background:var(--fog);color:var(--graphite);}
+    .bp-trade-loading{background:var(--fog);color:var(--graphite);animation:bp-pulse 1.2s ease-in-out infinite;}
+    @keyframes bp-pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+
+    /* ── Weekly summary ──────────────────────────────────────────────────── */
+    .bp-week{border-top:1px solid var(--hairline);padding:14px 12px 8px;margin-top:4px;}
+    .bp-week-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .bp-week-title{font-size:13px;font-weight:700;color:var(--ink);}
+    .bp-week-load-btn{font-size:11px;background:var(--fog);border:1px solid var(--hairline);color:var(--graphite);padding:3px 8px;border-radius:6px;cursor:pointer;}
+    .bp-week-load-btn:hover{color:var(--ink);border-color:var(--steel);}
+    .bp-week-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+    .bp-stat-card{background:var(--fog);border-radius:8px;padding:8px 10px;}
+    .bp-stat-label{font-size:10px;color:var(--graphite);font-weight:500;text-transform:uppercase;letter-spacing:0.04em;}
+    .bp-stat-val{font-size:16px;font-weight:700;color:var(--ink);margin-top:2px;}
+    .bp-stat-val.up{color:var(--bullish);}
+    .bp-stat-val.dn{color:var(--danger);}
+    .bp-week-tiger{font-size:10px;color:var(--graphite);text-align:right;margin-bottom:8px;}
+    .bp-ai-block{margin-top:6px;}
+    .bp-ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+    .bp-ai-label{font-size:11px;font-weight:600;color:var(--graphite);text-transform:uppercase;letter-spacing:0.05em;}
+    .bp-ai-btn{font-size:11px;background:transparent;border:1px solid var(--hairline);color:var(--graphite);padding:3px 8px;border-radius:6px;cursor:pointer;}
+    .bp-ai-btn:hover{color:var(--ink);border-color:var(--steel);}
+    .bp-ai-btn:disabled{opacity:0.4;cursor:default;}
+    .bp-ai-text{font-size:12px;line-height:1.5;color:var(--ink);white-space:pre-wrap;background:var(--fog);border-radius:8px;padding:10px 12px;}
+    .bp-ai-spinner{color:var(--graphite);font-size:12px;padding:8px 0;}
+
     /* ── FV Briefing Drawer ──────────────────────────────────────────────── */
     #fv-briefing-drawer{width:0;overflow:hidden;background:var(--paper);transition:width 0.2s ease;flex-shrink:0;}
     #fv-briefing-drawer.open{width:360px;overflow-y:auto;padding-left:10px;border-left:1px solid var(--hairline);}

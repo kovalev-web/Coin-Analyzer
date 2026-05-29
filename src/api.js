@@ -817,3 +817,152 @@ export async function fetchMarketStrength(force) {
 export function startMSPolling() {
   setInterval(function () { fetchMarketStrength(false); }, 5 * 60 * 1000);
 }
+
+// ── Trades (Binance Futures via proxy) ────────────────────────────────────
+
+function _dateToMs(dateStr, endOfDay) {
+  var p = dateStr.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2],
+    endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return d.getTime();
+}
+
+function _proxyCode() {
+  return localStorage.getItem('pa_user_code') || '';
+}
+
+// Fetch trades for one symbol on one date. Results cached in state.trades.
+export async function fetchTrades(symbol, dateStr) {
+  var key = symbol + ':' + dateStr;
+  var cached = state.trades[key];
+  if (cached && cached.status !== 'error') return cached;
+
+  state.trades[key] = { status: 'loading' };
+
+  try {
+    var binSym = symbol.toUpperCase() + 'USDT';
+    var res = await fetch(API_BASE + '/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service: 'binance',
+        user_code: _proxyCode(),
+        payload: {
+          symbol: binSym,
+          startTime: _dateToMs(dateStr, false),
+          endTime: _dateToMs(dateStr, true),
+        },
+      }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Proxy error');
+
+    var trades = data.trades || [];
+    var pnl = 0, commission = 0;
+    for (var i = 0; i < trades.length; i++) {
+      pnl += parseFloat(trades[i].realizedPnl || 0);
+      commission += parseFloat(trades[i].commission || 0);
+    }
+    state.trades[key] = { status: 'ok', pnl: pnl - commission, count: trades.length, entries: trades };
+  } catch (e) {
+    state.trades[key] = { status: 'error', error: e.message };
+  }
+  return state.trades[key];
+}
+
+// Fetch trades for all briefing entries on a given date, then notify UI.
+export async function fetchBriefingTrades(dateStr) {
+  var entries = (state.briefing || []).filter(function (e) { return e.date === dateStr; });
+  if (!entries.length) return;
+  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, dateStr); }));
+  emit('trades:updated', dateStr);
+}
+
+// Fetch trades for all briefing entries in the last 7 days, compute weekly aggregate.
+export async function fetchWeekTrades() {
+  var today = new Date();
+  var d7 = new Date(today.getTime() - 6 * 24 * 3600 * 1000);
+  var weekAgoStr = d7.getFullYear() + '-'
+    + String(d7.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d7.getDate()).padStart(2, '0');
+
+  var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
+  if (!entries.length) { emit('trades:week-updated'); return null; }
+
+  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+
+  var totalPnl = 0, totalTrades = 0, profitSessions = 0, tradedSessions = 0;
+  var symsBriefed = new Set(entries.map(function (e) { return e.sym; }));
+
+  // Count per sym:date sessions (one briefing entry = one session)
+  entries.forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (t && t.status === 'ok' && t.count > 0) {
+      totalPnl += t.pnl;
+      totalTrades += t.count;
+      tradedSessions++;
+      if (t.pnl > 0) profitSessions++;
+    }
+  });
+
+  state.weekSummary = {
+    pnl: totalPnl,
+    tradeCount: totalTrades,
+    winRate: tradedSessions > 0 ? Math.round(profitSessions / tradedSessions * 100) : 0,
+    conversion: symsBriefed.size > 0 ? Math.round(tradedSessions / entries.length * 100) : 0,
+    fromDate: weekAgoStr,
+  };
+  emit('trades:week-updated');
+  return state.weekSummary;
+}
+
+// Call Gemini via proxy to generate a weekly trading summary.
+export async function generateWeeklySummary() {
+  var today = new Date();
+  var d7 = new Date(today.getTime() - 6 * 24 * 3600 * 1000);
+  var weekAgoStr = d7.getFullYear() + '-'
+    + String(d7.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d7.getDate()).padStart(2, '0');
+  var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
+
+  // Build briefing text grouped by date
+  var byDate = {};
+  entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+
+  var briefingText = Object.keys(byDate).sort().reverse().map(function (date) {
+    return date + ':\n' + byDate[date].map(function (e) {
+      var t = state.trades[e.sym + ':' + e.date];
+      var pnlStr = (t && t.status === 'ok' && t.count > 0)
+        ? ' | PnL: $' + t.pnl.toFixed(2) + ' (' + t.count + ' сд.)'
+        : ' | нет сделок';
+      return '  - ' + e.sym.toUpperCase() + (e.note ? ': ' + e.note : '') + pnlStr;
+    }).join('\n');
+  }).join('\n\n');
+
+  var ws = state.weekSummary;
+  var statsText = ws
+    ? 'Итого за неделю: PnL $' + ws.pnl.toFixed(2) + ', сделок ' + ws.tradeCount
+      + ', win rate ' + ws.winRate + '%, конверсия ' + ws.conversion + '%'
+    : '';
+
+  var prompt = 'Ты торговый аналитик. Разбери мою торговую неделю.\n\n'
+    + 'Брифинги (монеты + заметки с уровнями + реальный PnL по каждой):\n'
+    + briefingText + '\n\n' + statsText
+    + '\n\nНапиши краткий разбор: что сработало, что нет, паттерны в заметках vs реальных сделках. '
+    + 'До 300 слов. На русском.';
+
+  var res = await fetch(API_BASE + '/api/proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service: 'gemini',
+      user_code: _proxyCode(),
+      payload: { prompt: prompt },
+    }),
+  });
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Proxy error');
+  state.aiSummary = data.text || '';
+  emit('trades:ai-updated');
+  return state.aiSummary;
+}

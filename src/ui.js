@@ -1909,6 +1909,63 @@ function updateAllStarButtons() {
   });
 }
 
+// ── Trade pill helper ──────────────────────────────────────────────────────
+
+function _tradePillHTML(sym, date) {
+  var t = state.trades[sym + ':' + date];
+  if (!t) return '<span class="bp-trade-pill bp-trade-loading">···</span>';
+  if (t.status === 'loading') return '<span class="bp-trade-pill bp-trade-loading">···</span>';
+  if (t.status === 'error' || t.count === 0) return '<span class="bp-trade-pill bp-trade-none">—</span>';
+  var sign = t.pnl >= 0 ? '+' : '';
+  var cls = t.pnl >= 0 ? 'bp-trade-pos' : 'bp-trade-neg';
+  var title = t.count + ' сд.';
+  if (t.entries && t.entries.length) {
+    var first = t.entries[0], last = t.entries[t.entries.length - 1];
+    title += ' · вход $' + parseFloat(first.price).toFixed(2) + ' → $' + parseFloat(last.price).toFixed(2);
+  }
+  return '<span class="bp-trade-pill ' + cls + '" title="' + escHtml(title) + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
+}
+
+// ── Weekly summary block ───────────────────────────────────────────────────
+
+function _weekSummaryHTML() {
+  var ws = state.weekSummary;
+  var aiText = state.aiSummary;
+
+  var statsHTML = '';
+  if (ws) {
+    var pnlSign = ws.pnl >= 0 ? '+' : '';
+    var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
+    statsHTML = '<div class="bp-week-stats">'
+      + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
+      + '<div class="bp-stat-card"><div class="bp-stat-label">Сделок</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
+      + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
+      + '<div class="bp-stat-card"><div class="bp-stat-label">Конверсия</div><div class="bp-stat-val">' + ws.conversion + '%</div></div>'
+      + '</div>'
+      + '<div class="bp-week-tiger">Tiger · Binance Futures · реальные сделки</div>';
+  }
+
+  var aiHTML = '<div class="bp-ai-block">'
+    + '<div class="bp-ai-header">'
+    + '<span class="bp-ai-label">AI разбор</span>'
+    + '<button class="bp-ai-btn" data-action="bp-gen-ai"' + (!ws ? ' disabled' : '') + '>Сгенерировать</button>'
+    + '</div>'
+    + (aiText
+      ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>'
+      : '<div class="bp-ai-spinner">Нажми «Сгенерировать» после загрузки итогов</div>')
+    + '</div>';
+
+  var loadBtn = !ws
+    ? '<button class="bp-week-load-btn" data-action="bp-load-week">Загрузить</button>'
+    : '<button class="bp-week-load-btn" data-action="bp-load-week">Обновить</button>';
+
+  return '<div class="bp-week">'
+    + '<div class="bp-week-header"><span class="bp-week-title">Итог недели</span>' + loadBtn + '</div>'
+    + statsHTML
+    + aiHTML
+    + '</div>';
+}
+
 // ── Briefing Panel ─────────────────────────────────────────────────────────
 
 export function openBriefingPanel() {
@@ -1986,14 +2043,13 @@ export function renderBriefingPanel() {
   var rowsHTML = entries.length ? entries.map(function (e) {
     var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
     var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
-    var price = coin ? fmtPrice(coin.current_price) : '—';
-    var vol = coin ? fmt(coin.total_volume) : '—';
     return '<div class="bp-row">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
       (isToday
         ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
         : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
+      _tradePillHTML(e.sym, e.date) +
       '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>' +
       (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '') +
       '</div>' +
@@ -2008,6 +2064,7 @@ export function renderBriefingPanel() {
       '<button class="popup-close" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
+    _weekSummaryHTML() +
     '<div class="popup-footer">' +
       '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' +
     '</div>';
@@ -2681,6 +2738,7 @@ export function renderFVBriefingDrawer() {
         + (isToday
           ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
           : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+        + _tradePillHTML(e.sym, e.date)
         + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>'
         + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '')
         + '</div>'
