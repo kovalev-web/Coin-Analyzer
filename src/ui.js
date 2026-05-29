@@ -1970,9 +1970,7 @@ function _weekSummaryHTML() {
       : '<div class="bp-ai-spinner">Нажми «Сгенерировать» после загрузки итогов</div>')
     + '</div>';
 
-  var loadBtn = !ws
-    ? '<button class="bp-week-load-btn" data-action="bp-load-week">Загрузить</button>'
-    : '<button class="bp-week-load-btn" data-action="bp-load-week">Обновить</button>';
+  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week">Обновить</button>';
 
   return '<div class="bp-week">'
     + '<div class="bp-week-header"><span class="bp-week-title">Итог недели</span>' + loadBtn + '</div>'
