@@ -892,13 +892,15 @@ export async function fetchAllBriefingTrades() {
   emit('trades:updated');
 }
 
-// Fetch trades for all briefing entries in the last 7 days, compute weekly aggregate.
+// Fetch trades for all briefing entries since Monday of the current week, compute weekly aggregate.
 export async function fetchWeekTrades() {
   var today = new Date();
-  var d7 = new Date(today.getTime() - 6 * 24 * 3600 * 1000);
-  var weekAgoStr = d7.getFullYear() + '-'
-    + String(d7.getMonth() + 1).padStart(2, '0') + '-'
-    + String(d7.getDate()).padStart(2, '0');
+  var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  var monday = new Date(today.getTime() - daysToMonday * 24 * 3600 * 1000);
+  var weekAgoStr = monday.getFullYear() + '-'
+    + String(monday.getMonth() + 1).padStart(2, '0') + '-'
+    + String(monday.getDate()).padStart(2, '0');
 
   var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
   if (!entries.length) { emit('trades:week-updated'); return null; }
@@ -933,10 +935,12 @@ export async function fetchWeekTrades() {
 // Call Gemini via proxy to generate a weekly trading summary.
 export async function generateWeeklySummary() {
   var today = new Date();
-  var d7 = new Date(today.getTime() - 6 * 24 * 3600 * 1000);
-  var weekAgoStr = d7.getFullYear() + '-'
-    + String(d7.getMonth() + 1).padStart(2, '0') + '-'
-    + String(d7.getDate()).padStart(2, '0');
+  var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  var monday = new Date(today.getTime() - daysToMonday * 24 * 3600 * 1000);
+  var weekAgoStr = monday.getFullYear() + '-'
+    + String(monday.getMonth() + 1).padStart(2, '0') + '-'
+    + String(monday.getDate()).padStart(2, '0');
   var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
 
   // Build briefing text grouped by date
