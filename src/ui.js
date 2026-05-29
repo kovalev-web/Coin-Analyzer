@@ -924,6 +924,7 @@ function drawAlertIcons(sym, ctx, rc) {
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
     ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+    ctx.globalAlpha = 1;
     drawAlertLabel(ctx, a, y);
     ctx.restore();
   });
@@ -2169,6 +2170,7 @@ function _drawFVOverlays(ctx, rc, sym) {
       var sz = 18;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
       ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+      ctx.globalAlpha = 1;
       drawAlertLabel(ctx, a, y);
       ctx.restore();
     });
