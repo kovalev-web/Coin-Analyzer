@@ -892,8 +892,8 @@ export async function fetchAllBriefingTrades() {
   emit('trades:updated');
 }
 
-// Fetch ALL realized trades for the current week (Mon–today) via income endpoint.
-// Uses /fapi/v1/income?incomeType=REALIZED_PNL so it counts every trade, not just briefing coins.
+// Fetch trades for all briefing entries this week (Mon–today), compute weekly aggregate.
+// Counts by unique orderId (not fills) to match Binance trade count.
 export async function fetchWeekTrades() {
   var today = new Date();
   var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
@@ -902,93 +902,44 @@ export async function fetchWeekTrades() {
   var weekAgoStr = monday.getFullYear() + '-'
     + String(monday.getMonth() + 1).padStart(2, '0') + '-'
     + String(monday.getDate()).padStart(2, '0');
-  var startMs = monday.getTime();
-  var endMs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime() - 1;
 
-  try {
-    var [pnlRes, comRes] = await Promise.all([
-      fetch(API_BASE + '/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service: 'binance-income', user_code: _proxySecret(),
-          payload: { incomeType: 'REALIZED_PNL', startTime: startMs, endTime: endMs, limit: 1000 } }),
-      }),
-      fetch(API_BASE + '/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service: 'binance-income', user_code: _proxySecret(),
-          payload: { incomeType: 'COMMISSION', startTime: startMs, endTime: endMs, limit: 1000 } }),
-      }),
-    ]);
-    var pnlData = await pnlRes.json();
-    var comData = await comRes.json();
-    if (!pnlRes.ok) throw new Error(pnlData.error || 'Proxy error');
+  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= weekAgoStr; });
+  if (!entries.length) { emit('trades:week-updated'); return null; }
 
-    var pnlEntries = pnlData.income || [];
-    var comEntries = comData.income || [];
+  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
-    // Total PnL from income (correct, all symbols)
-    var totalPnl = pnlEntries.reduce(function (s, e) { return s + parseFloat(e.income || 0); }, 0);
-    var totalCom = comEntries.reduce(function (s, e) { return s + Math.abs(parseFloat(e.income || 0)); }, 0);
-
-    // Auto-add traded symbols not in briefing (in memory only, not persisted)
-    state.briefing = (state.briefing || []).filter(function (e) { return !e.auto; });
-    var existingKeys = new Set((state.briefing || []).map(function (e) { return e.sym + ':' + e.date; }));
-    var seen = new Set();
-    var autoEntries = [];
-    pnlEntries.forEach(function (inc) {
-      var sym = inc.symbol.toLowerCase().replace(/usdt$/, '');
-      var _d = new Date(inc.time);
-      var date = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + '-' + String(_d.getDate()).padStart(2, '0');
-      var key = sym + ':' + date;
-      if (!existingKeys.has(key) && !seen.has(key)) {
-        seen.add(key);
-        autoEntries.push({ sym: sym, date: date, auto: true, status: 'none', note: '' });
-      }
+  // Deduplicate by sym+orderId — multiple fills of one order = one trade.
+  // Only count closing fills (realizedPnl != 0).
+  var orderPnl = {};
+  entries.forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (!t || t.status !== 'ok' || !t.entries) return;
+    t.entries.forEach(function (fill) {
+      if (parseFloat(fill.realizedPnl || 0) === 0) return;
+      var key = e.sym + ':' + fill.orderId;
+      if (!orderPnl[key]) orderPnl[key] = 0;
+      orderPnl[key] += parseFloat(fill.realizedPnl || 0);
     });
-    autoEntries.forEach(function (e) { state.briefing.push(e); });
+  });
 
-    // Fetch userTrades for ALL week entries (briefing + auto) to get orderId-level data
-    var allWeekEntries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
-    await Promise.all(allWeekEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+  var orderKeys = Object.keys(orderPnl);
+  var tradeCount = orderKeys.length;
+  var winCount = orderKeys.filter(function (k) { return orderPnl[k] > 0; }).length;
 
-    // Build tradeId → orderId map from all fetched userTrades.
-    // income tradeId == userTrades fill id — they reference the same fill.
-    var tradeIdToOrderId = {};
-    allWeekEntries.forEach(function (e) {
-      var t = state.trades[e.sym + ':' + e.date];
-      if (!t || t.status !== 'ok' || !t.entries) return;
-      t.entries.forEach(function (fill) {
-        tradeIdToOrderId[String(fill.id)] = fill.orderId;
-      });
-    });
+  // PnL: use state.trades per entry (already deducts commission)
+  var totalPnl = 0;
+  entries.forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (t && t.status === 'ok') totalPnl += t.pnl;
+  });
 
-    // Income entries only contain position-REDUCING fills (Binance never emits
-    // REALIZED_PNL for pure opening fills). Map each income tradeId → orderId,
-    // deduplicate by orderId → exact Binance trade count.
-    var orderPnl = {};
-    pnlEntries.forEach(function (inc) {
-      var oid = tradeIdToOrderId[String(inc.tradeId)];
-      if (oid == null) return;
-      oid = String(oid);
-      if (!orderPnl[oid]) orderPnl[oid] = 0;
-      orderPnl[oid] += parseFloat(inc.income || 0);
-    });
-
-    var orderIds = Object.keys(orderPnl);
-    var tradeCount = orderIds.length;
-    var winCount = orderIds.filter(function (oid) { return orderPnl[oid] > 0; }).length;
-
-    state.weekSummary = {
-      pnl: totalPnl - totalCom,
-      tradeCount: tradeCount,
-      winCount: winCount,
-      winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
-      fromDate: weekAgoStr,
-    };
-  } catch (e) {
-    state.weekSummary = { error: e.message };
-  }
+  state.weekSummary = {
+    pnl: totalPnl,
+    tradeCount: tradeCount,
+    winCount: winCount,
+    winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+    fromDate: weekAgoStr,
+  };
   emit('trades:week-updated');
   return state.weekSummary;
 }
