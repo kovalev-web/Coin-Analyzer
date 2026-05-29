@@ -939,6 +939,25 @@ export async function fetchWeekTrades() {
       winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
       fromDate: weekAgoStr,
     };
+
+    // Auto-add traded symbols not in briefing (in memory only, not persisted)
+    state.briefing = (state.briefing || []).filter(function (e) { return !e.auto; });
+    var existingKeys = new Set((state.briefing || []).map(function (e) { return e.sym + ':' + e.date; }));
+    var seen = new Set();
+    var autoEntries = [];
+    pnlEntries.forEach(function (inc) {
+      var sym = inc.symbol.toLowerCase().replace(/usdt$/, '');
+      var date = new Date(inc.time).toISOString().slice(0, 10);
+      var key = sym + ':' + date;
+      if (!existingKeys.has(key) && !seen.has(key)) {
+        seen.add(key);
+        autoEntries.push({ sym: sym, date: date, auto: true, status: 'none', note: '' });
+      }
+    });
+    autoEntries.forEach(function (e) { state.briefing.push(e); });
+    if (autoEntries.length) {
+      await Promise.all(autoEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+    }
   } catch (e) {
     state.weekSummary = { error: e.message };
   }

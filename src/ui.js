@@ -1820,7 +1820,8 @@ function isInBriefing(sym) {
 }
 
 function saveBriefingLocal() {
-  try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {}
+  var toSave = (state.briefing || []).filter(function (e) { return !e.auto; });
+  try { localStorage.setItem('pa_briefing', JSON.stringify(toSave)); } catch (e) {}
   clearTimeout(_briefingSyncTimer);
   _briefingSyncTimer = setTimeout(syncBriefingToServer, 1000);
 }
@@ -1828,10 +1829,11 @@ function saveBriefingLocal() {
 function syncBriefingToServer() {
   var code = _briefingUserCode || localStorage.getItem('pa_user_code');
   if (!code) return;
+  var toSync = (state.briefing || []).filter(function (e) { return !e.auto; });
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
+    body: JSON.stringify({ action: 'save', code: code, entries: toSync }),
   }).catch(function () {});
 }
 
@@ -2793,19 +2795,27 @@ export function renderFVBriefingDrawer() {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
       var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
       var isCurrent = _fvSym === e.sym;
-      html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '">'
-        + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
-        + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
-        + (isToday
-          ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
-          : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
-        + _tradePillHTML(e.sym, e.date)
-        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>'
-        + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '')
-        + '</div>'
-        + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
-        + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
-        + '</div>';
+      if (e.auto) {
+        html += '<div class="bp-row fvbd-auto' + (isCurrent ? ' fvbd-current' : '') + '">'
+          + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
+          + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+          + _tradePillHTML(e.sym, e.date)
+          + '</div>';
+      } else {
+        html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '">'
+          + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
+          + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+          + (isToday
+            ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
+            : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+          + _tradePillHTML(e.sym, e.date)
+          + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>'
+          + (isToday ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' : '')
+          + '</div>'
+          + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
+          + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
+          + '</div>';
+      }
     });
   });
   drawer.innerHTML = html + _weekSummaryHTML();
