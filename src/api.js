@@ -952,28 +952,35 @@ export async function fetchWeekTrades() {
     await Promise.all(allWeekEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
     // Count unique orders (not fills) — each orderId with non-zero realizedPnl = one trade
-    // A fill is "closing" if it reduces an existing position:
-    // hedge mode: LONG+SELL or SHORT+BUY
-    // one-way mode (BOTH): realizedPnl != 0
-    function _isClosingFill(fill) {
-      if (fill.positionSide === 'BOTH') return parseFloat(fill.realizedPnl || 0) !== 0;
-      return (fill.positionSide === 'LONG' && fill.side === 'SELL') ||
-             (fill.positionSide === 'SHORT' && fill.side === 'BUY');
-    }
-    var orderMap = {};
+    // Group fills by (sym:positionSide), dedup by fill id to avoid double-counting
+    // from multiple date-range fetches of the same fill.
+    var streamByKey = {};
     allWeekEntries.forEach(function (e) {
       var t = state.trades[e.sym + ':' + e.date];
       if (!t || t.status !== 'ok' || !t.entries) return;
       t.entries.forEach(function (fill) {
-        if (!_isClosingFill(fill)) return;
-        var oid = String(fill.orderId);
-        if (!orderMap[oid]) orderMap[oid] = { pnl: 0 };
-        orderMap[oid].pnl += parseFloat(fill.realizedPnl || 0);
+        var key = e.sym + ':' + (fill.positionSide || 'BOTH');
+        if (!streamByKey[key]) streamByKey[key] = {};
+        streamByKey[key][fill.id] = fill;
       });
     });
-    var orders = Object.values(orderMap);
-    var tradeCount = orders.length;
-    var winCount = orders.filter(function (o) { return o.pnl > 0; }).length;
+
+    // Count position round-trips: position 0→X→0 = one trade.
+    // Works for both hedge mode (separate LONG/SHORT streams) and one-way mode.
+    var tradeCount = 0, winCount = 0;
+    Object.values(streamByKey).forEach(function (fillMap) {
+      var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
+      var position = 0, roundPnl = 0;
+      fills.forEach(function (fill) {
+        position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
+        roundPnl += parseFloat(fill.realizedPnl || 0);
+        if (Math.abs(position) < 0.00001) { // position returned to zero = round-trip complete
+          tradeCount++;
+          if (roundPnl > 0) winCount++;
+          roundPnl = 0;
+        }
+      });
+    });
 
     state.weekSummary = {
       pnl: totalPnl - totalCom,
