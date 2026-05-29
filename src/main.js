@@ -362,14 +362,14 @@ on('trades:updated', function () {
 
 // Re-render weekly summary block when week aggregate is ready
 on('trades:week-updated', function () {
-  var popup = document.getElementById('bp-popup');
-  if (popup && popup.style.display !== 'none') renderBriefingPanel();
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
 });
 
 // Re-render AI summary text when Gemini responds
 on('trades:ai-updated', function () {
-  var popup = document.getElementById('bp-popup');
-  if (popup && popup.style.display !== 'none') renderBriefingPanel();
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
 });
 
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─

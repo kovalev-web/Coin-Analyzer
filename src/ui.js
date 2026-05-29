@@ -2073,7 +2073,6 @@ export function renderBriefingPanel() {
       '<button class="popup-close" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
-    _weekSummaryHTML() +
     '<div class="popup-footer">' +
       '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' +
     '</div>';
@@ -2809,7 +2808,7 @@ export function renderFVBriefingDrawer() {
         + '</div>';
     });
   });
-  drawer.innerHTML = html;
+  drawer.innerHTML = html + _weekSummaryHTML();
   // Re-attach textarea listeners
   drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
     ta.addEventListener('input', function () {
