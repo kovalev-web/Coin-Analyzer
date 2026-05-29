@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Vite Frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:front"],
+      "port": 5173
+    },
+    {
+      "name": "API Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=.env", "server.js"],
+      "port": 3000
+    },
+    {
+      "name": "WebSocket Server (VPS)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:ws"],
+      "port": 3001
+    }
+  ]
+}
