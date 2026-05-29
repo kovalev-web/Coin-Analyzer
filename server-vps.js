@@ -769,6 +769,23 @@ var httpServer = http.createServer(async function (req, res) {
           return proxyJson(200, { trades: binData });
         }
 
+        if (service === 'binance-income') {
+          var BIN_KEY = process.env.BINANCE_API_KEY;
+          var BIN_SEC = process.env.BINANCE_API_SECRET;
+          if (!BIN_KEY || !BIN_SEC) return proxyJson(500, { error: 'Binance keys not configured' });
+          var incParams = new URLSearchParams({ timestamp: String(Date.now()), limit: String(payload.limit || 1000) });
+          if (payload.incomeType) incParams.set('incomeType', payload.incomeType);
+          if (payload.startTime) incParams.set('startTime', String(payload.startTime));
+          if (payload.endTime) incParams.set('endTime', String(payload.endTime));
+          var incQs = incParams.toString();
+          var incSig = crypto.createHmac('sha256', BIN_SEC).update(incQs).digest('hex');
+          var incUrl = 'https://fapi.binance.com/fapi/v1/income?' + incQs + '&signature=' + incSig;
+          var incRes = await fetch(incUrl, { headers: { 'X-MBX-APIKEY': BIN_KEY } });
+          var incData = await incRes.json();
+          if (!incRes.ok) return proxyJson(502, { error: incData.msg || 'Binance error', code: incData.code });
+          return proxyJson(200, { income: incData });
+        }
+
         if (service === 'gemini') {
           var GEM_KEY = process.env.GEMINI_API_KEY;
           if (!GEM_KEY) return proxyJson(500, { error: 'Gemini key not configured' });
