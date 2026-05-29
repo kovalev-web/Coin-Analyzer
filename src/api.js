@@ -56,6 +56,11 @@ function connectWS() {
     }
     emit('ws:status');
     emit('render');
+    // On reconnect (coins already in state) — force-refresh NATR for all visible coins.
+    // Wait 800ms for the ticker push to arrive so state.coins is up to date.
+    if (state.coins.length > 0) {
+      setTimeout(function () { emit('natr:force-refresh'); }, 800);
+    }
   };
 
   ws.onmessage = function (event) {
