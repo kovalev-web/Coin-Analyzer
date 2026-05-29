@@ -938,7 +938,8 @@ export async function fetchWeekTrades() {
     var autoEntries = [];
     pnlEntries.forEach(function (inc) {
       var sym = inc.symbol.toLowerCase().replace(/usdt$/, '');
-      var date = new Date(inc.time).toISOString().slice(0, 10);
+      var _d = new Date(inc.time);
+      var date = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + '-' + String(_d.getDate()).padStart(2, '0');
       var key = sym + ':' + date;
       if (!existingKeys.has(key) && !seen.has(key)) {
         seen.add(key);
