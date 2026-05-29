@@ -2676,9 +2676,12 @@ export function openCoinFullView(sym) {
           });
         }
         // Trade entry/exit triangles at exact price
+        // Snap trade time to candle open (timeToCoordinate requires exact bar time)
+        var _tfSec = {'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'1d':86400}[state.chartTF[sym] || '5m'] || 300;
         _fvTradeMarkersData.forEach(function (m) {
+          var snapped = Math.floor(m.time / _tfSec) * _tfSec;
           var y = _fvSeries.priceToCoordinate(m.price);
-          var x = _fvChart.timeScale().timeToCoordinate(m.time);
+          var x = _fvChart.timeScale().timeToCoordinate(snapped);
           if (y == null || x == null || x < 0 || x > ruler.canvas.width || y < 0 || y > ruler.canvas.height) return;
           var sz = 6;
           ctx.save();
