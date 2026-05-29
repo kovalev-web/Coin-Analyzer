@@ -927,18 +927,9 @@ export async function fetchWeekTrades() {
     var pnlEntries = pnlData.income || [];
     var comEntries = comData.income || [];
 
+    // Total PnL from income (correct, all symbols)
     var totalPnl = pnlEntries.reduce(function (s, e) { return s + parseFloat(e.income || 0); }, 0);
     var totalCom = comEntries.reduce(function (s, e) { return s + Math.abs(parseFloat(e.income || 0)); }, 0);
-    var winCount = pnlEntries.filter(function (e) { return parseFloat(e.income || 0) > 0; }).length;
-    var tradeCount = pnlEntries.length;
-
-    state.weekSummary = {
-      pnl: totalPnl - totalCom,
-      tradeCount: tradeCount,
-      winCount: winCount,
-      winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
-      fromDate: weekAgoStr,
-    };
 
     // Auto-add traded symbols not in briefing (in memory only, not persisted)
     state.briefing = (state.briefing || []).filter(function (e) { return !e.auto; });
@@ -955,9 +946,34 @@ export async function fetchWeekTrades() {
       }
     });
     autoEntries.forEach(function (e) { state.briefing.push(e); });
-    if (autoEntries.length) {
-      await Promise.all(autoEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
-    }
+
+    // Fetch userTrades for ALL week entries (briefing + auto) to get orderId-level data
+    var allWeekEntries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
+    await Promise.all(allWeekEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+
+    // Count unique orders (not fills) — each orderId with non-zero realizedPnl = one trade
+    var orderMap = {};
+    allWeekEntries.forEach(function (e) {
+      var t = state.trades[e.sym + ':' + e.date];
+      if (!t || t.status !== 'ok' || !t.entries) return;
+      t.entries.forEach(function (fill) {
+        if (parseFloat(fill.realizedPnl || 0) === 0) return; // opening fills have 0 PnL
+        var oid = String(fill.orderId);
+        if (!orderMap[oid]) orderMap[oid] = { pnl: 0 };
+        orderMap[oid].pnl += parseFloat(fill.realizedPnl || 0);
+      });
+    });
+    var orders = Object.values(orderMap);
+    var tradeCount = orders.length;
+    var winCount = orders.filter(function (o) { return o.pnl > 0; }).length;
+
+    state.weekSummary = {
+      pnl: totalPnl - totalCom,
+      tradeCount: tradeCount,
+      winCount: winCount,
+      winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+      fromDate: weekAgoStr,
+    };
   } catch (e) {
     state.weekSummary = { error: e.message };
   }
