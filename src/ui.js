@@ -1932,6 +1932,7 @@ export function openBriefingPanel() {
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
+  popup._isFullscreenMode = _useFullscreenPopup();
 
   if (_useFullscreenPopup()) {
     popup.style.position = 'fixed';
@@ -2807,6 +2808,7 @@ export function openSearchPopup() {
   });
 
   popup.style.display = 'flex';
+  popup._isFullscreenMode = _useFullscreenPopup();
 
   if (_useFullscreenPopup()) {
     popup.style.position = 'fixed';

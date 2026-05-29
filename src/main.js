@@ -334,9 +334,12 @@ on('natr:refresh', function () {
 window.addEventListener('orientationchange', function () {
   closeMSPopup();
   closeClearPopup();
-  // Close dropdown-mode popups — their positions are stale after viewport resize
-  closeSearchPopup();
-  closeBriefingPanel();
+  // Close only dropdown-mode popups (positions stale after resize).
+  // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
+  var _sp = document.getElementById('search-popup');
+  if (_sp && _sp.style.display !== 'none' && !_sp._isFullscreenMode) closeSearchPopup();
+  var _bp = document.getElementById('bp-popup');
+  if (_bp && _bp.style.display !== 'none' && !_bp._isFullscreenMode) closeBriefingPanel();
   var _ao = document.getElementById('analysis-overlay');
   if (_ao && _ao.style.display !== 'none' && !_ao._lockedScroll) {
     _ao.style.display = 'none';
