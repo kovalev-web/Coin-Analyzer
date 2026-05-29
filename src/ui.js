@@ -2383,31 +2383,34 @@ export function openCoinFullView(sym) {
     var rc = ruler.canvas, ctx = rc.getContext('2d');
     ctx.clearRect(0, 0, rc.width, rc.height);
     var p1 = ruler.start.pt, pr1 = ruler.start.price;
-    var isUp = pr2 >= pr1, color = isUp ? getCSSVar('--bullish') : getCSSVar('--danger');
+    var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
     var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
-    var pctStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+    var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+    var durStr = '';
     if (_fvChart) {
       var t1 = _fvChart.timeScale().coordinateToTime(p1.x), t2 = _fvChart.timeScale().coordinateToTime(pt.x);
       if (t1 != null && t2 != null) {
         var d = Math.abs(t2 - t1);
-        var dur = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
-        pctStr += '  ·  ' + dur;
+        durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
       }
     }
-    ctx.fillStyle = isUp ? 'rgba(22,163,74,0.07)' : 'rgba(220,38,38,0.07)';
+    ctx.fillStyle = 'rgba(150,150,150,0.07)';
     ctx.fillRect(0, Math.min(p1.y, pt.y), rc.width, Math.abs(pt.y - p1.y) || 1);
     ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.moveTo(0, pt.y); ctx.lineTo(rc.width, pt.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = color; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.font = 'bold 16px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
+    ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
     var lx = pt.x + 12, lyt = pt.y - 10;
     if (lx + 170 > rc.width) lx = pt.x - 175; if (lx < 2) lx = 2;
-    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 4) lyt = rc.height - 4;
-    ctx.fillText(pctStr, lx, lyt);
+    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 36) lyt = rc.height - 36; if (lyt < 4) lyt = 4;
+    var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
+    ctx.fillText(sign, lx - signW, lyt);
+    ctx.fillText(digits, lx, lyt);
+    if (durStr) ctx.fillText(durStr, lx, lyt + 18);
   });
   el.addEventListener('mouseup', function (e) {
     if (e.button === 1 && _fvRuler) _fvRuler.start = null;
