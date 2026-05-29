@@ -402,6 +402,10 @@ export function loadCache() {
 // ── Live price updates (WS push) ─────────────────────────────────────────
 
 export function applyLivePriceUpdates() {
+  // TV overlay перекрывает весь экран — карточки невидимы, обновлять нет смысла
+  var _tvEl = document.getElementById('tv-overlay');
+  if (_tvEl && _tvEl.style.display !== 'none') return;
+
   document.querySelectorAll('[data-sym]').forEach(function (el) {
     var sym = el.dataset.sym;
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
@@ -475,37 +479,6 @@ export function applyLivePriceUpdates() {
   }
 
   emit('metrics:update');
-}
-
-// ── Live chart updates from ticker (каждый пуш обновляет последнюю свечу) ─
-
-export function applyLiveChartUpdates() {
-  filteredCoins().forEach(function (coin) {
-    var tf = state.chartTF[coin.symbol] || '5m';
-    var key = coin.symbol + '_' + tf;
-    var cd = state.chartData[key];
-    if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
-    var last = cd.candles[cd.candles.length - 1];
-    var price = coin.current_price;
-    if (!price) return;
-    var updated = {
-      time: last.time,
-      open: last.open,
-      high: last.high,
-      low: last.low,
-      close: price,
-      volume: last.volume,
-    };
-    cd.candles[cd.candles.length - 1] = updated;
-    var s = (window.__chartSeries || {})[coin.symbol];
-    if (s) { try { s.update(updated); } catch (e) { } }
-    var vs = (window.__chartVolSeries || {})[coin.symbol];
-    if (vs) { try { vs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
-    var ts = (window.__tvChartSeries || {})[coin.symbol];
-    if (ts) { try { ts.update(updated); } catch (e) { } }
-    var tvvs = (window.__tvChartVolSeries || {})[coin.symbol];
-    if (tvvs) { try { tvvs.update({ time: updated.time, value: updated.volume, color: updated.close >= updated.open ? volClrs().up : volClrs().dn }); } catch (e) { } }
-  });
 }
 
 // ── Chart polling ────────────────────────────────────────────────────────
