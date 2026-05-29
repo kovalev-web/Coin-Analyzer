@@ -1836,6 +1836,24 @@ function syncBriefingToServer() {
 }
 
 export function loadBriefing() {
+  // Reset briefing every Monday — new week, clean slate
+  var _today = new Date();
+  var _dow = _today.getDay();
+  var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
+  var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
+  var _savedWeek = localStorage.getItem('pa_briefing_week');
+  if (_savedWeek && _savedWeek !== _mondayStr) {
+    // New week — wipe everything
+    state.briefing = [];
+    state.weekSummary = null;
+    state.aiSummary = null;
+    localStorage.removeItem('pa_briefing');
+    localStorage.setItem('pa_briefing_week', _mondayStr);
+    syncBriefingToServer();
+    return;
+  }
+  localStorage.setItem('pa_briefing_week', _mondayStr);
+
   try {
     var local = JSON.parse(localStorage.getItem('pa_briefing') || '[]');
     if (Array.isArray(local)) state.briefing = local;
