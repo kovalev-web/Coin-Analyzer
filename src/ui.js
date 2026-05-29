@@ -158,6 +158,7 @@ export function screenerCoins() {
 // ── Charts ─────────────────────────────────────────────────────────────────
 
 var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
+var _cardObserver = null;
 var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
 var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 // Fullscreen popups only on narrow viewports (phones + small tablets).
@@ -837,6 +838,7 @@ export function reapplyOverlayPositions() {
 
 
 export function destroyCharts() {
+  if (_cardObserver) { _cardObserver.disconnect(); _cardObserver = null; }
   Object.keys(_charts).forEach(function (sym) { try { _charts[sym].remove(); } catch (e) { } });
   Object.keys(_levels).forEach(function (sym) { if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; }); });
   // Nullify card-chart line refs in _aLines (chart is gone, refs are stale).
@@ -944,188 +946,217 @@ function clearRuler(sym) {
   redrawAlerts(sym);
 }
 
-function initCharts() {
-  if (!window.LightweightCharts) return;
-  (_screenerMode ? screenerCoins() : filteredCoins()).forEach(function (c) {
-    var el = document.getElementById('chart-' + c.symbol);
-    if (!el) return;
-    if (_charts[c.symbol]) return;
-    var chart = window.LightweightCharts.createChart(el, getChartOpts());
-    var s = chart.addCandlestickSeries(getSeriesColors());
-    var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
-    chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    _charts[c.symbol] = chart; _fullSeries[c.symbol] = s; _volSeries[c.symbol] = vs;
-    var rc = document.createElement('canvas');
-    rc.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:5;';
-    el.style.position = 'relative'; el.appendChild(rc);
-    rc.width = el.offsetWidth || 400; rc.height = el.offsetHeight || 300;
-    _rulers[c.symbol] = { start: null, canvas: rc };
-    // Restore saved levels and alerts
-    (_levels[c.symbol] || []).forEach(function (l) { attachLevel(c.symbol, l); });
-    _syncAlerts(c.symbol);
-    // Keep alert bell icons in sync with chart on every frame
-    (function alertIconLoop(sym) {
-      if (!_charts[sym]) return; // chart was destroyed, stop loop
-      var ruler = _rulers[sym];
-      if (ruler && ruler.canvas && !ruler.start) {
-        var rc = ruler.canvas, ctx = rc.getContext('2d');
-        ctx.clearRect(0, 0, rc.width, rc.height);
-        drawAlertIcons(sym, ctx, rc);
+// Attach mouse/resize event listeners to a chart container once.
+// Uses dynamic _fullSeries[sym] / _charts[sym] lookups so listeners survive chart recreate.
+function _attachChartEvents(sym, container) {
+  if (container.dataset.eventsAttached) return;
+  container.dataset.eventsAttached = '1';
+
+  container.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var cs = _fullSeries[sym]; if (!cs) return;
+    var rect = container.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    var price = cs.coordinateToPrice(y);
+    if (price == null) return;
+    if (e.shiftKey) {
+      if (_alertDragMoved) { _alertDragMoved = false; return; }
+      var alerts = _alerts[sym] || [];
+      for (var i = 0; i < alerts.length; i++) {
+        var ay = cs.priceToCoordinate(alerts[i].price);
+        if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
       }
-      requestAnimationFrame(function () { alertIconLoop(sym); });
-    }(c.symbol));
+      addAlert(sym, price);
+    } else {
+      var levels = _levels[sym] || [];
+      for (var i = 0; i < levels.length; i++) {
+        var ly = cs.priceToCoordinate(levels[i].price);
+        if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+      }
+      addLevel(sym, price);
+    }
+  });
 
-    (function (sym, container, cs, ch) {
-      // Right-click: add/remove level; Shift+right-click: add/remove alert
-      container.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-        var rect = container.getBoundingClientRect();
-        var y = e.clientY - rect.top;
+  container.addEventListener('mousedown', function (e) {
+    var cs = _fullSeries[sym], ch = _charts[sym];
+    var rect = container.getBoundingClientRect();
+    var priceAxisW = 0;
+    try { if (ch) priceAxisW = ch.priceScale('right').width(); } catch (_) {}
+    if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+
+    if (e.button === 0) {
+      if (!cs) return;
+      var y = e.clientY - rect.top;
+      var levels = _levels[sym] || [];
+      for (var i = 0; i < levels.length; i++) {
+        var ly = cs.priceToCoordinate(levels[i].price);
+        if (ly != null && Math.abs(ly - y) < 8) {
+          e.stopPropagation(); e.preventDefault();
+          _dragging = { sym: sym, idx: i, lvl: levels[i] };
+          container.style.cursor = 'ns-resize';
+          return;
+        }
+      }
+      return;
+    }
+    if (e.button === 2 && e.shiftKey) {
+      if (!cs) return;
+      var alertY = e.clientY - rect.top;
+      var alertArr = _alerts[sym] || [];
+      for (var ai = 0; ai < alertArr.length; ai++) {
+        var aCoord = cs.priceToCoordinate(alertArr[ai].price);
+        if (aCoord != null && Math.abs(aCoord - alertY) < 10) {
+          if (alertArr[ai].triggered) return;
+          e.stopPropagation(); e.preventDefault();
+          _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
+          _alertDragMoved = false;
+          container.style.cursor = 'ns-resize';
+          return;
+        }
+      }
+    }
+    if (e.button !== 1) return;
+    if (!cs) return;
+    e.preventDefault();
+    var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    var pr = cs.coordinateToPrice(pt.y);
+    if (pr != null && _rulers[sym]) _rulers[sym].start = { pt: pt, price: pr };
+  }, { capture: true });
+
+  container.addEventListener('mousemove', function (e) {
+    var cs = _fullSeries[sym];
+    var rect = container.getBoundingClientRect();
+    var y = e.clientY - rect.top;
+    if (_dragging && _dragging.sym === sym && (e.buttons & 1)) {
+      if (cs) {
         var price = cs.coordinateToPrice(y);
-        if (price == null) return;
-        if (e.shiftKey) {
-          // If we were dragging, suppress the context menu action
-          if (_alertDragMoved) { _alertDragMoved = false; return; }
-          var alerts = _alerts[sym] || [];
-          for (var i = 0; i < alerts.length; i++) {
-            var ay = cs.priceToCoordinate(alerts[i].price);
-            if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+        if (price != null && _dragging.lvl.line) { _dragging.lvl.price = price; _dragging.lvl.line.applyOptions({ price: price }); }
+      }
+      return;
+    }
+    if (_alertDragging && _alertDragging.sym === sym && (e.buttons & 2)) {
+      if (cs) {
+        var alertPrice = cs.coordinateToPrice(y);
+        if (alertPrice != null) {
+          _alertDragging.alert.price = alertPrice;
+          var _dragRefs = _aLines[_alertDragging.alert.id];
+          if (_dragRefs) {
+            if (_dragRefs.card) { try { _dragRefs.card.applyOptions({ price: alertPrice }); } catch (e) {} }
+            if (_dragRefs.fv)   { try { _dragRefs.fv.applyOptions({ price: alertPrice }); } catch (e) {} }
           }
-          addAlert(sym, price);
-        } else {
-          var levels = _levels[sym] || [];
-          for (var i = 0; i < levels.length; i++) {
-            var ly = cs.priceToCoordinate(levels[i].price);
-            if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
-          }
-          addLevel(sym, price);
+          _alertDragging.dragY = y;
+          _alertDragMoved = true;
+          redrawAlerts(sym);
         }
-      });
-      // Left mousedown: start drag if near a level, else ruler (middle)
-      container.addEventListener('mousedown', function (e) {
-        // Ignore clicks on price axis (right side) — let chart handle vertical zoom natively
-        var rect = container.getBoundingClientRect();
-        var priceAxisW = 0;
-        try { priceAxisW = ch.priceScale('right').width(); } catch (_) {}
-        if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
-
-        if (e.button === 0) {
-          var y = e.clientY - rect.top;
-          var levels = _levels[sym] || [];
-          for (var i = 0; i < levels.length; i++) {
-            var ly = cs.priceToCoordinate(levels[i].price);
-            if (ly != null && Math.abs(ly - y) < 8) {
-              e.stopPropagation();
-              e.preventDefault();
-              _dragging = { sym: sym, idx: i, lvl: levels[i] };
-              container.style.cursor = 'ns-resize';
-              return;
-            }
-          }
-          return;
+      }
+      return;
+    }
+    if (cs) {
+      var levels = _levels[sym] || [];
+      var near = false;
+      for (var j = 0; j < levels.length; j++) {
+        var ly2 = cs.priceToCoordinate(levels[j].price);
+        if (ly2 != null && Math.abs(ly2 - y) < 8) { near = true; break; }
+      }
+      if (!near && e.shiftKey) {
+        var alertsHint = _alerts[sym] || [];
+        for (var ak = 0; ak < alertsHint.length; ak++) {
+          var ayk = cs.priceToCoordinate(alertsHint[ak].price);
+          if (ayk != null && Math.abs(ayk - y) < 10) { near = true; break; }
         }
-        // Alert drag: shift + right-click (button 2)
-        if (e.button === 2 && e.shiftKey) {
-          var alertY = e.clientY - rect.top;
-          var alertArr = _alerts[sym] || [];
-          for (var ai = 0; ai < alertArr.length; ai++) {
-            var aCoord = cs.priceToCoordinate(alertArr[ai].price);
-            if (aCoord != null && Math.abs(aCoord - alertY) < 10) {
-              if (alertArr[ai].triggered) return; // triggered alerts are not draggable
-              e.stopPropagation();
-              e.preventDefault();
-              _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
-              _alertDragMoved = false;
-              container.style.cursor = 'ns-resize';
-              return;
-            }
-          }
-        }
-        if (e.button !== 1) return;
-        e.preventDefault();
-        var pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        var pr = cs.coordinateToPrice(pt.y);
-        if (pr != null) _rulers[sym].start = { pt: pt, price: pr };
-      }, { capture: true });
-      container.addEventListener('mousemove', function (e) {
-        var rect = container.getBoundingClientRect();
-        var y = e.clientY - rect.top;
-        // Drag level
-        if (_dragging && _dragging.sym === sym && (e.buttons & 1)) {
-          var price = cs.coordinateToPrice(y);
-          if (price != null && _dragging.lvl.line) {
-            _dragging.lvl.price = price;
-            _dragging.lvl.line.applyOptions({ price: price });
-          }
-          return;
-        }
-        // Drag alert (shift + right button)
-        if (_alertDragging && _alertDragging.sym === sym && (e.buttons & 2)) {
-          var alertPrice = cs.coordinateToPrice(y);
-          if (alertPrice != null) {
-            _alertDragging.alert.price = alertPrice;
-            // Update both card and FV lines via _aLines so neither jumps
-            var _dragRefs = _aLines[_alertDragging.alert.id];
-            if (_dragRefs) {
-              if (_dragRefs.card) { try { _dragRefs.card.applyOptions({ price: alertPrice }); } catch (e) {} }
-              if (_dragRefs.fv)   { try { _dragRefs.fv.applyOptions({ price: alertPrice }); } catch (e) {} }
-            }
-            _alertDragging.dragY = y;
-            _alertDragMoved = true;
-            redrawAlerts(sym);
-          }
-          return;
-        }
-        // Cursor hint near level or alert (when shift held)
-        var levels = _levels[sym] || [];
-        var near = false;
-        for (var j = 0; j < levels.length; j++) {
-          var ly2 = cs.priceToCoordinate(levels[j].price);
-          if (ly2 != null && Math.abs(ly2 - y) < 8) { near = true; break; }
-        }
-        if (!near && e.shiftKey) {
-          var alertsHint = _alerts[sym] || [];
-          for (var ak = 0; ak < alertsHint.length; ak++) {
-            var ayk = cs.priceToCoordinate(alertsHint[ak].price);
-            if (ayk != null && Math.abs(ayk - y) < 10) { near = true; break; }
-          }
-        }
-        container.style.cursor = near ? 'ns-resize' : '';
-        // Ruler
-        var ruler = _rulers[sym];
-        if (!ruler.start || !(e.buttons & 4)) return;
+      }
+      container.style.cursor = near ? 'ns-resize' : '';
+      var ruler = _rulers[sym];
+      if (ruler && ruler.start && (e.buttons & 4)) {
         var pt = { x: e.clientX - rect.left, y: y };
         drawRuler(sym, ruler.start.pt, pt, ruler.start.price, cs.coordinateToPrice(y));
-      });
-      container.addEventListener('mouseup', function (e) {
-        if (e.button === 0 && _dragging && _dragging.sym === sym) {
-          _dragging = null;
-          container.style.cursor = '';
-          saveLevels();
-          return;
+      }
+    }
+  });
+
+  container.addEventListener('mouseup', function (e) {
+    if (e.button === 0 && _dragging && _dragging.sym === sym) {
+      _dragging = null; container.style.cursor = ''; saveLevels(); return;
+    }
+    if (e.button === 2 && _alertDragging && _alertDragging.sym === sym) {
+      var adSym = _alertDragging.sym; _alertDragging = null; container.style.cursor = ''; saveAlerts(); redrawAlerts(adSym); return;
+    }
+    if (e.button === 1) clearRuler(sym);
+  });
+
+  container.addEventListener('mouseleave', function () {
+    if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
+    if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; saveAlerts(); redrawAlerts(adLeaveSym); }
+    container.style.cursor = '';
+    clearRuler(sym);
+  });
+
+  new ResizeObserver(function () {
+    if (_charts[sym]) _charts[sym].resize(container.offsetWidth, container.offsetHeight || 300);
+    if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
+  }).observe(container);
+}
+
+function _initChartForSym(sym) {
+  if (!window.LightweightCharts) return;
+  var el = document.getElementById('chart-' + sym);
+  if (!el || _charts[sym]) return;
+  var chart = window.LightweightCharts.createChart(el, getChartOpts());
+  var s = chart.addCandlestickSeries(getSeriesColors());
+  var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
+  chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  _charts[sym] = chart; _fullSeries[sym] = s; _volSeries[sym] = vs;
+  window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
+  var rc = document.createElement('canvas');
+  rc.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:5;';
+  el.style.position = 'relative'; el.appendChild(rc);
+  rc.width = el.offsetWidth || 400; rc.height = el.offsetHeight || 300;
+  _rulers[sym] = { start: null, canvas: rc };
+  (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
+  _syncAlerts(sym);
+  (function alertIconLoop(s) {
+    if (!_charts[s]) return;
+    var ruler = _rulers[s];
+    if (ruler && ruler.canvas && !ruler.start) {
+      var rc2 = ruler.canvas, ctx = rc2.getContext('2d');
+      ctx.clearRect(0, 0, rc2.width, rc2.height);
+      drawAlertIcons(s, ctx, rc2);
+    }
+    requestAnimationFrame(function () { alertIconLoop(s); });
+  }(sym));
+  _attachChartEvents(sym, el);
+  fetchChart(sym, state.chartTF[sym] || '5m');
+}
+
+function _destroyChartForSym(sym) {
+  if (!_charts[sym]) return;
+  try { _charts[sym].remove(); } catch (e) {}
+  if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
+  (_alerts[sym] || []).forEach(function (a) { if (_aLines[a.id]) _aLines[a.id].card = null; });
+  // Remove ruler canvas (recreated on next init)
+  var el = document.getElementById('chart-' + sym);
+  if (el) { var rc = el.querySelector('canvas'); if (rc) rc.remove(); }
+  delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
+  window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
+}
+
+function initCharts() {
+  if (!window.LightweightCharts) return;
+  if (!_cardObserver) {
+    _cardObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var sym = entry.target.dataset.sym;
+        if (!sym) return;
+        if (entry.isIntersecting) {
+          _initChartForSym(sym);
+        } else {
+          _destroyChartForSym(sym);
         }
-        if (e.button === 2 && _alertDragging && _alertDragging.sym === sym) {
-          var adSym = _alertDragging.sym;
-          _alertDragging = null;
-          container.style.cursor = '';
-          saveAlerts();
-          redrawAlerts(adSym);
-          return;
-        }
-        if (e.button === 1) clearRuler(sym);
       });
-      container.addEventListener('mouseleave', function () {
-        if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
-        if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; saveAlerts(); redrawAlerts(adLeaveSym); }
-        container.style.cursor = '';
-        clearRuler(sym);
-      });
-      new ResizeObserver(function () {
-        if (_charts[sym]) _charts[sym].resize(container.offsetWidth, container.offsetHeight || 300);
-        if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
-      }).observe(container);
-    })(c.symbol, el, s, chart);
-    fetchChart(c.symbol, state.chartTF[c.symbol] || '5m');
+    }, { rootMargin: '500px 0px', threshold: 0 });
+  }
+  document.querySelectorAll('.coin-card').forEach(function (card) {
+    _cardObserver.observe(card);
   });
 }
 
