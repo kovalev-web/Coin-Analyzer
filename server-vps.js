@@ -773,10 +773,10 @@ var httpServer = http.createServer(async function (req, res) {
           var GEM_KEY = process.env.GEMINI_API_KEY;
           if (!GEM_KEY) return proxyJson(500, { error: 'Gemini key not configured' });
           if (!payload.prompt) return proxyJson(400, { error: 'prompt required' });
-          var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEM_KEY;
+          var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
           var gemRes = await fetch(gemUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: payload.prompt }] }] }) });
           var gemData = await gemRes.json();
-          if (!gemRes.ok) return proxyJson(502, { error: 'Gemini error', status: gemRes.status, details: gemData });
+          if (!gemRes.ok) return proxyJson(502, { error: 'Gemini error' });
           var text = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0] && gemData.candidates[0].content.parts[0].text) || '';
           return proxyJson(200, { text: text });
         }
