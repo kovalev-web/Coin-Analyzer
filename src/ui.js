@@ -1949,7 +1949,7 @@ function _weekSummaryHTML() {
     var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
     statsHTML = '<div class="bp-week-stats">'
       + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
-      + '<div class="bp-stat-card"><div class="bp-stat-label">Сделок</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
+      + '<div class="bp-stat-card"><div class="bp-stat-label">Монет</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
       + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
       + '<div class="bp-stat-card"><div class="bp-stat-label">Побед</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
       + '</div>'

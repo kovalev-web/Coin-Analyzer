@@ -927,16 +927,26 @@ export async function fetchWeekTrades() {
     var pnlEntries = pnlData.income || [];
     var comEntries = comData.income || [];
 
-    var totalPnl = pnlEntries.reduce(function (s, e) { return s + parseFloat(e.income || 0); }, 0);
-    var totalCom = comEntries.reduce(function (s, e) { return s + Math.abs(parseFloat(e.income || 0)); }, 0);
-    var winCount = pnlEntries.filter(function (e) { return parseFloat(e.income || 0) > 0; }).length;
-    var tradeCount = pnlEntries.length;
+    // Aggregate per-symbol net PnL (fills → symbols)
+    var symPnl = {};
+    pnlEntries.forEach(function (e) {
+      var sym = e.symbol.toLowerCase().replace(/usdt$/, '');
+      symPnl[sym] = (symPnl[sym] || 0) + parseFloat(e.income || 0);
+    });
+    comEntries.forEach(function (e) {
+      var sym = e.symbol.toLowerCase().replace(/usdt$/, '');
+      symPnl[sym] = (symPnl[sym] || 0) - Math.abs(parseFloat(e.income || 0));
+    });
+
+    var symList = Object.keys(symPnl);
+    var winSyms = symList.filter(function (s) { return symPnl[s] > 0; });
+    var totalPnl = symList.reduce(function (s, sym) { return s + symPnl[sym]; }, 0);
 
     state.weekSummary = {
-      pnl: totalPnl - totalCom,
-      tradeCount: tradeCount,
-      winCount: winCount,
-      winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+      pnl: totalPnl,
+      tradeCount: symList.length,
+      winCount: winSyms.length,
+      winRate: symList.length > 0 ? Math.round(winSyms.length / symList.length * 100) : 0,
       fromDate: weekAgoStr,
     };
 
