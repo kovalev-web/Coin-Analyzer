@@ -952,36 +952,32 @@ export async function fetchWeekTrades() {
     var allWeekEntries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
     await Promise.all(allWeekEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
-    // Count unique orders (not fills) — each orderId with non-zero realizedPnl = one trade
-    // Group fills by (sym:positionSide), dedup by fill id to avoid double-counting
-    // from multiple date-range fetches of the same fill.
-    var streamByKey = {};
+    // Build tradeId → orderId map from all fetched userTrades.
+    // income tradeId == userTrades fill id — they reference the same fill.
+    var tradeIdToOrderId = {};
     allWeekEntries.forEach(function (e) {
       var t = state.trades[e.sym + ':' + e.date];
       if (!t || t.status !== 'ok' || !t.entries) return;
       t.entries.forEach(function (fill) {
-        var key = e.sym + ':' + (fill.positionSide || 'BOTH');
-        if (!streamByKey[key]) streamByKey[key] = {};
-        streamByKey[key][fill.id] = fill;
+        tradeIdToOrderId[String(fill.id)] = fill.orderId;
       });
     });
 
-    // Count position round-trips: position 0→X→0 = one trade.
-    // Works for both hedge mode (separate LONG/SHORT streams) and one-way mode.
-    var tradeCount = 0, winCount = 0;
-    Object.values(streamByKey).forEach(function (fillMap) {
-      var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
-      var position = 0, roundPnl = 0;
-      fills.forEach(function (fill) {
-        position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
-        roundPnl += parseFloat(fill.realizedPnl || 0);
-        if (Math.abs(position) < 0.00001) { // position returned to zero = round-trip complete
-          tradeCount++;
-          if (roundPnl > 0) winCount++;
-          roundPnl = 0;
-        }
-      });
+    // Income entries only contain position-REDUCING fills (Binance never emits
+    // REALIZED_PNL for pure opening fills). Map each income tradeId → orderId,
+    // deduplicate by orderId → exact Binance trade count.
+    var orderPnl = {};
+    pnlEntries.forEach(function (inc) {
+      var oid = tradeIdToOrderId[String(inc.tradeId)];
+      if (oid == null) return;
+      oid = String(oid);
+      if (!orderPnl[oid]) orderPnl[oid] = 0;
+      orderPnl[oid] += parseFloat(inc.income || 0);
     });
+
+    var orderIds = Object.keys(orderPnl);
+    var tradeCount = orderIds.length;
+    var winCount = orderIds.filter(function (oid) { return orderPnl[oid] > 0; }).length;
 
     state.weekSummary = {
       pnl: totalPnl - totalCom,
