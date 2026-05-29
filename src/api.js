@@ -952,12 +952,20 @@ export async function fetchWeekTrades() {
     await Promise.all(allWeekEntries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
     // Count unique orders (not fills) — each orderId with non-zero realizedPnl = one trade
+    // A fill is "closing" if it reduces an existing position:
+    // hedge mode: LONG+SELL or SHORT+BUY
+    // one-way mode (BOTH): realizedPnl != 0
+    function _isClosingFill(fill) {
+      if (fill.positionSide === 'BOTH') return parseFloat(fill.realizedPnl || 0) !== 0;
+      return (fill.positionSide === 'LONG' && fill.side === 'SELL') ||
+             (fill.positionSide === 'SHORT' && fill.side === 'BUY');
+    }
     var orderMap = {};
     allWeekEntries.forEach(function (e) {
       var t = state.trades[e.sym + ':' + e.date];
       if (!t || t.status !== 'ok' || !t.entries) return;
       t.entries.forEach(function (fill) {
-        if (parseFloat(fill.realizedPnl || 0) === 0) return; // opening fills have 0 PnL
+        if (!_isClosingFill(fill)) return;
         var oid = String(fill.orderId);
         if (!orderMap[oid]) orderMap[oid] = { pnl: 0 };
         orderMap[oid].pnl += parseFloat(fill.realizedPnl || 0);
