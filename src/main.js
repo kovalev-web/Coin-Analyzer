@@ -268,6 +268,7 @@ document.body.addEventListener('click', function (e) {
     case 'bp-open':
       closeBriefingPanel();
       openFV(sym);
+      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
       break;
     case 'go-briefing': {
       var today = new Date().toISOString().slice(0, 10);
