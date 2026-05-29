@@ -2,6 +2,9 @@
   "version": 2,
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/proxy.js": { "regions": ["sin1"] }
+  },
   "rewrites": [
     { "source": "/inplay-beta",  "destination": "/inplay-beta.html" },
     { "source": "/inplay-phase", "destination": "/inplay-phase.html" },
