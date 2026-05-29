@@ -169,7 +169,7 @@ function processTickerPush(arr) {
     state.lastUpdate = new Date();
     state.cacheExpires = Date.now() + CACHE_TTL_MS;
     emit('render');
-    fetchAllNATR(filteredCoins());
+    emit('natr:refresh');
     return;
   }
 
@@ -349,7 +349,7 @@ export async function fetchCoins() {
     state.error = null;
     state.lastUpdate = new Date();
     state.cacheExpires = now + CACHE_TTL_MS;
-    fetchAllNATR(filteredCoins());
+    emit('natr:refresh');
   } catch (err) {
     if (err.message === 'WS timeout') {
       state.error = navigator.onLine
@@ -578,7 +578,7 @@ export function startChartPolling() {
   // Гарантированный 2с-таймер для обновления % и объёма в DOM.
   _liveTimer = setInterval(function () { applyLivePriceUpdates(); }, 2000);
   // Обновляем NATR раз в 5 минут: каждые 5м закрывается новая свеча, окно смещается.
-  setInterval(function () { fetchAllNATR(filteredCoins(), true); }, 5 * 60 * 1000);
+  setInterval(function () { emit('natr:force-refresh'); }, 5 * 60 * 1000);
   // Сброс d1Open при смене UTC-дня: dailyOpen хранит open полуночи UTC,
   // при смене суток он устаревает и % начинает расходиться с Binance.
   var _lastDay = new Date().toISOString().slice(0, 10);
@@ -588,7 +588,7 @@ export function startChartPolling() {
       _lastDay = today;
       Object.keys(state.dailyOpen).forEach(function (k) { delete state.dailyOpen[k]; });
       Object.keys(state.natrData).forEach(function (k) { delete state.natrData[k]; });
-      fetchAllNATR(filteredCoins());
+      emit('natr:refresh');
     }
   }, 60000);
   // iOS PWA: восстанавливаем данные после разморозки из фона.
@@ -600,7 +600,7 @@ export function startChartPolling() {
     } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000) {
       _hiddenAt = null;
       pollCharts(true);
-      fetchAllNATR(filteredCoins(), true);
+      emit('natr:force-refresh');
     } else {
       _hiddenAt = null;
     }

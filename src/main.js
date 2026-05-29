@@ -321,12 +321,15 @@ on('alert:triggered', function (msg) {
   handleAlertTriggered(msg.sym, msg.price);
 });
 
-// When a new coin appears and triggers a full re-render, fetch NATR for both
-// screenerCoins() and filteredCoins() — they can differ when in screener mode
-// (screener shows top-6 by % change which may not pass the volume tier filter).
+// Soft refresh — skips coins that already have NATR (initial load, new coins)
 on('natr:refresh', function () {
   fetchAllNATR(screenerCoins());
   fetchAllNATR(filteredCoins());
+});
+// Force refresh — re-fetches all (5-min interval, back from background, UTC day change)
+on('natr:force-refresh', function () {
+  fetchAllNATR(screenerCoins(), true);
+  fetchAllNATR(filteredCoins(), true);
 });
 
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─
