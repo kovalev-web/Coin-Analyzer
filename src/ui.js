@@ -2156,6 +2156,42 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>';
 }
 
+// Draw alert bells + trade triangles on the FV canvas overlay.
+// Called from both the rAF loop and the ruler mousemove handler so
+// they always stay visible regardless of ruler state.
+function _drawFVOverlays(ctx, rc, sym) {
+  if (!_fvSeries) return;
+  // Alert bell icons
+  if (_bellImg && _bellImg.complete) {
+    (_alerts[sym] || []).forEach(function (a) {
+      var y = _fvSeries.priceToCoordinate(a.price);
+      if (y == null || y < 0 || y > rc.height) return;
+      var sz = 18;
+      ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
+      ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+      drawAlertLabel(ctx, a, y);
+      ctx.restore();
+    });
+  }
+  // Trade entry/exit triangles
+  var tfSec = {'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'1d':86400}[state.chartTF[sym] || '5m'] || 300;
+  _fvTradeMarkersData.forEach(function (m) {
+    var snapped = Math.floor(m.time / tfSec) * tfSec;
+    var y = _fvSeries.priceToCoordinate(m.price);
+    var x = _fvChart && _fvChart.timeScale().timeToCoordinate(snapped);
+    if (y == null || x == null || x < 0 || x > rc.width || y < 0 || y > rc.height) return;
+    var sz = 6;
+    ctx.save();
+    ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
+    ctx.beginPath();
+    if (m.buy) { ctx.moveTo(x, y - sz); ctx.lineTo(x + sz, y + sz); ctx.lineTo(x - sz, y + sz); }
+    else        { ctx.moveTo(x, y + sz); ctx.lineTo(x + sz, y - sz); ctx.lineTo(x - sz, y - sz); }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
 function _applyFVTradeMarkers(sym) {
   if (!sym) { _fvTradeMarkersData = []; return; }
   var briefingEntries = (state.briefing || []).filter(function (e) { return e.sym === sym; });
@@ -2412,6 +2448,7 @@ export function openCoinFullView(sym) {
     if (pr2 == null) return;
     var rc = ruler.canvas, ctx = rc.getContext('2d');
     ctx.clearRect(0, 0, rc.width, rc.height);
+    _drawFVOverlays(ctx, rc, sym);
     var p1 = ruler.start.pt, pr1 = ruler.start.price;
     var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
     var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
@@ -2655,52 +2692,14 @@ export function openCoinFullView(sym) {
     }
   });
 
-  // rAF loop: alert bell icons + trade markers on canvas
+  // rAF loop: alert bells + trade markers (only when ruler is idle)
   (function fvBellLoop() {
     if (!_fvChart) return;
     var ruler = _fvRuler;
     if (ruler && ruler.canvas && !ruler.start) {
       var ctx = ruler.canvas.getContext('2d');
       ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height);
-      if (_fvSeries) {
-        // Alert bell icons
-        if (_bellImg && _bellImg.complete) {
-          (_alerts[sym] || []).forEach(function (a) {
-            var y = _fvSeries.priceToCoordinate(a.price);
-            if (y == null || y < 0 || y > ruler.canvas.height) return;
-            var sz = 18;
-            ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
-            ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
-            drawAlertLabel(ctx, a, y);
-            ctx.restore();
-          });
-        }
-        // Trade entry/exit triangles at exact price
-        // Snap trade time to candle open (timeToCoordinate requires exact bar time)
-        var _tfSec = {'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'1d':86400}[state.chartTF[sym] || '5m'] || 300;
-        _fvTradeMarkersData.forEach(function (m) {
-          var snapped = Math.floor(m.time / _tfSec) * _tfSec;
-          var y = _fvSeries.priceToCoordinate(m.price);
-          var x = _fvChart.timeScale().timeToCoordinate(snapped);
-          if (y == null || x == null || x < 0 || x > ruler.canvas.width || y < 0 || y > ruler.canvas.height) return;
-          var sz = 6;
-          ctx.save();
-          ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
-          ctx.beginPath();
-          if (m.buy) {
-            ctx.moveTo(x, y - sz);
-            ctx.lineTo(x + sz, y + sz);
-            ctx.lineTo(x - sz, y + sz);
-          } else {
-            ctx.moveTo(x, y + sz);
-            ctx.lineTo(x + sz, y - sz);
-            ctx.lineTo(x - sz, y - sz);
-          }
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-        });
-      }
+      _drawFVOverlays(ctx, ruler.canvas, sym);
     }
     requestAnimationFrame(fvBellLoop);
   }());
