@@ -268,7 +268,7 @@ document.body.addEventListener('click', function (e) {
     case 'bp-open':
       closeBriefingPanel();
       openFV(sym);
-      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); fetchWeekTrades(); }, 50);
+      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
       break;
     case 'go-briefing': {
       var today = new Date().toISOString().slice(0, 10);
@@ -282,7 +282,7 @@ document.body.addEventListener('click', function (e) {
       if (first) {
         closeBriefingPanel();
         openFV(first.sym);
-        setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); fetchWeekTrades(); }, 50);
+        setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
       }
       break;
     }
@@ -307,8 +307,7 @@ document.body.addEventListener('click', function (e) {
     }
     case 'toggle-fv-briefing':
       toggleFVBriefingDrawer();
-      fetchAllBriefingTrades();
-      fetchWeekTrades();
+      fetchAllBriefingTrades().then(function () { fetchWeekTrades(); });
       break;
     case 'fvbd-open':
       openFV(sym);
