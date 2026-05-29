@@ -908,25 +908,37 @@ export async function fetchWeekTrades() {
 
   await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
-  // Deduplicate by sym+orderId — multiple fills of one order = one trade.
-  // Only count closing fills (realizedPnl != 0).
-  var orderPnl = {};
+  // Group fills by (sym:positionSide) stream, dedup by fill id across multiple
+  // date-range fetches of the same symbol. Track net position per stream.
+  var streams = {}; // key -> { id: fill }
   entries.forEach(function (e) {
     var t = state.trades[e.sym + ':' + e.date];
     if (!t || t.status !== 'ok' || !t.entries) return;
     t.entries.forEach(function (fill) {
-      if (parseFloat(fill.realizedPnl || 0) === 0) return;
-      var key = e.sym + ':' + fill.orderId;
-      if (!orderPnl[key]) orderPnl[key] = 0;
-      orderPnl[key] += parseFloat(fill.realizedPnl || 0);
+      var key = e.sym + ':' + (fill.positionSide || 'BOTH');
+      if (!streams[key]) streams[key] = {};
+      streams[key][fill.id] = fill;
     });
   });
 
-  var orderKeys = Object.keys(orderPnl);
-  var tradeCount = orderKeys.length;
-  var winCount = orderKeys.filter(function (k) { return orderPnl[k] > 0; }).length;
+  // Count round-trips: position 0→X→0 = one trade (open+adds+partial closes+close).
+  // Uses net PnL (realizedPnl - commission) for win/loss determination.
+  var tradeCount = 0, winCount = 0;
+  Object.values(streams).forEach(function (fillMap) {
+    var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
+    var position = 0, roundPnl = 0;
+    fills.forEach(function (fill) {
+      position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
+      roundPnl += parseFloat(fill.realizedPnl || 0) - parseFloat(fill.commission || 0);
+      if (Math.abs(position) < 0.00001) {
+        tradeCount++;
+        if (roundPnl > 0) winCount++;
+        roundPnl = 0;
+      }
+    });
+  });
 
-  // PnL: use state.trades per entry (already deducts commission)
+  // PnL: sum from state.trades (already commission-deducted)
   var totalPnl = 0;
   entries.forEach(function (e) {
     var t = state.trades[e.sym + ':' + e.date];
