@@ -2180,12 +2180,12 @@ function _drawFVOverlays(ctx, rc, sym) {
     var y = _fvSeries.priceToCoordinate(m.price);
     var x = _fvChart && _fvChart.timeScale().timeToCoordinate(snapped);
     if (y == null || x == null || x < 0 || x > rc.width || y < 0 || y > rc.height) return;
-    var sz = 6;
+    var hb = 8, h = 14; // equilateral: halfBase=8, height≈8×√3
     ctx.save();
     ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
     ctx.beginPath();
-    if (m.buy) { ctx.moveTo(x, y - sz); ctx.lineTo(x + sz, y + sz); ctx.lineTo(x - sz, y + sz); }
-    else        { ctx.moveTo(x, y + sz); ctx.lineTo(x + sz, y - sz); ctx.lineTo(x - sz, y - sz); }
+    if (m.buy) { ctx.moveTo(x, y); ctx.lineTo(x - hb, y + h); ctx.lineTo(x + hb, y + h); }
+    else        { ctx.moveTo(x, y); ctx.lineTo(x - hb, y - h); ctx.lineTo(x + hb, y - h); }
     ctx.closePath();
     ctx.fill();
     ctx.restore();
