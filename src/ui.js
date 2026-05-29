@@ -1842,7 +1842,7 @@ export function loadBriefing() {
   var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
   var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
   var _savedWeek = localStorage.getItem('pa_briefing_week');
-  if (_savedWeek && _savedWeek !== _mondayStr) {
+  if (_savedWeek !== _mondayStr) {
     // New week — wipe everything
     state.briefing = [];
     state.weekSummary = null;
