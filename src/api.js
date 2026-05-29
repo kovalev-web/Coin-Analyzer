@@ -11,8 +11,9 @@ export var API_BASE = _wsEnv
 // Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
 var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
 
-// TV chart update throttle: max once per 2s per symbol (TV hardware is slow)
+// TV update throttle: max once per 2s (TV hardware is slow)
 var _tvKlineThrottle = {};
+var _tvHeaderLast = 0;
 var TV_THROTTLE_MS = 2000;
 
 function volClrs() {
@@ -447,19 +448,31 @@ export function applyLivePriceUpdates() {
     }
   }
 
-  // Update TV slot headers
-  document.querySelectorAll('[data-tv-sym]').forEach(function (el) {
-    var sym = el.dataset.tvSym;
-    var coin = state.coins.find(function (c) { return c.symbol === sym; });
-    if (!coin) return;
-    var ch = (coin.open_24h > 0 && coin.current_price > 0)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
-    var chgEl = el.querySelector('.tv-chg');
-    if (chgEl) { chgEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; chgEl.className = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn'); }
-    var prEl = el.querySelector('.tv-price');
-    if (prEl && coin.current_price) prEl.textContent = '$' + coin.current_price;
-  });
+  // Update TV slot headers — only when overlay is visible, throttled + diff-guarded
+  var _tvOverlay = document.getElementById('tv-overlay');
+  if (_tvOverlay && _tvOverlay.style.display !== 'none') {
+    var _tvHNow = Date.now();
+    if (_tvHNow - _tvHeaderLast >= TV_THROTTLE_MS) {
+      _tvHeaderLast = _tvHNow;
+      document.querySelectorAll('[data-tv-sym]').forEach(function (el) {
+        var sym = el.dataset.tvSym;
+        var coin = state.coins.find(function (c) { return c.symbol === sym; });
+        if (!coin) return;
+        var ch = (coin.open_24h > 0 && coin.current_price > 0)
+          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+          : (coin.price_change_percentage_24h || 0);
+        var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+        var newCls = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn');
+        var chgEl = el.querySelector('.tv-chg');
+        if (chgEl) {
+          if (chgEl.textContent !== newChg) chgEl.textContent = newChg;
+          if (chgEl.className !== newCls) chgEl.className = newCls;
+        }
+        var prEl = el.querySelector('.tv-price');
+        if (prEl && coin.current_price) prEl.textContent = '$' + coin.current_price;
+      });
+    }
+  }
 
   emit('metrics:update');
 }
