@@ -1786,6 +1786,7 @@ on('ws:status', function () {
 // ── Full View ──────────────────────────────────────────────────────────────
 
 var _fvRuler = null;
+var _fvTradeMarkersData = [];
 
 // ── Briefing ───────────────────────────────────────────────────────────────
 
@@ -2156,25 +2157,21 @@ function _fvCoinInfoHTML(sym, tf) {
 }
 
 function _applyFVTradeMarkers(sym) {
-  if (!_fvSeries || !sym) return;
+  if (!sym) { _fvTradeMarkersData = []; return; }
   var briefingEntries = (state.briefing || []).filter(function (e) { return e.sym === sym; });
   var markers = [];
   briefingEntries.forEach(function (e) {
     var t = state.trades[sym + ':' + e.date];
     if (!t || t.status !== 'ok' || !t.entries || !t.entries.length) return;
     t.entries.forEach(function (trade) {
-      var ts = Math.floor(parseInt(trade.time, 10) / 1000);
       markers.push({
-        time: ts,
-        position: trade.side === 'BUY' ? 'belowBar' : 'aboveBar',
-        color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
-        shape: trade.side === 'BUY' ? 'arrowUp' : 'arrowDown',
-        size: 1,
+        time: Math.floor(parseInt(trade.time, 10) / 1000),
+        price: parseFloat(trade.price),
+        buy: trade.side === 'BUY',
       });
     });
   });
-  markers.sort(function (a, b) { return a.time - b.time; });
-  try { _fvSeries.setMarkers(markers); } catch (e) {}
+  _fvTradeMarkersData = markers;
 }
 
 export function applyFVTradeMarkers() { _applyFVTradeMarkers(_fvSym); }
@@ -2658,21 +2655,46 @@ export function openCoinFullView(sym) {
     }
   });
 
-  // rAF loop: alert bell icons on canvas
+  // rAF loop: alert bell icons + trade markers on canvas
   (function fvBellLoop() {
     if (!_fvChart) return;
     var ruler = _fvRuler;
     if (ruler && ruler.canvas && !ruler.start) {
       var ctx = ruler.canvas.getContext('2d');
       ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height);
-      if (_fvSeries && _bellImg && _bellImg.complete) {
-        (_alerts[sym] || []).forEach(function (a) {
-          var y = _fvSeries.priceToCoordinate(a.price);
-          if (y == null || y < 0 || y > ruler.canvas.height) return;
-          var sz = 18;
-          ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
-          ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
-          drawAlertLabel(ctx, a, y);
+      if (_fvSeries) {
+        // Alert bell icons
+        if (_bellImg && _bellImg.complete) {
+          (_alerts[sym] || []).forEach(function (a) {
+            var y = _fvSeries.priceToCoordinate(a.price);
+            if (y == null || y < 0 || y > ruler.canvas.height) return;
+            var sz = 18;
+            ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
+            ctx.drawImage(_bellImg, ruler.canvas.width / 2 - sz / 2, y - sz / 2, sz, sz);
+            drawAlertLabel(ctx, a, y);
+            ctx.restore();
+          });
+        }
+        // Trade entry/exit triangles at exact price
+        _fvTradeMarkersData.forEach(function (m) {
+          var y = _fvSeries.priceToCoordinate(m.price);
+          var x = _fvChart.timeScale().timeToCoordinate(m.time);
+          if (y == null || x == null || x < 0 || x > ruler.canvas.width || y < 0 || y > ruler.canvas.height) return;
+          var sz = 6;
+          ctx.save();
+          ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
+          ctx.beginPath();
+          if (m.buy) {
+            ctx.moveTo(x, y - sz);
+            ctx.lineTo(x + sz, y + sz);
+            ctx.lineTo(x - sz, y + sz);
+          } else {
+            ctx.moveTo(x, y + sz);
+            ctx.lineTo(x + sz, y - sz);
+            ctx.lineTo(x - sz, y - sz);
+          }
+          ctx.closePath();
+          ctx.fill();
           ctx.restore();
         });
       }
@@ -2687,7 +2709,7 @@ export function closeCoinFullView() {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
-  _fvSeries = null; _fvVolSeries = null; _fvRuler = null;
+  _fvSeries = null; _fvVolSeries = null; _fvRuler = null; _fvTradeMarkersData = [];
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
