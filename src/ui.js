@@ -760,7 +760,7 @@ function updateChart(symbol) {
   var total = cd.candles.length;
   var visibleCandles = 80;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total - 1 });
-  redrawAlerts(symbol);
+  _syncAlerts(symbol);
 }
 
 export function setChartTF(symbol, tf) {
@@ -1133,9 +1133,7 @@ function _destroyChartForSym(sym) {
   try { _charts[sym].remove(); } catch (e) {}
   if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
   (_alerts[sym] || []).forEach(function (a) { if (_aLines[a.id]) _aLines[a.id].card = null; });
-  // Remove ruler canvas (recreated on next init)
-  var el = document.getElementById('chart-' + sym);
-  if (el) { var rc = el.querySelector('canvas'); if (rc) rc.remove(); }
+  if (_rulers[sym] && _rulers[sym].canvas) { try { _rulers[sym].canvas.remove(); } catch (e) {} }
   delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
   window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
 }
