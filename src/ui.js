@@ -2126,6 +2126,11 @@ function _loadFVData(sym, tf) {
   }
 }
 
+function _pauseCardCharts() {
+  if (_cardObserver) _cardObserver.disconnect();
+  Object.keys(_charts).slice().forEach(function (sym) { _destroyChartForSym(sym); });
+}
+
 export function openCoinFullView(sym) {
   if (!window.LightweightCharts) return;
   // Destroy previous
@@ -2145,6 +2150,7 @@ export function openCoinFullView(sym) {
   var tf = state.chartTF[sym] || '5m';
   var switchingCoins = overlay.style.display === 'flex';
   if (!switchingCoins) {
+    _pauseCardCharts();
     // First open — build full structure including drawer
     overlay.innerHTML = '<div class="fv-body">'
       + '<div class="fv-chart-wrap">'
@@ -2602,6 +2608,7 @@ export function closeCoinFullView() {
   var ap = document.getElementById('analysis-overlay');
   if (ap) { ap.style.display = 'none'; if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; } }
   forceUnlockScroll();
+  initCharts();
 }
 
 export function setFVChartTF(tf) {
