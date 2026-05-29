@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
     // ── Binance Futures ──────────────────────────────────────────────────────
     if (service === 'binance') {
       if (!BINANCE_API_KEY || !BINANCE_API_SECRET) {
-        return send(res, 500, { error: 'Binance keys not configured', hasKey: !!BINANCE_API_KEY, hasSecret: !!BINANCE_API_SECRET, envCount: Object.keys(process.env).length });
+        return send(res, 500, { error: 'Binance keys not configured', hasKey: !!BINANCE_API_KEY, hasSecret: !!BINANCE_API_SECRET, binanceVars: Object.keys(process.env).filter(function(k){ return k.includes('BINANCE'); }) });
       }
       const { symbol, startTime, endTime, limit } = payload || {};
       if (!symbol) return send(res, 400, { error: 'symbol required' });
