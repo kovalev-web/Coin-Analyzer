@@ -2,7 +2,7 @@ import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR, fetchNATR,
-  fetchBriefingTrades, fetchWeekTrades, generateWeeklySummary,
+  fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF,
@@ -281,7 +281,7 @@ document.body.addEventListener('click', function (e) {
       if (first) {
         closeBriefingPanel();
         openFV(first.sym);
-        setTimeout(function () { openFVBriefingDrawer(); }, 50);
+        setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
       }
       break;
     }
@@ -306,6 +306,7 @@ document.body.addEventListener('click', function (e) {
     }
     case 'toggle-fv-briefing':
       toggleFVBriefingDrawer();
+      fetchAllBriefingTrades();
       break;
     case 'fvbd-open':
       openFV(sym);

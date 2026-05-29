@@ -878,6 +878,14 @@ export async function fetchBriefingTrades(dateStr) {
   emit('trades:updated', dateStr);
 }
 
+// Fetch trades for every entry in state.briefing (all dates) — used by FV drawer.
+export async function fetchAllBriefingTrades() {
+  var entries = state.briefing || [];
+  if (!entries.length) return;
+  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+  emit('trades:updated');
+}
+
 // Fetch trades for all briefing entries in the last 7 days, compute weekly aggregate.
 export async function fetchWeekTrades() {
   var today = new Date();
