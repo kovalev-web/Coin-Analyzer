@@ -286,6 +286,8 @@ export function showCodeModal() {
         '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
         '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
         '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
+        '<p style="margin-top:16px;margin-bottom:4px;">Proxy ключ <span style="color:var(--graphite);font-size:11px;">(Binance + Gemini)</span></p>' +
+        '<input id="proxy-secret-input" type="password" placeholder="Ключ доступа" maxlength="64" autocomplete="off" spellcheck="false" />' +
         '<div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:16px;">' +
           '<button id="clear-all-alerts-btn" class="code-modal-danger">Удалить все алерты</button>' +
         '</div>' +
@@ -299,12 +301,14 @@ export function showCodeModal() {
 
   var input = document.getElementById('code-modal-input');
   var chatInput = document.getElementById('chat-id-input');
+  var proxyInput = document.getElementById('proxy-secret-input');
   var saveBtn = document.getElementById('code-modal-save');
   var skipBtn = document.getElementById('code-modal-skip');
   var clearAllBtn = document.getElementById('clear-all-alerts-btn');
 
   if (_userCode) input.value = _userCode;
   if (_chatId) chatInput.value = _chatId;
+  if (_proxySecret) proxyInput.value = _proxySecret;
 
   function save() {
     var code = input.value.trim();
@@ -315,6 +319,8 @@ export function showCodeModal() {
     }
     var newChatId = chatInput.value.trim();
     if (newChatId) { _chatId = newChatId; localStorage.setItem('pa_chat_id', newChatId); }
+    var newProxySecret = proxyInput.value.trim();
+    if (newProxySecret) { _proxySecret = newProxySecret; localStorage.setItem('pa_proxy_secret', newProxySecret); }
     _userCode = code;
     localStorage.setItem('pa_user_code', code);
     backdrop.remove();
@@ -425,6 +431,7 @@ var _aLines = {};       // alertId → { card, fv }
 var _aIdSeed = 0;
 
 var _chatId = localStorage.getItem('pa_chat_id') || '';
+var _proxySecret = localStorage.getItem('pa_proxy_secret') || '';
 var _alertSyncTimer = null;
 
 function _aNewId() { return 'a' + (++_aIdSeed) + '_' + Date.now(); }

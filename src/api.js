@@ -831,6 +831,12 @@ function _proxyCode() {
   return localStorage.getItem('pa_user_code') || '';
 }
 
+// Separate secret for proxy auth — decoupled from user data code.
+// Falls back to pa_user_code for backward compatibility.
+function _proxySecret() {
+  return localStorage.getItem('pa_proxy_secret') || localStorage.getItem('pa_user_code') || '';
+}
+
 // Fetch trades for one symbol on one date. Results cached in state.trades.
 export async function fetchTrades(symbol, dateStr) {
   var key = symbol + ':' + dateStr;
@@ -846,7 +852,7 @@ export async function fetchTrades(symbol, dateStr) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         service: 'binance',
-        user_code: _proxyCode(),
+        user_code: _proxySecret(),
         payload: {
           symbol: binSym,
           startTime: _dateToMs(dateStr, false),
@@ -964,7 +970,7 @@ export async function generateWeeklySummary() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       service: 'gemini',
-      user_code: _proxyCode(),
+      user_code: _proxySecret(),
       payload: { prompt: prompt },
     }),
   });
