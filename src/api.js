@@ -134,6 +134,15 @@ function wsSend(msg) {
   }
 }
 
+var _applyLivePriceTimer = null;
+function _scheduleApplyLivePrice() {
+  if (_applyLivePriceTimer) return;
+  _applyLivePriceTimer = setTimeout(function () {
+    _applyLivePriceTimer = null;
+    applyLivePriceUpdates();
+  }, 50);
+}
+
 export function sendWS(obj) { wsSend(obj); }
 
 function wsRequest(msg) {
@@ -318,7 +327,7 @@ function processKlineUpdate(msg) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
   if (coin) {
     coin.current_price = k.close;
-    applyLivePriceUpdates();
+    _scheduleApplyLivePrice();
   }
 }
 

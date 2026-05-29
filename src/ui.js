@@ -1153,7 +1153,7 @@ function initCharts() {
           _destroyChartForSym(sym);
         }
       });
-    }, { rootMargin: '500px 0px', threshold: 0 });
+    }, { rootMargin: '150px 0px', threshold: 0 });
   }
   document.querySelectorAll('.coin-card').forEach(function (card) {
     _cardObserver.observe(card);
