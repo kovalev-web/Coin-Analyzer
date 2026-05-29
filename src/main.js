@@ -313,7 +313,7 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     case 'bp-load-week':
-      fetchWeekTrades();
+      fetchWeekTrades(true);
       break;
     case 'bp-gen-ai': {
       var _aiBtn = target;

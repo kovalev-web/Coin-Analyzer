@@ -894,7 +894,7 @@ export async function fetchAllBriefingTrades() {
 
 // Fetch trades for all briefing entries this week (Mon–today), compute weekly aggregate.
 // Counts by unique orderId (not fills) to match Binance trade count.
-export async function fetchWeekTrades() {
+export async function fetchWeekTrades(force) {
   var today = new Date();
   var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
   var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -905,6 +905,10 @@ export async function fetchWeekTrades() {
 
   var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= weekAgoStr; });
   if (!entries.length) { emit('trades:week-updated'); return null; }
+
+  if (force) {
+    entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
+  }
 
   await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
