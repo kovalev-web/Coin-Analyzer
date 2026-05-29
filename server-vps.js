@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 
 // Load .env from project root if it exists (never committed to git)
@@ -729,6 +730,60 @@ var httpServer = http.createServer(async function (req, res) {
         }
       } catch (e) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // ── Proxy: Binance Futures + Gemini (keys stay server-side) ────────────────
+  if (req.method === 'POST' && req.url === '/api/proxy') {
+    var proxyBody = '';
+    req.on('data', function (chunk) { proxyBody += chunk; });
+    req.on('end', async function () {
+      function proxyJson(code, data) {
+        res.writeHead(code, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+      }
+      try {
+        var p = JSON.parse(proxyBody);
+        var service = p.service, payload = p.payload || {}, userCode = p.user_code;
+        var PROXY_SECRET = process.env.PROXY_SECRET;
+        if (!PROXY_SECRET || userCode !== PROXY_SECRET) return proxyJson(401, { error: 'Unauthorized' });
+
+        if (service === 'binance') {
+          var BIN_KEY = process.env.BINANCE_API_KEY;
+          var BIN_SEC = process.env.BINANCE_API_SECRET;
+          if (!BIN_KEY || !BIN_SEC) return proxyJson(500, { error: 'Binance keys not configured' });
+          var sym = payload.symbol;
+          if (!sym) return proxyJson(400, { error: 'symbol required' });
+          var params = new URLSearchParams({ symbol: sym.toUpperCase(), timestamp: String(Date.now()), limit: String(payload.limit || 1000) });
+          if (payload.startTime) params.set('startTime', String(payload.startTime));
+          if (payload.endTime) params.set('endTime', String(payload.endTime));
+          var qs = params.toString();
+          var sig = crypto.createHmac('sha256', BIN_SEC).update(qs).digest('hex');
+          var binUrl = 'https://fapi.binance.com/fapi/v1/userTrades?' + qs + '&signature=' + sig;
+          var binRes = await fetch(binUrl, { headers: { 'X-MBX-APIKEY': BIN_KEY } });
+          var binData = await binRes.json();
+          if (!binRes.ok) return proxyJson(502, { error: binData.msg || 'Binance error', code: binData.code });
+          return proxyJson(200, { trades: binData });
+        }
+
+        if (service === 'gemini') {
+          var GEM_KEY = process.env.GEMINI_API_KEY;
+          if (!GEM_KEY) return proxyJson(500, { error: 'Gemini key not configured' });
+          if (!payload.prompt) return proxyJson(400, { error: 'prompt required' });
+          var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEM_KEY;
+          var gemRes = await fetch(gemUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: payload.prompt }] }] }) });
+          var gemData = await gemRes.json();
+          if (!gemRes.ok) return proxyJson(502, { error: 'Gemini error' });
+          var text = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0] && gemData.candidates[0].content.parts[0].text) || '';
+          return proxyJson(200, { text: text });
+        }
+
+        return proxyJson(400, { error: 'Unknown service: ' + service });
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
       }
     });
