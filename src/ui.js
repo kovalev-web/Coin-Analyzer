@@ -2198,7 +2198,8 @@ function _drawFVOverlays(ctx, rc, sym) {
 }
 
 function _applyFVTradeMarkers(sym) {
-  if (!sym) { _fvTradeMarkersData = []; return; }
+  var _drawer = document.getElementById('fv-briefing-drawer');
+  if (!sym || !_drawer || !_drawer.classList.contains('open')) { _fvTradeMarkersData = []; return; }
   var briefingEntries = (state.briefing || []).filter(function (e) { return e.sym === sym; });
   var markers = [];
   briefingEntries.forEach(function (e) {
@@ -2839,6 +2840,7 @@ export function closeFVBriefingDrawer() {
   if (drawer) drawer.classList.remove('open');
   var star = document.querySelector('.btn-fv-star');
   if (star) star.style.display = '';
+  _applyFVTradeMarkers(null);
 }
 
 export function toggleFVBriefingDrawer() {
