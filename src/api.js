@@ -892,42 +892,56 @@ export async function fetchAllBriefingTrades() {
   emit('trades:updated');
 }
 
-// Fetch trades for all briefing entries since Monday of the current week, compute weekly aggregate.
+// Fetch ALL realized trades for the current week (Mon–today) via income endpoint.
+// Uses /fapi/v1/income?incomeType=REALIZED_PNL so it counts every trade, not just briefing coins.
 export async function fetchWeekTrades() {
   var today = new Date();
   var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
   var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  var monday = new Date(today.getTime() - daysToMonday * 24 * 3600 * 1000);
+  var monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToMonday);
   var weekAgoStr = monday.getFullYear() + '-'
     + String(monday.getMonth() + 1).padStart(2, '0') + '-'
     + String(monday.getDate()).padStart(2, '0');
+  var startMs = monday.getTime();
+  var endMs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime() - 1;
 
-  var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
-  if (!entries.length) { emit('trades:week-updated'); return null; }
+  try {
+    var [pnlRes, comRes] = await Promise.all([
+      fetch(API_BASE + '/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service: 'binance-income', user_code: _proxySecret(),
+          payload: { incomeType: 'REALIZED_PNL', startTime: startMs, endTime: endMs, limit: 1000 } }),
+      }),
+      fetch(API_BASE + '/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service: 'binance-income', user_code: _proxySecret(),
+          payload: { incomeType: 'COMMISSION', startTime: startMs, endTime: endMs, limit: 1000 } }),
+      }),
+    ]);
+    var pnlData = await pnlRes.json();
+    var comData = await comRes.json();
+    if (!pnlRes.ok) throw new Error(pnlData.error || 'Proxy error');
 
-  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+    var pnlEntries = pnlData.income || [];
+    var comEntries = comData.income || [];
 
-  var totalPnl = 0, totalTrades = 0, profitSessions = 0, tradedSessions = 0;
-  var symsBriefed = new Set(entries.map(function (e) { return e.sym; }));
+    var totalPnl = pnlEntries.reduce(function (s, e) { return s + parseFloat(e.income || 0); }, 0);
+    var totalCom = comEntries.reduce(function (s, e) { return s + Math.abs(parseFloat(e.income || 0)); }, 0);
+    var winCount = pnlEntries.filter(function (e) { return parseFloat(e.income || 0) > 0; }).length;
+    var tradeCount = pnlEntries.length;
 
-  // Count per sym:date sessions (one briefing entry = one session)
-  entries.forEach(function (e) {
-    var t = state.trades[e.sym + ':' + e.date];
-    if (t && t.status === 'ok' && t.count > 0) {
-      totalPnl += t.pnl;
-      totalTrades += t.count;
-      tradedSessions++;
-      if (t.pnl > 0) profitSessions++;
-    }
-  });
-
-  state.weekSummary = {
-    pnl: totalPnl,
-    tradeCount: totalTrades,
-    winRate: tradedSessions > 0 ? Math.round(profitSessions / tradedSessions * 100) : 0,
-    conversion: symsBriefed.size > 0 ? Math.round(tradedSessions / entries.length * 100) : 0,
-    fromDate: weekAgoStr,
-  };
+    state.weekSummary = {
+      pnl: totalPnl - totalCom,
+      tradeCount: tradeCount,
+      winCount: winCount,
+      winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+      fromDate: weekAgoStr,
+    };
+  } catch (e) {
+    state.weekSummary = { error: e.message };
+  }
   emit('trades:week-updated');
   return state.weekSummary;
 }
