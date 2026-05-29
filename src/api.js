@@ -11,6 +11,10 @@ export var API_BASE = _wsEnv
 // Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
 var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
 
+// TV chart update throttle: max once per 2s per symbol (TV hardware is slow)
+var _tvKlineThrottle = {};
+var TV_THROTTLE_MS = 2000;
+
 function volClrs() {
   var s = getComputedStyle(document.documentElement);
   return {
@@ -288,11 +292,15 @@ function processKlineUpdate(msg) {
   var vs = (window.__chartVolSeries || {})[sym];
   if (vs) { try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
-  // TV-режим тоже обновляем
-  var ts = (window.__tvChartSeries || {})[sym];
-  if (ts) { try { ts.update(k); } catch (e) {} }
-  var tvs = (window.__tvChartVolSeries || {})[sym];
-  if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
+  // TV-режим: обновляем не чаще TV_THROTTLE_MS (слабые TV-процессоры не справляются с каждым тиком)
+  var _tvNow = Date.now();
+  if (!_tvKlineThrottle[sym] || _tvNow - _tvKlineThrottle[sym] >= TV_THROTTLE_MS) {
+    _tvKlineThrottle[sym] = _tvNow;
+    var ts = (window.__tvChartSeries || {})[sym];
+    if (ts) { try { ts.update(k); } catch (e) {} }
+    var tvs = (window.__tvChartVolSeries || {})[sym];
+    if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
+  }
 
   // Full view обновляем если открыт для этой монеты и совпадает таймфрейм
   if (window.__fvSymbol === sym && window.__fvTF === tf) {
