@@ -1790,12 +1790,11 @@ function cycleBriefingStatus(sym, date) {
   var _fvd = document.getElementById('fv-briefing-drawer');
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
   openNotes.forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) {
+    document.querySelectorAll('[id="' + id + '"]').forEach(function (el) {
       el.style.display = '';
       var ta = el.querySelector('textarea');
       if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-    }
+    });
   });
 }
 
