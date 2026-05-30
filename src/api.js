@@ -463,8 +463,9 @@ export function applyLivePriceUpdates() {
         var sym = el.dataset.tvSym;
         var coin = state.coins.find(function (c) { return c.symbol === sym; });
         if (!coin) return;
-        var ch = (coin.open_24h > 0 && coin.current_price > 0)
-          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+        var tvD1 = state.dailyOpen[coin.symbol];
+        var ch = (tvD1 > 0 && coin.current_price > 0)
+          ? (coin.current_price - tvD1) / tvD1 * 100
           : (coin.price_change_percentage_24h || 0);
         var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
         var newCls = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn');
@@ -492,8 +493,9 @@ function _refreshCardPct() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (!spans.length) return;
-    var ch = (coin.open_24h > 0 && coin.current_price > 0)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+    var d1 = state.dailyOpen[coin.symbol];
+    var ch = (d1 > 0 && coin.current_price > 0)
+      ? (coin.current_price - d1) / d1 * 100
       : (coin.price_change_percentage_24h || 0);
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     var newCls = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
@@ -507,8 +509,9 @@ function _refreshCardPct() {
     if (fvCoin && fvStatsEl) {
       var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
       if (fvSpans.length >= 1) {
-        var fvCh = (fvCoin.open_24h > 0 && fvCoin.current_price > 0)
-          ? (fvCoin.current_price - fvCoin.open_24h) / fvCoin.open_24h * 100
+        var fvD1 = state.dailyOpen[fvCoin.symbol];
+        var fvCh = (fvD1 > 0 && fvCoin.current_price > 0)
+          ? (fvCoin.current_price - fvD1) / fvD1 * 100
           : (fvCoin.price_change_percentage_24h || 0);
         var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
         var newFvCls = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn');
