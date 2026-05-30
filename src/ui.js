@@ -879,6 +879,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     }
   }
   var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
+  var priceAxisW = 0; try { if (chart) priceAxisW = chart.priceScale('right').width(); } catch (_) {}
   // Fill zone between the two price levels
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
@@ -900,7 +901,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var signW = ctx.measureText(sign).width;
   var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
   var lx = p2.x + 12, ly = p2.y - 10;
-  if (lx + maxW > rc.width) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
+  if (lx + maxW > rc.width - priceAxisW) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
   if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 36) ly = rc.height - 36; if (ly < 4) ly = 4;
   ctx.fillText(sign, lx - signW, ly);
   ctx.fillText(digits, lx, ly);
@@ -2553,8 +2554,9 @@ export function openCoinFullView(sym) {
     ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
     var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+    var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var lx = pt.x + 12, lyt = pt.y - 10;
-    if (lx + maxW > rc.width) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
+    if (lx + maxW > rc.width - fvPriceAxisW) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
     if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 36) lyt = rc.height - 36; if (lyt < 4) lyt = 4;
     ctx.fillText(sign, lx - signW, lyt);
     ctx.fillText(digits, lx, lyt);
