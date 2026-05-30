@@ -1879,10 +1879,7 @@ function _refreshBriefingPct() {
   document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
     var coin = coinMap[row.dataset.sym];
     if (!coin) return;
-    var d1 = state.dailyOpen[coin.symbol];
-    var ch = (d1 > 0 && coin.current_price > 0)
-      ? (coin.current_price - d1) / d1 * 100
-      : (coin.price_change_percentage_24h || 0);
+    var ch = coin.price_change_percentage_24h || 0;
     var span = row.querySelector('.bp-chg');
     if (!span) return;
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
