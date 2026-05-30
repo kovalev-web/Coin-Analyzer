@@ -1763,7 +1763,7 @@ function briefingStatusLabel(status) {
 function briefingStatusText(status) {
   if (status === 'watching') return 'Наблюдение';
   if (status === 'traded')   return 'Торговал';
-  if (status === 'skip')     return 'Пропуск';
+  if (status === 'skip')     return 'Отмена';
   if (status === 'missed')   return 'Упустил';
   return '';
 }
