@@ -1757,27 +1757,24 @@ export function toggleBriefing(sym) {
 }
 
 function briefingStatusLabel(status) {
-  if (status === 'watching') return icon('eye', 16);
   if (status === 'traded')   return icon('zap', 16);
   if (status === 'skip')     return icon('ban', 16);
   if (status === 'missed')   return icon('clock', 16);
-  return icon('circle', 16);
+  return icon('eye', 16);
 }
 
 function briefingStatusText(status) {
-  if (status === 'watching') return 'Наблюдение';
   if (status === 'traded')   return 'Отработка';
   if (status === 'skip')     return 'Отмена';
   if (status === 'missed')   return 'Упущено';
-  return '';
+  return 'Наблюдение';
 }
 
 function briefingStatusClass(status) {
-  if (status === 'watching') return 'bp-s-watching';
   if (status === 'traded')   return 'bp-s-traded';
   if (status === 'skip')     return 'bp-s-skip';
   if (status === 'missed')   return 'bp-s-missed';
-  return 'bp-s-none';
+  return 'bp-s-watching';
 }
 
 function cycleBriefingStatus(sym, date) {
