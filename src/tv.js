@@ -1,9 +1,24 @@
 import { state, filteredCoins } from './state.js';
 import { getCSSVar, getChartOpts, getSeriesColors, calcPriceFormat } from './ui.js';
+import { fetchChartData } from './api.js';
 
 // ── TV Mode ────────────────────────────────────────────────────────────────
 
 var _tvCharts = {};
+
+// Заливает данные в уже созданный TV-чарт (вызывается сразу или после фетча)
+function _tvApplyData(sym, s, vs, volClr) {
+  var tf = state.chartTF[sym] || '5m';
+  var cd = state.chartData[sym + '_' + tf];
+  if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
+  var lastClose = cd.candles[cd.candles.length - 1].close;
+  s.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
+  s.setData(cd.candles);
+  var tvVolDn = getCSSVar('--vol-dn');
+  vs.setData(cd.candles.map(function (k) { return { time: k.time, value: k.volume || 0, color: k.close >= k.open ? volClr : tvVolDn }; }));
+  var chart = _tvCharts[sym];
+  if (chart) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+}
 var _tvInterval = null;
 window.__tvChartSeries = {};
 window.__tvChartVolSeries = {};
@@ -108,11 +123,12 @@ export function openTVMode() {
       var tf = state.chartTF[c.symbol] || '5m';
       var cd = state.chartData[c.symbol + '_' + tf];
       if (cd && cd.status === 'ok' && cd.candles.length) {
-        var lastClose = cd.candles[cd.candles.length - 1].close;
-        s.applyOptions({ priceFormat: calcPriceFormat(lastClose) });
-        s.setData(cd.candles);
-        var tvVolDn = getCSSVar('--vol-dn'); vs.setData(cd.candles.map(function (k) { return { time: k.time, value: k.volume || 0, color: k.close >= k.open ? volClr : tvVolDn }; }));
-        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+        _tvApplyData(c.symbol, s, vs, volClr);
+      } else {
+        // Данные ещё не загружены — фетчим и заливаем когда придут
+        fetchChartData(c.symbol, tf).then(function () {
+          if (_tvCharts[c.symbol]) _tvApplyData(c.symbol, s, vs, volClr);
+        });
       }
 
       // Single ResizeObserver — safe since autoSize is off
