@@ -904,24 +904,17 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
   // Label — pct and duration on separate lines
-  ctx.font = '12px Manrope,Arial,sans-serif';
-  var sign = pctStr[0], digits = pctStr.slice(1);
+  ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
+  var sign = pctStr[0]; // '+' or '-'
+  var digits = pctStr.slice(1);
   var signW = ctx.measureText(sign).width;
   var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
-  var pad = 5, lh = 16;
-  var lx = p2.x + 12;
-  if (lx + maxW + pad > cw - priceAxisW) lx = p2.x - 12 - maxW - pad;
-  if (lx < pad + 2) lx = pad + 2;
-  var ly = p2.y - 8;
-  if (ly < 14) ly = p2.y + 14; if (ly > ch - 30) ly = ch - 30; if (ly < 4) ly = 4;
-  var ply = ly - 11, plateH = lh * 2 + pad * 2;
-  ctx.fillStyle = getCSSVar('--paper');
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
-  else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
-  ctx.fillStyle = color;
+  var lx = p2.x + 12, ly = p2.y - 10;
+  if (lx + maxW > cw - priceAxisW) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
+  if (ly < 14) ly = p2.y + 20; if (ly > ch - 36) ly = ch - 36; if (ly < 4) ly = 4;
   ctx.fillText(sign, lx - signW, ly);
   ctx.fillText(digits, lx, ly);
-  if (durStr) ctx.fillText(durStr, lx, ly + lh);
+  if (durStr) ctx.fillText(durStr, lx, ly + 18);
 }
 
 function drawAlertLabel(ctx, a, y) {
@@ -2578,25 +2571,16 @@ export function openCoinFullView(sym) {
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.font = '12px Manrope,Arial,sans-serif';
-    var sign = pctStr[0], digits = pctStr.slice(1);
-    var signW = ctx.measureText(sign).width;
+    ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
+    var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
-    var pad = 5, lh = 16;
-    var lx = pt.x + 12;
-    if (lx + maxW + pad > cw - fvPriceAxisW) lx = pt.x - 12 - maxW - pad;
-    if (lx < pad + 2) lx = pad + 2;
-    var lyt = pt.y - 8;
-    if (lyt < 14) lyt = pt.y + 14; if (lyt > ch - 30) lyt = ch - 30; if (lyt < 4) lyt = 4;
-    var ply = lyt - 11, plateH = lh * 2 + pad * 2;
-    ctx.fillStyle = getCSSVar('--paper');
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
-    else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
-    ctx.fillStyle = color;
+    var lx = pt.x + 12, lyt = pt.y - 10;
+    if (lx + maxW > cw - fvPriceAxisW) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
+    if (lyt < 14) lyt = pt.y + 20; if (lyt > ch - 36) lyt = ch - 36; if (lyt < 4) lyt = 4;
     ctx.fillText(sign, lx - signW, lyt);
     ctx.fillText(digits, lx, lyt);
-    if (durStr) ctx.fillText(durStr, lx, lyt + lh);
+    if (durStr) ctx.fillText(durStr, lx, lyt + 18);
   });
   el.addEventListener('mouseup', function (e) {
     if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; }
