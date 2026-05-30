@@ -1869,9 +1869,7 @@ function _weekSummaryHTML() {
     + '<span class="bp-ai-label">AI разбор</span>'
     + '<button class="bp-ai-btn" data-action="bp-gen-ai"' + (!ws ? ' disabled' : '') + '>Сгенерировать</button>'
     + '</div>'
-    + (aiText
-      ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>'
-      : '<div class="bp-ai-spinner">Нажми «Сгенерировать» после загрузки итогов</div>')
+    + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
     + '</div>';
 
   var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 14) + '</button>';
