@@ -909,7 +909,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     var sign = pctStr[0], digits = pctStr.slice(1);
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var flipLeft = p2.x + 16 + maxW + 16 > cw - priceAxisW;
-    var plateHalf = durStr ? 24 : 14;
+    var plateHalf = durStr ? 22 : 12;
     var dpr = window.devicePixelRatio || 1;
     var snappedY = Math.round(p2.y * dpr) / dpr;
     var clampedY = Math.max(plateHalf, Math.min(ch - plateHalf, snappedY));
@@ -919,7 +919,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
     lbl.style.borderRadius = '4px';
-    lbl.style.padding = '4px';
+    lbl.style.padding = '2px 4px';
     lbl.innerHTML =
       '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
       (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
@@ -2595,7 +2595,7 @@ export function openCoinFullView(sym) {
       var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
       var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
       var flipLeft = pt.x + 16 + maxW + 16 > cw - fvPriceAxisW;
-      var fvPlateHalf = durStr ? 24 : 14;
+      var fvPlateHalf = durStr ? 22 : 12;
       var fvDpr = window.devicePixelRatio || 1;
       var fvSnappedY = Math.round(pt.y * fvDpr) / fvDpr;
       var fvClampedY = Math.max(fvPlateHalf, Math.min(ch - fvPlateHalf, fvSnappedY));
