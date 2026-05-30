@@ -1847,37 +1847,37 @@ function _tradePillHTML(sym, date) {
 
 // ── Weekly summary block ───────────────────────────────────────────────────
 
-function _weekSummaryHTML() {
+function _weekStatsHTML() {
+  var ws = state.weekSummary;
+  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 14) + '</button>';
+  var statsHTML = ws
+    ? (function () {
+        var pnlSign = ws.pnl >= 0 ? '+' : '';
+        var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
+        return '<div class="bp-week-stats">'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Сделок</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Побед</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
+          + '</div>';
+      })()
+    : '<div class="fvbd-empty">Нажми обновить для загрузки</div>';
+  return '<div class="bp-week">'
+    + '<div class="bp-week-header">' + loadBtn + '</div>'
+    + statsHTML
+    + '</div>';
+}
+
+function _weekAIHTML() {
   var ws = state.weekSummary;
   var aiText = state.aiSummary;
-
-  var statsHTML = '';
-  if (ws) {
-    var pnlSign = ws.pnl >= 0 ? '+' : '';
-    var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
-    statsHTML = '<div class="bp-week-stats">'
-      + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
-      + '<div class="bp-stat-card"><div class="bp-stat-label">Сделок</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
-      + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
-      + '<div class="bp-stat-card"><div class="bp-stat-label">Побед</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
-      + '</div>'
-      ;
-  }
-
-  var aiHTML = '<div class="bp-ai-block">'
+  return '<div class="bp-week">'
+    + '<div class="bp-ai-block">'
     + '<div class="bp-ai-header">'
-    + '<span class="bp-ai-label">AI разбор</span>'
     + '<button class="bp-ai-btn" data-action="bp-gen-ai"' + (!ws ? ' disabled' : '') + '>Сгенерировать</button>'
     + '</div>'
     + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
-    + '</div>';
-
-  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 14) + '</button>';
-
-  return '<div class="bp-week">'
-    + '<div class="bp-week-header"><span class="bp-week-title">Итог недели</span>' + loadBtn + '</div>'
-    + statsHTML
-    + aiHTML
+    + '</div>'
     + '</div>';
 }
 
@@ -2737,7 +2737,15 @@ export function renderFVBriefingDrawer() {
   var dateMap = {};
   allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
   var dates = Object.keys(dateMap).sort().reverse();
-  var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>';
+  var tab = state.briefingTab || 'coins';
+  var tabs = '<div class="fvbd-tabs">'
+    + '<button class="fvbd-tab nav-pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Монеты</button>'
+    + '<button class="fvbd-tab nav-pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Итоги</button>'
+    + '<button class="fvbd-tab nav-pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI анализ</button>'
+    + '</div>';
+  var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>' + tabs;
+  if (tab === 'week') { drawer.innerHTML = html + _weekStatsHTML(); _refreshBriefingPct(); return; }
+  if (tab === 'ai')   { drawer.innerHTML = html + _weekAIHTML();   _refreshBriefingPct(); return; }
   dates.forEach(function (date, idx) {
     var isToday = date === today;
     if (idx > 0 && dates[idx - 1] === today) html += '<div class="fvbd-divider"></div>';
@@ -2766,7 +2774,7 @@ export function renderFVBriefingDrawer() {
         + '</div>';
     });
   });
-  drawer.innerHTML = html + _weekSummaryHTML();
+  drawer.innerHTML = html;
   _refreshBriefingPct();
   // Re-attach textarea listeners
   drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {

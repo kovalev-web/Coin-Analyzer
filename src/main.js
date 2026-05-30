@@ -320,6 +320,10 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-open':
       openFV(sym);
       break;
+    case 'fvbd-tab':
+      state.briefingTab = target.dataset.tab;
+      renderFVBriefingDrawer();
+      break;
     case 'bp-load-week':
       target.innerHTML = '<span class="spinner" style="margin-right:0"></span>';
       target.disabled = true;

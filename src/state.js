@@ -31,6 +31,7 @@ export const state = {
   trades: {},          // 'sym:date' → {status:'ok'|'loading'|'error', pnl, count, entries[]}
   weekSummary: null,   // агрегат за неделю {pnl, tradeCount, winRate, conversion, ...}
   aiSummary: null,     // текст от Gemini
+  briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
 };
 
 export function filteredCoins() {
