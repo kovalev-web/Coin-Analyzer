@@ -2288,7 +2288,7 @@ function _setFVData(sym, cd) {
   _fvLastVol = cd.candles[cd.candles.length - 1].volume || 0;
   var _volLbl = document.getElementById('fv-vol-label');
   if (_volLbl) _volLbl.textContent = 'vol. ' + fmt(_fvLastVol).replace('$', '');
-  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 80), to: cd.candles.length - 1 });
+  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 120), to: cd.candles.length + 4 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
     if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--caution'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
@@ -2373,7 +2373,7 @@ export function openCoinFullView(sym) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
-    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt, rightOffset: 5 },
     localization: { timeFormatter: _localTimeFmt },
     handleScroll: true, handleScale: true,
   });
