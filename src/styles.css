@@ -360,7 +360,7 @@
       #fv-briefing-drawer.open{height:33vh;width:auto !important;flex-shrink:0;overflow-y:auto;border-top:1px solid var(--hairline);}
       .fv-sym-label{font-size:14px;}
       .fv-info-top{display:none;}
-      .fv-bottom-bar{display:flex;}
+      .fv-bottom-bar{display:flex;background:var(--canvas);border-top-color:transparent;padding-left:12px;padding-right:12px;}
       #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{padding-bottom:8px;}
       .fv-bb-left .fv-back-btn,.fv-bb-right .btn-analyze-one,.fv-bb-right .btn-pressed,.fv-bb-right .btn-retry{width:36px;height:36px;}
       .fv-bb-right .btn-star{width:36px;height:36px;background:var(--fog);border-radius:6px;}
