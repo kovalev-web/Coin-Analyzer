@@ -2014,9 +2014,11 @@ export function renderBriefingPanel() {
       '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
         '<div class="bp-note-top">' +
           '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>' +
-          '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>' +
         '</div>' +
-        '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
+        '<div class="bp-note-wrap">' +
+          '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
+          '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '"' + (e.note ? '' : ' style="display:none"') + '>' + icon('x', 12) + '</button>' +
+        '</div>' +
       '</div>';
   }).join('') : '<div class="bp-empty">На сегодня монет нет — отметь звёздочкой на дашборде</div>';
 
@@ -2041,6 +2043,8 @@ export function renderBriefingPanel() {
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }
       var noteBtn = popup.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
+      var clrBtn = ta.closest('.bp-note-row') && ta.closest('.bp-note-row').querySelector('.bp-note-clear');
+      if (clrBtn) clrBtn.style.display = ta.value ? '' : 'none';
     });
   });
 }
@@ -2727,7 +2731,10 @@ export function briefingClearNote(sym, date, noteRow) {
   if (!entry) return;
   entry.note = '';
   saveBriefingLocal();
-  if (noteRow) { var ta = noteRow.querySelector('textarea'); if (ta) ta.value = ''; }
+  if (noteRow) {
+    var ta = noteRow.querySelector('textarea'); if (ta) ta.value = '';
+    var clrBtn = noteRow.querySelector('.bp-note-clear'); if (clrBtn) clrBtn.style.display = 'none';
+  }
   document.querySelectorAll('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]')
     .forEach(function (btn) { btn.classList.remove('has-note'); });
 }
@@ -2791,10 +2798,12 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-top">'
         + (isToday
           ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
-          + '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>'
           : '')
         + '</div>'
+        + '<div class="bp-note-wrap">'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
+        + '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '"' + (e.note ? '' : ' style="display:none"') + '>' + icon('x', 12) + '</button>'
+        + '</div>'
         + '</div>';
     });
   });
@@ -2810,6 +2819,8 @@ export function renderFVBriefingDrawer() {
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }
       var noteBtn = drawer.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
+      var clrBtn = ta.closest('.bp-note-row') && ta.closest('.bp-note-row').querySelector('.bp-note-clear');
+      if (clrBtn) clrBtn.style.display = ta.value ? '' : 'none';
     });
   });
 }
