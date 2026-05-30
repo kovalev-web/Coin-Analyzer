@@ -1744,6 +1744,15 @@ export function loadBriefing() {
   var code = localStorage.getItem('pa_user_code');
   if (!code) return;
   _briefingUserCode = code;
+  // If we have AI summary locally — push it to server so other devices can get it
+  if (state.aiSummary) {
+    fetch(API_BASE + '/api/briefing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', code: code, entries: state.briefing,
+        ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys || [], ai_summary_date: state.aiSummaryDate || null }),
+    }).catch(function () {});
+  }
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
