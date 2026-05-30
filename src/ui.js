@@ -1755,6 +1755,16 @@ export function loadBriefing() {
       renderBriefingPanel();
       updateAllStarButtons();
     }
+    if (d && d.ai_summary) {
+      state.aiSummary = d.ai_summary;
+      state.aiSummaryTradedKeys = d.ai_traded_keys || [];
+      state.aiSummaryDate = d.ai_summary_date || null;
+      try {
+        localStorage.setItem('pa_ai_summary', state.aiSummary);
+        localStorage.setItem('pa_ai_traded_keys', JSON.stringify(state.aiSummaryTradedKeys));
+        if (state.aiSummaryDate) localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
+      } catch (e) {}
+    }
   }).catch(function () {});
 }
 

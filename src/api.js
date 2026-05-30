@@ -1064,6 +1064,15 @@ export async function generateWeeklySummary() {
     localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
     localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
   } catch (e) {}
+  var _aiCode = _proxyCode();
+  if (_aiCode) {
+    fetch(API_BASE + '/api/briefing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', code: _aiCode, entries: state.briefing,
+        ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys, ai_summary_date: state.aiSummaryDate }),
+    }).catch(function () {});
+  }
   emit('trades:ai-updated');
   return state.aiSummary;
 }

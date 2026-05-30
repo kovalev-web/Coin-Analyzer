@@ -716,12 +716,23 @@ var httpServer = http.createServer(async function (req, res) {
           return;
         }
         var key = 'briefing:' + code.toLowerCase();
+        var keyAI = 'briefing_ai:' + code.toLowerCase();
         if (action === 'get') {
           var r = await redis(['GET', key]);
+          var rAI = await redis(['GET', keyAI]);
+          var aiData = rAI.result ? JSON.parse(rAI.result) : {};
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ entries: r.result ? JSON.parse(r.result) : [] }));
+          res.end(JSON.stringify({
+            entries: r.result ? JSON.parse(r.result) : [],
+            ai_summary: aiData.text || null,
+            ai_traded_keys: aiData.keys || null,
+            ai_summary_date: aiData.date || null,
+          }));
         } else if (action === 'save') {
           await redis(['SET', key, JSON.stringify(entries || [])]);
+          if (parsed.ai_summary) {
+            await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null })]);
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else {
