@@ -1877,7 +1877,9 @@ setInterval(function () {
   document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
     var coin = state.coins.find(function (c) { return c.symbol === row.dataset.sym; });
     if (!coin) return;
-    var change = coin.price_change_percentage_24h || 0;
+    var change = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
     var span = row.querySelector('.bp-chg');
     if (span) {
       span.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
