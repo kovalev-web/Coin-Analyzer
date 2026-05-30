@@ -422,6 +422,7 @@
     .bp-remove{background:transparent;border:none;color:var(--graphite);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .bp-remove:hover{color:var(--danger);opacity:1;}
     .bp-note-row{padding:0 12px 8px;}
+    .bp-note-top{display:flex;align-items:center;padding:2px 0 4px;}
     .bp-note-row textarea{width:100%;box-sizing:border-box;background:var(--fog);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font-size:12px;padding:8px 10px;resize:vertical;min-height:60px;font-family:inherit;outline:none;}
     .bp-note-row textarea:focus{border-color:var(--primary);}
 
