@@ -893,7 +893,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), cw, Math.abs(p2.y - p1.y) || 1);
   // Horizontal dashed line at start price level only
-  ctx.strokeStyle = getCSSVar('--ink'); ctx.lineWidth = 1;
+  ctx.strokeStyle = color; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke();
   // Diagonal line from start to end point
   ctx.strokeStyle = color; ctx.lineWidth = 1;
@@ -2574,7 +2574,7 @@ export function openCoinFullView(sym) {
     }
     ctx.fillStyle = 'rgba(150,150,150,0.07)';
     ctx.fillRect(0, Math.min(p1.y, pt.y), cw, Math.abs(pt.y - p1.y) || 1);
-    ctx.strokeStyle = getCSSVar('--ink'); ctx.lineWidth = 1;
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke();
     ctx.strokeStyle = color; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
