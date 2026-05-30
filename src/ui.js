@@ -910,14 +910,14 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var signW = ctx.measureText(sign).width;
   var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
   var pad = 5, lh = 15, asc = 9;
-  var plateW = signW + maxW + pad * 2;
-  var plateH = (durStr ? asc + lh + 3 : 12) + pad * 2;
-  var plx = p2.x + 12;
-  if (plx + plateW > cw - priceAxisW) plx = p2.x - 12 - plateW;
+  var plateW = Math.ceil(signW + maxW + pad * 2);
+  var plateH = (asc + lh + 3) + pad * 2;
+  var plx = Math.round(p2.x + 12);
+  if (plx + plateW > cw - priceAxisW) plx = Math.round(p2.x - 12 - plateW);
   if (plx < 2) plx = 2;
-  var ply = p2.y - plateH / 2;
+  var ply = Math.round(p2.y - plateH / 2);
   if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-  var lx = plx + pad + signW, ly = ply + pad + asc;
+  var lx = Math.round(plx + pad + signW), ly = ply + pad + asc;
   ctx.fillStyle = getCSSVar('--paper');
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
   else { ctx.fillRect(plx, ply, plateW, plateH); }
@@ -2586,14 +2586,14 @@ export function openCoinFullView(sym) {
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var pad = 5, lh = 15, asc = 9;
-    var plateW = signW + maxW + pad * 2;
-    var plateH = (durStr ? asc + lh + 3 : 12) + pad * 2;
-    var plx = pt.x + 12;
-    if (plx + plateW > cw - fvPriceAxisW) plx = pt.x - 12 - plateW;
+    var plateW = Math.ceil(signW + maxW + pad * 2);
+    var plateH = (asc + lh + 3) + pad * 2;
+    var plx = Math.round(pt.x + 12);
+    if (plx + plateW > cw - fvPriceAxisW) plx = Math.round(pt.x - 12 - plateW);
     if (plx < 2) plx = 2;
-    var ply = pt.y - plateH / 2;
+    var ply = Math.round(pt.y - plateH / 2);
     if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-    var lx = plx + pad + signW, lyt = ply + pad + asc;
+    var lx = Math.round(plx + pad + signW), lyt = ply + pad + asc;
     ctx.fillStyle = getCSSVar('--paper');
     if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
     else { ctx.fillRect(plx, ply, plateW, plateH); }
