@@ -909,8 +909,10 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     var sign = pctStr[0], digits = pctStr.slice(1);
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var flipLeft = p2.x + 12 + maxW + 16 > cw - priceAxisW;
+    var plateHalf = durStr ? 24 : 14;
+    var clampedY = Math.max(plateHalf, Math.min(ch - plateHalf, p2.y));
     lbl.style.left = p2.x + 'px';
-    lbl.style.top = p2.y + 'px';
+    lbl.style.top = clampedY + 'px';
     lbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
     lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
@@ -2591,8 +2593,10 @@ export function openCoinFullView(sym) {
       var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
       var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
       var flipLeft = pt.x + 12 + maxW + 16 > cw - fvPriceAxisW;
+      var fvPlateHalf = durStr ? 24 : 14;
+      var fvClampedY = Math.max(fvPlateHalf, Math.min(ch - fvPlateHalf, pt.y));
       fvLbl.style.left = pt.x + 'px';
-      fvLbl.style.top = pt.y + 'px';
+      fvLbl.style.top = fvClampedY + 'px';
       fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
       fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
       fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
