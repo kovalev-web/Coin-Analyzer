@@ -425,8 +425,8 @@
     .bp-note-top{display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px;}
     .bp-note-top .bp-status{width:auto;padding:0 8px;gap:5px;}
     .bp-status-text{font-size:12px;}
-    .bp-note-clear{background:transparent;border:none;color:var(--graphite);padding:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;flex-shrink:0;}
-    .bp-note-clear:hover{color:var(--danger);}
+    .bp-note-clear{background:transparent;border:none;color:var(--graphite);padding:0;font-size:12px;cursor:pointer;flex-shrink:0;}
+    .bp-note-clear:hover{opacity:0.7;}
     .bp-note-row textarea{width:100%;box-sizing:border-box;background:var(--fog);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font-size:12px;padding:8px 10px;resize:none;overflow:hidden;min-height:40px;font-family:inherit;outline:none;}
 
     /* ── Trade pills ─────────────────────────────────────────────────────── */
