@@ -1733,6 +1733,12 @@ export function loadBriefing() {
     var local = JSON.parse(localStorage.getItem('pa_briefing') || '[]');
     if (Array.isArray(local)) state.briefing = local.filter(function (e) { return e.date >= _mondayStr; });
   } catch (e) {}
+  try {
+    var savedAI = localStorage.getItem('pa_ai_summary');
+    if (savedAI) state.aiSummary = savedAI;
+    var savedKeys = localStorage.getItem('pa_ai_traded_keys');
+    if (savedKeys) state.aiSummaryTradedKeys = JSON.parse(savedKeys);
+  } catch (e) {}
   var code = localStorage.getItem('pa_user_code');
   if (!code) return;
   _briefingUserCode = code;
@@ -1871,10 +1877,17 @@ function _weekStatsHTML() {
 function _weekAIHTML() {
   var ws = state.weekSummary;
   var aiText = state.aiSummary;
+  var currentKeys = (state.briefing || [])
+    .filter(function (e) { return e.status === 'traded'; })
+    .map(function (e) { return e.sym + ':' + e.date; })
+    .sort().join(',');
+  var savedKeys = (state.aiSummaryTradedKeys || []).slice().sort().join(',');
+  var hasNewTraded = currentKeys !== savedKeys;
+  var btnDisabled = !ws || (!!aiText && !hasNewTraded);
   return '<div class="bp-week">'
     + '<div class="bp-ai-block">'
     + '<div class="bp-ai-header">'
-    + '<button class="bp-ai-btn" data-action="bp-gen-ai"' + (!ws ? ' disabled' : '') + '>Сгенерировать</button>'
+    + '<button class="bp-ai-btn" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Сгенерировать</button>'
     + '</div>'
     + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
     + '</div>'

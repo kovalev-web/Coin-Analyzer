@@ -1053,6 +1053,15 @@ export async function generateWeeklySummary() {
   var data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Proxy error');
   state.aiSummary = data.text || '';
+  var tradedKeys = (state.briefing || [])
+    .filter(function (e) { return e.status === 'traded'; })
+    .map(function (e) { return e.sym + ':' + e.date; })
+    .sort();
+  state.aiSummaryTradedKeys = tradedKeys;
+  try {
+    localStorage.setItem('pa_ai_summary', state.aiSummary);
+    localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
+  } catch (e) {}
   emit('trades:ai-updated');
   return state.aiSummary;
 }
