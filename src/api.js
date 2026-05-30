@@ -210,7 +210,6 @@ function processTickerPush(arr) {
       return;
     }
     coin.current_price = parseFloat(t.c);
-    coin.open_24h = parseFloat(t.o);   // rolling 24h open — держим свежим для kline-расчётов
     coin.total_volume = Math.round(parseFloat(t.q));
     if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
   });
@@ -463,7 +462,9 @@ export function applyLivePriceUpdates() {
         var sym = el.dataset.tvSym;
         var coin = state.coins.find(function (c) { return c.symbol === sym; });
         if (!coin) return;
-        var ch = coin.price_change_percentage_24h || 0;
+        var ch = (coin.open_24h > 0 && coin.current_price > 0)
+          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+          : (coin.price_change_percentage_24h || 0);
         var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
         var newCls = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn');
         var chgEl = el.querySelector('.tv-chg');
@@ -490,7 +491,9 @@ function _refreshCardPct() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (!spans.length) return;
-    var ch = coin.price_change_percentage_24h || 0;
+    var ch = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
     var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
     var newCls = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
     if (spans[0].textContent !== newChg) spans[0].textContent = newChg;
@@ -503,7 +506,9 @@ function _refreshCardPct() {
     if (fvCoin && fvStatsEl) {
       var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
       if (fvSpans.length >= 1) {
-        var fvCh = fvCoin.price_change_percentage_24h || 0;
+        var fvCh = (fvCoin.open_24h > 0 && fvCoin.current_price > 0)
+          ? (fvCoin.current_price - fvCoin.open_24h) / fvCoin.open_24h * 100
+          : (fvCoin.price_change_percentage_24h || 0);
         var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
         var newFvCls = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn');
         if (fvSpans[0].textContent !== newFvChg) fvSpans[0].textContent = newFvChg;
