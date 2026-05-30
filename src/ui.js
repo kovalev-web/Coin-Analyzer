@@ -907,12 +907,12 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.font = '12px Manrope,Arial,sans-serif';
   var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
   var pad = 5, lh = 15, asc = 9;
-  var plateW = Math.ceil(maxW + pad * 2);
+  var plateW = maxW + pad * 2;
   var plateH = (asc + lh + 3) + pad * 2;
-  var plx = Math.round(p2.x + 12);
-  if (plx + plateW > cw - priceAxisW) plx = Math.round(p2.x - 12 - plateW);
+  var plx = p2.x + 12;
+  if (plx + plateW > cw - priceAxisW) plx = p2.x - 12 - plateW;
   if (plx < 2) plx = 2;
-  var ply = Math.round(p2.y - plateH / 2);
+  var ply = p2.y - plateH / 2;
   if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
   var lx = plx + pad, ly = ply + pad + asc;
   ctx.fillStyle = getCSSVar('--paper');
@@ -2581,12 +2581,12 @@ export function openCoinFullView(sym) {
     var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var pad = 5, lh = 15, asc = 9;
-    var plateW = Math.ceil(maxW + pad * 2);
+    var plateW = maxW + pad * 2;
     var plateH = (asc + lh + 3) + pad * 2;
-    var plx = Math.round(pt.x + 12);
-    if (plx + plateW > cw - fvPriceAxisW) plx = Math.round(pt.x - 12 - plateW);
+    var plx = pt.x + 12;
+    if (plx + plateW > cw - fvPriceAxisW) plx = pt.x - 12 - plateW;
     if (plx < 2) plx = 2;
-    var ply = Math.round(pt.y - plateH / 2);
+    var ply = pt.y - plateH / 2;
     if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
     var lx = plx + pad, lyt = ply + pad + asc;
     ctx.fillStyle = getCSSVar('--paper');
