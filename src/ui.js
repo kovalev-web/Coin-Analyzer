@@ -1773,6 +1773,10 @@ export function loadBriefing() {
         localStorage.setItem('pa_ai_traded_keys', JSON.stringify(state.aiSummaryTradedKeys));
         if (state.aiSummaryDate) localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
       } catch (e) {}
+      var _drawer = document.getElementById('fv-briefing-drawer');
+      if (_drawer && _drawer.classList.contains('open') && state.briefingTab === 'ai') {
+        renderFVBriefingDrawer();
+      }
     }
   }).catch(function () {});
 }
