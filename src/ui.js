@@ -915,8 +915,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
     lbl.style.color = color;
     lbl.innerHTML =
-      '<div style="display:flex;height:17px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-      (durStr ? '<div style="display:flex;height:17px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+      '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+      (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
     lbl.style.display = 'block';
   }
 }
@@ -2594,8 +2594,8 @@ export function openCoinFullView(sym) {
       fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
       fvLbl.style.color = color;
       fvLbl.innerHTML =
-        '<div style="display:flex;height:17px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-        (durStr ? '<div style="display:flex;height:17px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+        '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+        (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
       fvLbl.style.display = 'block';
     }
   });
