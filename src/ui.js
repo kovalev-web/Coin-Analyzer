@@ -920,7 +920,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
     lbl.innerHTML =
       '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-      (durStr ? '<div>' + durStr + '</div>' : '');
+      (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
     lbl.style.display = 'flex';
   }
 }
