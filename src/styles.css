@@ -413,9 +413,10 @@
     .bp-status{width:30px;height:30px;border-radius:6px;padding:0;background:transparent;border:none;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
     span.bp-status{cursor:default;}
     .bp-status.bp-s-none{color:var(--graphite);}
-    .bp-status.bp-s-watching{color:#f59e0b;}
-    .bp-status.bp-s-worked{color:var(--bullish);}
-    .bp-status.bp-s-skip{color:var(--danger);}
+    .bp-status.bp-s-watching{color:var(--graphite);}
+    .bp-status.bp-s-traded{color:var(--bullish);}
+    .bp-status.bp-s-skip{color:var(--graphite);}
+    .bp-status.bp-s-missed{color:#f59e0b;}
     .bp-note-btn{background:transparent;border:none;color:var(--graphite);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .bp-note-btn:hover{opacity:0.8;}
     .bp-note-btn.has-note{color:var(--ink);}

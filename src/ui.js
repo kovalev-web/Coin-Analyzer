@@ -1754,29 +1754,32 @@ export function toggleBriefing(sym) {
 
 function briefingStatusLabel(status) {
   if (status === 'watching') return icon('eye', 16);
-  if (status === 'worked')   return icon('check', 16);
+  if (status === 'traded')   return icon('zap', 16);
   if (status === 'skip')     return icon('ban', 16);
+  if (status === 'missed')   return icon('clock', 16);
   return icon('circle', 16);
 }
 
 function briefingStatusText(status) {
   if (status === 'watching') return 'Наблюдение';
-  if (status === 'worked')   return 'Сработало';
+  if (status === 'traded')   return 'Торговал';
   if (status === 'skip')     return 'Пропуск';
+  if (status === 'missed')   return 'Упустил';
   return '';
 }
 
 function briefingStatusClass(status) {
   if (status === 'watching') return 'bp-s-watching';
-  if (status === 'worked')   return 'bp-s-worked';
+  if (status === 'traded')   return 'bp-s-traded';
   if (status === 'skip')     return 'bp-s-skip';
+  if (status === 'missed')   return 'bp-s-missed';
   return 'bp-s-none';
 }
 
 function cycleBriefingStatus(sym, date) {
   var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
   if (!entry) return;
-  var order = ['watching', 'worked', 'skip'];
+  var order = ['watching', 'traded', 'skip', 'missed'];
   var cur = order.indexOf(entry.status);
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
