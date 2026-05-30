@@ -912,7 +912,10 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.left = p2.x + 'px';
     lbl.style.top = p2.y + 'px';
     lbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
-    lbl.style.color = color;
+    lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
+    lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
+    lbl.style.borderRadius = '6px';
+    lbl.style.padding = '4px';
     lbl.innerHTML =
       '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
       (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
@@ -2591,7 +2594,10 @@ export function openCoinFullView(sym) {
       fvLbl.style.left = pt.x + 'px';
       fvLbl.style.top = pt.y + 'px';
       fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
-      fvLbl.style.color = color;
+      fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
+      fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
+      fvLbl.style.borderRadius = '6px';
+      fvLbl.style.padding = '4px';
       fvLbl.innerHTML =
         '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
         (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
