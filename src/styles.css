@@ -412,6 +412,7 @@
     .bp-row:hover{background:color-mix(in srgb,var(--fog) 50%,var(--paper));}
     .fvbd-current:hover{background:var(--fog);}
     .bp-chg{flex:1;font-size:12px;font-weight:400;}
+    .bp-row-status{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;}
     .bp-status{width:30px;height:30px;border-radius:6px;padding:0;background:transparent;border:none;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
     span.bp-status{cursor:default;}
     .bp-status.bp-s-none{color:var(--graphite);}
