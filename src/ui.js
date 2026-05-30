@@ -2288,7 +2288,7 @@ function _setFVData(sym, cd) {
   _fvLastVol = cd.candles[cd.candles.length - 1].volume || 0;
   var _volLbl = document.getElementById('fv-vol-label');
   if (_volLbl) _volLbl.textContent = 'vol. ' + fmt(_fvLastVol).replace('$', '');
-  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 200), to: cd.candles.length + 20 });
+  _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - 240), to: cd.candles.length + 20 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
     if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--caution'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
