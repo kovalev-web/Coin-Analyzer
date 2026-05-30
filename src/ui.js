@@ -1788,7 +1788,11 @@ function cycleBriefingStatus(sym, date) {
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
   openNotes.forEach(function (id) {
     var el = document.getElementById(id);
-    if (el) el.style.display = '';
+    if (el) {
+      el.style.display = '';
+      var ta = el.querySelector('textarea');
+      if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+    }
   });
 }
 
@@ -1972,6 +1976,8 @@ export function renderBriefingPanel() {
   // Re-attach note textarea listeners
   popup.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
     ta.addEventListener('input', function () {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
       var sym = ta.dataset.sym, date = ta.dataset.date;
       var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }
@@ -2725,6 +2731,8 @@ export function renderFVBriefingDrawer() {
   // Re-attach textarea listeners
   drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
     ta.addEventListener('input', function () {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
       var sym = ta.dataset.sym, date = ta.dataset.date;
       var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }

@@ -306,7 +306,10 @@ document.body.addEventListener('click', function (e) {
       if (noteEl && noteEl.classList.contains('bp-note-row')) {
         var showing = noteEl.style.display !== 'none';
         noteEl.style.display = showing ? 'none' : 'block';
-        if (!showing) { var ta = noteEl.querySelector('textarea'); if (ta) ta.focus(); }
+        if (!showing) {
+          var ta = noteEl.querySelector('textarea');
+          if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
+        }
       }
       break;
     }

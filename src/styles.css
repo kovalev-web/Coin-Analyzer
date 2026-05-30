@@ -427,8 +427,7 @@
     .bp-status-text{font-size:12px;}
     .bp-note-clear{background:transparent;border:none;color:var(--graphite);padding:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;flex-shrink:0;}
     .bp-note-clear:hover{color:var(--danger);}
-    .bp-note-row textarea{width:100%;box-sizing:border-box;background:var(--fog);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font-size:12px;padding:8px 10px;resize:vertical;min-height:60px;font-family:inherit;outline:none;}
-    .bp-note-row textarea:focus{border-color:var(--primary);}
+    .bp-note-row textarea{width:100%;box-sizing:border-box;background:var(--fog);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font-size:12px;padding:8px 10px;resize:none;overflow:hidden;min-height:40px;font-family:inherit;outline:none;}
 
     /* ── Trade pills ─────────────────────────────────────────────────────── */
     .bp-trade-pill{font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;flex-shrink:0;white-space:nowrap;cursor:default;}
