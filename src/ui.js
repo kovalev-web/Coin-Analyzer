@@ -903,18 +903,22 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
-  // Label — pct and duration on separate lines
-  ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
-  var sign = pctStr[0]; // '+' or '-'
-  var digits = pctStr.slice(1);
-  var signW = ctx.measureText(sign).width;
-  var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
-  var lx = p2.x + 12, ly = p2.y - 10;
-  if (lx + maxW > cw - priceAxisW) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
-  if (ly < 14) ly = p2.y + 20; if (ly > ch - 36) ly = ch - 36; if (ly < 4) ly = 4;
-  ctx.fillText(sign, lx - signW, ly);
-  ctx.fillText(digits, lx, ly);
-  if (durStr) ctx.fillText(durStr, lx, ly + 18);
+  // Label — div overlay (avoids canvas sub-pixel jitter)
+  var lbl = ruler.label;
+  if (lbl) {
+    ctx.font = 'bold 14px Manrope,Arial,sans-serif';
+    var sign = pctStr[0], digits = pctStr.slice(1);
+    var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+    var flipLeft = p2.x + 12 + maxW + 16 > cw - priceAxisW;
+    lbl.style.left = p2.x + 'px';
+    lbl.style.top = p2.y + 'px';
+    lbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
+    lbl.style.color = color;
+    lbl.innerHTML =
+      '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+      (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+    lbl.style.display = 'block';
+  }
 }
 
 function drawAlertLabel(ctx, a, y) {
@@ -967,6 +971,7 @@ function redrawAlerts(sym) {
 function clearRuler(sym) {
   var ruler = _rulers[sym]; if (!ruler) return;
   ruler.start = null;
+  if (ruler.label) ruler.label.style.display = 'none';
   redrawAlerts(sym);
 }
 
@@ -1172,7 +1177,10 @@ function _initChartForSym(sym) {
   rc.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:5;';
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
-  _rulers[sym] = { start: null, canvas: rc };
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:bold 14px/1.8 Manrope,Arial,sans-serif;';
+  el.appendChild(lbl);
+  _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
   _syncAlerts(sym);
   (function alertIconLoop(s) {
@@ -2405,7 +2413,10 @@ export function openCoinFullView(sym) {
   window.addEventListener('resize', _syncFVCanvas);
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
-  _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
+  var fvLblEl = document.createElement('div');
+  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:bold 14px/1.8 Manrope,Arial,sans-serif;';
+  wrap.appendChild(fvLblEl);
+  _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
   // On Mac trackpads: vertical scroll passes through; horizontal pans the chart.
   el.addEventListener('wheel', function (e) {
@@ -2571,27 +2582,32 @@ export function openCoinFullView(sym) {
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
-    var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
-    var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
-    var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
-    var lx = pt.x + 12, lyt = pt.y - 10;
-    if (lx + maxW > cw - fvPriceAxisW) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
-    if (lyt < 14) lyt = pt.y + 20; if (lyt > ch - 36) lyt = ch - 36; if (lyt < 4) lyt = 4;
-    ctx.fillText(sign, lx - signW, lyt);
-    ctx.fillText(digits, lx, lyt);
-    if (durStr) ctx.fillText(durStr, lx, lyt + 18);
+    var fvLbl = _fvRuler && _fvRuler.label;
+    if (fvLbl) {
+      ctx.font = 'bold 14px Manrope,Arial,sans-serif';
+      var sign = pctStr[0], digits = pctStr.slice(1);
+      var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+      var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
+      var flipLeft = pt.x + 12 + maxW + 16 > cw - fvPriceAxisW;
+      fvLbl.style.left = pt.x + 'px';
+      fvLbl.style.top = pt.y + 'px';
+      fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 12px),-50%)' : 'translate(12px,-50%)';
+      fvLbl.style.color = color;
+      fvLbl.innerHTML =
+        '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+        (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+      fvLbl.style.display = 'block';
+    }
   });
   el.addEventListener('mouseup', function (e) {
-    if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; }
+    if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
     if (_fvDragging && e.button === 0) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
     if (_fvAlertDragging && e.button === _fvAlertDragBtn) { saveAlerts(); _fvAlertDragging = null; _fvAlertDragBtn = 2; el.style.cursor = ''; }
   });
   el.addEventListener('mouseleave', function () {
     if (_fvDragging) { _fvDragging = null; saveLevels(); }
     if (_fvAlertDragging) { _fvAlertDragging = null; _fvAlertDragBtn = 2; saveAlerts(); }
-    if (_fvRuler) { _fvRuler._altRuler = false; }
-    if (_fvRuler) _fvRuler.start = null;
+    if (_fvRuler) { _fvRuler._altRuler = false; _fvRuler.start = null; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
     el.style.cursor = '';
   });
 
