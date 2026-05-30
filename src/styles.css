@@ -459,8 +459,8 @@
     .bp-ai-block{margin-top:6px;}
     .bp-ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
     .bp-ai-label{font-size:11px;font-weight:600;color:var(--graphite);text-transform:uppercase;letter-spacing:0.05em;}
-    .bp-ai-btn{font-size:11px;background:transparent;border:1px solid var(--hairline);color:var(--graphite);padding:3px 8px;border-radius:6px;cursor:pointer;}
-    .bp-ai-btn:hover{color:var(--ink);border-color:var(--steel);}
+    .bp-ai-btn{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
+    .bp-ai-btn:hover{opacity:0.8;}
     .bp-ai-btn:disabled{opacity:0.4;cursor:default;}
     .bp-ai-text{font-size:12px;line-height:1.5;color:var(--ink);white-space:pre-wrap;background:var(--fog);border-radius:8px;padding:10px 12px;}
     .bp-ai-spinner{color:var(--graphite);font-size:12px;padding:8px 0;}
