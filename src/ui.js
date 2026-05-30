@@ -919,8 +919,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.borderRadius = '4px';
     lbl.style.padding = '2px 4px';
     lbl.innerHTML =
-      '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-      (durStr ? '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+      '<div style="height:18px;overflow:hidden"><span style="display:inline-block;width:.55em;text-align:right">' + sign + '</span>' + digits + '</div>' +
+      (durStr ? '<div style="height:18px;overflow:hidden">' + durStr + '</div>' : '');
     lbl.style.display = 'block';
   }
 }
@@ -1182,7 +1182,7 @@ function _initChartForSym(sym) {
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
+  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/18px Manrope,Arial,sans-serif;';
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
@@ -2418,7 +2418,7 @@ export function openCoinFullView(sym) {
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
-  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
+  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/18px Manrope,Arial,sans-serif;';
   wrap.appendChild(fvLblEl);
   _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
