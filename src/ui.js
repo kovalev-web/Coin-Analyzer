@@ -918,8 +918,6 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
     lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
-    lbl.style.borderRadius = '4px';
-    lbl.style.padding = '2px 4px';
     lbl.innerHTML =
       '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
       (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
@@ -1184,7 +1182,7 @@ function _initChartForSym(sym) {
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;';
+  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;';
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
@@ -2420,7 +2418,7 @@ export function openCoinFullView(sym) {
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
-  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;';
+  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;';
   wrap.appendChild(fvLblEl);
   _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
@@ -2604,11 +2602,9 @@ export function openCoinFullView(sym) {
       fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
       fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
       fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
-      fvLbl.style.borderRadius = '4px';
-      fvLbl.style.padding = '4px';
       fvLbl.innerHTML =
-        '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-        (durStr ? '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+        '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+        (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
       fvLbl.style.display = 'block';
     }
   });
