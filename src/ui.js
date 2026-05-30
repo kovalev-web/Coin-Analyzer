@@ -906,18 +906,16 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   // Label — pct and duration on separate lines
   ctx.font = '12px Manrope,Arial,sans-serif';
   var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
-  var pad = 5, lh = 15, asc = 9;
-  var plateW = maxW + pad * 2;
-  var plateH = (asc + lh + 3) + pad * 2;
-  var plx = p2.x + 12;
-  if (plx + plateW > cw - priceAxisW) plx = p2.x - 12 - plateW;
-  if (plx < 2) plx = 2;
-  var ply = p2.y - plateH / 2;
-  if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-  var lx = plx + pad, ly = ply + pad + asc;
+  var pad = 5, lh = 16;
+  var lx = p2.x + 12;
+  if (lx + maxW + pad > cw - priceAxisW) lx = p2.x - 12 - maxW - pad;
+  if (lx < pad + 2) lx = pad + 2;
+  var ly = p2.y - 8;
+  if (ly < 14) ly = p2.y + 14; if (ly > ch - 30) ly = ch - 30; if (ly < 4) ly = 4;
+  var ply = ly - 11, plateH = lh * 2 + pad * 2;
   ctx.fillStyle = getCSSVar('--paper');
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
-  else { ctx.fillRect(plx, ply, plateW, plateH); }
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
+  else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
   ctx.fillStyle = color;
   ctx.fillText(pctStr, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + lh);
@@ -2580,18 +2578,16 @@ export function openCoinFullView(sym) {
     ctx.font = '12px Manrope,Arial,sans-serif';
     var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
-    var pad = 5, lh = 15, asc = 9;
-    var plateW = maxW + pad * 2;
-    var plateH = (asc + lh + 3) + pad * 2;
-    var plx = pt.x + 12;
-    if (plx + plateW > cw - fvPriceAxisW) plx = pt.x - 12 - plateW;
-    if (plx < 2) plx = 2;
-    var ply = pt.y - plateH / 2;
-    if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-    var lx = plx + pad, lyt = ply + pad + asc;
+    var pad = 5, lh = 16;
+    var lx = pt.x + 12;
+    if (lx + maxW + pad > cw - fvPriceAxisW) lx = pt.x - 12 - maxW - pad;
+    if (lx < pad + 2) lx = pad + 2;
+    var lyt = pt.y - 8;
+    if (lyt < 14) lyt = pt.y + 14; if (lyt > ch - 30) lyt = ch - 30; if (lyt < 4) lyt = 4;
+    var ply = lyt - 11, plateH = lh * 2 + pad * 2;
     ctx.fillStyle = getCSSVar('--paper');
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
-    else { ctx.fillRect(plx, ply, plateW, plateH); }
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
+    else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
     ctx.fillStyle = color;
     ctx.fillText(pctStr, lx, lyt);
     if (durStr) ctx.fillText(durStr, lx, lyt + lh);
