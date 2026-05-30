@@ -954,8 +954,10 @@ function _attachChartEvents(sym, container) {
   if (container.dataset.eventsAttached) return;
   container.dataset.eventsAttached = '1';
 
-  // Vertical trackpad scroll passes through to the page; horizontal pans the chart.
+  // On Mac trackpads: vertical scroll passes through to the page; horizontal pans the chart.
+  // Skipped on non-Mac (Windows/Linux) so mouse wheel zoom works normally.
   container.addEventListener('wheel', function (e) {
+    if (!/Mac/.test(navigator.platform)) return;
     if (e.ctrlKey) return; // pinch-to-zoom — let chart handle
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal swipe — let chart pan
     e.stopPropagation();
@@ -2379,8 +2381,9 @@ export function openCoinFullView(sym) {
   document.addEventListener('keydown', _onEscKey);
   _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
-  // Vertical trackpad scroll passes through; horizontal pans the chart.
+  // On Mac trackpads: vertical scroll passes through; horizontal pans the chart.
   el.addEventListener('wheel', function (e) {
+    if (!/Mac/.test(navigator.platform)) return;
     if (e.ctrlKey) return;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     e.stopPropagation();
