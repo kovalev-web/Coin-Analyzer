@@ -409,7 +409,8 @@
     .bp-row{display:flex;align-items:center;gap:14px;padding:0 12px;cursor:pointer;}
     .bp-row button{cursor:pointer;}
     .bp-sym-btn{background:transparent;border:none;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:0;flex-shrink:0;min-width:52px;text-align:left;letter-spacing:0.01em;}
-    .bp-sym-btn:hover{color:var(--graphite);}
+    .bp-row:hover{background:var(--fog);}
+    .fvbd-current:hover{background:var(--fog);}
     .bp-chg{flex:1;font-size:12px;font-weight:400;}
     .bp-status{width:30px;height:30px;border-radius:6px;padding:0;background:transparent;border:none;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
     span.bp-status{cursor:default;}
