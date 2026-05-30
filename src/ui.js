@@ -1184,7 +1184,7 @@ function _initChartForSym(sym) {
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
+  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;';
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
@@ -2420,7 +2420,7 @@ export function openCoinFullView(sym) {
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
-  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
+  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;';
   wrap.appendChild(fvLblEl);
   _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
