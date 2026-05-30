@@ -993,7 +993,8 @@ export async function generateWeeklySummary() {
       var pnlStr = (t && t.status === 'ok' && t.count > 0)
         ? ' | PnL: $' + t.pnl.toFixed(2) + ' (' + t.count + ' сд.)'
         : ' | нет сделок';
-      return '  - ' + e.sym.toUpperCase() + (e.note ? ': ' + e.note : '') + pnlStr;
+      var statusStr = e.status && e.status !== 'watching' ? ' [' + e.status + ']' : '';
+      return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
     }).join('\n');
   }).join('\n\n');
 
