@@ -19,7 +19,9 @@ function renderCard(coin) {
   var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var tf = state.chartTF[coin.symbol] || '5m';
-  var change = coin.price_change_percentage_24h || 0;
+  var change = (coin.open_24h > 0 && coin.current_price > 0)
+    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+    : (coin.price_change_percentage_24h || 0);
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
@@ -2042,7 +2044,9 @@ function _fvBottomBarHTML(sym, tf) {
 
 function _fvCoinInfoHTML(sym, tf) {
   var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
+  var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0)
+    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+    : (coin.price_change_percentage_24h || 0)) : 0;
   var nd = natrDisplay(sym);
 
   var cache = state.analysisCache[sym];
