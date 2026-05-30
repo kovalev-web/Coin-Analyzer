@@ -1871,8 +1871,26 @@ function _weekSummaryHTML() {
 }
 
 function _refreshBriefingPct() {
-  applyLivePriceUpdates();
+  var popup = document.getElementById('bp-popup');
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
+  var coinMap = {};
+  state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
+  document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
+    var coin = coinMap[row.dataset.sym];
+    if (!coin) return;
+    var ch = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
+    var span = row.querySelector('.bp-chg');
+    if (!span) return;
+    var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+    var newCls = 'bp-chg stat-val ' + (ch >= 0 ? 'up' : 'dn');
+    if (span.textContent !== newChg) span.textContent = newChg;
+    if (span.className !== newCls) span.className = newCls;
+  });
 }
+setInterval(_refreshBriefingPct, 500);
 
 // ── Briefing Panel ─────────────────────────────────────────────────────────
 

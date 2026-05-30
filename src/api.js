@@ -487,25 +487,6 @@ export function applyLivePriceUpdates() {
     }
   }
 
-  // Update briefing panel/drawer % in sync with live price updates
-  var _bpEl = document.getElementById('bp-popup');
-  var _bdEl = document.getElementById('fv-briefing-drawer');
-  if ((_bpEl && _bpEl.style.display !== 'none') || (_bdEl && _bdEl.classList.contains('open'))) {
-    document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
-      var coin = state.coins.find(function (c) { return c.symbol === row.dataset.sym; });
-      if (!coin) return;
-      var ch = (coin.open_24h > 0 && coin.current_price > 0)
-        ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-        : (coin.price_change_percentage_24h || 0);
-      var span = row.querySelector('.bp-chg');
-      if (!span) return;
-      var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-      var newCls = 'bp-chg stat-val ' + (ch >= 0 ? 'up' : 'dn');
-      if (span.textContent !== newChg) span.textContent = newChg;
-      if (span.className !== newCls) span.className = newCls;
-    });
-  }
-
   emit('metrics:update');
 }
 
