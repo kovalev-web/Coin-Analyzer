@@ -676,7 +676,7 @@ export function getCSSVar(name) {
 function getChartColors() {
   return {
     bg: getCSSVar('--canvas'),
-    text: getCSSVar('--steel'),
+    text: isDark() ? getCSSVar('--graphite') : getCSSVar('--steel'),
     grid: isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(232,232,232,0.5)',
     border: getCSSVar('--hairline'),
   };
@@ -729,7 +729,7 @@ export function getChartOpts() {
   var c = getChartColors();
   return {
     autoSize: true,
-    layout: { background: { color: c.bg }, textColor: c.text },
+    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
@@ -2369,7 +2369,7 @@ export function openCoinFullView(sym) {
   var c = getChartColors();
   _fvChart = window.LightweightCharts.createChart(el, {
     autoSize: true,
-    layout: { background: { color: c.bg }, textColor: c.text },
+    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
