@@ -99,7 +99,7 @@
     .stat-val{font-size:13px;font-weight:500;color:var(--ink);cursor:default;}
     .stat-val.up{color:var(--bullish);}
     .stat-val.dn{color:var(--bloom-deep);}
-    .stat-val.hot{color:var(--bloom-coral);}
+    .stat-val.hot{color:var(--bloom-deep);}
     .stat-val.warn{color:var(--caution);}
     .stat-val.dim{color:var(--steel);}
     .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 16px 16px;}
