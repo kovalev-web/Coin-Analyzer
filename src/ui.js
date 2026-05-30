@@ -1674,7 +1674,7 @@ function todayDate() {
 
 function fmtBriefingDate(iso) {
   var parts = iso.split('-');
-  var days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+  var days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
   return days[d.getDay()] + ', ' + parts[2] + '.' + parts[1] + '.' + parts[0];
 }
