@@ -1948,7 +1948,7 @@ export function renderBriefingPanel() {
   var rowsHTML = entries.length ? entries.map(function (e) {
     var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
     var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
-    return '<div class="bp-row">' +
+    return '<div class="bp-row" data-action="bp-open" data-sym="' + e.sym + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
       _tradePillHTML(e.sym, e.date) +
@@ -2712,7 +2712,7 @@ export function renderFVBriefingDrawer() {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
       var change = coin ? (coin.price_change_percentage_24h || 0) : 0;
       var isCurrent = _fvSym === e.sym;
-      html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '">'
+      html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-open" data-sym="' + e.sym + '">'
         + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
         + _tradePillHTML(e.sym, e.date)
