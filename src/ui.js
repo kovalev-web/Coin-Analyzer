@@ -1694,6 +1694,18 @@ function isInBriefing(sym) {
   return (state.briefing || []).some(function (e) { return e.sym === sym && e.date === today; });
 }
 
+export function autoSetTradedStatus() {
+  var changed = false;
+  (state.briefing || []).forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (t && t.status === 'ok' && t.count > 0 && e.status !== 'traded') {
+      e.status = 'traded';
+      changed = true;
+    }
+  });
+  if (changed) saveBriefingLocal();
+}
+
 function saveBriefingLocal() {
   try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {}
   clearTimeout(_briefingSyncTimer);
