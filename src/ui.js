@@ -1953,7 +1953,7 @@ export function renderBriefingPanel() {
           (isToday
             ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
             : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></span>') +
-          (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Очистить заметку">' + icon('x', 12) + '</button>' : '') +
+          (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>' : '') +
         '</div>' +
         '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
       '</div>';
@@ -2715,7 +2715,7 @@ export function renderFVBriefingDrawer() {
         + (isToday
           ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
           : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></span>')
-        + (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Очистить заметку">' + icon('x', 12) + '</button>' : '')
+        + (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>' : '')
         + '</div>'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
         + '</div>';
