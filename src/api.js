@@ -421,11 +421,7 @@ export function applyLivePriceUpdates() {
     if (!coin) return;
     var spans = el.querySelectorAll('.card-chart-stats .stat-val');
     if (spans.length < 3) return;
-    var ch = (coin.open_24h > 0 && coin.current_price > 0)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
-    var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-    if (spans[0].textContent !== newChg) { spans[0].textContent = newChg; spans[0].className = 'stat-val ' + (ch >= 0 ? 'up' : 'dn'); }
+    // spans[0] (%) handled by _refreshCardPct interval
     var nd = state.natrData[sym];
     if (nd && nd !== 'loading' && nd !== 'error') {
       var v = nd.value;
@@ -444,11 +440,7 @@ export function applyLivePriceUpdates() {
     if (fvCoin && fvStatsEl) {
       var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
       if (fvSpans.length >= 3) {
-        var fvCh = (fvCoin.open_24h > 0 && fvCoin.current_price > 0)
-          ? (fvCoin.current_price - fvCoin.open_24h) / fvCoin.open_24h * 100
-          : (fvCoin.price_change_percentage_24h || 0);
-        var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
-        if (fvSpans[0].textContent !== newFvChg) { fvSpans[0].textContent = newFvChg; fvSpans[0].className = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn'); }
+        // fvSpans[0] (%) handled by _refreshCardPct interval
         var fvNd = state.natrData[fvSym];
         if (fvNd && fvNd !== 'loading' && fvNd !== 'error') {
           var fvV = fvNd.value;
@@ -489,6 +481,44 @@ export function applyLivePriceUpdates() {
 
   emit('metrics:update');
 }
+
+function _refreshCardPct() {
+  var _tvEl = document.getElementById('tv-overlay');
+  if (_tvEl && _tvEl.style.display !== 'none') return;
+  var coinMap = {};
+  state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
+  document.querySelectorAll('[data-sym]').forEach(function (el) {
+    var coin = coinMap[el.dataset.sym];
+    if (!coin) return;
+    var spans = el.querySelectorAll('.card-chart-stats .stat-val');
+    if (!spans.length) return;
+    var ch = (coin.open_24h > 0 && coin.current_price > 0)
+      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+      : (coin.price_change_percentage_24h || 0);
+    var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+    var newCls = 'stat-val ' + (ch >= 0 ? 'up' : 'dn');
+    if (spans[0].textContent !== newChg) spans[0].textContent = newChg;
+    if (spans[0].className !== newCls) spans[0].className = newCls;
+  });
+  var fvSym = window.__fvSymbol;
+  if (fvSym) {
+    var fvCoin = coinMap[fvSym];
+    var fvStatsEl = document.querySelector('.fv-info-stats');
+    if (fvCoin && fvStatsEl) {
+      var fvSpans = fvStatsEl.querySelectorAll('.stat-val');
+      if (fvSpans.length >= 1) {
+        var fvCh = (fvCoin.open_24h > 0 && fvCoin.current_price > 0)
+          ? (fvCoin.current_price - fvCoin.open_24h) / fvCoin.open_24h * 100
+          : (fvCoin.price_change_percentage_24h || 0);
+        var newFvChg = (fvCh >= 0 ? '+' : '') + fvCh.toFixed(2) + '%';
+        var newFvCls = 'stat-val ' + (fvCh >= 0 ? 'up' : 'dn');
+        if (fvSpans[0].textContent !== newFvChg) fvSpans[0].textContent = newFvChg;
+        if (fvSpans[0].className !== newFvCls) fvSpans[0].className = newFvCls;
+      }
+    }
+  }
+}
+setInterval(_refreshCardPct, 500);
 
 // ── Chart polling ────────────────────────────────────────────────────────
 
