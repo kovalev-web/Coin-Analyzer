@@ -895,13 +895,13 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
   // Label — pct and duration on separate lines
   ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
-  var lx = p2.x + 12, ly = p2.y - 10;
-  if (lx + 170 > rc.width) lx = p2.x - 175; if (lx < 2) lx = 2;
-  if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 36) ly = rc.height - 36; if (ly < 4) ly = 4;
-  // Hanging punctuation: draw sign offset left so digits align at lx
   var sign = pctStr[0]; // '+' or '-'
   var digits = pctStr.slice(1);
   var signW = ctx.measureText(sign).width;
+  var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+  var lx = p2.x + 12, ly = p2.y - 10;
+  if (lx + maxW > rc.width) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
+  if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 36) ly = rc.height - 36; if (ly < 4) ly = 4;
   ctx.fillText(sign, lx - signW, ly);
   ctx.fillText(digits, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + 18);
@@ -2551,10 +2551,11 @@ export function openCoinFullView(sym) {
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.font = 'bold 14px Manrope,Arial,sans-serif'; ctx.fillStyle = color;
-    var lx = pt.x + 12, lyt = pt.y - 10;
-    if (lx + 170 > rc.width) lx = pt.x - 175; if (lx < 2) lx = 2;
-    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 36) lyt = rc.height - 36; if (lyt < 4) lyt = 4;
     var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
+    var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+    var lx = pt.x + 12, lyt = pt.y - 10;
+    if (lx + maxW > rc.width) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
+    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 36) lyt = rc.height - 36; if (lyt < 4) lyt = 4;
     ctx.fillText(sign, lx - signW, lyt);
     ctx.fillText(digits, lx, lyt);
     if (durStr) ctx.fillText(durStr, lx, lyt + 18);
