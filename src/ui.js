@@ -1870,6 +1870,22 @@ function _weekSummaryHTML() {
     + '</div>';
 }
 
+setInterval(function () {
+  var popup = document.getElementById('bp-popup');
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
+  document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
+    var coin = state.coins.find(function (c) { return c.symbol === row.dataset.sym; });
+    if (!coin) return;
+    var change = coin.price_change_percentage_24h || 0;
+    var span = row.querySelector('.bp-chg');
+    if (span) {
+      span.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+      span.className = 'bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn');
+    }
+  });
+}, 2000);
+
 // ── Briefing Panel ─────────────────────────────────────────────────────────
 
 export function openBriefingPanel() {
