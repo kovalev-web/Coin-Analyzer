@@ -1870,7 +1870,7 @@ function _weekSummaryHTML() {
     + '</div>';
 }
 
-setInterval(function () {
+function _refreshBriefingPct() {
   var popup = document.getElementById('bp-popup');
   var drawer = document.getElementById('fv-briefing-drawer');
   if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
@@ -1886,7 +1886,8 @@ setInterval(function () {
       span.className = 'bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn');
     }
   });
-}, 2000);
+}
+setInterval(_refreshBriefingPct, 2000);
 
 // ── Briefing Panel ─────────────────────────────────────────────────────────
 
@@ -1993,6 +1994,7 @@ export function renderBriefingPanel() {
       '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' +
     '</div>';
 
+  _refreshBriefingPct();
   // Re-attach note textarea listeners
   popup.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
     ta.addEventListener('input', function () {
@@ -2748,6 +2750,7 @@ export function renderFVBriefingDrawer() {
     });
   });
   drawer.innerHTML = html + _weekSummaryHTML();
+  _refreshBriefingPct();
   // Re-attach textarea listeners
   drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
     ta.addEventListener('input', function () {
