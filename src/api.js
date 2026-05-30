@@ -410,10 +410,10 @@ export function loadCache() {
 // ── Live price updates (WS push) ─────────────────────────────────────────
 
 export function applyLivePriceUpdates() {
-  // TV overlay перекрывает весь экран — карточки невидимы, обновлять нет смысла
   var _tvEl = document.getElementById('tv-overlay');
-  if (_tvEl && _tvEl.style.display !== 'none') return;
+  var _tvOpen = _tvEl && _tvEl.style.display !== 'none';
 
+  if (!_tvOpen) {
   document.querySelectorAll('[data-sym]').forEach(function (el) {
     var sym = el.dataset.sym;
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
@@ -452,9 +452,10 @@ export function applyLivePriceUpdates() {
     }
   }
 
+  } // end !_tvOpen
+
   // Update TV slot headers — only when overlay is visible, throttled + diff-guarded
-  var _tvOverlay = document.getElementById('tv-overlay');
-  if (_tvOverlay && _tvOverlay.style.display !== 'none') {
+  if (_tvOpen) {
     var _tvHNow = Date.now();
     if (_tvHNow - _tvHeaderLast >= TV_THROTTLE_MS) {
       _tvHeaderLast = _tvHNow;
