@@ -909,18 +909,18 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     var sign = pctStr[0], digits = pctStr.slice(1);
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var flipLeft = p2.x + 16 + maxW + 16 > cw - priceAxisW;
-    var plateH = durStr ? 36 : 22;
-    var top = Math.round(Math.max(0, Math.min(ch - plateH, p2.y - plateH / 2)));
+    var plateHalf = durStr ? 24 : 14;
+    var clampedY = Math.max(plateHalf, Math.min(ch - plateHalf, p2.y));
     lbl.style.left = p2.x + 'px';
-    lbl.style.top = top + 'px';
-    lbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),0)' : 'translate(16px,0)';
+    lbl.style.top = clampedY + 'px';
+    lbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
     lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
     lbl.style.borderRadius = '4px';
     lbl.style.padding = '4px';
     lbl.innerHTML =
-      '<div style="display:flex;height:14px;overflow:hidden"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-      (durStr ? '<div style="display:flex;height:14px;overflow:hidden"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+      '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+      (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
     lbl.style.display = 'block';
   }
 }
@@ -1182,7 +1182,7 @@ function _initChartForSym(sym) {
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/14px Manrope,Arial,sans-serif;';
+  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
@@ -2418,7 +2418,7 @@ export function openCoinFullView(sym) {
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
-  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/14px Manrope,Arial,sans-serif;';
+  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/1 Manrope,Arial,sans-serif;';
   wrap.appendChild(fvLblEl);
   _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
@@ -2593,18 +2593,18 @@ export function openCoinFullView(sym) {
       var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
       var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
       var flipLeft = pt.x + 16 + maxW + 16 > cw - fvPriceAxisW;
-      var fvPlateH = durStr ? 36 : 22;
-      var fvTop = Math.round(Math.max(0, Math.min(ch - fvPlateH, pt.y - fvPlateH / 2)));
+      var fvPlateHalf = durStr ? 24 : 14;
+      var fvClampedY = Math.max(fvPlateHalf, Math.min(ch - fvPlateHalf, pt.y));
       fvLbl.style.left = pt.x + 'px';
-      fvLbl.style.top = fvTop + 'px';
-      fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),0)' : 'translate(16px,0)';
+      fvLbl.style.top = fvClampedY + 'px';
+      fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
       fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
       fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
       fvLbl.style.borderRadius = '4px';
       fvLbl.style.padding = '4px';
       fvLbl.innerHTML =
-        '<div style="display:flex;height:14px;overflow:hidden"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-        (durStr ? '<div style="display:flex;height:14px;overflow:hidden"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+        '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+        (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
       fvLbl.style.display = 'block';
     }
   });
