@@ -1773,9 +1773,16 @@ function cycleBriefingStatus(sym, date) {
   var cur = order.indexOf(entry.status);
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
+  var openNotes = Array.from(document.querySelectorAll('.bp-note-row'))
+    .filter(function (el) { return el.style.display !== 'none'; })
+    .map(function (el) { return el.id; });
   renderBriefingPanel();
   var _fvd = document.getElementById('fv-briefing-drawer');
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
+  openNotes.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
 }
 
 function updateStarButton(sym) {
