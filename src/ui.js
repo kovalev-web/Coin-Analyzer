@@ -1975,16 +1975,12 @@ export function renderBriefingPanel() {
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
       _tradePillHTML(e.sym, e.date) +
       '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>' +
-      (isToday
-        ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>'
-        : '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
+      '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' +
       '</div>' +
       '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
         '<div class="bp-note-top">' +
-          (isToday
-            ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
-            + '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>'
-            : '') +
+          '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>' +
+          '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '">Очистить</button>' +
         '</div>' +
         '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
       '</div>';
