@@ -864,7 +864,15 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var durStr = '';
   var chart = _charts[sym];
   if (chart) {
-    var t1 = chart.timeScale().coordinateToTime(p1.x), t2 = chart.timeScale().coordinateToTime(p2.x);
+    var ts = chart.timeScale();
+    var t1 = ts.coordinateToTime(p1.x), t2 = ts.coordinateToTime(p2.x);
+    if (t1 == null || t2 == null) {
+      var vr = ts.getVisibleRange();
+      if (vr) {
+        if (t1 == null) t1 = p1.x < p2.x ? vr.from : vr.to;
+        if (t2 == null) t2 = p2.x > p1.x ? vr.to : vr.from;
+      }
+    }
     if (t1 != null && t2 != null) {
       var d = Math.abs(t2 - t1);
       durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
@@ -2519,7 +2527,15 @@ export function openCoinFullView(sym) {
     var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
     var durStr = '';
     if (_fvChart) {
-      var t1 = _fvChart.timeScale().coordinateToTime(p1.x), t2 = _fvChart.timeScale().coordinateToTime(pt.x);
+      var fvTs = _fvChart.timeScale();
+      var t1 = fvTs.coordinateToTime(p1.x), t2 = fvTs.coordinateToTime(pt.x);
+      if (t1 == null || t2 == null) {
+        var vr = fvTs.getVisibleRange();
+        if (vr) {
+          if (t1 == null) t1 = p1.x < pt.x ? vr.from : vr.to;
+          if (t2 == null) t2 = pt.x > p1.x ? vr.to : vr.from;
+        }
+      }
       if (t1 != null && t2 != null) {
         var d = Math.abs(t2 - t1);
         durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
