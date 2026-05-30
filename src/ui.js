@@ -2731,8 +2731,9 @@ export function renderFVBriefingDrawer() {
   allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
   var dates = Object.keys(dateMap).sort().reverse();
   var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>';
-  dates.forEach(function (date) {
+  dates.forEach(function (date, idx) {
     var isToday = date === today;
+    if (idx > 0 && dates[idx - 1] === today) html += '<div class="fvbd-divider"></div>';
     if (!isToday) html += '<div class="fvbd-date-label">' + fmtBriefingDate(date) + '</div>';
     dateMap[date].forEach(function (e) {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
