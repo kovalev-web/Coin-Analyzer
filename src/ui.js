@@ -917,7 +917,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
     lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
     lbl.style.borderRadius = '4px';
-    lbl.style.padding = '2px 0 0 0';
+    lbl.style.padding = '2px 4px 0';
     lbl.innerHTML =
       '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
       (durStr ? '<div style="display:flex;height:18px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
