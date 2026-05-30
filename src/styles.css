@@ -462,6 +462,7 @@
     .bp-ai-btn{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:26px;font-size:11px;font-weight:500;font-family:'Manrope',Arial,sans-serif;cursor:pointer;letter-spacing:0;}
     .bp-ai-btn:hover{opacity:0.8;}
     .bp-ai-btn:disabled{opacity:0.4;cursor:default;}
+    .bp-ai-date{font-size:11px;color:var(--graphite);flex:1;}
     .bp-ai-text{font-size:12px;line-height:1.5;color:var(--ink);white-space:pre-wrap;background:var(--fog);border-radius:8px;padding:10px 12px;}
     .bp-ai-spinner{color:var(--graphite);font-size:12px;padding:8px 0;}
 

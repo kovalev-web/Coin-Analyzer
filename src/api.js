@@ -1058,9 +1058,11 @@ export async function generateWeeklySummary() {
     .map(function (e) { return e.sym + ':' + e.date; })
     .sort();
   state.aiSummaryTradedKeys = tradedKeys;
+  state.aiSummaryDate = new Date().toISOString();
   try {
     localStorage.setItem('pa_ai_summary', state.aiSummary);
     localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
+    localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
   } catch (e) {}
   emit('trades:ai-updated');
   return state.aiSummary;

@@ -32,6 +32,7 @@ export const state = {
   weekSummary: null,   // агрегат за неделю {pnl, tradeCount, winRate, conversion, ...}
   aiSummary: null,     // текст от Gemini
   aiSummaryTradedKeys: null, // 'sym:date' traded-записей на момент генерации
+  aiSummaryDate: null,      // ISO timestamp последней генерации
   briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
 };
 
