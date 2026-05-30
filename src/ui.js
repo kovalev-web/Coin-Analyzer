@@ -905,25 +905,21 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
   // Label — pct and duration on separate lines
   ctx.font = '12px Manrope,Arial,sans-serif';
-  var sign = pctStr[0]; // '+' or '-'
-  var digits = pctStr.slice(1);
-  var signW = ctx.measureText(sign).width;
-  var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+  var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
   var pad = 5, lh = 15, asc = 9;
-  var plateW = Math.ceil(signW + maxW + pad * 2);
+  var plateW = Math.ceil(maxW + pad * 2);
   var plateH = (asc + lh + 3) + pad * 2;
   var plx = Math.round(p2.x + 12);
   if (plx + plateW > cw - priceAxisW) plx = Math.round(p2.x - 12 - plateW);
   if (plx < 2) plx = 2;
   var ply = Math.round(p2.y - plateH / 2);
   if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-  var lx = Math.round(plx + pad + signW), ly = ply + pad + asc;
+  var lx = plx + pad, ly = ply + pad + asc;
   ctx.fillStyle = getCSSVar('--paper');
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
   else { ctx.fillRect(plx, ply, plateW, plateH); }
   ctx.fillStyle = color;
-  ctx.fillText(sign, lx - signW, ly);
-  ctx.fillText(digits, lx, ly);
+  ctx.fillText(pctStr, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + lh);
 }
 
@@ -2582,24 +2578,22 @@ export function openCoinFullView(sym) {
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.font = '12px Manrope,Arial,sans-serif';
-    var sign = pctStr[0], digits = pctStr.slice(1), signW = ctx.measureText(sign).width;
-    var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
+    var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var pad = 5, lh = 15, asc = 9;
-    var plateW = Math.ceil(signW + maxW + pad * 2);
+    var plateW = Math.ceil(maxW + pad * 2);
     var plateH = (asc + lh + 3) + pad * 2;
     var plx = Math.round(pt.x + 12);
     if (plx + plateW > cw - fvPriceAxisW) plx = Math.round(pt.x - 12 - plateW);
     if (plx < 2) plx = 2;
     var ply = Math.round(pt.y - plateH / 2);
     if (ply < 2) ply = 2; if (ply + plateH > ch - 2) ply = ch - plateH - 2;
-    var lx = Math.round(plx + pad + signW), lyt = ply + pad + asc;
+    var lx = plx + pad, lyt = ply + pad + asc;
     ctx.fillStyle = getCSSVar('--paper');
     if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(plx, ply, plateW, plateH, 6); ctx.fill(); }
     else { ctx.fillRect(plx, ply, plateW, plateH); }
     ctx.fillStyle = color;
-    ctx.fillText(sign, lx - signW, lyt);
-    ctx.fillText(digits, lx, lyt);
+    ctx.fillText(pctStr, lx, lyt);
     if (durStr) ctx.fillText(durStr, lx, lyt + lh);
   });
   el.addEventListener('mouseup', function (e) {
