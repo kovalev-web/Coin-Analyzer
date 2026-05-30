@@ -159,7 +159,7 @@ export function screenerCoins() {
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 
-var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false;
+var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false, _alertDragBtn = 2;
 var _cardObserver = null;
 var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
 var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -954,6 +954,13 @@ function _attachChartEvents(sym, container) {
   if (container.dataset.eventsAttached) return;
   container.dataset.eventsAttached = '1';
 
+  // Vertical trackpad scroll passes through to the page; horizontal pans the chart.
+  container.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) return; // pinch-to-zoom — let chart handle
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal swipe — let chart pan
+    e.stopPropagation();
+  }, { passive: true, capture: true });
+
   container.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     var cs = _fullSeries[sym]; if (!cs) return;
@@ -989,6 +996,30 @@ function _attachChartEvents(sym, container) {
     if (e.button === 0) {
       if (!cs) return;
       var y = e.clientY - rect.top;
+      // Shift+Alt+left: drag alert (trackpad alternative to Shift+right-drag)
+      if (e.altKey && e.shiftKey) {
+        var alertArr0 = _alerts[sym] || [];
+        for (var ai0 = 0; ai0 < alertArr0.length; ai0++) {
+          var aCoord0 = cs.priceToCoordinate(alertArr0[ai0].price);
+          if (aCoord0 != null && Math.abs(aCoord0 - y) < 10) {
+            if (alertArr0[ai0].triggered) return;
+            e.stopPropagation(); e.preventDefault();
+            _alertDragging = { sym: sym, idx: ai0, alert: alertArr0[ai0] };
+            _alertDragMoved = false; _alertDragBtn = 0;
+            container.style.cursor = 'ns-resize';
+            return;
+          }
+        }
+        return;
+      }
+      // Alt+left: ruler (trackpad alternative to middle-click drag)
+      if (e.altKey) {
+        e.stopPropagation(); e.preventDefault();
+        var pt0 = { x: e.clientX - rect.left, y: y };
+        var pr0 = cs.coordinateToPrice(y);
+        if (pr0 != null && _rulers[sym]) { _rulers[sym].start = { pt: pt0, price: pr0 }; _rulers[sym]._altRuler = true; }
+        return;
+      }
       var levels = _levels[sym] || [];
       for (var i = 0; i < levels.length; i++) {
         var ly = cs.priceToCoordinate(levels[i].price);
@@ -1011,7 +1042,7 @@ function _attachChartEvents(sym, container) {
           if (alertArr[ai].triggered) return;
           e.stopPropagation(); e.preventDefault();
           _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
-          _alertDragMoved = false;
+          _alertDragMoved = false; _alertDragBtn = 2;
           container.style.cursor = 'ns-resize';
           return;
         }
@@ -1036,7 +1067,7 @@ function _attachChartEvents(sym, container) {
       }
       return;
     }
-    if (_alertDragging && _alertDragging.sym === sym && (e.buttons & 2)) {
+    if (_alertDragging && _alertDragging.sym === sym && (e.buttons & (_alertDragBtn === 0 ? 1 : 2))) {
       if (cs) {
         var alertPrice = cs.coordinateToPrice(y);
         if (alertPrice != null) {
@@ -1069,7 +1100,7 @@ function _attachChartEvents(sym, container) {
       }
       container.style.cursor = near ? 'ns-resize' : '';
       var ruler = _rulers[sym];
-      if (ruler && ruler.start && (e.buttons & 4)) {
+      if (ruler && ruler.start && ((e.buttons & 4) || (ruler._altRuler && (e.buttons & 1)))) {
         var pt = { x: e.clientX - rect.left, y: y };
         drawRuler(sym, ruler.start.pt, pt, ruler.start.price, cs.coordinateToPrice(y));
       }
@@ -1080,16 +1111,20 @@ function _attachChartEvents(sym, container) {
     if (e.button === 0 && _dragging && _dragging.sym === sym) {
       _dragging = null; container.style.cursor = ''; saveLevels(); return;
     }
-    if (e.button === 2 && _alertDragging && _alertDragging.sym === sym) {
-      var adSym = _alertDragging.sym; _alertDragging = null; container.style.cursor = ''; saveAlerts(); redrawAlerts(adSym); return;
+    if (_alertDragging && _alertDragging.sym === sym && e.button === _alertDragBtn) {
+      var adSym = _alertDragging.sym; _alertDragging = null; _alertDragBtn = 2; container.style.cursor = ''; saveAlerts(); redrawAlerts(adSym); return;
     }
-    if (e.button === 1) clearRuler(sym);
+    if (e.button === 1 || (e.button === 0 && _rulers[sym] && _rulers[sym]._altRuler)) {
+      if (_rulers[sym]) _rulers[sym]._altRuler = false;
+      clearRuler(sym);
+    }
   });
 
   container.addEventListener('mouseleave', function () {
     if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
-    if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; saveAlerts(); redrawAlerts(adLeaveSym); }
+    if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; _alertDragBtn = 2; saveAlerts(); redrawAlerts(adLeaveSym); }
     container.style.cursor = '';
+    if (_rulers[sym]) _rulers[sym]._altRuler = false;
     clearRuler(sym);
   });
 
@@ -2344,9 +2379,16 @@ export function openCoinFullView(sym) {
   document.addEventListener('keydown', _onEscKey);
   _fvRuler = { start: null, canvas: rc, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
+  // Vertical trackpad scroll passes through; horizontal pans the chart.
+  el.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) return;
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.stopPropagation();
+  }, { passive: true, capture: true });
+
   // Event handlers (contextmenu: add/remove level or alert; mousedown: drag level/alert)
   var _fvDragging = null;
-  var _fvAlertDragging = null, _fvAlertDragMoved = false;
+  var _fvAlertDragging = null, _fvAlertDragMoved = false, _fvAlertDragBtn = 2;
   el.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     var rect = el.getBoundingClientRect();
@@ -2384,6 +2426,32 @@ export function openCoinFullView(sym) {
       if (pr != null) _fvRuler.start = { pt: pt, price: pr };
       return;
     }
+    // Alt+left: ruler or alert drag (trackpad alternatives)
+    if (e.button === 0 && e.altKey) {
+      if (e.shiftKey) {
+        // Shift+Alt+left: drag alert
+        var fvAltAY = e.clientY - rect.top;
+        var fvAltArr = _alerts[sym] || [];
+        for (var fvAi = 0; fvAi < fvAltArr.length; fvAi++) {
+          var fvACoord = _fvSeries.priceToCoordinate(fvAltArr[fvAi].price);
+          if (fvACoord != null && Math.abs(fvACoord - fvAltAY) < 10) {
+            if (fvAltArr[fvAi].triggered) return;
+            e.stopPropagation(); e.preventDefault();
+            _fvAlertDragging = { idx: fvAi, alert: fvAltArr[fvAi] };
+            _fvAlertDragMoved = false; _fvAlertDragBtn = 0;
+            el.style.cursor = 'ns-resize';
+            return;
+          }
+        }
+        return;
+      }
+      // Alt+left: ruler
+      e.stopPropagation(); e.preventDefault();
+      var fvAltPt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      var fvAltPr = _fvSeries.coordinateToPrice(fvAltPt.y);
+      if (fvAltPr != null) { _fvRuler.start = { pt: fvAltPt, price: fvAltPr }; _fvRuler._altRuler = true; }
+      return;
+    }
     // Alert drag: shift + right-button (button 2)
     if (e.button === 2 && e.shiftKey) {
       var ay2 = e.clientY - rect.top;
@@ -2394,7 +2462,7 @@ export function openCoinFullView(sym) {
           if (alertArr[ai].triggered) return; // triggered alerts are not draggable
           e.stopPropagation(); e.preventDefault();
           _fvAlertDragging = { idx: ai, alert: alertArr[ai] };
-          _fvAlertDragMoved = false;
+          _fvAlertDragMoved = false; _fvAlertDragBtn = 2;
           el.style.cursor = 'ns-resize';
           return;
         }
@@ -2420,8 +2488,8 @@ export function openCoinFullView(sym) {
       }
       return;
     }
-    // Alert drag (shift + right button)
-    if (_fvAlertDragging && (e.buttons & 2)) {
+    // Alert drag (shift+right or Shift+Alt+left)
+    if (_fvAlertDragging && (e.buttons & (_fvAlertDragBtn === 0 ? 1 : 2))) {
       var alertPrice = _fvSeries.coordinateToPrice(y);
       if (alertPrice != null) {
         _fvAlertDragging.alert.price = alertPrice;
@@ -2435,7 +2503,7 @@ export function openCoinFullView(sym) {
       return;
     }
     var ruler = _fvRuler;
-    if (!ruler || !ruler.start || !(e.buttons & 4)) return;
+    if (!ruler || !ruler.start || (!(e.buttons & 4) && !(ruler._altRuler && (e.buttons & 1)))) return;
     var pt = { x: e.clientX - rect.left, y: y };
     var pr2 = _fvSeries.coordinateToPrice(y);
     if (pr2 == null) return;
@@ -2473,13 +2541,14 @@ export function openCoinFullView(sym) {
     if (durStr) ctx.fillText(durStr, lx, lyt + 18);
   });
   el.addEventListener('mouseup', function (e) {
-    if (e.button === 1 && _fvRuler) _fvRuler.start = null;
-    if (_fvDragging) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
-    if (e.button === 2 && _fvAlertDragging) { saveAlerts(); _fvAlertDragging = null; el.style.cursor = ''; }
+    if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; }
+    if (_fvDragging && e.button === 0) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
+    if (_fvAlertDragging && e.button === _fvAlertDragBtn) { saveAlerts(); _fvAlertDragging = null; _fvAlertDragBtn = 2; el.style.cursor = ''; }
   });
   el.addEventListener('mouseleave', function () {
     if (_fvDragging) { _fvDragging = null; saveLevels(); }
-    if (_fvAlertDragging) { _fvAlertDragging = null; saveAlerts(); }
+    if (_fvAlertDragging) { _fvAlertDragging = null; _fvAlertDragBtn = 2; saveAlerts(); }
+    if (_fvRuler) { _fvRuler._altRuler = false; }
     if (_fvRuler) _fvRuler.start = null;
     el.style.cursor = '';
   });
