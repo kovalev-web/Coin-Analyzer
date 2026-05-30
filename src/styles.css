@@ -424,7 +424,7 @@
     .bp-remove:hover{color:var(--danger);opacity:1;}
     .bp-note-row{padding:0 12px 8px;}
     .bp-note-top{display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px;}
-    .bp-note-top .bp-status{width:auto;padding:0 8px;gap:5px;}
+    .bp-note-top .bp-status{width:auto;padding:0 8px 0 0;gap:5px;}
     .bp-status-text{font-size:12px;}
     .bp-note-clear{background:transparent;border:none;color:var(--graphite);padding:0;font-size:12px;cursor:pointer;flex-shrink:0;}
     .bp-note-clear:hover{opacity:0.7;}
