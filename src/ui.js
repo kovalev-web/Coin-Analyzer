@@ -905,7 +905,9 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.beginPath(); ctx.arc(p2.x, p2.y, 3.5, 0, Math.PI * 2); ctx.fill();
   // Label — pct and duration on separate lines
   ctx.font = '12px Manrope,Arial,sans-serif';
-  var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
+  var sign = pctStr[0], digits = pctStr.slice(1);
+  var signW = ctx.measureText(sign).width;
+  var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
   var pad = 5, lh = 16;
   var lx = p2.x + 12;
   if (lx + maxW + pad > cw - priceAxisW) lx = p2.x - 12 - maxW - pad;
@@ -917,7 +919,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
   else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
   ctx.fillStyle = color;
-  ctx.fillText(pctStr, lx, ly);
+  ctx.fillText(sign, lx - signW, ly);
+  ctx.fillText(digits, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + lh);
 }
 
@@ -2576,7 +2579,9 @@ export function openCoinFullView(sym) {
     ctx.beginPath(); ctx.arc(p1.x, p1.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.font = '12px Manrope,Arial,sans-serif';
-    var maxW = Math.max(ctx.measureText(pctStr).width, durStr ? ctx.measureText(durStr).width : 0);
+    var sign = pctStr[0], digits = pctStr.slice(1);
+    var signW = ctx.measureText(sign).width;
+    var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var pad = 5, lh = 16;
     var lx = pt.x + 12;
@@ -2589,7 +2594,8 @@ export function openCoinFullView(sym) {
     if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - pad, ply, maxW + pad * 2, plateH, 6); ctx.fill(); }
     else { ctx.fillRect(lx - pad, ply, maxW + pad * 2, plateH); }
     ctx.fillStyle = color;
-    ctx.fillText(pctStr, lx, lyt);
+    ctx.fillText(sign, lx - signW, lyt);
+    ctx.fillText(digits, lx, lyt);
     if (durStr) ctx.fillText(durStr, lx, lyt + lh);
   });
   el.addEventListener('mouseup', function (e) {
