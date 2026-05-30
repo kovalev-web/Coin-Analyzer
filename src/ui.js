@@ -853,10 +853,19 @@ export function destroyCharts() {
   window.__charts = _charts;
 }
 
+function _setCanvasSize(rc, cssW, cssH) {
+  var dpr = window.devicePixelRatio || 1;
+  rc.width = Math.round(cssW * dpr); rc.height = Math.round(cssH * dpr);
+  rc.style.width = cssW + 'px'; rc.style.height = cssH + 'px';
+}
+
 function drawRuler(sym, p1, p2, pr1, pr2) {
   var ruler = _rulers[sym]; if (!ruler || !ruler.canvas) return;
   var rc = ruler.canvas, ctx = rc.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, rc.width, rc.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var cw = rc.width / dpr, ch = rc.height / dpr;
   drawAlertIcons(sym, ctx, rc);
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
@@ -882,10 +891,10 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var priceAxisW = 0; try { if (chart) priceAxisW = chart.priceScale('right').width(); } catch (_) {}
   // Fill zone between the two price levels
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
-  ctx.fillRect(0, Math.min(p1.y, p2.y), rc.width, Math.abs(p2.y - p1.y) || 1);
+  ctx.fillRect(0, Math.min(p1.y, p2.y), cw, Math.abs(p2.y - p1.y) || 1);
   // Horizontal dashed line at start price level only
   ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-  ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke();
   ctx.setLineDash([]);
   // Diagonal line from start to end point
   ctx.strokeStyle = color; ctx.lineWidth = 1.5;
@@ -901,8 +910,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   var signW = ctx.measureText(sign).width;
   var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
   var lx = p2.x + 12, ly = p2.y - 10;
-  if (lx + maxW > rc.width - priceAxisW) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
-  if (ly < 14) ly = p2.y + 20; if (ly > rc.height - 36) ly = rc.height - 36; if (ly < 4) ly = 4;
+  if (lx + maxW > cw - priceAxisW) lx = p2.x - 12 - maxW; if (lx < 2) lx = 2;
+  if (ly < 14) ly = p2.y + 20; if (ly > ch - 36) ly = ch - 36; if (ly < 4) ly = 4;
   ctx.fillText(sign, lx - signW, ly);
   ctx.fillText(digits, lx, ly);
   if (durStr) ctx.fillText(durStr, lx, ly + 18);
@@ -926,6 +935,8 @@ function drawAlertLabel(ctx, a, y) {
 function drawAlertIcons(sym, ctx, rc) {
   var s = _fullSeries[sym]; if (!s) return;
   if (!_bellImg || !_bellImg.complete) return;
+  var dpr = window.devicePixelRatio || 1;
+  var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var alerts = _alerts[sym] || [];
   var sz = 18;
   alerts.forEach(function (a) {
@@ -933,10 +944,10 @@ function drawAlertIcons(sym, ctx, rc) {
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
-    if (y == null || y < 0 || y > rc.height) return;
+    if (y == null || y < 0 || y > cssH) return;
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
-    ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+    ctx.drawImage(_bellImg, cssW / 2 - sz / 2, y - sz / 2, sz, sz);
     ctx.globalAlpha = 1;
     drawAlertLabel(ctx, a, y);
     ctx.restore();
@@ -947,7 +958,9 @@ function redrawAlerts(sym) {
   var ruler = _rulers[sym]; if (!ruler || !ruler.canvas) return;
   if (ruler.start) return; // ruler draw cycle is active, it handles the canvas
   var rc = ruler.canvas, ctx = rc.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, rc.width, rc.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawAlertIcons(sym, ctx, rc);
 }
 
@@ -1141,7 +1154,7 @@ function _attachChartEvents(sym, container) {
 
   new ResizeObserver(function () {
     if (_charts[sym]) _charts[sym].resize(container.offsetWidth, container.offsetHeight || 300);
-    if (_rulers[sym] && _rulers[sym].canvas) { _rulers[sym].canvas.width = container.offsetWidth; _rulers[sym].canvas.height = container.offsetHeight; }
+    if (_rulers[sym] && _rulers[sym].canvas) { _setCanvasSize(_rulers[sym].canvas, container.offsetWidth, container.offsetHeight); }
   }).observe(container);
 }
 
@@ -1158,7 +1171,7 @@ function _initChartForSym(sym) {
   var rc = document.createElement('canvas');
   rc.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:5;';
   el.style.position = 'relative'; el.appendChild(rc);
-  rc.width = el.offsetWidth || 400; rc.height = el.offsetHeight || 300;
+  _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   _rulers[sym] = { start: null, canvas: rc };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
   _syncAlerts(sym);
@@ -1167,7 +1180,9 @@ function _initChartForSym(sym) {
     var ruler = _rulers[s];
     if (ruler && ruler.canvas && !ruler.start) {
       var rc2 = ruler.canvas, ctx = rc2.getContext('2d');
+      var dpr2 = window.devicePixelRatio || 1;
       ctx.clearRect(0, 0, rc2.width, rc2.height);
+      ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
       drawAlertIcons(s, ctx, rc2);
     }
     requestAnimationFrame(function () { alertIconLoop(s); });
@@ -2192,14 +2207,16 @@ function _fvCoinInfoHTML(sym, tf) {
 // they always stay visible regardless of ruler state.
 function _drawFVOverlays(ctx, rc, sym) {
   if (!_fvSeries) return;
+  var dpr = window.devicePixelRatio || 1;
+  var cssW = rc.width / dpr, cssH = rc.height / dpr;
   // Alert bell icons
   if (_bellImg && _bellImg.complete) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
-      if (y == null || y < 0 || y > rc.height) return;
+      if (y == null || y < 0 || y > cssH) return;
       var sz = 18;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
-      ctx.drawImage(_bellImg, rc.width / 2 - sz / 2, y - sz / 2, sz, sz);
+      ctx.drawImage(_bellImg, cssW / 2 - sz / 2, y - sz / 2, sz, sz);
       ctx.globalAlpha = 1;
       drawAlertLabel(ctx, a, y);
       ctx.restore();
@@ -2211,7 +2228,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     var snapped = Math.floor(m.time / tfSec) * tfSec;
     var y = _fvSeries.priceToCoordinate(m.price);
     var x = _fvChart && _fvChart.timeScale().timeToCoordinate(snapped);
-    if (y == null || x == null || x < 0 || x > rc.width || y < 0 || y > rc.height) return;
+    if (y == null || x == null || x < 0 || x > cssW || y < 0 || y > cssH) return;
     var hb = 8, h = 14; // equilateral: halfBase=8, height≈8×√3
     ctx.save();
     ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
@@ -2383,7 +2400,7 @@ export function openCoinFullView(sym) {
   var rc = document.createElement('canvas');
   rc.className = 'fv-canvas';
   wrap.appendChild(rc);
-  function _syncFVCanvas() { rc.width = wrap.offsetWidth || window.innerWidth; rc.height = wrap.offsetHeight || window.innerHeight; }
+  function _syncFVCanvas() { _setCanvasSize(rc, wrap.offsetWidth || window.innerWidth, wrap.offsetHeight || window.innerHeight); }
   _syncFVCanvas();
   window.addEventListener('resize', _syncFVCanvas);
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
@@ -2520,7 +2537,10 @@ export function openCoinFullView(sym) {
     var pr2 = _fvSeries.coordinateToPrice(y);
     if (pr2 == null) return;
     var rc = ruler.canvas, ctx = rc.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, rc.width, rc.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var cw = rc.width / dpr, ch = rc.height / dpr;
     _drawFVOverlays(ctx, rc, sym);
     var p1 = ruler.start.pt, pr1 = ruler.start.price;
     var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
@@ -2543,9 +2563,9 @@ export function openCoinFullView(sym) {
       }
     }
     ctx.fillStyle = 'rgba(150,150,150,0.07)';
-    ctx.fillRect(0, Math.min(p1.y, pt.y), rc.width, Math.abs(pt.y - p1.y) || 1);
+    ctx.fillRect(0, Math.min(p1.y, pt.y), cw, Math.abs(pt.y - p1.y) || 1);
     ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(rc.width, p1.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = color; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
     ctx.fillStyle = color;
@@ -2556,8 +2576,8 @@ export function openCoinFullView(sym) {
     var maxW = Math.max(ctx.measureText(digits).width, durStr ? ctx.measureText(durStr).width : 0);
     var fvPriceAxisW = 0; try { fvPriceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     var lx = pt.x + 12, lyt = pt.y - 10;
-    if (lx + maxW > rc.width - fvPriceAxisW) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
-    if (lyt < 14) lyt = pt.y + 20; if (lyt > rc.height - 36) lyt = rc.height - 36; if (lyt < 4) lyt = 4;
+    if (lx + maxW > cw - fvPriceAxisW) lx = pt.x - 12 - maxW; if (lx < 2) lx = 2;
+    if (lyt < 14) lyt = pt.y + 20; if (lyt > ch - 36) lyt = ch - 36; if (lyt < 4) lyt = 4;
     ctx.fillText(sign, lx - signW, lyt);
     ctx.fillText(digits, lx, lyt);
     if (durStr) ctx.fillText(durStr, lx, lyt + 18);
@@ -2782,7 +2802,9 @@ export function openCoinFullView(sym) {
     var ruler = _fvRuler;
     if (ruler && ruler.canvas && !ruler.start) {
       var ctx = ruler.canvas.getContext('2d');
+      var fvDpr = window.devicePixelRatio || 1;
       ctx.clearRect(0, 0, ruler.canvas.width, ruler.canvas.height);
+      ctx.setTransform(fvDpr, 0, 0, fvDpr, 0, 0);
       _drawFVOverlays(ctx, ruler.canvas, sym);
     }
     requestAnimationFrame(fvBellLoop);
