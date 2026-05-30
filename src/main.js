@@ -7,7 +7,7 @@ import {
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
-  briefingNavDate, briefingCycleStatus, briefingRemove,
+  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
@@ -292,6 +292,11 @@ document.body.addEventListener('click', function (e) {
     case 'bp-remove': {
       var bRemoveDate = target.dataset.date;
       briefingRemove(sym, bRemoveDate);
+      break;
+    }
+    case 'bp-clear-note': {
+      var bClearDate = target.dataset.date;
+      briefingClearNote(sym, bClearDate, target.closest('.bp-note-row'));
       break;
     }
     case 'bp-toggle-note': {

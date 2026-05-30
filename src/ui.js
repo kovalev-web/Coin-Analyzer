@@ -1759,6 +1759,13 @@ function briefingStatusLabel(status) {
   return icon('circle', 16);
 }
 
+function briefingStatusText(status) {
+  if (status === 'watching') return 'Наблюдение';
+  if (status === 'worked')   return 'Сработало';
+  if (status === 'skip')     return 'Пропуск';
+  return '';
+}
+
 function briefingStatusClass(status) {
   if (status === 'watching') return 'bp-s-watching';
   if (status === 'worked')   return 'bp-s-worked';
@@ -1944,8 +1951,9 @@ export function renderBriefingPanel() {
       '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
         '<div class="bp-note-top">' +
           (isToday
-            ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
-            : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
+            ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
+            : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></span>') +
+          (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Очистить заметку">' + icon('x', 12) + '</button>' : '') +
         '</div>' +
         '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
       '</div>';
@@ -2648,6 +2656,16 @@ export function briefingCycleStatus(sym, date) {
   cycleBriefingStatus(sym, date);
 }
 
+export function briefingClearNote(sym, date, noteRow) {
+  var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
+  if (!entry) return;
+  entry.note = '';
+  saveBriefingLocal();
+  if (noteRow) { var ta = noteRow.querySelector('textarea'); if (ta) ta.value = ''; }
+  document.querySelectorAll('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]')
+    .forEach(function (btn) { btn.classList.remove('has-note'); });
+}
+
 export function briefingRemove(sym, date) {
   var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === date; });
   if (idx >= 0) {
@@ -2695,8 +2713,9 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
         + '<div class="bp-note-top">'
         + (isToday
-          ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '</button>'
-          : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+          ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
+          : '<span class="bp-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></span>')
+        + (isToday ? '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Очистить заметку">' + icon('x', 12) + '</button>' : '')
         + '</div>'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
         + '</div>';
