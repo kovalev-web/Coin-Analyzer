@@ -376,6 +376,11 @@
       .fv-mob-actions{display:flex;}
     }
 
+    @media(max-width:768px) and (orientation:portrait){
+      #fv-overlay:has(#fv-briefing-drawer.open) .fv-chart-wrap{flex:2 1 0%;}
+      #fv-overlay:has(#fv-briefing-drawer.open) #fv-briefing-drawer.open{height:auto;flex:3 1 0%;}
+    }
+
     /* ── Card header: action buttons only in full view ── */
     .card-head-right .btn-clear-alerts,
     .card-head-right .btn-clear-levels,
