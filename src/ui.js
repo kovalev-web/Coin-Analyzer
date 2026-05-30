@@ -1762,9 +1762,9 @@ function briefingStatusLabel(status) {
 
 function briefingStatusText(status) {
   if (status === 'watching') return 'Наблюдение';
-  if (status === 'traded')   return 'Торговал';
+  if (status === 'traded')   return 'Отработка';
   if (status === 'skip')     return 'Отмена';
-  if (status === 'missed')   return 'Упустил';
+  if (status === 'missed')   return 'Упущено';
   return '';
 }
 

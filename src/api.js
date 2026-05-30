@@ -993,7 +993,7 @@ export async function generateWeeklySummary() {
       var pnlStr = (t && t.status === 'ok' && t.count > 0)
         ? ' | PnL: $' + t.pnl.toFixed(2) + ' (' + t.count + ' сд.)'
         : ' | нет сделок';
-      var statusLabels = { watching: 'наблюдение', traded: 'торговал', skip: 'отмена', missed: 'упустил' };
+      var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
       var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
       return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
     }).join('\n');
