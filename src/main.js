@@ -321,6 +321,8 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     case 'bp-load-week':
+      target.textContent = 'Загрузка...';
+      target.disabled = true;
       fetchWeekTrades(true);
       break;
     case 'bp-gen-ai': {

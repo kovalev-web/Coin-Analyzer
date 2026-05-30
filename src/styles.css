@@ -447,6 +447,7 @@
     .bp-week-title{font-size:13px;font-weight:700;color:var(--ink);}
     .bp-week-load-btn{font-size:11px;background:var(--fog);border:1px solid var(--hairline);color:var(--graphite);padding:3px 8px;border-radius:6px;cursor:pointer;}
     .bp-week-load-btn:hover{color:var(--ink);border-color:var(--steel);}
+    .bp-week-load-btn:disabled{opacity:0.5;cursor:default;}
     .bp-week-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
     .bp-stat-card{background:var(--fog);border-radius:8px;padding:8px 10px;}
     .bp-stat-label{font-size:10px;color:var(--graphite);font-weight:500;text-transform:uppercase;letter-spacing:0.04em;}
