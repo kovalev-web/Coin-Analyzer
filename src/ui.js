@@ -901,8 +901,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
   // Dots at endpoints
   ctx.fillStyle = color;
-  ctx.beginPath(); ctx.arc(p1.x, p1.y, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(p2.x, p2.y, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p1.x, p1.y, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p2.x, p2.y, 2, 0, Math.PI * 2); ctx.fill();
   // Label — div overlay (avoids canvas sub-pixel jitter)
   var lbl = ruler.label;
   if (lbl) {
@@ -2580,8 +2580,8 @@ export function openCoinFullView(sym) {
     ctx.strokeStyle = color; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
     ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(p1.x, p1.y, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p1.x, p1.y, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2); ctx.fill();
     var fvLbl = _fvRuler && _fvRuler.label;
     if (fvLbl) {
       ctx.font = '12px Manrope,Arial,sans-serif';
