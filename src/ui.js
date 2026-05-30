@@ -1874,7 +1874,7 @@ function _weekSummaryHTML() {
       : '<div class="bp-ai-spinner">Нажми «Сгенерировать» после загрузки итогов</div>')
     + '</div>';
 
-  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week">Обновить</button>';
+  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 14) + '</button>';
 
   return '<div class="bp-week">'
     + '<div class="bp-week-header"><span class="bp-week-title">Итог недели</span>' + loadBtn + '</div>'

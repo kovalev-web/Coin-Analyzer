@@ -321,7 +321,7 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     case 'bp-load-week':
-      target.textContent = 'Загрузка...';
+      target.innerHTML = '<span class="spinner" style="margin-right:0"></span>';
       target.disabled = true;
       fetchWeekTrades(true);
       break;
