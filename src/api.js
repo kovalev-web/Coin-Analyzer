@@ -841,42 +841,51 @@ function _proxySecret() {
 }
 
 // Fetch trades for one symbol on one date. Results cached in state.trades.
+var _fetchTradesInFlight = {};
+
 export async function fetchTrades(symbol, dateStr) {
   var key = symbol + ':' + dateStr;
   var cached = state.trades[key];
-  if (cached && cached.status !== 'error') return cached;
+  if (cached && cached.status === 'ok') return cached;
+  if (_fetchTradesInFlight[key]) return _fetchTradesInFlight[key];
 
   state.trades[key] = { status: 'loading' };
 
-  try {
-    var binSym = symbol.toUpperCase() + 'USDT';
-    var res = await fetch(API_BASE + '/api/proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service: 'binance',
-        user_code: _proxySecret(),
-        payload: {
-          symbol: binSym,
-          startTime: _dateToMs(dateStr, false),
-          endTime: _dateToMs(dateStr, true),
-        },
-      }),
-    });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Proxy error');
+  var p = (async function () {
+    try {
+      var binSym = symbol.toUpperCase() + 'USDT';
+      var res = await fetch(API_BASE + '/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'binance',
+          user_code: _proxySecret(),
+          payload: {
+            symbol: binSym,
+            startTime: _dateToMs(dateStr, false),
+            endTime: _dateToMs(dateStr, true),
+          },
+        }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Proxy error');
 
-    var trades = data.trades || [];
-    var pnl = 0, commission = 0;
-    for (var i = 0; i < trades.length; i++) {
-      pnl += parseFloat(trades[i].realizedPnl || 0);
-      commission += parseFloat(trades[i].commission || 0);
+      var trades = data.trades || [];
+      var pnl = 0, commission = 0;
+      for (var i = 0; i < trades.length; i++) {
+        pnl += parseFloat(trades[i].realizedPnl || 0);
+        commission += parseFloat(trades[i].commission || 0);
+      }
+      state.trades[key] = { status: 'ok', pnl: pnl - commission, count: trades.length, entries: trades };
+    } catch (e) {
+      state.trades[key] = { status: 'error', error: e.message };
     }
-    state.trades[key] = { status: 'ok', pnl: pnl - commission, count: trades.length, entries: trades };
-  } catch (e) {
-    state.trades[key] = { status: 'error', error: e.message };
-  }
-  return state.trades[key];
+    delete _fetchTradesInFlight[key];
+    return state.trades[key];
+  })();
+
+  _fetchTradesInFlight[key] = p;
+  return p;
 }
 
 // Fetch trades for all briefing entries on a given date, then notify UI.
