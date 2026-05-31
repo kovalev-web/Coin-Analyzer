@@ -111,6 +111,8 @@ async function pollTelegram() {
       var msg = upd.message;
       if (msg && msg.text && msg.text.startsWith('/start')) {
         sendTG(msg.chat.id, 'Ваш Telegram chat_id:\n<code>' + msg.chat.id + '</code>\n\nВведите его в Pump Analyzer → кнопка ⚙️ → поле «Telegram chat_id».');
+      } else if (msg && msg.text && msg.text.startsWith('/test')) {
+        sendTG(msg.chat.id, '🚨 Inplay Phase\n<b>BTC</b> — 🟢 LONG ↑\nRVOL: 9.2x | Δp15m: +10.50% | CVD_z: 1.83\n24h Vol: $48.2B\n\n<i>Test alert — доставка работает ✓</i>');
       }
     });
   } catch (e) {}
