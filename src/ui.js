@@ -3076,7 +3076,7 @@ export function renderFVBriefingDrawer() {
         + '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
           ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
-          : '<span class="bp-row-status"></span>')
+          : '')
         + '</div>'
         + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
