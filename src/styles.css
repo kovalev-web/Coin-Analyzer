@@ -437,8 +437,8 @@
     .bp-note-btn.has-note{color:var(--ink);}
     .bp-remove{background:transparent;border:none;color:var(--graphite);padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .bp-remove:hover{color:var(--danger);opacity:1;}
-    .bp-note-row{padding:0 12px 10px;}
-    .bp-note-row.bp-note-row-empty{padding-bottom:0;}
+    .bp-note-row{padding:0 12px 0;}
+    .bp-note-row:has(.bp-note-wrap:not([style*="display:none"])){padding-bottom:10px;}
     .bp-note-top{display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px;}
     .bp-note-top .bp-status{width:auto;padding:0 8px 0 0;gap:5px;}
     .bp-expand-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 4px;}
