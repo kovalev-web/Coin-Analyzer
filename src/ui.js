@@ -2017,6 +2017,16 @@ function _refreshBriefingPct() {
   if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
   var coinMap = {};
   state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
+  // Expose for mobile USB debugging: window._bpDiag()
+  window._bpDiag = function () {
+    var rows = document.querySelectorAll('.bp-row[data-sym]');
+    return {
+      rowCount: rows.length,
+      syms: Array.from(rows).map(function (r) { return r.dataset.sym; }),
+      coinMapSize: Object.keys(coinMap).length,
+      matchCount: Array.from(rows).filter(function (r) { return !!(coinMap[r.dataset.sym] || coinMap[(r.dataset.sym || '').toLowerCase()]); }).length,
+    };
+  };
   document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
     var coin = coinMap[row.dataset.sym] || coinMap[(row.dataset.sym || '').toLowerCase()];
     if (!coin) return;
@@ -2056,6 +2066,13 @@ export function openBriefingPanel() {
   if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
   popup._isFullscreenMode = _useFullscreenPopup();
+
+  // Subscribe all briefing coins to kline stream so the server pushes per-trade
+  // kline_update messages for them. Without this, only coins previously viewed in
+  // FV (with loaded chart data) get per-trade price updates; the rest only update
+  // on the slow bulk ticker, making them appear frozen in the popup.
+  var _bpSyms = Array.from(new Set((state.briefing || []).map(function (e) { return e.sym; })));
+  if (_bpSyms.length) sendWS({ type: 'subscribe_klines', symbols: _bpSyms, tf: '5m' });
 
   if (_useFullscreenPopup()) {
     popup.style.position = 'fixed';

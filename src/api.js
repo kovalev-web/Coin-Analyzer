@@ -265,6 +265,13 @@ function processKlineUpdate(msg) {
   var tf = msg.tf;
   var k = msg.candle;
   if (!isValidCandle(k)) return;
+
+  // Update live price for all kline subscribers regardless of chart data state.
+  // Without this, coins without loaded chart data (e.g. briefing coins not yet viewed in FV)
+  // skip the price update and appear frozen in the briefing popup.
+  var _priceCoin = state.coins.find(function (c) { return c.symbol === sym; });
+  if (_priceCoin) { _priceCoin.current_price = k.close; _scheduleApplyLivePrice(); }
+
   var key = sym + '_' + tf;
   var cd = state.chartData[key];
   if (!cd || cd.status !== 'ok' || !cd.candles.length) return;
@@ -323,11 +330,6 @@ function processKlineUpdate(msg) {
     }
   }
 
-  var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (coin) {
-    coin.current_price = k.close;
-    _scheduleApplyLivePrice();
-  }
 }
 
 // ── D1 opens: суточный % от UTC-полуночи ─────────────────────────────────
