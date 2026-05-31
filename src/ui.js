@@ -2966,6 +2966,7 @@ export function toggleBpExpand(sym, date) {
   // Collapse all
   popup.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; el.classList.remove('bp-row-active'); });
   popup.querySelectorAll('.bp-row.bp-row-active').forEach(function (el) { el.classList.remove('bp-row-active'); });
+  popup.classList.remove('bp-has-expanded');
   _expandedBpKey = null;
   if (isExpanded) return;
   // Expand target
@@ -2978,6 +2979,7 @@ export function toggleBpExpand(sym, date) {
     var compactRow = noteRow.previousElementSibling;
     if (compactRow) compactRow.classList.add('bp-row-active');
   }
+  popup.classList.add('bp-has-expanded');
   _expandedBpKey = key;
 }
 
