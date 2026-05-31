@@ -113,6 +113,10 @@ async function pollTelegram() {
         sendTG(msg.chat.id, 'Ваш Telegram chat_id:\n<code>' + msg.chat.id + '</code>\n\nВведите его в Pump Analyzer → кнопка ⚙️ → поле «Telegram chat_id».');
       } else if (msg && msg.text && msg.text.startsWith('/test')) {
         sendTG(msg.chat.id, '🚨 Inplay Phase\n<b>BTC</b> — 🟢 LONG ↑\nRVOL: 9.2x | Δp15m: +10.50% | CVD_z: 1.83\n24h Vol: $48.2B\n\n<i>Test alert — доставка работает ✓</i>');
+      } else if (msg && msg.text && msg.text.startsWith('/briefing')) {
+        sendWeeklyBriefingReport(msg.chat.id).catch(function (e) {
+          sendTG(msg.chat.id, '❌ Ошибка: ' + e.message);
+        });
       }
     });
   } catch (e) {}
@@ -1151,7 +1155,47 @@ setInterval(function () {
   });
 }, 60000);
 
-// ── Weekly briefing report (Sunday 23:59) ────────────────────────────────
+// ── Weekly briefing report ────────────────────────────────────────────────
+async function sendWeeklyBriefingReport(chatId) {
+  var GEM_KEY = process.env.GEMINI_API_KEY;
+  var code = (process.env.PROXY_SECRET || '').toLowerCase();
+  if (!GEM_KEY || !code || !chatId) return;
+  var raw = await redis(['GET', 'briefing:' + code]);
+  var entries = JSON.parse(raw || '[]');
+  // Filter current week (Mon–Sun)
+  var now = new Date();
+  var daysToMon = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  var mon = new Date(now.getTime() - daysToMon * 24 * 3600 * 1000);
+  var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+  entries = entries.filter(function (e) { return e.date >= monStr; });
+  if (!entries.length) { await sendTG(chatId, '📋 Брифинг за эту неделю пуст.'); return; }
+  var byDate = {};
+  entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+  var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
+  var briefText = Object.keys(byDate).sort().reverse().map(function (date) {
+    return date + ':\n' + byDate[date].map(function (e) {
+      var st = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
+      return '  - ' + e.sym.toUpperCase() + st + (e.note ? ': ' + e.note : '');
+    }).join('\n');
+  }).join('\n\n');
+  var prompt = 'Ты торговый психолог. Вот мои заметки по монетам за неделю — мысли в моменте и статусы.\n\n'
+    + briefText + '\n\n'
+    + 'Напиши 2-3 предложения: что говорит психология этих заметок о моей торговле на этой неделе? Только вывод, без перечисления монет. На русском.';
+  var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
+  var gemRes = await fetch(gemUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  var gemData = await gemRes.json();
+  var summary = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content
+    && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0]
+    && gemData.candidates[0].content.parts[0].text) || '';
+  if (!summary) return;
+  await sendTG(chatId, '📋 <b>Итоги недели</b>\n\n' + summary);
+  console.log('[Weekly report] Sent to', chatId);
+}
+
 var _weeklyReportSent = false;
 setInterval(async function () {
   var now = new Date();
@@ -1161,46 +1205,7 @@ setInterval(async function () {
   }
   if (_weeklyReportSent) return;
   _weeklyReportSent = true;
-  try {
-    var GEM_KEY = process.env.GEMINI_API_KEY;
-    var code = (process.env.PROXY_SECRET || '').toLowerCase();
-    if (!GEM_KEY || !code || !INPLAY_ALERT_CHAT_ID) return;
-    var raw = await redis(['GET', 'briefing:' + code]);
-    var entries = JSON.parse(raw || '[]');
-    // Filter current week (Mon–Sun)
-    var daysToMon = now.getDay() === 0 ? 6 : now.getDay() - 1;
-    var mon = new Date(now.getTime() - daysToMon * 24 * 3600 * 1000);
-    var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
-    entries = entries.filter(function (e) { return e.date >= monStr; });
-    if (!entries.length) return;
-    // Build prompt text grouped by date
-    var byDate = {};
-    entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
-    var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
-    var briefText = Object.keys(byDate).sort().reverse().map(function (date) {
-      return date + ':\n' + byDate[date].map(function (e) {
-        var st = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
-        return '  - ' + e.sym.toUpperCase() + st + (e.note ? ': ' + e.note : '');
-      }).join('\n');
-    }).join('\n\n');
-    var prompt = 'Ты торговый психолог. Вот мои заметки по монетам за неделю — мысли в моменте и статусы.\n\n'
-      + briefText + '\n\n'
-      + 'Напиши 2-3 предложения: что говорит психология этих заметок о моей торговле на этой неделе? Только вывод, без перечисления монет. На русском.';
-    // Call Gemini directly (key is server-side)
-    var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
-    var gemRes = await fetch(gemUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    });
-    var gemData = await gemRes.json();
-    var summary = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content
-      && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0]
-      && gemData.candidates[0].content.parts[0].text) || '';
-    if (!summary) return;
-    await sendTG(INPLAY_ALERT_CHAT_ID, '📋 <b>Итоги недели</b>\n\n' + summary);
-    console.log('[Weekly report] Sent Sunday briefing to TG');
-  } catch (e) {
+  sendWeeklyBriefingReport(INPLAY_ALERT_CHAT_ID).catch(function (e) {
     console.error('[Weekly report]', e.message);
-  }
+  });
 }, 60000);
