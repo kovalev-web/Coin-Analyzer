@@ -438,7 +438,11 @@
     .bp-note-top{display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px;}
     .bp-note-top .bp-status{width:auto;padding:0 8px 0 0;gap:5px;}
     .bp-expand-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px;}
-    .bp-expand-bar .bp-status{width:auto;padding:0 8px 0 0;gap:6px;height:auto;}
+    .bp-expand-bar .bp-status{width:auto;padding:6px 8px;gap:6px;height:auto;border-radius:8px;}
+    .bp-expand-bar .bp-status.bp-s-watching{background:rgba(150,150,150,0.12);}
+    .bp-expand-bar .bp-status.bp-s-traded{background:rgba(34,197,94,0.12);}
+    .bp-expand-bar .bp-status.bp-s-skip{background:rgba(239,68,68,0.12);}
+    .bp-expand-bar .bp-status.bp-s-missed{background:rgba(245,158,11,0.12);}
     .bp-status-locked{cursor:default;opacity:1;}
     .bp-note-action{background:transparent;border:none;color:var(--graphite);font-size:12px;cursor:pointer;padding:0;flex-shrink:0;}
     .bp-note-action:hover{color:var(--ink);}
