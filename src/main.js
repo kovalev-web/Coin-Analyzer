@@ -52,7 +52,7 @@ document.body.addEventListener('click', function (e) {
   }
   var _bpPopup = document.getElementById('bp-popup');
   if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
-    _bpPopup.style.display = 'none';
+    closeBriefingPanel();
   }
   var _searchPopup = document.getElementById('search-popup');
   if (_searchPopup && _searchPopup.style.display !== 'none' && !_searchPopup.contains(e.target) && !e.target.closest('[data-action="open-search"]')) {

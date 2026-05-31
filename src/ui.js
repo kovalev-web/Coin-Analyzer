@@ -2087,6 +2087,7 @@ export function openBriefingPanel() {
 export function closeBriefingPanel() {
   var popup = document.getElementById('bp-popup');
   if (popup) popup.style.display = 'none';
+  _expandedBpKey = null;
   unlockScroll();
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = '';
