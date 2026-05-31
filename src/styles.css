@@ -437,7 +437,7 @@
     .bp-note-row{padding:0 12px 8px;}
     .bp-note-top{display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px;}
     .bp-note-top .bp-status{width:auto;padding:0 8px 0 0;gap:5px;}
-    .bp-expand-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px;}
+    .bp-expand-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 4px;}
     .bp-expand-bar .bp-status{width:auto;padding:6px 8px;gap:6px;height:auto;border-radius:9999px;background:var(--paper);}
     .bp-status-locked{cursor:default;opacity:1;}
     .bp-note-action{background:transparent;border:none;color:var(--graphite);font-size:12px;cursor:pointer;padding:0;flex-shrink:0;}
