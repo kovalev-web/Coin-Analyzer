@@ -7,7 +7,7 @@ import {
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
-  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, briefingNoteAction,
+  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
@@ -309,18 +309,9 @@ document.body.addEventListener('click', function (e) {
       briefingNoteAction(sym, bNoteDate, target.closest('.bp-note-row'), target);
       break;
     }
-    case 'bp-toggle-note': {
-      // Used by FV drawer only — popup uses bp-expand instead
-      var bpRow = target.closest('.bp-row');
-      var noteEl = bpRow ? bpRow.nextElementSibling : null;
-      if (noteEl && noteEl.classList.contains('bp-note-row')) {
-        var showing = noteEl.style.display !== 'none';
-        noteEl.style.display = showing ? 'none' : 'block';
-        if (!showing) {
-          var ta = noteEl.querySelector('textarea');
-          if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
-        }
-      }
+    case 'fvbd-expand': {
+      var fvExpandDate = target.dataset.date;
+      toggleFvExpand(sym, fvExpandDate);
       break;
     }
     case 'toggle-fv-briefing':

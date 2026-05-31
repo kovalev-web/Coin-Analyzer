@@ -1740,6 +1740,7 @@ var _fvTradeMarkersData = [];
 var _briefingUserCode = localStorage.getItem('pa_user_code') || null;
 var _briefingSyncTimer = null;
 var _expandedBpKey = null; // sym:date of currently expanded popup row
+var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
 
 function todayDate() {
   var d = new Date();
@@ -2983,6 +2984,31 @@ export function toggleBpExpand(sym, date) {
   _expandedBpKey = key;
 }
 
+export function toggleFvExpand(sym, date) {
+  var key = sym + ':' + date;
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if (!drawer) return;
+  var isExpanded = _expandedFvKey === key;
+  // Collapse all
+  drawer.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; el.classList.remove('bp-row-active'); });
+  drawer.querySelectorAll('.bp-row.bp-row-active').forEach(function (el) { el.classList.remove('bp-row-active'); });
+  drawer.classList.remove('fvbd-has-expanded');
+  _expandedFvKey = null;
+  if (isExpanded) return;
+  // Expand target
+  var noteRow = document.getElementById('bp-note-' + sym + '-' + date);
+  if (noteRow) {
+    noteRow.style.display = '';
+    noteRow.classList.add('bp-row-active');
+    var ta = noteRow.querySelector('textarea');
+    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+    var compactRow = noteRow.previousElementSibling;
+    if (compactRow) compactRow.classList.add('bp-row-active');
+  }
+  drawer.classList.add('fvbd-has-expanded');
+  _expandedFvKey = key;
+}
+
 export function briefingRemove(sym, date) {
   var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === date; });
   if (idx >= 0) {
@@ -3028,25 +3054,26 @@ export function renderFVBriefingDrawer() {
     dateMap[date].forEach(function (e) {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
       var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
-      var isCurrent = _fvSym === e.sym;
-      html += '<div class="bp-row' + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-open" data-sym="' + e.sym + '">'
+      var tradeInline = _tradeInlineHTML(e.sym, e.date);
+      var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
+      var isExpanded = _expandedFvKey === e.sym + ':' + e.date;
+      var hasNote = !!e.note;
+      html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">'
         + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
-        + _tradePillHTML(e.sym, e.date)
-        + '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>'
-        + (isToday
-          ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>'
-          : '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+        + (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+        + '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
+        + '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
         + '</div>'
-        + '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">'
-        + '<div class="bp-note-top">'
-        + (isToday
-          ? '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>'
-          : '')
+        + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
+        + '<div class="bp-expand-bar">'
+        + (tradeLocked
+          ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
+          : '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
+        + '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>'
         + '</div>'
-        + '<div class="bp-note-wrap">'
+        + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
-        + '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '"' + (e.note ? '' : ' style="display:none"') + '>' + icon('x', 12) + '</button>'
         + '</div>'
         + '</div>';
     });
@@ -3063,8 +3090,6 @@ export function renderFVBriefingDrawer() {
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }
       var noteBtn = drawer.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
-      var clrBtn = ta.closest('.bp-note-row') && ta.closest('.bp-note-row').querySelector('.bp-note-clear');
-      if (clrBtn) clrBtn.style.display = ta.value ? '' : 'none';
     });
   });
 }
@@ -3080,7 +3105,8 @@ export function openFVBriefingDrawer() {
 
 export function closeFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
-  if (drawer) drawer.classList.remove('open');
+  if (drawer) { drawer.classList.remove('open'); drawer.classList.remove('fvbd-has-expanded'); }
+  _expandedFvKey = null;
   var star = document.querySelector('.btn-fv-star');
   if (star) star.style.display = '';
   _applyFVTradeMarkers(null);
