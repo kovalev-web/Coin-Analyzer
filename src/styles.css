@@ -380,7 +380,7 @@
       #fv-overlay:has(#fv-briefing-drawer.open) .fv-body{flex:9 1 0%;}
       #fv-overlay:has(#fv-briefing-drawer.open) #fv-briefing-drawer.open{height:auto;flex:11 1 0%;}
     }
-    @media(max-width:768px){.bp-note-row textarea{font-size:14px;}}
+    @media(max-width:768px){.bp-note-row textarea{font-size:14px !important;}}
 
     /* ── Card header: action buttons only in full view ── */
     .card-head-right .btn-clear-alerts,
