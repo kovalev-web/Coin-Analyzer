@@ -7,7 +7,7 @@ import {
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
-  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote,
+  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
@@ -299,8 +299,18 @@ document.body.addEventListener('click', function (e) {
       briefingClearNote(sym, bClearDate, target.closest('.bp-note-row'));
       break;
     }
+    case 'bp-expand': {
+      var bExpandDate = target.dataset.date;
+      toggleBpExpand(sym, bExpandDate);
+      break;
+    }
+    case 'bp-note-action': {
+      var bNoteDate = target.dataset.date;
+      briefingNoteAction(sym, bNoteDate, target.closest('.bp-note-row'), target);
+      break;
+    }
     case 'bp-toggle-note': {
-      // Use DOM sibling instead of getElementById to avoid collision between popup and drawer
+      // Used by FV drawer only — popup uses bp-expand instead
       var bpRow = target.closest('.bp-row');
       var noteEl = bpRow ? bpRow.nextElementSibling : null;
       if (noteEl && noteEl.classList.contains('bp-note-row')) {

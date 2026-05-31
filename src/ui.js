@@ -1739,6 +1739,7 @@ var _fvTradeMarkersData = [];
 
 var _briefingUserCode = localStorage.getItem('pa_user_code') || null;
 var _briefingSyncTimer = null;
+var _expandedBpKey = null; // sym:date of currently expanded popup row
 
 function todayDate() {
   var d = new Date();
@@ -1949,6 +1950,15 @@ function _tradePillHTML(sym, date) {
   return '<span class="bp-trade-pill ' + cls + '" title="' + escHtml(title) + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
 }
 
+// Inline trade result for popup compact row (no pill background, just colored text)
+function _tradeInlineHTML(sym, date) {
+  var t = state.trades[sym + ':' + date];
+  if (!t || t.status === 'loading' || t.status === 'error' || t.count === 0) return null;
+  var sign = t.pnl >= 0 ? '+' : '';
+  var cls = t.pnl >= 0 ? 'up' : 'dn';
+  return '<span class="bp-trade-inline stat-val ' + cls + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
+}
+
 // ── Weekly summary block ───────────────────────────────────────────────────
 
 function _weekStatsHTML() {
@@ -2100,20 +2110,26 @@ export function renderBriefingPanel() {
   var rowsHTML = entries.length ? entries.map(function (e) {
     var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
     var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
-    return '<div class="bp-row" data-action="bp-open" data-sym="' + e.sym + '">' +
+    var tradeInline = _tradeInlineHTML(e.sym, e.date);
+    var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
+    var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
+    var hasNote = !!e.note;
+    return '<div class="bp-row" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
-      _tradePillHTML(e.sym, e.date) +
-      '<button class="bp-note-btn ' + (e.note ? 'has-note' : '') + '" data-action="bp-toggle-note" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Заметка">' + icon('sticky-note', 16) + '</button>' +
-      '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '" title="Убрать">' + icon('trash', 16) + '</button>' +
+      (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
+      '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('file-text', 16) + '</button>' +
+      '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
       '</div>' +
-      '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '" style="display:none">' +
-        '<div class="bp-note-top">' +
-          '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>' +
+      '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
+        '<div class="bp-expand-bar">' +
+          (tradeLocked
+            ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('zap', 14) + '<span class="bp-status-text">Отработка</span></span>'
+            : '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
+          '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>' +
         '</div>' +
-        '<div class="bp-note-wrap">' +
+        '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
           '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
-          '<button class="bp-note-clear" data-action="bp-clear-note" data-sym="' + e.sym + '" data-date="' + e.date + '"' + (e.note ? '' : ' style="display:none"') + '>' + icon('x', 12) + '</button>' +
         '</div>' +
       '</div>';
   }).join('') : '<div class="bp-empty">На сегодня монет нет — отметь звёздочкой на дашборде</div>';
@@ -2139,8 +2155,6 @@ export function renderBriefingPanel() {
       if (entry) { entry.note = ta.value; saveBriefingLocal(); }
       var noteBtn = popup.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
-      var clrBtn = ta.closest('.bp-note-row') && ta.closest('.bp-note-row').querySelector('.bp-note-clear');
-      if (clrBtn) clrBtn.style.display = ta.value ? '' : 'none';
     });
   });
 }
@@ -2899,6 +2913,47 @@ export function briefingClearNote(sym, date, noteRow) {
   }
   document.querySelectorAll('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]')
     .forEach(function (btn) { btn.classList.remove('has-note'); });
+}
+
+// Handle "Добавить заметку" / "Удалить заметку" button in popup expand bar
+export function briefingNoteAction(sym, date, noteRow, actionBtn) {
+  var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
+  if (!entry || !noteRow) return;
+  var noteWrap = noteRow.querySelector('.bp-note-wrap');
+  var ta = noteRow.querySelector('textarea');
+  var isShowing = noteWrap && noteWrap.style.display !== 'none';
+  if (isShowing) {
+    entry.note = '';
+    saveBriefingLocal();
+    if (ta) ta.value = '';
+    if (noteWrap) noteWrap.style.display = 'none';
+    if (actionBtn) actionBtn.textContent = 'Добавить заметку';
+    var compactRow = noteRow.previousElementSibling;
+    if (compactRow) { var nb = compactRow.querySelector('.bp-note-btn'); if (nb) nb.classList.remove('has-note'); }
+  } else {
+    if (noteWrap) noteWrap.style.display = '';
+    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
+    if (actionBtn) actionBtn.textContent = 'Удалить заметку';
+  }
+}
+
+export function toggleBpExpand(sym, date) {
+  var key = sym + ':' + date;
+  var popup = document.getElementById('bp-popup');
+  if (!popup) return;
+  var isExpanded = _expandedBpKey === key;
+  // Collapse all
+  popup.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; });
+  _expandedBpKey = null;
+  if (isExpanded) return;
+  // Expand target
+  var noteRow = document.getElementById('bp-note-' + sym + '-' + date);
+  if (noteRow) {
+    noteRow.style.display = '';
+    var ta = noteRow.querySelector('textarea');
+    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  }
+  _expandedBpKey = key;
 }
 
 export function briefingRemove(sym, date) {
