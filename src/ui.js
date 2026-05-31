@@ -2179,6 +2179,16 @@ export function renderBriefingPanel() {
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
     });
   });
+  // Restore textarea height for expanded row after re-render
+  if (_expandedBpKey) {
+    var _bpParts = _expandedBpKey.split(':');
+    var _bpSym = _bpParts[0], _bpDate = _bpParts.slice(1).join(':');
+    var _bpNoteRow = popup.querySelector('[id="bp-note-' + _bpSym + '-' + _bpDate + '"]');
+    if (_bpNoteRow) {
+      var _bpTa = _bpNoteRow.querySelector('textarea');
+      if (_bpTa) { _bpTa.style.height = 'auto'; _bpTa.style.height = _bpTa.scrollHeight + 'px'; }
+    }
+  }
 }
 
 function _fvBottomBarHTML(sym, tf) {
