@@ -411,7 +411,7 @@
     .bp-nav-btn:disabled{opacity:0.3;cursor:default;}
     .bp-list{padding:16px 0 0;}
     .bp-empty{padding:20px 12px;color:var(--graphite);font-size:13px;text-align:center;}
-    .bp-row{display:flex;align-items:center;gap:14px;padding:0 12px;cursor:pointer;}
+    .bp-row{display:flex;align-items:center;gap:20px;padding:0 12px;cursor:pointer;}
     .bp-row button{cursor:pointer;}
     .bp-sym-btn{background:transparent;border:none;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:0;flex-shrink:0;min-width:52px;text-align:left;letter-spacing:0.01em;}
     .bp-row:hover{background:color-mix(in srgb,var(--fog) 50%,var(--paper));}
