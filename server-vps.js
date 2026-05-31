@@ -70,6 +70,7 @@ async function redis(cmd) {
 
 var TELEGRAM_TOKEN      = process.env.TELEGRAM_BOT_TOKEN;
 var INPLAY_ALERT_CHAT_ID = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
+var BRIEFING_USER_CODE  = (process.env.BRIEFING_USER_CODE || process.env.PROXY_SECRET || '').toLowerCase();
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
 var tgOffset = 0;
 
@@ -1158,7 +1159,7 @@ setInterval(function () {
 // ── Weekly briefing report ────────────────────────────────────────────────
 async function sendWeeklyBriefingReport(chatId) {
   var GEM_KEY = process.env.GEMINI_API_KEY;
-  var code = (process.env.PROXY_SECRET || '').toLowerCase();
+  var code = BRIEFING_USER_CODE;
   if (!GEM_KEY || !code || !chatId) return;
   var r = await redis(['GET', 'briefing:' + code]);
   var entries = r.result ? JSON.parse(r.result) : [];
