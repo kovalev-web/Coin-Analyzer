@@ -443,7 +443,7 @@
     .bp-note-action{background:transparent;border:none;color:var(--graphite);font-size:12px;cursor:pointer;padding:0;flex-shrink:0;}
     .bp-note-action:hover{color:var(--ink);}
     .bp-trade-inline{font-size:12px;font-weight:500;flex-shrink:0;white-space:nowrap;}
-    .bp-status-text{font-size:12px;}
+    .bp-status-text{font-size:12px;line-height:1.4;}
     .bp-note-wrap{position:relative;}
     .bp-note-clear{position:absolute;top:6px;right:6px;background:var(--paper);border:none;color:var(--graphite);padding:0;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;}
     .bp-note-clear:hover{color:var(--ink);background:var(--fog);}
