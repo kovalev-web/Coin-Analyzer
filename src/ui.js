@@ -2143,7 +2143,7 @@ export function renderBriefingPanel() {
       '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
       '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
       '</div>' +
-      '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
+      '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + (hasNote ? '' : ' bp-note-row-empty') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
         '<div class="bp-expand-bar">' +
           (tradeLocked
             ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
@@ -2951,12 +2951,14 @@ export function briefingNoteAction(sym, date, noteRow, actionBtn) {
     if (ta) ta.value = '';
     if (noteWrap) noteWrap.style.display = 'none';
     if (actionBtn) actionBtn.textContent = 'Добавить заметку';
+    noteRow.classList.add('bp-note-row-empty');
     var compactRow = noteRow.previousElementSibling;
     if (compactRow) { var nb = compactRow.querySelector('.bp-note-btn'); if (nb) nb.classList.remove('has-note'); }
   } else {
     if (noteWrap) noteWrap.style.display = '';
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
     if (actionBtn) actionBtn.textContent = 'Удалить заметку';
+    noteRow.classList.remove('bp-note-row-empty');
   }
 }
 
@@ -3068,7 +3070,7 @@ export function renderFVBriefingDrawer() {
           ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
           : '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
         + '</div>'
-        + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
+        + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + (hasNote ? '' : ' bp-note-row-empty') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
         + (tradeLocked
           ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
