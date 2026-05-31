@@ -494,7 +494,7 @@
     .fvbd-tabs{display:flex;gap:2px;padding:0 8px 8px;}
     .fvbd-divider{border-top:1px solid var(--hairline);}
     .fvbd-current{background:var(--fog);}
-    .fvbd-current .bp-sym-btn{color:var(--graphite);}
+    #fv-briefing-drawer .bp-row:not(.fvbd-current) .bp-sym-btn{color:var(--graphite);}
     .fvbd-auto{opacity:0.6;}
     .fvbd-auto .bp-sym-btn{font-style:italic;}
     .fvbd-empty{padding:24px 16px;color:var(--graphite);font-size:13px;text-align:center;}
