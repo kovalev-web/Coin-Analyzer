@@ -2032,6 +2032,7 @@ function _refreshBriefingPct() {
   });
 }
 setInterval(_refreshBriefingPct, 500);
+on('metrics:update', _refreshBriefingPct); // also fires on every WS push (reliable on iOS)
 
 // ── Briefing Panel ─────────────────────────────────────────────────────────
 
