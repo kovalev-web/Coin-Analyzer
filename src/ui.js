@@ -2996,7 +2996,7 @@ export function toggleFvExpand(sym, date) {
   _expandedFvKey = null;
   if (isExpanded) return;
   // Expand target
-  var noteRow = document.getElementById('bp-note-' + sym + '-' + date);
+  var noteRow = drawer.querySelector('[id="bp-note-' + sym + '-' + date + '"]');
   if (noteRow) {
     noteRow.style.display = '';
     noteRow.classList.add('bp-row-active');
