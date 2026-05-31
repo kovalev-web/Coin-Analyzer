@@ -415,7 +415,7 @@
     .bp-row button{cursor:pointer;}
     .bp-sym-btn{background:transparent;border:none;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:0;flex-shrink:0;min-width:52px;text-align:left;letter-spacing:0.01em;}
     .bp-row:hover{background:color-mix(in srgb,var(--fog) 50%,var(--paper));}
-    .bp-row.bp-row-active{background:var(--fog);border-bottom:2px solid var(--fog);}
+    .bp-row.bp-row-active{background:var(--fog);border-bottom:2px solid var(--paper);}
     .bp-note-row.bp-row-active{background:var(--fog);}
     .bp-row.bp-row-active:hover{background:var(--fog);}
     .fvbd-current:hover{background:var(--fog);}
