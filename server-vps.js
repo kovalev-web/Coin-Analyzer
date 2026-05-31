@@ -75,16 +75,29 @@ var tgOffset = 0;
 
 async function sendTG(chatId, text, replyMarkup) {
   if (!TELEGRAM_TOKEN || !chatId) return;
-  try {
-    var body = { chat_id: chatId, text: text, parse_mode: 'HTML' };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-    var r = await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) console.error('[TG] sendMessage failed:', r.status, await r.text());
-  } catch (e) { console.error('[TG] sendMessage error:', e.message); }
+  var body = { chat_id: chatId, text: text, parse_mode: 'HTML' };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  var delays = [0, 3000, 10000];
+  for (var i = 0; i < delays.length; i++) {
+    if (delays[i]) await new Promise(function (r) { setTimeout(r, delays[i]); });
+    try {
+      var r = await fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) return;
+      var errText = await r.text();
+      if (r.status === 429) {
+        var retryAfter = JSON.parse(errText).parameters && JSON.parse(errText).parameters.retry_after;
+        if (retryAfter) await new Promise(function (r) { setTimeout(r, retryAfter * 1000); });
+      }
+      console.error('[TG] sendMessage failed:', r.status, errText);
+      if (r.status >= 400 && r.status < 500 && r.status !== 429) return; // non-retriable
+    } catch (e) {
+      console.error('[TG] sendMessage error (attempt ' + (i + 1) + '):', e.message);
+    }
+  }
 }
 
 async function pollTelegram() {
