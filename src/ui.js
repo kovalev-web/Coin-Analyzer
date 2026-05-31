@@ -3089,6 +3089,21 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
         + '</div>'
+        + (isToday ? (function () {
+          var _fullDays = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+          var _hist = (state.briefing || []).filter(function (e2) { return e2.sym === e.sym && e2.date !== today && e2.note; });
+          if (!_hist.length) return '';
+          return '<div class="fvbd-history">' + _hist.map(function (e2) {
+            var _p = e2.date.split('-'); var _d = new Date(+_p[0], +_p[1] - 1, +_p[2]);
+            return '<div class="fvbd-history-item">'
+              + '<span class="fvbd-history-date">' + _fullDays[_d.getDay()] + '</span>'
+              + '<div class="fvbd-history-row">'
+              + '<span class="fvbd-history-note">' + escHtml(e2.note) + '</span>'
+              + '<span class="bp-row-status ' + briefingStatusClass(e2.status) + '">' + briefingStatusLabel(e2.status) + '</span>'
+              + '</div>'
+              + '</div>';
+          }).join('') + '</div>';
+        })() : '')
         + '</div>';
     });
   });

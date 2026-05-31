@@ -494,6 +494,10 @@
     .fvbd-date-label{font-size:11px;font-weight:500;color:var(--graphite);padding:16px 12px 6px;}
     .fvbd-tabs{display:flex;gap:2px;padding:0 8px 8px;}
     .fvbd-divider{border-top:1px solid var(--hairline);}
+    .fvbd-history{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px;}
+    .fvbd-history-date{display:block;font-size:11px;font-weight:500;color:var(--graphite);margin-bottom:2px;}
+    .fvbd-history-row{display:flex;align-items:flex-start;gap:8px;}
+    .fvbd-history-note{flex:1;font-size:13px;color:var(--graphite);line-height:1.4;}
     .fvbd-current{background:var(--fog);}
     #fv-briefing-drawer .bp-row:not(.fvbd-current) .bp-sym-btn{color:var(--graphite);}
     .fvbd-auto{opacity:0.6;}
