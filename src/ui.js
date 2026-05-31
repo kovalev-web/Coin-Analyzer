@@ -2114,14 +2114,14 @@ export function renderBriefingPanel() {
     var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
     var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
     var hasNote = !!e.note;
-    return '<div class="bp-row" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' +
+    return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
       (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
       '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
       '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
       '</div>' +
-      '<div class="bp-note-row" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
+      '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
         '<div class="bp-expand-bar">' +
           (tradeLocked
             ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('zap', 14) + '<span class="bp-status-text">Отработка</span></span>'
@@ -2943,15 +2943,19 @@ export function toggleBpExpand(sym, date) {
   if (!popup) return;
   var isExpanded = _expandedBpKey === key;
   // Collapse all
-  popup.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; });
+  popup.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; el.classList.remove('bp-row-active'); });
+  popup.querySelectorAll('.bp-row.bp-row-active').forEach(function (el) { el.classList.remove('bp-row-active'); });
   _expandedBpKey = null;
   if (isExpanded) return;
   // Expand target
   var noteRow = document.getElementById('bp-note-' + sym + '-' + date);
   if (noteRow) {
     noteRow.style.display = '';
+    noteRow.classList.add('bp-row-active');
     var ta = noteRow.querySelector('textarea');
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+    var compactRow = noteRow.previousElementSibling;
+    if (compactRow) compactRow.classList.add('bp-row-active');
   }
   _expandedBpKey = key;
 }
