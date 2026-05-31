@@ -1796,7 +1796,7 @@ function syncBriefingToServer() {
     body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
   }).catch(function () {});
 }
-function syncBriefingNow() {
+export function syncBriefingNow() {
   clearTimeout(_briefingSyncTimer);
   syncBriefingToServer();
 }

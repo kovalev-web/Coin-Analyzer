@@ -8,7 +8,7 @@ import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
-  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus,
+  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
@@ -386,6 +386,11 @@ on('trades:week-updated', function () {
 on('trades:ai-updated', function () {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
+});
+
+// Sync briefing to server when tab goes hidden (screen lock, app switch, close)
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) syncBriefingNow();
 });
 
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─
