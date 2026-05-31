@@ -205,7 +205,7 @@ function processTickerPush(arr) {
       // Не фильтруем по объёму здесь — filteredCoins() применяет тир-фильтр для отображения.
       // Фильтруем только явно нулевые объёмы (монеты не торгуются).
       if (qv < 1e6 || pc < (state.minChange || 0)) return;
-      state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.c), total_volume: qv, price_change_percentage_24h: pc });
+      state.coins.push({ symbol: sym, name: sym.toUpperCase(), current_price: parseFloat(t.c), open_24h: parseFloat(t.o), total_volume: qv, price_change_percentage_24h: pc });
       newCoins++;
       return;
     }
