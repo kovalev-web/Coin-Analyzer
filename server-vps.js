@@ -1150,3 +1150,57 @@ setInterval(function () {
     logInplay('[Inplay] Refresh bootstrap error:', e.message);
   });
 }, 60000);
+
+// ── Weekly briefing report (Sunday 23:59) ────────────────────────────────
+var _weeklyReportSent = false;
+setInterval(async function () {
+  var now = new Date();
+  if (now.getDay() !== 0 || now.getHours() !== 23 || now.getMinutes() !== 59) {
+    _weeklyReportSent = false;
+    return;
+  }
+  if (_weeklyReportSent) return;
+  _weeklyReportSent = true;
+  try {
+    var GEM_KEY = process.env.GEMINI_API_KEY;
+    var code = (process.env.PROXY_SECRET || '').toLowerCase();
+    if (!GEM_KEY || !code || !INPLAY_ALERT_CHAT_ID) return;
+    var raw = await redis(['GET', 'briefing:' + code]);
+    var entries = JSON.parse(raw || '[]');
+    // Filter current week (Mon–Sun)
+    var daysToMon = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    var mon = new Date(now.getTime() - daysToMon * 24 * 3600 * 1000);
+    var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+    entries = entries.filter(function (e) { return e.date >= monStr; });
+    if (!entries.length) return;
+    // Build prompt text grouped by date
+    var byDate = {};
+    entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+    var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
+    var briefText = Object.keys(byDate).sort().reverse().map(function (date) {
+      return date + ':\n' + byDate[date].map(function (e) {
+        var st = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
+        return '  - ' + e.sym.toUpperCase() + st + (e.note ? ': ' + e.note : '');
+      }).join('\n');
+    }).join('\n\n');
+    var prompt = 'Ты торговый психолог. Вот мои заметки по монетам за неделю — мысли в моменте и статусы.\n\n'
+      + briefText + '\n\n'
+      + 'Напиши 2-3 предложения: что говорит психология этих заметок о моей торговле на этой неделе? Только вывод, без перечисления монет. На русском.';
+    // Call Gemini directly (key is server-side)
+    var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
+    var gemRes = await fetch(gemUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    var gemData = await gemRes.json();
+    var summary = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content
+      && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0]
+      && gemData.candidates[0].content.parts[0].text) || '';
+    if (!summary) return;
+    await sendTG(INPLAY_ALERT_CHAT_ID, '📋 <b>Итоги недели</b>\n\n' + summary);
+    console.log('[Weekly report] Sent Sunday briefing to TG');
+  } catch (e) {
+    console.error('[Weekly report]', e.message);
+  }
+}, 60000);
