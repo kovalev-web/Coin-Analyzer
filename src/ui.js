@@ -2604,8 +2604,8 @@ export function openCoinFullView(sym) {
       fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
       fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
       fvLbl.innerHTML =
-        '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
-        (durStr ? '<div style="display:flex;height:20px;align-items:center"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
+        '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
+        (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
       fvLbl.style.display = 'flex';
     }
   });
