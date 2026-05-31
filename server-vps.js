@@ -1155,7 +1155,7 @@ setInterval(function () {
 var _weeklyReportSent = false;
 setInterval(async function () {
   var now = new Date();
-  if (now.getDay() !== 0 || now.getHours() !== 23 || now.getMinutes() !== 59) {
+  if (now.getDay() !== 0 || now.getHours() !== 22 || now.getMinutes() !== 0) {
     _weeklyReportSent = false;
     return;
   }
