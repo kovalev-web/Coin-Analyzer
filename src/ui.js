@@ -2011,7 +2011,11 @@ function _weekAIHTML() {
     + '</div>';
 }
 
+var _refreshBriefingPctLast = 0;
 function _refreshBriefingPct() {
+  var now = Date.now();
+  if (now - _refreshBriefingPctLast < 500) return;
+  _refreshBriefingPctLast = now;
   var popup = document.getElementById('bp-popup');
   var drawer = document.getElementById('fv-briefing-drawer');
   if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
