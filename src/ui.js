@@ -1796,6 +1796,10 @@ function syncBriefingToServer() {
     body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
   }).catch(function () {});
 }
+function syncBriefingNow() {
+  clearTimeout(_briefingSyncTimer);
+  syncBriefingToServer();
+}
 
 export function loadBriefing() {
   // Always filter to current week — old entries disappear automatically each Monday
@@ -1834,7 +1838,14 @@ export function loadBriefing() {
     body: JSON.stringify({ action: 'get', code: code }),
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (d && Array.isArray(d.entries)) {
-      state.briefing = d.entries.filter(function (e) { return e.date >= _mondayStr; });
+      var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });
+      // Merge: server wins for existing entries, but local-only entries survive
+      // (handles case when sync didn't complete before reload)
+      var _localOnly = (state.briefing || []).filter(function (le) {
+        return !_serverEntries.some(function (se) { return se.sym === le.sym && se.date === le.date; });
+      });
+      state.briefing = _serverEntries.concat(_localOnly);
+      if (_localOnly.length) syncBriefingToServer(); // push missing entries to server
       saveBriefingLocal();
       renderBriefingPanel();
       updateAllStarButtons();
@@ -1870,6 +1881,7 @@ export function toggleBriefing(sym) {
     state.briefing.push({ sym: sym, date: today, addedAt: Date.now(), status: 'watching', note: '' });
   }
   saveBriefingLocal();
+  syncBriefingNow();
   updateStarButton(sym);
   renderBriefingPanel();
 }
@@ -1902,6 +1914,7 @@ function cycleBriefingStatus(sym, date) {
   var cur = order.indexOf(entry.status);
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
+  syncBriefingNow();
   var openNotes = Array.from(document.querySelectorAll('.bp-note-row'))
     .filter(function (el) { return el.style.display !== 'none'; })
     .map(function (el) { return el.id; });
