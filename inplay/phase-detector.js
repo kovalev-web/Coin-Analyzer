@@ -163,7 +163,7 @@ function stepSymbol(sym, buf5m, getMicroFn, now, pd, logFn) {
       state.status             = 'active';
       state.cooling_start_time = null;
       state.revivals_count++;
-      transitions.push({ symbol: sym, from: 'cooling', to: 'active', revival: true, ts: now });
+      transitions.push({ symbol: sym, from: 'cooling', to: 'active', direction: state.direction, revival: true, ts: now });
       if (logFn) logFn('[Phase]', sym, '→ active (revival #' + state.revivals_count + ')');
     } else if (now - state.cooling_start_time > timeoutMs) {
       state.status             = 'not_in_phase';
