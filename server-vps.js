@@ -1160,8 +1160,8 @@ async function sendWeeklyBriefingReport(chatId) {
   var GEM_KEY = process.env.GEMINI_API_KEY;
   var code = (process.env.PROXY_SECRET || '').toLowerCase();
   if (!GEM_KEY || !code || !chatId) return;
-  var raw = await redis(['GET', 'briefing:' + code]);
-  var entries = JSON.parse(raw || '[]');
+  var r = await redis(['GET', 'briefing:' + code]);
+  var entries = r.result ? JSON.parse(r.result) : [];
   // Filter current week (Mon–Sun)
   var now = new Date();
   var daysToMon = now.getDay() === 0 ? 6 : now.getDay() - 1;
