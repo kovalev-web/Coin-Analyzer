@@ -2886,6 +2886,7 @@ export function closeCoinFullView() {
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = null;
+  _expandedFvKey = null;
   var overlay = document.getElementById('fv-overlay');
   if (overlay) overlay.style.display = 'none';
   var ap = document.getElementById('analysis-overlay');
@@ -3094,6 +3095,16 @@ export function renderFVBriefingDrawer() {
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
     });
   });
+  // Restore textarea height for expanded row after full re-render
+  if (_expandedFvKey) {
+    var _exParts = _expandedFvKey.split(':');
+    var _exSym = _exParts[0], _exDate = _exParts.slice(1).join(':');
+    var _exNoteRow = drawer.querySelector('[id="bp-note-' + _exSym + '-' + _exDate + '"]');
+    if (_exNoteRow) {
+      var _exTa = _exNoteRow.querySelector('textarea');
+      if (_exTa) { _exTa.style.height = 'auto'; _exTa.style.height = _exTa.scrollHeight + 'px'; }
+    }
+  }
 }
 
 export function openFVBriefingDrawer() {
