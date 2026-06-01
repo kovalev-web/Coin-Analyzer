@@ -747,7 +747,7 @@ export function getChartOpts() {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
-    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt },
+    timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false, tickMarkFormatter: _tickMarkFmt, rightOffset: 5 },
     localization: { timeFormatter: _localTimeFmt },
     handleScroll: true, handleScale: true,
   };
@@ -775,7 +775,7 @@ function updateChart(symbol) {
   }));
   var total = cd.candles.length;
   var visibleCandles = 80;
-  chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total - 1 });
+  chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total + 4 });
   _syncAlerts(symbol);
 }
 
