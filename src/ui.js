@@ -1800,6 +1800,39 @@ export function syncBriefingNow() {
   clearTimeout(_briefingSyncTimer);
   syncBriefingToServer();
 }
+export function refreshBriefingFromServer() {
+  var code = _briefingUserCode || localStorage.getItem('pa_user_code');
+  if (!code) return;
+  var _today = new Date(); var _dow = _today.getDay();
+  var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
+  var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
+  fetch(API_BASE + '/api/briefing', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'get', code: code }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || !Array.isArray(d.entries)) return;
+    var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });
+    var _localMap = {};
+    (state.briefing || []).forEach(function (le) { _localMap[le.sym + ':' + le.date] = le; });
+    // Server is authoritative for which entries exist.
+    // But if local note is newer (noteUpdatedAt) — keep local note and push it back.
+    var _merged = _serverEntries.map(function (se) {
+      var le = _localMap[se.sym + ':' + se.date];
+      if (le && (le.noteUpdatedAt || 0) > (se.noteUpdatedAt || 0)) {
+        return Object.assign({}, se, { note: le.note, noteUpdatedAt: le.noteUpdatedAt });
+      }
+      return se;
+    });
+    var _needsSync = _merged.some(function (e, i) { return e !== _serverEntries[i]; });
+    state.briefing = _merged;
+    if (_needsSync) syncBriefingToServer();
+    saveBriefingLocal();
+    renderBriefingPanel();
+    updateAllStarButtons();
+    var _fvd = document.getElementById('fv-briefing-drawer');
+    if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
+  }).catch(function () {});
+}
 
 export function loadBriefing() {
   // Always filter to current week — old entries disappear automatically each Monday
@@ -1839,16 +1872,28 @@ export function loadBriefing() {
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (d && Array.isArray(d.entries)) {
       var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });
-      // Merge: server wins for existing entries, but local-only entries survive
-      // (handles case when sync didn't complete before reload)
+      var _localMap = {};
+      (state.briefing || []).forEach(function (le) { _localMap[le.sym + ':' + le.date] = le; });
+      // Merge: for each server entry, prefer local note if it's newer (noteUpdatedAt)
+      var _merged = _serverEntries.map(function (se) {
+        var le = _localMap[se.sym + ':' + se.date];
+        if (le && (le.noteUpdatedAt || 0) > (se.noteUpdatedAt || 0)) {
+          return Object.assign({}, se, { note: le.note, noteUpdatedAt: le.noteUpdatedAt });
+        }
+        return se;
+      });
+      // Append local-only entries not on server at all
       var _localOnly = (state.briefing || []).filter(function (le) {
         return !_serverEntries.some(function (se) { return se.sym === le.sym && se.date === le.date; });
       });
-      state.briefing = _serverEntries.concat(_localOnly);
-      if (_localOnly.length) syncBriefingToServer(); // push missing entries to server
+      var _needsSync = _localOnly.length || _merged.some(function (e, i) { return e !== _serverEntries[i]; });
+      state.briefing = _merged.concat(_localOnly);
+      if (_needsSync) syncBriefingToServer();
       saveBriefingLocal();
       renderBriefingPanel();
       updateAllStarButtons();
+      var _fvd = document.getElementById('fv-briefing-drawer');
+      if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
     }
     if (d && d.ai_summary) {
       state.aiSummary = d.ai_summary;
@@ -2187,10 +2232,11 @@ export function renderBriefingPanel() {
       ta.style.height = ta.scrollHeight + 'px';
       var sym = ta.dataset.sym, date = ta.dataset.date;
       var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-      if (entry) { entry.note = ta.value; saveBriefingLocal(); }
+      if (entry) { entry.note = ta.value; entry.noteUpdatedAt = Date.now(); saveBriefingLocal(); }
       var noteBtn = popup.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
     });
+    ta.addEventListener('blur', function () { syncBriefingNow(); });
   });
   // Restore textarea height for expanded row after re-render
   if (_expandedBpKey) {
@@ -2952,7 +2998,9 @@ export function briefingClearNote(sym, date, noteRow) {
   var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
   if (!entry) return;
   entry.note = '';
+  entry.noteUpdatedAt = Date.now();
   saveBriefingLocal();
+  syncBriefingNow();
   if (noteRow) {
     var ta = noteRow.querySelector('textarea'); if (ta) ta.value = '';
     var clrBtn = noteRow.querySelector('.bp-note-clear'); if (clrBtn) clrBtn.style.display = 'none';
@@ -2970,7 +3018,9 @@ export function briefingNoteAction(sym, date, noteRow, actionBtn) {
   var isShowing = noteWrap && noteWrap.style.display !== 'none';
   if (isShowing) {
     entry.note = '';
+    entry.noteUpdatedAt = Date.now();
     saveBriefingLocal();
+    syncBriefingNow();
     if (ta) ta.value = '';
     if (noteWrap) noteWrap.style.display = 'none';
     if (actionBtn) actionBtn.textContent = 'Добавить заметку';
@@ -3042,6 +3092,7 @@ export function briefingRemove(sym, date) {
     }
     state.briefing.splice(idx, 1);
     saveBriefingLocal();
+    syncBriefingNow();
     updateStarButton(sym);
     renderBriefingPanel();
     var _fvd2 = document.getElementById('fv-briefing-drawer');
@@ -3129,10 +3180,11 @@ export function renderFVBriefingDrawer() {
       ta.style.height = ta.scrollHeight + 'px';
       var sym = ta.dataset.sym, date = ta.dataset.date;
       var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-      if (entry) { entry.note = ta.value; saveBriefingLocal(); }
+      if (entry) { entry.note = ta.value; entry.noteUpdatedAt = Date.now(); saveBriefingLocal(); }
       var noteBtn = drawer.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
       if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
     });
+    ta.addEventListener('blur', function () { syncBriefingNow(); });
   });
   // Restore textarea height for expanded row after full re-render
   if (_expandedFvKey) {

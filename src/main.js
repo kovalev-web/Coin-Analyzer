@@ -8,7 +8,7 @@ import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
-  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow,
+  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
@@ -388,9 +388,13 @@ on('trades:ai-updated', function () {
   if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
 });
 
-// Sync briefing to server when tab goes hidden (screen lock, app switch, close)
+// Sync on hide, pull from server on show — bidirectional cross-device sync
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) syncBriefingNow();
+  if (document.hidden) {
+    syncBriefingNow();
+  } else {
+    refreshBriefingFromServer();
+  }
 });
 
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─
