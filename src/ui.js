@@ -2658,6 +2658,20 @@ export function openCoinFullView(sym) {
       }
       return;
     }
+    var fvNear = false;
+    var fvLvls = _levels[sym] || [];
+    for (var fvi = 0; fvi < fvLvls.length; fvi++) {
+      var fvLy = _fvSeries.priceToCoordinate(fvLvls[fvi].price);
+      if (fvLy != null && Math.abs(fvLy - y) < 6) { fvNear = true; break; }
+    }
+    if (!fvNear && e.shiftKey) {
+      var fvAlertHints = _alerts[sym] || [];
+      for (var fvAk = 0; fvAk < fvAlertHints.length; fvAk++) {
+        var fvAyk = _fvSeries.priceToCoordinate(fvAlertHints[fvAk].price);
+        if (fvAyk != null && Math.abs(fvAyk - y) < 8) { fvNear = true; break; }
+      }
+    }
+    el.style.cursor = fvNear ? 'ns-resize' : '';
     var ruler = _fvRuler;
     if (!ruler || !ruler.start || (!(e.buttons & 4) && !(ruler._altRuler && (e.buttons & 1)))) return;
     var pt = { x: e.clientX - rect.left, y: y };
