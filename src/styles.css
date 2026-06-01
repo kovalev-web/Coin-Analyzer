@@ -352,7 +352,7 @@
       .cards-area{padding:0 12px 32px;}
       .cards-area--scr{padding-top:16px;}
       .cards-grid{grid-template-columns:1fr;}
-      .chart-container{height:210px;}
+      .chart-container{height:208px;}
       .error-banner{margin:12px 12px 0;}
       #fv-overlay{flex-direction:column;}
       .fv-chart-wrap{flex:2;}
