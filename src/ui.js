@@ -1793,7 +1793,7 @@ function syncBriefingToServer() {
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
+    body: JSON.stringify({ action: 'save', code: code, entries: state.briefing, utcOffset: Math.round(new Date().getTimezoneOffset() / -60) }),
   }).catch(function () {});
 }
 var _lastSyncAt = 0;

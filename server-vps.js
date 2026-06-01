@@ -72,6 +72,7 @@ var TELEGRAM_TOKEN      = process.env.TELEGRAM_BOT_TOKEN;
 var INPLAY_ALERT_CHAT_ID = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
 var BRIEFING_USER_CODE  = (process.env.BRIEFING_USER_CODE || process.env.PROXY_SECRET || '').toLowerCase();
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
+var _userUtcOffset = null; // loaded from Redis briefing_tz:{code} at startup, updated on save
 var tgOffset = 0;
 
 async function sendTG(chatId, text, replyMarkup) {
@@ -753,6 +754,10 @@ var httpServer = http.createServer(async function (req, res) {
           if (parsed.ai_summary) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null })]);
           }
+          if (typeof parsed.utcOffset === 'number' && isFinite(parsed.utcOffset)) {
+            await redis(['SET', 'briefing_tz:' + code.toLowerCase(), String(parsed.utcOffset)]);
+            if (code.toLowerCase() === BRIEFING_USER_CODE) _userUtcOffset = parsed.utcOffset;
+          }
           // Notify all connected clients to refresh briefing
           var _bMsg = JSON.stringify({ type: 'briefing_updated' });
           clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(_bMsg); });
@@ -849,6 +854,14 @@ var httpServer = http.createServer(async function (req, res) {
 var wss = new WebSocketServer({ server: httpServer });
 httpServer.listen(PORT, function () {
   console.log('[Server] Pump Analyzer running on port', PORT);
+  if (BRIEFING_USER_CODE) {
+    redis(['GET', 'briefing_tz:' + BRIEFING_USER_CODE]).then(function (r) {
+      if (r.result !== null) {
+        var v = parseFloat(r.result);
+        if (isFinite(v)) { _userUtcOffset = v; console.log('[Weekly] user utcOffset:', _userUtcOffset); }
+      }
+    }).catch(function () {});
+  }
 });
 
 wss.on('connection', function (ws) {
@@ -1205,8 +1218,9 @@ async function sendWeeklyBriefingReport(chatId) {
 
 var _weeklyReportSent = false;
 setInterval(async function () {
-  var now = new Date();
-  if (now.getDay() !== 0 || now.getHours() !== 22 || now.getMinutes() !== 0) {
+  if (_userUtcOffset === null) return;
+  var userDate = new Date(Date.now() + _userUtcOffset * 3600000);
+  if (userDate.getUTCDay() !== 0 || userDate.getUTCHours() !== 22 || userDate.getUTCMinutes() !== 0) {
     _weeklyReportSent = false;
     return;
   }
