@@ -167,12 +167,12 @@ var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0
 // Checked at open-time so orientation changes are handled correctly.
 function _useFullscreenPopup() { return window.innerWidth < 768; }
 
-// Pre-render Lucide bell as SVG image for canvas drawing
+// Pre-render alert tag as SVG image for canvas drawing.
+// Shape: flat left edge (flush to price axis), rounded right (semicircle). 22×20px.
 var _bellImg = (function () {
-  // Bell paths scaled to ~60% and centered — leaves visible padding inside the circle
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">' +
-    '<circle cx="12" cy="12" r="11" fill="#ef4444"/>' +
-    '<g transform="translate(12,12) scale(0.58) translate(-12,-11)">' +
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 22 20">' +
+    '<path d="M0,0 L12,0 A10,10 0 0,1 12,20 L0,20 Z" fill="#ef4444"/>' +
+    '<g transform="translate(9,10) scale(0.55) translate(-12,-11)">' +
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -925,7 +925,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   }
 }
 
-function drawAlertLabel(ctx, a, y, labelX) {
+function drawAlertLabel(ctx, a, y, bellX) {
   if (!a.createdAt) return;
   var d = new Date(a.createdAt);
   var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
@@ -933,7 +933,9 @@ function drawAlertLabel(ctx, a, y, labelX) {
   ctx.font = '10px Manrope, Arial, sans-serif';
   var tw = ctx.measureText(label).width;
   var px = 4, bh = 14;
-  var bx = labelX, by = Math.round(y - bh / 2);
+  var bx = bellX - tw - px * 2 - 6; // 6px gap to the left of the bell tag
+  if (bx < 0) return; // not enough space — skip
+  var by = Math.round(y - bh / 2);
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(bx, by, tw + px * 2, bh);
   ctx.fillStyle = '#ffffff';
@@ -946,19 +948,21 @@ function drawAlertIcons(sym, ctx, rc) {
   var dpr = window.devicePixelRatio || 1;
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var alerts = _alerts[sym] || [];
-  var sz = 18;
+  var tagW = 22, tagH = 20;
+  var priceAxisW = 0;
+  try { if (_charts[sym]) priceAxisW = _charts[sym].priceScale('right').width(); } catch (_e) {}
   alerts.forEach(function (a) {
     // During drag use exact mouse Y so icon tracks cursor without lag
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
     if (y == null || y < 0 || y > cssH) return;
-    var bellX = 8;
+    var bellX = cssW - priceAxisW - tagW;
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
-    ctx.drawImage(_bellImg, bellX, y - sz / 2, sz, sz);
+    ctx.drawImage(_bellImg, bellX, y - tagH / 2, tagW, tagH);
     ctx.globalAlpha = 1;
-    drawAlertLabel(ctx, a, y, bellX + sz + 4);
+    drawAlertLabel(ctx, a, y, bellX);
     ctx.restore();
   });
 }
@@ -2338,12 +2342,14 @@ function _drawFVOverlays(ctx, rc, sym) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
       if (y == null || y < 0 || y > cssH) return;
-      var sz = 18;
-      var bellX = 8;
+      var tagW = 22, tagH = 20;
+      var priceAxisW = 0;
+      try { if (_fvChart) priceAxisW = _fvChart.priceScale('right').width(); } catch (_e) {}
+      var bellX = cssW - priceAxisW - tagW;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
-      ctx.drawImage(_bellImg, bellX, y - sz / 2, sz, sz);
+      ctx.drawImage(_bellImg, bellX, y - tagH / 2, tagW, tagH);
       ctx.globalAlpha = 1;
-      drawAlertLabel(ctx, a, y, bellX + sz + 4);
+      drawAlertLabel(ctx, a, y, bellX);
       ctx.restore();
     });
   }
