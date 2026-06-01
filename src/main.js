@@ -194,6 +194,8 @@ document.body.addEventListener('click', function (e) {
           _toast.style.opacity = '1';
           _toast.style.transition = '';
           var _r = target.getBoundingClientRect();
+          _toast.style.bottom = 'auto';
+          _toast.style.transform = 'none';
           _toast.style.left = _r.left + 'px';
           _toast.style.top = (_r.bottom + 6) + 'px';
           _toast._t1 = setTimeout(function () { _toast.style.transition = 'opacity 0.3s'; _toast.style.opacity = '0'; }, 1200);
