@@ -168,11 +168,11 @@ var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0
 function _useFullscreenPopup() { return window.innerWidth < 768; }
 
 // Pre-render alert tag as SVG image for canvas drawing.
-// Shape: flat left edge (flush to price axis), rounded right (semicircle). 22×20px.
+// Shape: flat left edge (against left wall), rounded right (into chart). 22×20px.
 var _bellImg = (function () {
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 22 20">' +
-    '<path d="M22,0 L10,0 A10,10 0 0,0 10,20 L22,20 Z" fill="#ef4444"/>' +
-    '<g transform="translate(14,10) scale(0.55) translate(-12,-11)">' +
+    '<path d="M0,0 L12,0 A10,10 0 0,1 12,20 L0,20 Z" fill="#ef4444"/>' +
+    '<g transform="translate(8,10) scale(0.55) translate(-12,-11)">' +
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -925,7 +925,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   }
 }
 
-function drawAlertLabel(ctx, a, y, bellX) {
+function drawAlertLabel(ctx, a, y, labelX) {
   if (!a.createdAt) return;
   var d = new Date(a.createdAt);
   var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
@@ -933,8 +933,7 @@ function drawAlertLabel(ctx, a, y, bellX) {
   ctx.font = '10px Manrope, Arial, sans-serif';
   var tw = ctx.measureText(label).width;
   var px = 4, bh = 14;
-  var bx = bellX - tw - px * 2 - 6; // 6px gap to the left of the bell tag
-  if (bx < 0) return; // not enough space — skip
+  var bx = labelX;
   var by = Math.round(y - bh / 2);
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(bx, by, tw + px * 2, bh);
@@ -949,20 +948,18 @@ function drawAlertIcons(sym, ctx, rc) {
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var alerts = _alerts[sym] || [];
   var tagW = 22, tagH = 20;
-  var priceAxisW = 0;
-  try { if (_charts[sym]) priceAxisW = _charts[sym].priceScale('right').width(); } catch (_e) {}
   alerts.forEach(function (a) {
     // During drag use exact mouse Y so icon tracks cursor without lag
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
     if (y == null || y < 0 || y > cssH) return;
-    var bellX = cssW - priceAxisW - tagW;
+    var bellX = 0;
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
     ctx.drawImage(_bellImg, bellX, y - tagH / 2, tagW, tagH);
     ctx.globalAlpha = 1;
-    drawAlertLabel(ctx, a, y, bellX);
+    drawAlertLabel(ctx, a, y, bellX + tagW + 4);
     ctx.restore();
   });
 }
@@ -2343,13 +2340,11 @@ function _drawFVOverlays(ctx, rc, sym) {
       var y = _fvSeries.priceToCoordinate(a.price);
       if (y == null || y < 0 || y > cssH) return;
       var tagW = 22, tagH = 20;
-      var priceAxisW = 0;
-      try { if (_fvChart) priceAxisW = _fvChart.priceScale('right').width(); } catch (_e) {}
-      var bellX = cssW - priceAxisW - tagW;
+      var bellX = 0;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
       ctx.drawImage(_bellImg, bellX, y - tagH / 2, tagW, tagH);
       ctx.globalAlpha = 1;
-      drawAlertLabel(ctx, a, y, bellX);
+      drawAlertLabel(ctx, a, y, bellX + tagW + 4);
       ctx.restore();
     });
   }
