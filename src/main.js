@@ -188,7 +188,7 @@ document.body.addEventListener('click', function (e) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
         var _r = target.getBoundingClientRect();
         var _tip = document.createElement('div');
-        _tip.textContent = 'Скопировано';
+        _tip.textContent = 'Тикер скопирован';
         _tip.style.cssText = 'position:fixed;left:' + _r.left + 'px;top:' + (_r.bottom + 4) + 'px;background:rgba(30,30,40,0.92);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;padding:3px 8px;border-radius:4px;pointer-events:none;z-index:99999;opacity:1;transition:opacity 0.25s;';
         document.body.appendChild(_tip);
         setTimeout(function () { _tip.style.opacity = '0'; }, 900);
