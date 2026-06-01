@@ -168,11 +168,11 @@ var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0
 function _useFullscreenPopup() { return window.innerWidth < 768; }
 
 // Pre-render alert tag as SVG image for canvas drawing.
-// Shape: flat left edge (against left wall), rounded right (into chart). 22×20px.
+// Shape: flat left edge (against left wall), rounded right (into chart). 18×20px.
 var _bellImg = (function () {
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 22 20">' +
-    '<path d="M0,0 L12,0 A10,10 0 0,1 12,20 L0,20 Z" fill="#ef4444"/>' +
-    '<g transform="translate(8,10) scale(0.55) translate(-12,-11)">' +
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20">' +
+    '<path d="M0,0 L8,0 A10,10 0 0,1 8,20 L0,20 Z" fill="#ef4444"/>' +
+    '<g transform="translate(6,10) scale(0.55) translate(-12,-11)">' +
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -947,7 +947,7 @@ function drawAlertIcons(sym, ctx, rc) {
   var dpr = window.devicePixelRatio || 1;
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var alerts = _alerts[sym] || [];
-  var tagW = 22, tagH = 20;
+  var tagW = 18, tagH = 20;
   alerts.forEach(function (a) {
     // During drag use exact mouse Y so icon tracks cursor without lag
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
@@ -2339,7 +2339,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
       if (y == null || y < 0 || y > cssH) return;
-      var tagW = 22, tagH = 20;
+      var tagW = 18, tagH = 20;
       var bellX = 0;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
       ctx.drawImage(_bellImg, bellX, y - tagH / 2, tagW, tagH);
