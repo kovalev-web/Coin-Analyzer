@@ -1882,7 +1882,8 @@ export function loadBriefing() {
       var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });
       var _localMap = {};
       (state.briefing || []).forEach(function (le) { _localMap[le.sym + ':' + le.date] = le; });
-      // Merge: for each server entry, prefer local note if it's newer (noteUpdatedAt)
+      // Server is authoritative for which entries exist.
+      // Only prefer local note if it has a newer noteUpdatedAt (typed locally, not yet synced).
       var _merged = _serverEntries.map(function (se) {
         var le = _localMap[se.sym + ':' + se.date];
         if (le && (le.noteUpdatedAt || 0) > (se.noteUpdatedAt || 0)) {
@@ -1890,12 +1891,8 @@ export function loadBriefing() {
         }
         return se;
       });
-      // Append local-only entries not on server at all
-      var _localOnly = (state.briefing || []).filter(function (le) {
-        return !_serverEntries.some(function (se) { return se.sym === le.sym && se.date === le.date; });
-      });
-      var _needsSync = _localOnly.length || _merged.some(function (e, i) { return e !== _serverEntries[i]; });
-      state.briefing = _merged.concat(_localOnly);
+      var _needsSync = _merged.some(function (e, i) { return e !== _serverEntries[i]; });
+      state.briefing = _merged;
       if (_needsSync) syncBriefingToServer();
       saveBriefingLocal();
       renderBriefingPanel();
