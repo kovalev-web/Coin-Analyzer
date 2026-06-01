@@ -1195,6 +1195,12 @@ function _initChartForSym(sym) {
     if (ruler && ruler.canvas && !ruler.start) {
       var rc2 = ruler.canvas, ctx = rc2.getContext('2d');
       var dpr2 = window.devicePixelRatio || 1;
+      // Resize canvas if dpr changed (e.g. browser zoom or display change)
+      if (rc2._lastDpr !== dpr2) {
+        var cel = document.getElementById('chart-' + s);
+        if (cel) _setCanvasSize(rc2, cel.offsetWidth, cel.offsetHeight);
+        rc2._lastDpr = dpr2;
+      }
       ctx.clearRect(0, 0, rc2.width, rc2.height);
       ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
       drawAlertIcons(s, ctx, rc2);
