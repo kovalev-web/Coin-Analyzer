@@ -397,6 +397,16 @@ document.addEventListener('visibilitychange', function () {
   }
 });
 
+// Poll every 15s when briefing popup or drawer is open
+setInterval(function () {
+  if (document.hidden) return;
+  var popup = document.getElementById('bp-popup');
+  var drawer = document.getElementById('fv-briefing-drawer');
+  if ((popup && popup.style.display !== 'none') || (drawer && drawer.classList.contains('open'))) {
+    refreshBriefingFromServer();
+  }
+}, 15000);
+
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─
 
 window.addEventListener('orientationchange', function () {
