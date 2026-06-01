@@ -2406,7 +2406,7 @@ function _setFVData(sym, cd) {
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - _fvVisibleCandles), to: cd.candles.length + 19 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
-    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--caution'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: '#277CC2', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
   // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
   (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
