@@ -397,10 +397,15 @@ document.addEventListener('visibilitychange', function () {
   }
 });
 
-// WS push: another device saved briefing → refresh immediately
-on('briefing:updated', function () {
+function _briefingRefreshSafe() {
+  // Don't refresh while user is typing in a briefing textarea — avoids re-render killing focus
+  var a = document.activeElement;
+  if (a && a.tagName === 'TEXTAREA' && a.dataset.sym) return;
   refreshBriefingFromServer();
-});
+}
+
+// WS push: another device saved briefing → refresh immediately
+on('briefing:updated', function () { _briefingRefreshSafe(); });
 
 // Fallback poll every 15s when briefing is open (covers WS gaps/reconnects)
 setInterval(function () {
@@ -408,7 +413,7 @@ setInterval(function () {
   var popup = document.getElementById('bp-popup');
   var drawer = document.getElementById('fv-briefing-drawer');
   if ((popup && popup.style.display !== 'none') || (drawer && drawer.classList.contains('open'))) {
-    refreshBriefingFromServer();
+    _briefingRefreshSafe();
   }
 }, 15000);
 
