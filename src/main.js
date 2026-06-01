@@ -186,13 +186,14 @@ document.body.addEventListener('click', function (e) {
     case 'copy-sym': {
       if (sym) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
-        var _r = target.getBoundingClientRect();
-        var _tip = document.createElement('div');
+        var _oldTip = target.parentElement.querySelector('._ctip');
+        if (_oldTip) _oldTip.remove();
+        var _tip = document.createElement('span');
+        _tip.className = '_ctip';
         _tip.textContent = 'Тикер скопирован';
-        _tip.style.cssText = 'position:fixed;left:' + Math.round(_r.left) + 'px;top:' + Math.round(_r.bottom + 6) + 'px;background:rgba(20,20,30,0.95);color:#fff;font-size:12px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:5px 12px;border-radius:6px;pointer-events:none;z-index:999999;white-space:nowrap;';
-        document.documentElement.appendChild(_tip);
-        setTimeout(function () { _tip.style.transition = 'opacity 0.3s'; _tip.style.opacity = '0'; }, 1200);
-        setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1500);
+        _tip.style.cssText = 'color:rgba(255,255,255,0.55);font-size:11px;font-weight:500;margin-left:8px;white-space:nowrap;';
+        target.insertAdjacentElement('afterend', _tip);
+        setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
       }
       break;
     }
