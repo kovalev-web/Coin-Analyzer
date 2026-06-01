@@ -186,20 +186,17 @@ document.body.addEventListener('click', function (e) {
     case 'copy-sym': {
       if (sym) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
-        var _toast = document.getElementById('toast');
-        if (_toast) {
-          clearTimeout(_toast._t1); clearTimeout(_toast._t2);
-          _toast.textContent = 'Тикер скопирован';
-          _toast.style.display = 'block';
-          _toast.style.opacity = '1';
-          _toast.style.transition = '';
-          var _r = target.getBoundingClientRect();
-          _toast.style.bottom = 'auto';
-          _toast.style.transform = 'none';
-          _toast.style.left = _r.left + 'px';
-          _toast.style.top = (_r.bottom + 6) + 'px';
-          _toast._t1 = setTimeout(function () { _toast.style.transition = 'opacity 0.3s'; _toast.style.opacity = '0'; }, 1200);
-          _toast._t2 = setTimeout(function () { _toast.style.display = 'none'; }, 1500);
+        var _container = target.closest('.card-head') || target.closest('.fv-bb-left') || target.closest('.fv-info-top') || target.parentElement;
+        var _old = _container && _container.querySelector('._ctip');
+        if (_old) _old.remove();
+        if (_container) {
+          var _tip = document.createElement('span');
+          _tip.className = '_ctip';
+          _tip.textContent = 'Тикер скопирован';
+          _tip.style.cssText = 'position:absolute;top:calc(100% + 2px);left:0;background:rgba(20,20,30,0.95);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:4px 10px;border-radius:6px;pointer-events:none;z-index:999;white-space:nowrap;';
+          if (getComputedStyle(_container).position === 'static') _container.style.position = 'relative';
+          _container.appendChild(_tip);
+          setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
         }
       }
       break;
