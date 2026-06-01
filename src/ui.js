@@ -2128,6 +2128,7 @@ export function openBriefingPanel() {
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = 'none';
   renderBriefingPanel();
+  refreshBriefingFromServer();
   popup._isFullscreenMode = _useFullscreenPopup();
 
   // Subscribe all briefing coins to kline stream so the server pushes per-trade
@@ -3205,6 +3206,7 @@ export function openFVBriefingDrawer() {
   var star = document.querySelector('.btn-fv-star');
   if (star) star.style.display = 'none';
   renderFVBriefingDrawer();
+  refreshBriefingFromServer();
 }
 
 export function closeFVBriefingDrawer() {
