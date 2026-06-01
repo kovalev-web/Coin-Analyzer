@@ -186,12 +186,15 @@ document.body.addEventListener('click', function (e) {
     case 'copy-sym': {
       if (sym) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
+        var _existingTip = document.getElementById('_copy-toast');
+        if (_existingTip) _existingTip.remove();
         var _tip = document.createElement('div');
+        _tip.id = '_copy-toast';
         _tip.textContent = 'Тикер скопирован';
-        _tip.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + (e.clientY - 32) + 'px;background:rgba(30,30,40,0.92);color:#fff;font-size:12px;font-family:Manrope,Arial,sans-serif;padding:4px 10px;border-radius:5px;pointer-events:none;z-index:99999;white-space:nowrap;opacity:1;transition:opacity 0.3s;';
+        _tip.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(20,20,30,0.95);color:#fff;font-size:13px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:7px 16px;border-radius:8px;pointer-events:none;z-index:999999;white-space:nowrap;';
         document.body.appendChild(_tip);
-        setTimeout(function () { _tip.style.opacity = '0'; }, 1000);
-        setTimeout(function () { _tip.remove(); }, 1300);
+        setTimeout(function () { _tip.style.transition = 'opacity 0.3s'; _tip.style.opacity = '0'; }, 1200);
+        setTimeout(function () { _tip.remove(); }, 1500);
       }
       break;
     }
