@@ -1833,8 +1833,8 @@ export function refreshBriefingFromServer() {
     });
     var _needsSync = _merged.some(function (e, i) { return e !== _serverEntries[i]; });
     state.briefing = _merged;
-    if (_needsSync) syncBriefingToServer();
-    saveBriefingLocal();
+    if (_needsSync) syncBriefingToServer(); // only if local note was newer
+    try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {} // no debounce sync — don't push server data back
     renderBriefingPanel();
     updateAllStarButtons();
     var _fvd = document.getElementById('fv-briefing-drawer');
