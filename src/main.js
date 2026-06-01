@@ -186,13 +186,12 @@ document.body.addEventListener('click', function (e) {
     case 'copy-sym': {
       if (sym) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
-        var _r = target.getBoundingClientRect();
         var _tip = document.createElement('div');
         _tip.textContent = 'Тикер скопирован';
-        _tip.style.cssText = 'position:fixed;left:' + _r.left + 'px;top:' + (_r.bottom + 4) + 'px;background:rgba(30,30,40,0.92);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;padding:3px 8px;border-radius:4px;pointer-events:none;z-index:99999;opacity:1;transition:opacity 0.25s;';
+        _tip.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + (e.clientY - 32) + 'px;background:rgba(30,30,40,0.92);color:#fff;font-size:12px;font-family:Manrope,Arial,sans-serif;padding:4px 10px;border-radius:5px;pointer-events:none;z-index:99999;white-space:nowrap;opacity:1;transition:opacity 0.3s;';
         document.body.appendChild(_tip);
-        setTimeout(function () { _tip.style.opacity = '0'; }, 900);
-        setTimeout(function () { _tip.remove(); }, 1150);
+        setTimeout(function () { _tip.style.opacity = '0'; }, 1000);
+        setTimeout(function () { _tip.remove(); }, 1300);
       }
       break;
     }
