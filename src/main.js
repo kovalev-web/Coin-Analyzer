@@ -8,7 +8,7 @@ import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
-  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer,
+  renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
@@ -398,9 +398,11 @@ document.addEventListener('visibilitychange', function () {
 });
 
 function _briefingRefreshSafe() {
-  // Don't refresh while user is typing in a briefing textarea — avoids re-render killing focus
+  // Don't refresh while typing in a textarea
   var a = document.activeElement;
   if (a && a.tagName === 'TEXTAREA' && a.dataset.sym) return;
+  // Don't refresh if we just synced (avoids re-render on our own WS push)
+  if (briefingJustSynced()) return;
   refreshBriefingFromServer();
 }
 

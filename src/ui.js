@@ -1796,10 +1796,13 @@ function syncBriefingToServer() {
     body: JSON.stringify({ action: 'save', code: code, entries: state.briefing }),
   }).catch(function () {});
 }
+var _lastSyncAt = 0;
 export function syncBriefingNow() {
   clearTimeout(_briefingSyncTimer);
+  _lastSyncAt = Date.now();
   syncBriefingToServer();
 }
+export function briefingJustSynced() { return Date.now() - _lastSyncAt < 2000; }
 export function refreshBriefingFromServer() {
   var code = _briefingUserCode || localStorage.getItem('pa_user_code');
   if (!code) return;
