@@ -397,7 +397,12 @@ document.addEventListener('visibilitychange', function () {
   }
 });
 
-// Poll every 15s when briefing popup or drawer is open
+// WS push: another device saved briefing → refresh immediately
+on('briefing:updated', function () {
+  refreshBriefingFromServer();
+});
+
+// Fallback poll every 15s when briefing is open (covers WS gaps/reconnects)
 setInterval(function () {
   if (document.hidden) return;
   var popup = document.getElementById('bp-popup');

@@ -753,6 +753,9 @@ var httpServer = http.createServer(async function (req, res) {
           if (parsed.ai_summary) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null })]);
           }
+          // Notify all connected clients to refresh briefing
+          var _bMsg = JSON.stringify({ type: 'briefing_updated' });
+          clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(_bMsg); });
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else {

@@ -97,6 +97,9 @@ function connectWS() {
       case 'alert_triggered':
         emit('alert:triggered', msg);
         break;
+      case 'briefing_updated':
+        emit('briefing:updated');
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
