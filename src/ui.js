@@ -371,11 +371,11 @@ function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
   if (s) {
     if (lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
-    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--caution'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.line = s.createPriceLine({ price: lvl.price, color: '#277CC2', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
   if (_fvSeries && _fvSym === sym) {
     if (lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
-    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--caution'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: '#277CC2', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
 }
 
