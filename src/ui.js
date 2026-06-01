@@ -925,7 +925,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   }
 }
 
-function drawAlertLabel(ctx, a, y) {
+function drawAlertLabel(ctx, a, y, labelX) {
   if (!a.createdAt) return;
   var d = new Date(a.createdAt);
   var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
@@ -933,7 +933,7 @@ function drawAlertLabel(ctx, a, y) {
   ctx.font = '10px Manrope, Arial, sans-serif';
   var tw = ctx.measureText(label).width;
   var px = 4, bh = 14;
-  var bx = 8, by = Math.round(y - bh / 2);
+  var bx = labelX, by = Math.round(y - bh / 2);
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(bx, by, tw + px * 2, bh);
   ctx.fillStyle = '#ffffff';
@@ -953,11 +953,12 @@ function drawAlertIcons(sym, ctx, rc) {
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
     if (y == null || y < 0 || y > cssH) return;
+    var bellX = 8;
     ctx.save();
     ctx.globalAlpha = a.triggered ? 0.35 : 1;
-    ctx.drawImage(_bellImg, cssW / 2 - sz / 2, y - sz / 2, sz, sz);
+    ctx.drawImage(_bellImg, bellX, y - sz / 2, sz, sz);
     ctx.globalAlpha = 1;
-    drawAlertLabel(ctx, a, y);
+    drawAlertLabel(ctx, a, y, bellX + sz + 4);
     ctx.restore();
   });
 }
@@ -2338,10 +2339,11 @@ function _drawFVOverlays(ctx, rc, sym) {
       var y = _fvSeries.priceToCoordinate(a.price);
       if (y == null || y < 0 || y > cssH) return;
       var sz = 18;
+      var bellX = 8;
       ctx.save(); ctx.globalAlpha = a.triggered ? 0.35 : 1;
-      ctx.drawImage(_bellImg, cssW / 2 - sz / 2, y - sz / 2, sz, sz);
+      ctx.drawImage(_bellImg, bellX, y - sz / 2, sz, sz);
       ctx.globalAlpha = 1;
-      drawAlertLabel(ctx, a, y);
+      drawAlertLabel(ctx, a, y, bellX + sz + 4);
       ctx.restore();
     });
   }
