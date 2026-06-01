@@ -181,8 +181,18 @@ function _makeBellImg(color) {
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   return img;
 }
-var _bellImg = _makeBellImg('#ff5050');          // активный
-var _bellImgTriggered = _makeBellImg('#b3262b'); // отработанный
+var _bellImg = _makeBellImg('#ff5050'); // активный — колокольчик
+var _bellImgTriggered = (function () {  // отработанный — check-иконка
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20">' +
+    '<path d="M0,0 L8,0 A10,10 0 0,1 8,20 L0,20 Z" fill="#6B6060"/>' +
+    '<g transform="translate(6,10) scale(0.55) translate(-12,-12)">' +
+    '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</g>' +
+    '</svg>';
+  var img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return img;
+}());
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
@@ -456,7 +466,7 @@ function alertsData() {
 }
 
 function alertLineOpts(a) {
-  return { color: a.triggered ? '#b3262b' : '#ff5050', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
+  return { color: a.triggered ? '#6B6060' : '#ff5050', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 // Create or update the price lines for a single alert (idempotent).
