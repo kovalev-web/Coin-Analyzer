@@ -170,9 +170,9 @@ function _useFullscreenPopup() { return window.innerWidth < 768; }
 // Pre-render alert tag as SVG image for canvas drawing.
 // Shape: flat left edge (against left wall), rounded right (into chart). 18×20px.
 function _makeBellImg(color) {
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">' +
-    '<path d="M0,0 L8,0 A8,8 0 0,1 8,16 L0,16 Z" fill="' + color + '"/>' +
-    '<g transform="translate(6,8) scale(0.5) translate(-12,-12)">' +
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 16 18">' +
+    '<path d="M0,0 L7,0 A9,9 0 0,1 7,18 L0,18 Z" fill="' + color + '"/>' +
+    '<g transform="translate(6,9) scale(0.5) translate(-12,-12)">' +
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -183,9 +183,9 @@ function _makeBellImg(color) {
 }
 var _bellImg = _makeBellImg('#ff5050'); // активный — колокольчик
 function _makeCheckImg(color) {         // отработанный — check-иконка
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">' +
-    '<path d="M0,0 L8,0 A8,8 0 0,1 8,16 L0,16 Z" fill="' + color + '"/>' +
-    '<g transform="translate(6,8) scale(0.5) translate(-12,-12)">' +
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 16 18">' +
+    '<path d="M0,0 L7,0 A9,9 0 0,1 7,18 L0,18 Z" fill="' + color + '"/>' +
+    '<g transform="translate(6,9) scale(0.5) translate(-12,-12)">' +
     '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
     '</svg>';
@@ -961,7 +961,7 @@ function drawAlertIcons(sym, ctx, rc) {
   var dpr = window.devicePixelRatio || 1;
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var alerts = _alerts[sym] || [];
-  var tagW = 16, tagH = 16;
+  var tagW = 16, tagH = 18;
   alerts.forEach(function (a) {
     // During drag use exact mouse Y so icon tracks cursor without lag
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
@@ -2357,7 +2357,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
       if (y == null || y < 0 || y > cssH) return;
-      var tagW = 16, tagH = 16;
+      var tagW = 16, tagH = 18;
       var bellX = 0;
       ctx.save();
       ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
