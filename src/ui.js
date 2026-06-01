@@ -2235,7 +2235,7 @@ export function renderBriefingPanel() {
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
-      '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' +
+      (state.briefing && state.briefing.length ? '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' : '') +
     '</div>';
 
   _refreshBriefingPct();
