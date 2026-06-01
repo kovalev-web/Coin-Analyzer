@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
       const { prompt } = payload || {};
       if (!prompt) return send(res, 400, { error: 'prompt required' });
 
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY;
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY;
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
