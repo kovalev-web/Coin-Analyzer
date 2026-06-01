@@ -1006,14 +1006,14 @@ function _attachChartEvents(sym, container) {
       var alerts = _alerts[sym] || [];
       for (var i = 0; i < alerts.length; i++) {
         var ay = cs.priceToCoordinate(alerts[i].price);
-        if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+        if (ay != null && Math.abs(ay - y) < 10) { removeAlert(sym, i); return; }
       }
       addAlert(sym, price);
     } else {
       var levels = _levels[sym] || [];
       for (var i = 0; i < levels.length; i++) {
         var ly = cs.priceToCoordinate(levels[i].price);
-        if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+        if (ly != null && Math.abs(ly - y) < 10) { removeLevel(sym, i); return; }
       }
       addLevel(sym, price);
     }
@@ -1034,7 +1034,7 @@ function _attachChartEvents(sym, container) {
         var alertArr0 = _alerts[sym] || [];
         for (var ai0 = 0; ai0 < alertArr0.length; ai0++) {
           var aCoord0 = cs.priceToCoordinate(alertArr0[ai0].price);
-          if (aCoord0 != null && Math.abs(aCoord0 - y) < 10) {
+          if (aCoord0 != null && Math.abs(aCoord0 - y) < 8) {
             if (alertArr0[ai0].triggered) return;
             e.stopPropagation(); e.preventDefault();
             _alertDragging = { sym: sym, idx: ai0, alert: alertArr0[ai0] };
@@ -1056,7 +1056,7 @@ function _attachChartEvents(sym, container) {
       var levels = _levels[sym] || [];
       for (var i = 0; i < levels.length; i++) {
         var ly = cs.priceToCoordinate(levels[i].price);
-        if (ly != null && Math.abs(ly - y) < 8) {
+        if (ly != null && Math.abs(ly - y) < 6) {
           e.stopPropagation(); e.preventDefault();
           _dragging = { sym: sym, idx: i, lvl: levels[i] };
           container.style.cursor = 'ns-resize';
@@ -1071,7 +1071,7 @@ function _attachChartEvents(sym, container) {
       var alertArr = _alerts[sym] || [];
       for (var ai = 0; ai < alertArr.length; ai++) {
         var aCoord = cs.priceToCoordinate(alertArr[ai].price);
-        if (aCoord != null && Math.abs(aCoord - alertY) < 10) {
+        if (aCoord != null && Math.abs(aCoord - alertY) < 8) {
           if (alertArr[ai].triggered) return;
           e.stopPropagation(); e.preventDefault();
           _alertDragging = { sym: sym, idx: ai, alert: alertArr[ai] };
@@ -1122,13 +1122,13 @@ function _attachChartEvents(sym, container) {
       var near = false;
       for (var j = 0; j < levels.length; j++) {
         var ly2 = cs.priceToCoordinate(levels[j].price);
-        if (ly2 != null && Math.abs(ly2 - y) < 8) { near = true; break; }
+        if (ly2 != null && Math.abs(ly2 - y) < 6) { near = true; break; }
       }
       if (!near && e.shiftKey) {
         var alertsHint = _alerts[sym] || [];
         for (var ak = 0; ak < alertsHint.length; ak++) {
           var ayk = cs.priceToCoordinate(alertsHint[ak].price);
-          if (ayk != null && Math.abs(ayk - y) < 10) { near = true; break; }
+          if (ayk != null && Math.abs(ayk - y) < 8) { near = true; break; }
         }
       }
       container.style.cursor = near ? 'ns-resize' : '';
@@ -2559,14 +2559,14 @@ export function openCoinFullView(sym) {
       var alerts = _alerts[sym] || [];
       for (var i = 0; i < alerts.length; i++) {
         var ay = _fvSeries.priceToCoordinate(alerts[i].price);
-        if (ay != null && Math.abs(ay - y) < 14) { removeAlert(sym, i); return; }
+        if (ay != null && Math.abs(ay - y) < 10) { removeAlert(sym, i); return; }
       }
       addAlert(sym, price);
     } else {
       var levels = _levels[sym] || [];
       for (var i = 0; i < levels.length; i++) {
         var ly = _fvSeries.priceToCoordinate(levels[i].price);
-        if (ly != null && Math.abs(ly - y) < 14) { removeLevel(sym, i); return; }
+        if (ly != null && Math.abs(ly - y) < 10) { removeLevel(sym, i); return; }
       }
       addLevel(sym, price);
     }
@@ -2593,7 +2593,7 @@ export function openCoinFullView(sym) {
         var fvAltArr = _alerts[sym] || [];
         for (var fvAi = 0; fvAi < fvAltArr.length; fvAi++) {
           var fvACoord = _fvSeries.priceToCoordinate(fvAltArr[fvAi].price);
-          if (fvACoord != null && Math.abs(fvACoord - fvAltAY) < 10) {
+          if (fvACoord != null && Math.abs(fvACoord - fvAltAY) < 8) {
             if (fvAltArr[fvAi].triggered) return;
             e.stopPropagation(); e.preventDefault();
             _fvAlertDragging = { idx: fvAi, alert: fvAltArr[fvAi] };
@@ -2617,7 +2617,7 @@ export function openCoinFullView(sym) {
       var alertArr = _alerts[sym] || [];
       for (var ai = 0; ai < alertArr.length; ai++) {
         var aCoord = _fvSeries.priceToCoordinate(alertArr[ai].price);
-        if (aCoord != null && Math.abs(aCoord - ay2) < 10) {
+        if (aCoord != null && Math.abs(aCoord - ay2) < 8) {
           if (alertArr[ai].triggered) return; // triggered alerts are not draggable
           e.stopPropagation(); e.preventDefault();
           _fvAlertDragging = { idx: ai, alert: alertArr[ai] };
@@ -2632,7 +2632,7 @@ export function openCoinFullView(sym) {
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
       var ly = _fvSeries.priceToCoordinate(levels[i].price);
-      if (ly != null && Math.abs(ly - y) < 8) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
+      if (ly != null && Math.abs(ly - y) < 6) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
     }
   }, { capture: true });
   el.addEventListener('mousemove', function (e) {
