@@ -1797,14 +1797,17 @@ function syncBriefingToServer() {
   }).catch(function () {});
 }
 var _lastSyncAt = 0;
+var _syncVersion = 0;
 export function syncBriefingNow() {
   clearTimeout(_briefingSyncTimer);
   _lastSyncAt = Date.now();
+  _syncVersion++;
   syncBriefingToServer();
 }
 export function briefingJustSynced() { return Date.now() - _lastSyncAt < 2000; }
 export function refreshBriefingFromServer() {
-  if (briefingJustSynced()) return; // our own sync in flight — server may not have latest yet
+  if (briefingJustSynced()) return;
+  var _versionAtStart = _syncVersion;
   var code = _briefingUserCode || localStorage.getItem('pa_user_code');
   if (!code) return;
   var _today = new Date(); var _dow = _today.getDay();
@@ -1814,6 +1817,7 @@ export function refreshBriefingFromServer() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'get', code: code }),
   }).then(function (r) { return r.json(); }).then(function (d) {
+    if (_syncVersion !== _versionAtStart) return; // sync happened while fetching — discard stale data
     if (!d || !Array.isArray(d.entries)) return;
     var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });
     var _localMap = {};
