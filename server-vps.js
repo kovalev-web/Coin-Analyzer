@@ -1176,7 +1176,9 @@ setInterval(function () {
 async function sendWeeklyBriefingReport(chatId) {
   var GEM_KEY = process.env.GEMINI_API_KEY;
   var code = BRIEFING_USER_CODE;
-  if (!GEM_KEY || !code || !chatId) return;
+  if (!chatId) return;
+  if (!GEM_KEY) { await sendTG(chatId, '❌ GEMINI_API_KEY не настроен.'); return; }
+  if (!code) { await sendTG(chatId, '❌ BRIEFING_USER_CODE не настроен.'); return; }
   var r = await redis(['GET', 'briefing:' + code]);
   var entries = r.result ? JSON.parse(r.result) : [];
   // Filter current week (Mon–Sun)
@@ -1208,10 +1210,11 @@ async function sendWeeklyBriefingReport(chatId) {
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
   });
   var gemData = await gemRes.json();
+  if (!gemRes.ok) { await sendTG(chatId, '❌ Gemini error ' + gemRes.status + ': ' + (gemData.error && gemData.error.message || '')); return; }
   var summary = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content
     && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0]
     && gemData.candidates[0].content.parts[0].text) || '';
-  if (!summary) return;
+  if (!summary) { await sendTG(chatId, '❌ Gemini вернул пустой ответ.'); return; }
   await sendTG(chatId, '📋 <b>Итоги недели</b>\n\n' + summary);
   console.log('[Weekly report] Sent to', chatId);
 }
