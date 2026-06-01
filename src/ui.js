@@ -172,7 +172,7 @@ function _useFullscreenPopup() { return window.innerWidth < 768; }
 function _makeBellImg(color) {
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="16" viewBox="0 0 18 16">' +
     '<path d="M0,0 L10,0 A8,8 0 0,1 10,16 L0,16 Z" fill="' + color + '"/>' +
-    '<g transform="translate(6,8) scale(0.4167) translate(-12,-12)">' +
+    '<g transform="translate(6,8) scale(0.5) translate(-12,-12)">' +
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -185,7 +185,7 @@ var _bellImg = _makeBellImg('#ff5050'); // активный — колоколь
 var _bellImgTriggered = (function () {  // отработанный — check-иконка
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="16" viewBox="0 0 18 16">' +
     '<path d="M0,0 L10,0 A8,8 0 0,1 10,16 L0,16 Z" fill="#6B6060"/>' +
-    '<g transform="translate(6,8) scale(0.4167) translate(-12,-12)">' +
+    '<g transform="translate(6,8) scale(0.5) translate(-12,-12)">' +
     '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
     '</svg>';
