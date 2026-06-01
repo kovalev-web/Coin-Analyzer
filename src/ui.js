@@ -1964,18 +1964,19 @@ function cycleBriefingStatus(sym, date) {
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
   syncBriefingNow();
-  var openNotes = Array.from(document.querySelectorAll('.bp-note-row'))
-    .filter(function (el) { return el.style.display !== 'none'; })
-    .map(function (el) { return el.id; });
-  renderBriefingPanel();
-  var _fvd = document.getElementById('fv-briefing-drawer');
-  if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
-  openNotes.forEach(function (id) {
-    document.querySelectorAll('[id="' + id + '"]').forEach(function (el) {
-      el.style.display = '';
-      var ta = el.querySelector('textarea');
-      if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-    });
+  // Surgical DOM update — no full re-render to avoid flicker
+  var cls = briefingStatusClass(entry.status);
+  var lbl = briefingStatusLabel(entry.status);
+  var txt = briefingStatusText(entry.status);
+  // Update status pill buttons (have data-sym/data-date)
+  document.querySelectorAll('button.bp-status[data-sym="' + sym + '"][data-date="' + date + '"]').forEach(function (btn) {
+    btn.className = 'bp-status ' + cls;
+    btn.innerHTML = lbl + '<span class="bp-status-text">' + txt + '</span>';
+  });
+  // Update compact row status icon (inside .bp-row[data-sym])
+  document.querySelectorAll('.bp-row[data-sym="' + sym + '"][data-date="' + date + '"] .bp-row-status').forEach(function (el) {
+    el.className = 'bp-row-status ' + cls;
+    el.innerHTML = lbl;
   });
 }
 
