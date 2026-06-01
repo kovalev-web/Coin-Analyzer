@@ -48,7 +48,7 @@ function renderCard(coin) {
   return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
     '<div class="card-head">' +
     '<div class="card-sym-row">' +
-    '<span class="card-sym">' + coin.symbol.toUpperCase() + '</span>' +
+    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" style="cursor:pointer" title="Копировать тикер">' + coin.symbol.toUpperCase() + '</span>' +
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
@@ -2290,7 +2290,7 @@ function _fvBottomBarHTML(sym, tf) {
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" style="cursor:pointer" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
@@ -2326,7 +2326,7 @@ function _fvCoinInfoHTML(sym, tf) {
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label">' + sym.toUpperCase() + '</span>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" style="cursor:pointer" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd" style="display:none">'

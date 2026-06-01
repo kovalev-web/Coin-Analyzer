@@ -183,6 +183,10 @@ document.body.addEventListener('click', function (e) {
       closeCoinFullView();
       break;
     }
+    case 'copy-sym': {
+      if (sym) navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
+      break;
+    }
     case 'fv-tf-pick': {
       e.stopPropagation();
       var _ao = document.getElementById('analysis-overlay');
