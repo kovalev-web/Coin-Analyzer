@@ -426,6 +426,7 @@
     #bp-popup .bp-chg,#fv-briefing-drawer .bp-chg{color:var(--graphite);}
     .bp-row-status{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;}
     .bp-status{width:30px;height:30px;border-radius:6px;padding:0;background:transparent;border:none;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+    .bp-status:hover{background:transparent;}
     span.bp-status{cursor:default;}
     .bp-status.bp-s-none,.bp-row-status.bp-s-none{color:var(--graphite);}
     .bp-status.bp-s-watching,.bp-row-status.bp-s-watching{color:var(--graphite);}
