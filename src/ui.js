@@ -182,9 +182,9 @@ function _makeBellImg(color) {
   return img;
 }
 var _bellImg = _makeBellImg('#ff5050'); // активный — колокольчик
-var _bellImgTriggered = (function () {  // отработанный — check-иконка
+function _makeCheckImg(color) {         // отработанный — check-иконка
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">' +
-    '<path d="M0,0 L8,0 A8,8 0 0,1 8,16 L0,16 Z" fill="#6B6060"/>' +
+    '<path d="M0,0 L8,0 A8,8 0 0,1 8,16 L0,16 Z" fill="' + color + '"/>' +
     '<g transform="translate(6,8) scale(0.5) translate(-12,-12)">' +
     '<polyline points="20 6 9 17 4 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</g>' +
@@ -192,7 +192,9 @@ var _bellImgTriggered = (function () {  // отработанный — check-и
   var img = new Image();
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   return img;
-}());
+}
+var _bellImgTriggeredDark  = _makeCheckImg('#6B6060'); // тёмная тема
+var _bellImgTriggeredLight = _makeCheckImg('#D1BDBD'); // светлая тема
 // Expose for api.js pollCharts (no circular dependency)
 window.__chartSeries = _fullSeries;
 window.__chartVolSeries = _volSeries;
@@ -466,7 +468,7 @@ function alertsData() {
 }
 
 function alertLineOpts(a) {
-  return { color: a.triggered ? '#6B6060' : '#ff5050', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
+  return { color: a.triggered ? (isDark() ? '#6B6060' : '#D1BDBD') : '#ff5050', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 // Create or update the price lines for a single alert (idempotent).
@@ -968,7 +970,7 @@ function drawAlertIcons(sym, ctx, rc) {
     if (y == null || y < 0 || y > cssH) return;
     var bellX = 0;
     ctx.save();
-    ctx.drawImage(a.triggered ? _bellImgTriggered : _bellImg, bellX, y - tagH / 2, tagW, tagH);
+    ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
     drawAlertLabel(ctx, a, y, bellX + tagW + 4);
     ctx.restore();
   });
@@ -2358,7 +2360,7 @@ function _drawFVOverlays(ctx, rc, sym) {
       var tagW = 16, tagH = 16;
       var bellX = 0;
       ctx.save();
-      ctx.drawImage(a.triggered ? _bellImgTriggered : _bellImg, bellX, y - tagH / 2, tagW, tagH);
+      ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
       drawAlertLabel(ctx, a, y, bellX + tagW + 4);
       ctx.restore();
     });
