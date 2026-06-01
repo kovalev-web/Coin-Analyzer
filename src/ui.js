@@ -1804,6 +1804,7 @@ export function syncBriefingNow() {
 }
 export function briefingJustSynced() { return Date.now() - _lastSyncAt < 2000; }
 export function refreshBriefingFromServer() {
+  if (briefingJustSynced()) return; // our own sync in flight — server may not have latest yet
   var code = _briefingUserCode || localStorage.getItem('pa_user_code');
   if (!code) return;
   var _today = new Date(); var _dow = _today.getDay();
