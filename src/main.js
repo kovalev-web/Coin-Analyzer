@@ -186,13 +186,15 @@ document.body.addEventListener('click', function (e) {
     case 'copy-sym': {
       if (sym) {
         navigator.clipboard.writeText(sym.toUpperCase()).catch(function () {});
-        var _origText = target.textContent;
-        var _origColor = target.style.color || '';
-        target.textContent = '✓ Скопирован';
-        target.style.color = '#4ade80';
-        setTimeout(function () {
-          if (target.isConnected) { target.textContent = _origText; target.style.color = _origColor; }
-        }, 1500);
+        var _oldTip = document.getElementById('_copy-toast');
+        if (_oldTip) _oldTip.remove();
+        var _tip = document.createElement('div');
+        _tip.id = '_copy-toast';
+        _tip.textContent = 'Тикер скопирован';
+        _tip.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(20,20,30,0.95);color:#fff;font-size:13px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:7px 16px;border-radius:8px;pointer-events:none;z-index:999999;white-space:nowrap;';
+        document.documentElement.appendChild(_tip);
+        setTimeout(function () { _tip.style.transition = 'opacity 0.3s'; _tip.style.opacity = '0'; }, 1200);
+        setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1500);
       }
       break;
     }
