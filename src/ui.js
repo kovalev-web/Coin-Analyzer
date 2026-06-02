@@ -205,6 +205,7 @@ window.__charts = _charts;
 var _levels = {}; // symbol → [{price, line}]
 var _userId = null; // set by setUserId() after session check
 var _userEmail = null;
+var _userEmailVerified = false;
 var _userAvatar = null;
 var _syncTimer = null;
 
@@ -213,9 +214,8 @@ export function setUserId(id) {
   _briefingUserCode = id; // briefing section uses its own var
 }
 
-export function setUserEmail(email) {
-  _userEmail = email;
-}
+export function setUserEmail(email) { _userEmail = email; }
+export function setUserEmailVerified(v) { _userEmailVerified = !!v; }
 
 export function setUserAvatar(av) {
   _userAvatar = av;
@@ -377,6 +377,10 @@ var _AVATAR_PRESETS = ['🐋','🚀','🎯','🦊','🌙','💎','🔥','⚡','�
 export function showAccountModal() {
   if (document.getElementById('account-overlay')) return;
 
+  var verifiedBadge = _userEmailVerified
+    ? '<span class="acc-badge acc-badge-ok">✓ Подтверждён</span>'
+    : '<span class="acc-badge acc-badge-warn">⚠ Не подтверждён</span>';
+
   var el = document.createElement('div');
   el.id = 'account-overlay';
   el.className = 'account-overlay';
@@ -384,6 +388,7 @@ export function showAccountModal() {
     '<div class="account-panel">'
     + '<div class="popup-header"><span class="popup-title">Личный кабинет</span><button class="popup-close" id="account-close">' + icon('x', 16) + '</button></div>'
     + '<div class="popup-body account-body">'
+
       + '<div class="account-section">'
         + '<div class="account-section-title">Аватарка</div>'
         + '<div class="avatar-grid" id="account-avatar-grid">'
@@ -392,34 +397,43 @@ export function showAccountModal() {
           }).join('')
         + '</div>'
       + '</div>'
+
       + '<div class="account-section">'
         + '<div class="account-section-title">Email</div>'
-        + '<div class="acc-email-current" id="acc-email-current"></div>'
+        + '<div class="acc-email-row">'
+          + '<span class="acc-email-addr">' + (_userEmail || '') + '</span>'
+          + verifiedBadge
+        + '</div>'
         + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email">'
         + '<div class="acc-field-err" id="acc-email-msg"></div>'
         + '<button class="tg-connect-btn" id="acc-email-btn">Сменить email</button>'
       + '</div>'
+
       + '<div class="account-section">'
         + '<div class="account-section-title">Telegram</div>'
         + '<div id="acc-tg-status"></div>'
       + '</div>'
+
       + '<div class="account-section">'
         + '<div class="account-section-title">Binance API</div>'
         + '<div id="acc-bin-status"></div>'
       + '</div>'
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Пароль</div>'
-        + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
-        + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
-      + '</div>'
+
       + '<div class="account-section">'
         + '<div class="account-section-title">Безопасность</div>'
-        + '<button class="acc-revoke-btn" id="acc-revoke-btn">Выйти со всех других устройств</button>'
-        + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
+        + '<div class="acc-security-actions">'
+          + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
+          + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
+          + '<button class="acc-revoke-btn" id="acc-revoke-btn">Выйти со всех других устройств</button>'
+          + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
+        + '</div>'
       + '</div>'
+
     + '</div>'
     + '<div class="popup-footer">'
-      + '<button class="popup-btn account-save-btn" id="account-save">Сохранить</button>'
+      + '<button class="popup-btn account-save-btn" id="account-save" style="display:none">Сохранить аватарку</button>'
+      + '<div class="acc-footer-divider"></div>'
+      + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
     + '</div>'
   + '</div>';
 
@@ -567,9 +581,17 @@ export function showAccountModal() {
     el.querySelectorAll('.avatar-preset').forEach(function (b) {
       b.classList.toggle('selected', b === btn);
     });
+    // Show save button only when avatar actually changed
+    document.getElementById('account-save').style.display =
+      _selectedAvatar !== _userAvatar ? 'block' : 'none';
   });
 
   document.getElementById('account-close').addEventListener('click', function () { el.remove(); });
+
+  document.getElementById('acc-logout-btn').addEventListener('click', function () {
+    fetch(API_BASE + '/auth/sign-out', { method: 'POST', credentials: 'include' })
+      .finally(function () { window.location.replace('/login'); });
+  });
 
   document.getElementById('acc-revoke-btn').addEventListener('click', function () {
     var btn = document.getElementById('acc-revoke-btn');

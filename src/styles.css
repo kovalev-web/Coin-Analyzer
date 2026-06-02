@@ -337,7 +337,7 @@
     .account-panel .popup-header{border-bottom:1px solid var(--hairline);padding-bottom:16px;}
     .account-section{margin-bottom:28px;}
     .account-section-title{font-size:11px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;}
-    .avatar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+    .avatar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
     .avatar-preset{background:var(--fog);border:2px solid transparent;border-radius:10px;width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;transition:border-color 0.15s;}
     .avatar-preset.selected{border-color:var(--primary);}
     .avatar-preset:hover:not(.selected){opacity:0.8;}
@@ -354,10 +354,18 @@
     .tg-connect-btn:disabled{opacity:0.5;cursor:default;}
     .tg-connected{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#4caf7d;}
     .tg-hint{font-size:12px;color:var(--graphite);margin:8px 0 6px;}
-    .acc-email-current{font-size:12px;color:var(--graphite);margin-bottom:8px;}
+    .acc-email-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .acc-email-addr{font-size:13px;font-weight:600;color:var(--ink);}
+    .acc-badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;}
+    .acc-badge-ok{background:#1a3a1a;color:#4caf7d;}
+    .acc-badge-warn{background:#3a2a1a;color:#e09a4a;}
     .acc-revoke-btn{padding:0 14px;height:36px;border-radius:8px;background:transparent;color:#f08080;border:1.5px solid #f08080;font-size:13px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;}
     .acc-revoke-btn:hover:not(:disabled){background:#f0808018;}
     .acc-revoke-btn:disabled{opacity:0.5;cursor:default;}
+    .acc-security-actions{display:flex;flex-direction:column;gap:10px;}
+    .acc-logout-btn{display:block;width:100%;height:36px;border-radius:8px;background:transparent;color:#f08080;border:1.5px solid #f08080;font-size:13px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;margin-top:4px;}
+    .acc-logout-btn:hover{background:#f0808018;}
+    .acc-footer-divider{height:1px;background:var(--hairline);margin:16px 0 12px;}
     .tg-waiting{color:var(--graphite);}
 
     /* ── Tier badge (topbar single button) ── */
