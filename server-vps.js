@@ -763,7 +763,7 @@ var httpServer = http.createServer(async function (req, res) {
         if (action === 'get') {
           var r = await redis(['GET', key]);
           var rAI = await redis(['GET', keyAI]);
-          console.log('[Briefing] GET userId=' + userId + ' entries=' + (r.result ? JSON.parse(r.result).length : 0));
+          console.log('[Briefing] GET key=' + JSON.stringify(key) + ' result=' + (r.result ? r.result.length + 'chars' : 'null'));
           var aiData = rAI.result ? JSON.parse(rAI.result) : {};
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
