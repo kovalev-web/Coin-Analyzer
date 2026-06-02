@@ -204,11 +204,19 @@ window.__charts = _charts;
 
 var _levels = {}; // symbol → [{price, line}]
 var _userId = null; // set by setUserId() after session check
+var _userAvatar = null;
 var _syncTimer = null;
 
 export function setUserId(id) {
   _userId = id;
   _briefingUserCode = id; // briefing section uses its own var
+}
+
+export function setUserAvatar(av) {
+  _userAvatar = av;
+  var iconSpan = document.getElementById('avatar-btn-icon');
+  if (!iconSpan) return;
+  iconSpan.innerHTML = av ? av : icon('user-round', 16);
 }
 
 function levelsData() {
@@ -354,6 +362,134 @@ export function showSettingsModal() {
   document.getElementById('code-modal-close').addEventListener('click', function () { backdrop.remove(); });
   chatInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
   chatInput.focus();
+}
+
+var _AVATAR_PRESETS = ['🐋','🚀','🎯','🦊','🌙','💎','🔥','⚡','🐂','🐻','🧠','👾'];
+
+export function showAccountModal() {
+  if (document.getElementById('account-overlay')) return;
+
+  var el = document.createElement('div');
+  el.id = 'account-overlay';
+  el.className = 'account-overlay';
+  el.innerHTML =
+    '<div class="account-panel">'
+    + '<div class="popup-header"><span class="popup-title">Личный кабинет</span><button class="popup-close" id="account-close">' + icon('x', 16) + '</button></div>'
+    + '<div class="popup-body account-body">'
+      + '<div class="account-section">'
+        + '<div class="account-section-title">Аватарка</div>'
+        + '<div class="avatar-grid" id="account-avatar-grid">'
+        + _AVATAR_PRESETS.map(function (p) {
+            return '<button class="avatar-preset' + (p === _userAvatar ? ' selected' : '') + '" data-preset="' + p + '">' + p + '</button>';
+          }).join('')
+        + '</div>'
+      + '</div>'
+      + '<div class="account-section">'
+        + '<div class="account-section-title">Смена пароля</div>'
+        + '<input type="password" id="acc-pass-cur" placeholder="Текущий пароль" autocomplete="current-password">'
+        + '<div class="acc-field-err" id="acc-pass-cur-err"></div>'
+        + '<input type="password" id="acc-pass-new" placeholder="Новый пароль" autocomplete="new-password">'
+        + '<div class="acc-field-err" id="acc-pass-new-err"></div>'
+        + '<input type="password" id="acc-pass-con" placeholder="Подтвердить пароль" autocomplete="new-password">'
+        + '<div class="acc-field-err" id="acc-pass-con-err"></div>'
+      + '</div>'
+    + '</div>'
+    + '<div class="popup-footer">'
+      + '<button class="popup-btn account-save-btn" id="account-save">Сохранить</button>'
+    + '</div>'
+  + '</div>';
+
+  document.body.appendChild(el);
+  el.classList.add('open');
+
+  // Load saved avatar from server
+  fetch(API_BASE + '/api/account', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.avatar) {
+        _userAvatar = d.avatar;
+        _selectedAvatar = d.avatar;
+        el.querySelectorAll('.avatar-preset').forEach(function (btn) {
+          btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
+        });
+      }
+    })
+    .catch(function () {});
+
+  var _selectedAvatar = _userAvatar;
+
+  document.getElementById('account-avatar-grid').addEventListener('click', function (e) {
+    var btn = e.target.closest('.avatar-preset');
+    if (!btn) return;
+    _selectedAvatar = btn.dataset.preset;
+    el.querySelectorAll('.avatar-preset').forEach(function (b) {
+      b.classList.toggle('selected', b === btn);
+    });
+  });
+
+  document.getElementById('account-close').addEventListener('click', function () { el.remove(); });
+
+  document.getElementById('account-save').addEventListener('click', async function () {
+    var saveBtn = document.getElementById('account-save');
+    var curPass = document.getElementById('acc-pass-cur').value;
+    var newPass = document.getElementById('acc-pass-new').value;
+    var conPass = document.getElementById('acc-pass-con').value;
+    var curErr = document.getElementById('acc-pass-cur-err');
+    var newErr = document.getElementById('acc-pass-new-err');
+    var conErr = document.getElementById('acc-pass-con-err');
+
+    curErr.textContent = newErr.textContent = conErr.textContent = '';
+
+    var passChanged = curPass || newPass || conPass;
+    var hasErr = false;
+
+    if (passChanged) {
+      if (!curPass) { curErr.textContent = 'Введите текущий пароль'; hasErr = true; }
+      if (!newPass) { newErr.textContent = 'Введите новый пароль'; hasErr = true; }
+      if (newPass && newPass.length < 8) { newErr.textContent = 'Минимум 8 символов'; hasErr = true; }
+      if (newPass && conPass !== newPass) { conErr.textContent = 'Пароли не совпадают'; hasErr = true; }
+    }
+    if (hasErr) return;
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = '…';
+
+    var promises = [];
+
+    if (_selectedAvatar && _selectedAvatar !== _userAvatar) {
+      promises.push(
+        fetch(API_BASE + '/api/account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ action: 'save-avatar', avatar: _selectedAvatar }),
+        }).then(function (r) {
+          if (r.ok) setUserAvatar(_selectedAvatar);
+        })
+      );
+    }
+
+    if (passChanged && !hasErr) {
+      promises.push(
+        fetch(API_BASE + '/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ currentPassword: curPass, newPassword: newPass }),
+        }).then(function (r) {
+          return r.json().then(function (d) {
+            if (!r.ok) { curErr.textContent = d.message || 'Неверный текущий пароль'; hasErr = true; }
+          });
+        })
+      );
+    }
+
+    await Promise.all(promises);
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Сохранить';
+    if (!hasErr) el.remove();
+  });
 }
 
 export function clearAllAlerts() {
@@ -1586,14 +1722,20 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="open-settings" title="Настройки">' + icon('user-round', 16) + '</button>'
+    + '<div class="avatar-wrap">'
+    + '<button class="btn-avatar" id="avatar-btn" data-action="toggle-avatar-dd" title="Профиль"><span id="avatar-btn-icon">' + (_userAvatar || icon('user-round', 16)) + '</span></button>'
+    + '<div class="avatar-dd" id="avatar-dd">'
+    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
+    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
+    + '</div>'
+    + '</div>'
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd" id="burger-dd">'
     + '<a class="burger-dd-item" href="/inplay-phase">' + icon('activity', 14) + 'Phase <span class="nav-beta-tag">beta</span></a>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
-    + '<button class="burger-dd-item" data-action="open-settings">' + icon('user-round', 14) + 'Настройки</button>'
+    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
     + '</div>'
     + '</div>'

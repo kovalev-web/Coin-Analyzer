@@ -2,6 +2,11 @@ var API_BASE = (import.meta.env.VITE_WS_URL || '')
   .replace(/^wss?:\/\//, 'https://')
   .replace(/\/ws$/, '');
 
+fetch(API_BASE + '/auth/get-session', { credentials: 'include' })
+  .then(function (r) { return r.json(); })
+  .then(function (s) { if (s && s.user) window.location.replace('/'); })
+  .catch(function () {});
+
 var isRegister = false;
 
 var formEl   = document.getElementById('login-form');

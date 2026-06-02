@@ -803,6 +803,47 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
+  if (req.method === 'GET' && req.url === '/api/account') {
+    try {
+      var session = await getSession(req);
+      if (!session) return unauthorized(res);
+      var userId = session.user.id;
+      var r = await redis(['GET', 'avatar:' + userId]);
+      var avatar = r && r.result ? r.result : null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ avatar: avatar }));
+    } catch (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/account') {
+    var bodyAcc = '';
+    req.on('data', function (chunk) { bodyAcc += chunk; });
+    req.on('end', async function () {
+      try {
+        var session = await getSession(req);
+        if (!session) return unauthorized(res);
+        var userId = session.user.id;
+        var parsed = JSON.parse(bodyAcc);
+        if (parsed.action === 'save-avatar') {
+          await redis(['SET', 'avatar:' + userId, parsed.avatar]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown action' }));
+        }
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
   // ── Proxy: Binance Futures + Gemini (keys stay server-side) ────────────────
   if (req.method === 'POST' && req.url === '/api/proxy') {
     var proxyBody = '';

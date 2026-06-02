@@ -12,7 +12,7 @@ import {
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
-  setUserId,
+  setUserId, setUserAvatar, showAccountModal,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -38,6 +38,11 @@ document.body.addEventListener('click', function (e) {
   var burgerDd = document.getElementById('burger-dd');
   if (burgerDd && burgerDd.classList.contains('open') && !e.target.closest('.burger-wrap')) {
     burgerDd.classList.remove('open');
+  }
+  // Close avatar dropdown on any click outside .avatar-wrap
+  var avatarDd = document.getElementById('avatar-dd');
+  if (avatarDd && avatarDd.classList.contains('open') && !e.target.closest('.avatar-wrap')) {
+    avatarDd.classList.remove('open');
   }
 
   // Close popups on any outside click — runs before data-action check so clicking
@@ -78,9 +83,11 @@ document.body.addEventListener('click', function (e) {
   var tf = target.dataset.tf;
 
   // Close burger on any action except its own toggle
-  if (action !== 'toggle-burger') {
+  if (action !== 'toggle-burger' && action !== 'toggle-avatar-dd') {
     var _bdd = document.getElementById('burger-dd');
     if (_bdd) _bdd.classList.remove('open');
+    var _add = document.getElementById('avatar-dd');
+    if (_add) _add.classList.remove('open');
   }
 
   switch (action) {
@@ -88,6 +95,12 @@ document.body.addEventListener('click', function (e) {
       e.stopPropagation();
       var bDd = document.getElementById('burger-dd');
       if (bDd) bDd.classList.toggle('open');
+      break;
+    }
+    case 'toggle-avatar-dd': {
+      e.stopPropagation();
+      var aDd = document.getElementById('avatar-dd');
+      if (aDd) aDd.classList.toggle('open');
       break;
     }
     case 'analyze': {
@@ -259,8 +272,8 @@ document.body.addEventListener('click', function (e) {
       closeSearchPopup();
       openFV(sym);
       break;
-    case 'open-settings':
-      showSettingsModal();
+    case 'open-account':
+      showAccountModal();
       break;
     case 'logout': {
       var _wsEnv2 = import.meta.env.VITE_WS_URL || '';
@@ -554,6 +567,10 @@ registerRoute('/404', function () {
       var s = await r.json();
       if (s && s.user && s.user.id) {
         setUserId(s.user.id);
+        fetch(apiBase + '/api/account', { credentials: 'include' })
+          .then(function (ar) { return ar.json(); })
+          .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
+          .catch(function () {});
       } else {
         window.location.replace('/login');
         return;
