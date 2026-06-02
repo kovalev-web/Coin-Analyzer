@@ -898,7 +898,11 @@ var httpServer = http.createServer(async function (req, res) {
         var userId = session.user.id;
         var parsed = JSON.parse(bodyAcc);
         if (parsed.action === 'save-avatar') {
-          await redis(['SET', 'avatar:' + userId, parsed.avatar]);
+          if (parsed.avatar) {
+            await redis(['SET', 'avatar:' + userId, parsed.avatar]);
+          } else {
+            await redis(['DEL', 'avatar:' + userId]);
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'save-binance') {

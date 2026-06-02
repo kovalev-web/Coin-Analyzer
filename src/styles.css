@@ -37,6 +37,14 @@
 
     .topbar-logo{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink);background:transparent;border:none;padding:0;cursor:pointer;height:30px;}
     .topbar-logo:hover{opacity:0.7;}
+    .logo-svg{display:flex;align-items:center;}
+    .logo-mob-av{display:none;font-size:24px;line-height:1;}
+    @media(max-width:1024px){
+      .topbar-logo.mob-has-avatar .logo-svg{display:none;}
+      .topbar-logo.mob-has-avatar .logo-mob-av{display:flex;align-items:center;}
+    }
+    .avatar-logo-btn{font-size:0;color:var(--ink);}
+    .avatar-logo-btn svg{width:22px;height:22px;}
     @keyframes logo-wiggle{
       0%,100%{transform:rotate(0deg) scale(1);}
       10%{transform:rotate(-14deg) scale(1.08);}
