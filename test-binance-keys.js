@@ -1,26 +1,39 @@
 /**
  * test-binance-keys.js
- * Запуск: node test-binance-keys.js --cookie="__Secure-better-auth.session_token=VALUE"
  *
- * Тестирует per-user Binance API keys flow:
- * 1. /api/proxy без ключей → 403
- * 2. save-binance → сохранение ключей
- * 3. GET /api/account → binanceConnected: true
- * 4. /api/proxy с ключами → не 403 (ключи читаются из Redis)
- * 5. delete-binance → удаление ключей
- * 6. GET /api/account → binanceConnected: false
- * 7. /api/proxy снова → 403
+ * Режим 1 — без реальных ключей (базовые проверки):
+ *   node test-binance-keys.js --cookie="..."
+ *
+ * Режим 2 — с реальными ключами (полный флоу):
+ *   node test-binance-keys.js --cookie="..." --apiKey=KEY --apiSecret=SECRET
+ *
+ * Тесты без реальных ключей:
+ *   1. /api/proxy без ключей → 403
+ *   2. save-binance пустые поля → 400
+ *   3. save-binance fake ключи → 400 (Binance отклоняет невалидные)
+ *
+ * Тесты с реальными ключами (дополнительно):
+ *   4. save-binance валидные read-only → 200
+ *   5. GET /api/account → binanceConnected: true, ключи не возвращаются
+ *   6. /api/proxy с ключами → не 403
+ *   7. delete-binance → 200
+ *   8. GET /api/account → binanceConnected: false
+ *   9. /api/proxy после удаления → 403
  */
 
 var https = require('https');
 var http  = require('http');
 
-var BASE   = 'https://api.questtick.com';
-var COOKIE = '';
+var BASE      = 'https://api.questtick.com';
+var COOKIE    = '';
+var REAL_KEY  = '';
+var REAL_SEC  = '';
 
 process.argv.slice(2).forEach(function (a) {
-  if (a.startsWith('--cookie=')) COOKIE = a.slice(9);
-  else if (!a.startsWith('--')) BASE = a.replace(/\/$/, '');
+  if (a.startsWith('--cookie='))    COOKIE   = a.slice(9);
+  else if (a.startsWith('--apiKey='))    REAL_KEY = a.slice(9);
+  else if (a.startsWith('--apiSecret=')) REAL_SEC = a.slice(13);
+  else if (!a.startsWith('--'))     BASE     = a.replace(/\/$/, '');
 });
 
 if (!COOKIE) {
@@ -59,69 +72,81 @@ function req(method, path, body, cookie) {
 function post(path, body) { return req('POST', path, body, COOKIE); }
 function get(path)        { return req('GET',  path, null, COOKIE); }
 
-// Fake keys for testing (obviously invalid, but test the flow)
-var FAKE_KEY = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-var FAKE_SEC = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-
 async function run() {
-  console.log('\nТестируем: ' + BASE + '\n');
+  console.log('\nТестируем: ' + BASE);
+  console.log(REAL_KEY ? 'Режим: с реальными ключами (полные тесты)\n' : 'Режим: без реальных ключей (базовые тесты)\n');
 
-  // ── 1. /api/proxy без ключей должен вернуть 403 ──────────────────────
-  console.log('── 1. Proxy без ключей ──');
-
-  // Сначала убедимся что ключей нет — удалим на всякий случай
+  // Сбрасываем состояние
   await post('/api/account', { action: 'delete-binance' });
 
-  var r1 = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
-  log(r1.status === 403, '/api/proxy без ключей → 403 (status=' + r1.status + ')');
+  // ── 1. /api/proxy без ключей → 403 ───────────────────────────────────
+  console.log('── 1. Proxy без ключей ──');
+
+  var r1a = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
+  log(r1a.status === 403, '/api/proxy (binance) без ключей → 403 (status=' + r1a.status + ')');
 
   var r1b = await post('/api/proxy', { service: 'binance-income', payload: {} });
-  log(r1b.status === 403, '/api/proxy binance-income без ключей → 403 (status=' + r1b.status + ')');
+  log(r1b.status === 403, '/api/proxy (binance-income) без ключей → 403 (status=' + r1b.status + ')');
 
-  // ── 2. Сохраняем ключи ────────────────────────────────────────────────
-  console.log('\n── 2. Сохранение ключей ──');
+  // ── 2. Валидация: пустые поля → 400 ──────────────────────────────────
+  console.log('\n── 2. Валидация входных данных ──');
 
-  var r2 = await post('/api/account', { action: 'save-binance', apiKey: FAKE_KEY, apiSecret: FAKE_SEC });
-  log(r2.status === 200 && r2.body.ok, 'save-binance → 200 ok (status=' + r2.status + ')');
+  var r2a = await post('/api/account', { action: 'save-binance', apiKey: '', apiSecret: '' });
+  log(r2a.status === 400, 'Пустые ключи → 400 (status=' + r2a.status + ')');
 
-  // Валидация: пустые поля должны вернуть 400
-  var r2b = await post('/api/account', { action: 'save-binance', apiKey: '', apiSecret: '' });
-  log(r2b.status === 400, 'save-binance с пустыми полями → 400 (status=' + r2b.status + ')');
+  var r2b = await post('/api/account', { action: 'save-binance', apiKey: 'onlykey', apiSecret: '' });
+  log(r2b.status === 400, 'Только apiKey без secret → 400 (status=' + r2b.status + ')');
 
-  // ── 3. GET /api/account должен вернуть binanceConnected: true ─────────
-  console.log('\n── 3. binanceConnected после сохранения ──');
+  // ── 3. Валидация: fake ключи → Binance отклоняет → 400 ───────────────
+  console.log('\n── 3. Проверка валидации через Binance ──');
 
-  var r3 = await get('/api/account');
-  log(r3.status === 200 && r3.body.binanceConnected === true, 'GET /api/account → binanceConnected: true');
-  // Ключи НЕ должны возвращаться в ответе
-  log(!r3.body.apiKey && !r3.body.apiSecret && !r3.body.binanceKey,
-      'Ключи не возвращаются в GET /api/account');
+  var FAKE = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  var r3 = await post('/api/account', { action: 'save-binance', apiKey: FAKE, apiSecret: FAKE });
+  log(r3.status === 400, 'Fake ключи отклонены Binance → 400 (status=' + r3.status + ')');
+  log(r3.body && typeof r3.body.error === 'string' && r3.body.error.length > 0,
+      'Возвращается понятное сообщение об ошибке: "' + (r3.body && r3.body.error ? r3.body.error.slice(0, 60) : '—') + '"');
 
-  // ── 4. /api/proxy с ключами — дойдёт до Binance (вернёт ошибку от них, но не 403) ──
-  console.log('\n── 4. Proxy с ключами (fake) ──');
+  // Убеждаемся что fake ключи не сохранились
+  var r3c = await get('/api/account');
+  log(r3c.body && r3c.body.binanceConnected === false, 'После rejected save — binanceConnected остался false');
 
-  var r4 = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
-  log(r4.status !== 403, '/api/proxy с ключами не возвращает 403 (читает из Redis) (status=' + r4.status + ')');
-  // Ожидаем 502 с ошибкой от Binance (подпись неверная), но не 403
-  log(r4.status === 502 || r4.status === 400, 'Binance вернул ошибку подписи (ожидаемо для fake keys) (status=' + r4.status + ')');
+  if (!REAL_KEY || !REAL_SEC) {
+    console.log('\n  ℹ️  Тесты 4-9 пропущены (нет --apiKey / --apiSecret).');
+    console.log('     Запустите с реальными read-only Futures ключами для полного теста.\n');
+  } else {
+    // ── 4. Сохранение реальных read-only ключей ───────────────────────
+    console.log('\n── 4. Сохранение валидных read-only ключей ──');
 
-  // ── 5. Удаляем ключи ──────────────────────────────────────────────────
-  console.log('\n── 5. Удаление ключей ──');
+    var r4 = await post('/api/account', { action: 'save-binance', apiKey: REAL_KEY, apiSecret: REAL_SEC });
+    log(r4.status === 200 && r4.body.ok, 'save-binance валидные ключи → 200 ok (status=' + r4.status + ')');
 
-  var r5 = await post('/api/account', { action: 'delete-binance' });
-  log(r5.status === 200 && r5.body.ok, 'delete-binance → 200 ok');
+    // ── 5. GET /api/account ────────────────────────────────────────────
+    console.log('\n── 5. binanceConnected + безопасность ──');
 
-  // ── 6. binanceConnected должен стать false ────────────────────────────
-  console.log('\n── 6. binanceConnected после удаления ──');
+    var r5 = await get('/api/account');
+    log(r5.body && r5.body.binanceConnected === true, 'binanceConnected: true после сохранения');
+    log(!r5.body.apiKey && !r5.body.apiSecret && !r5.body.binanceKey,
+        'Ключи не возвращаются в GET /api/account');
 
-  var r6 = await get('/api/account');
-  log(r6.status === 200 && r6.body.binanceConnected === false, 'GET /api/account → binanceConnected: false');
+    // ── 6. /api/proxy читает ключи из Redis ───────────────────────────
+    console.log('\n── 6. Proxy с реальными ключами ──');
 
-  // ── 7. /api/proxy снова → 403 ─────────────────────────────────────────
-  console.log('\n── 7. Proxy после удаления ──');
+    var r6 = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
+    log(r6.status !== 403, '/api/proxy не возвращает 403 (ключи из Redis) (status=' + r6.status + ')');
+    log(r6.status === 200, '/api/proxy возвращает 200 с реальными ключами (status=' + r6.status + ')');
 
-  var r7 = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
-  log(r7.status === 403, '/api/proxy после delete-binance → 403 снова');
+    // ── 7-9. Удаление и проверка ──────────────────────────────────────
+    console.log('\n── 7. Удаление ключей ──');
+
+    var r7 = await post('/api/account', { action: 'delete-binance' });
+    log(r7.status === 200 && r7.body.ok, 'delete-binance → 200 ok');
+
+    var r8 = await get('/api/account');
+    log(r8.body && r8.body.binanceConnected === false, 'binanceConnected: false после удаления');
+
+    var r9 = await post('/api/proxy', { service: 'binance', payload: { symbol: 'BTCUSDT' } });
+    log(r9.status === 403, '/api/proxy после удаления → 403 снова');
+  }
 
   // ── Итог ─────────────────────────────────────────────────────────────
   console.log('\n── Итог: ' + pass + ' прошло, ' + fail + ' упало ──\n');
