@@ -219,6 +219,7 @@ var inplaySymbols     = []; // symbols passing pre-filter, populated after boots
 var _joinTimes        = {}; // sym → ms when added to watchlist (for CVD warmup)
 var _bootstrapPending = new Set(); // syms currently being bootstrapped (throttle guard)
 var _klineFirstConnect = true; // gap-fill only on reconnect, not initial connect
+var knownFuturesSyms = null; // Set<string> — all USDT symbols known at startup, for listing detection
 
 // ── REST helper ──────────────────────────────────────────────────────────
 
@@ -322,6 +323,12 @@ async function startBinanceWS() {
       .filter(function (s) { return s.symbol.endsWith('USDT') && s.status === 'TRADING'; })
       .map(function (s) { return s.symbol.toLowerCase() + '@ticker'; });
     console.log('[Binance] Got', symbols.length, 'symbols for WS');
+    if (!knownFuturesSyms) {
+      knownFuturesSyms = new Set(info.symbols
+        .filter(function (s) { return s.symbol.endsWith('USDT') && s.status === 'TRADING'; })
+        .map(function (s) { return s.symbol; }));
+      console.log('[Listing] Baseline set:', knownFuturesSyms.size, 'symbols');
+    }
   } catch (e) {
     console.error('[Binance] Symbol fetch failed:', e.message, '— retrying in 10s');
     setTimeout(startBinanceWS, 10000);
@@ -1175,6 +1182,31 @@ setInterval(function () {
     logInplay('[Inplay] Refresh bootstrap error:', e.message);
   });
 }, 60000);
+
+// ── New futures listing alerts ────────────────────────────────────────────
+async function checkNewListings() {
+  if (!INPLAY_ALERT_CHAT_ID || !knownFuturesSyms) return;
+  try {
+    var info = await fetchBinance(BINANCE_REST + '/fapi/v1/exchangeInfo');
+    var newOnes = info.symbols.filter(function (s) {
+      return s.symbol.endsWith('USDT') && s.status === 'TRADING' && !knownFuturesSyms.has(s.symbol);
+    });
+    for (var i = 0; i < newOnes.length; i++) {
+      var sym = newOnes[i].symbol;
+      knownFuturesSyms.add(sym);
+      var coin = sym.replace(/USDT$/, '');
+      var markup = APP_URL
+        ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + coin }]] }
+        : undefined;
+      console.log('[Listing] New futures listing detected:', sym);
+      await sendTG(INPLAY_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
+    }
+  } catch (e) {
+    console.error('[Listing] exchangeInfo check failed:', e.message);
+  }
+}
+
+setInterval(checkNewListings, 2 * 60 * 1000);
 
 // ── Weekly briefing report ────────────────────────────────────────────────
 async function sendWeeklyBriefingReport(chatId) {
