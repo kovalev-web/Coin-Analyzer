@@ -26,11 +26,12 @@ function getAuth() {
     },
     emailVerification: {
       sendVerificationEmail: async function ({ user, url }) {
+        var frontendUrl = url.replace('https://api.questtick.com/api/auth/verify-email', 'https://questtick.com/verify-email');
         await resend.emails.send({
           from: 'Questtick <noreply@questtick.com>',
           to: user.email,
           subject: 'Подтвердите email — Questtick',
-          html: '<p>Нажмите кнопку ниже, чтобы подтвердить email и войти в Questtick.</p><p><a href="' + url + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Подтвердить email</a></p><p style="color:#888;font-size:12px;">Если вы не регистрировались — просто проигнорируйте это письмо.</p>',
+          html: '<p>Нажмите кнопку ниже, чтобы подтвердить email и войти в Questtick.</p><p><a href="' + frontendUrl + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Подтвердить email</a></p><p style="color:#888;font-size:12px;">Если вы не регистрировались — просто проигнорируйте это письмо.</p>',
         });
       },
       autoSignInAfterVerification: true,

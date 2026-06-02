@@ -12,9 +12,10 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main:   'index.html',
-        phase:  'inplay-phase.html',
-        login:  'login.html',
+        main:         'index.html',
+        phase:        'inplay-phase.html',
+        login:        'login.html',
+        verifyEmail:  'verify-email.html',
       },
     },
   },
