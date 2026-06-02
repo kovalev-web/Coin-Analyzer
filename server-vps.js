@@ -21,6 +21,19 @@ const inplayCfg = require('./inplay/config.json');
 const { ensureAuthTables } = require('./db/setup');
 const { getAuth } = require('./auth');
 const { toNodeHandler } = require('better-auth/node');
+const { Resend } = require('resend');
+
+function sendPasswordChangedEmail(email) {
+  var resend = new Resend(process.env.RESEND_API_KEY);
+  return resend.emails.send({
+    from: 'Questtick <noreply@questtick.com>',
+    to: email,
+    subject: 'Пароль был изменён — Questtick',
+    html: '<p>Пароль вашего аккаунта <b>' + email + '</b> был успешно изменён.</p>'
+        + '<p>Если это были не вы — немедленно восстановите доступ через форму входа.</p>'
+        + '<p style="color:#888;font-size:12px;">Questtick — автоматическое уведомление</p>',
+  });
+}
 
 // Create DB tables and init auth at startup
 ensureAuthTables();
@@ -672,6 +685,20 @@ var httpServer = http.createServer(async function (req, res) {
     req.url = '/api/auth' + req.url.slice(5);
   }
   if (req.url.startsWith('/api/auth')) {
+    // Email notification on password change
+    if (req.url === '/api/auth/change-password' && req.method === 'POST') {
+      var sess = await getSession(req);
+      var notifyEmail = sess && sess.user ? sess.user.email : null;
+      if (notifyEmail) {
+        var _origEnd = res.end.bind(res);
+        res.end = function () {
+          if (res.statusCode === 200) {
+            sendPasswordChangedEmail(notifyEmail).catch(function () {});
+          }
+          return _origEnd.apply(res, arguments);
+        };
+      }
+    }
     return toNodeHandler(getAuth())(req, res);
   }
 

@@ -400,6 +400,11 @@ export function showAccountModal() {
         + '<input type="password" id="acc-pass-con" placeholder="Подтвердить пароль" autocomplete="new-password">'
         + '<div class="acc-field-err" id="acc-pass-con-err"></div>'
       + '</div>'
+      + '<div class="account-section">'
+        + '<div class="account-section-title">Безопасность</div>'
+        + '<button class="acc-revoke-btn" id="acc-revoke-btn">Выйти со всех других устройств</button>'
+        + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
+      + '</div>'
     + '</div>'
     + '<div class="popup-footer">'
       + '<button class="popup-btn account-save-btn" id="account-save">Сохранить</button>'
@@ -471,6 +476,33 @@ export function showAccountModal() {
   });
 
   document.getElementById('account-close').addEventListener('click', function () { el.remove(); });
+
+  document.getElementById('acc-revoke-btn').addEventListener('click', function () {
+    var btn = document.getElementById('acc-revoke-btn');
+    var msg = document.getElementById('acc-revoke-msg');
+    btn.disabled = true;
+    btn.textContent = '…';
+    fetch(API_BASE + '/auth/revoke-other-sessions', {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(function (r) {
+        if (r.ok) {
+          msg.style.color = '#80c080';
+          msg.textContent = 'Готово — все другие устройства отключены';
+          btn.textContent = 'Выйти со всех других устройств';
+          btn.disabled = false;
+        } else {
+          throw new Error('fail');
+        }
+      })
+      .catch(function () {
+        msg.style.color = '';
+        msg.textContent = 'Ошибка, попробуйте ещё раз';
+        btn.textContent = 'Выйти со всех других устройств';
+        btn.disabled = false;
+      });
+  });
 
   document.getElementById('account-save').addEventListener('click', async function () {
     var saveBtn = document.getElementById('account-save');
