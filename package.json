@@ -23,6 +23,7 @@
     "better-auth": "^1.2.8",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
+    "resend": "^6.12.4",
     "ws": "^8.18.2"
   }
 }

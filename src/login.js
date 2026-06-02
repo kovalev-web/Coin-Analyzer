@@ -15,12 +15,16 @@ var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
 var errEl    = document.getElementById('login-error');
+var msgEl    = document.getElementById('login-msg');
 
 function setMode(reg) {
   isRegister = reg;
   submitEl.textContent = reg ? 'Зарегистрироваться' : 'Войти';
   toggleEl.textContent = reg ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
   errEl.style.display = 'none';
+  msgEl.style.display = 'none';
+  formEl.style.display = 'block';
+  toggleEl.style.display = 'block';
 }
 
 toggleEl.addEventListener('click', function () { setMode(!isRegister); });
@@ -28,6 +32,7 @@ toggleEl.addEventListener('click', function () { setMode(!isRegister); });
 formEl.addEventListener('submit', async function (e) {
   e.preventDefault();
   errEl.style.display = 'none';
+  msgEl.style.display = 'none';
   submitEl.disabled = true;
   submitEl.textContent = '…';
 
@@ -35,7 +40,7 @@ formEl.addEventListener('submit', async function (e) {
   var password = passEl.value;
   var endpoint = isRegister ? '/auth/sign-up/email' : '/auth/sign-in/email';
   var body     = isRegister
-    ? { email: email, password: password, name: email.split('@')[0] }
+    ? { email: email, password: password, name: email.split('@')[0], callbackURL: 'https://questtick.com' }
     : { email: email, password: password };
 
   try {
@@ -47,10 +52,21 @@ formEl.addEventListener('submit', async function (e) {
     });
     var data = await res.json();
     if (!res.ok) {
-      errEl.textContent = data.message || (isRegister ? 'Ошибка регистрации' : 'Неверный email или пароль');
-      errEl.style.display = 'block';
+      var isUnverified = data.code === 'EMAIL_NOT_VERIFIED' ||
+        (data.message || '').toLowerCase().includes('not verified') ||
+        (data.message || '').toLowerCase().includes('email verification');
+      if (isUnverified) {
+        showUnverified(email);
+      } else {
+        errEl.textContent = data.message || (isRegister ? 'Ошибка регистрации' : 'Неверный email или пароль');
+        errEl.style.display = 'block';
+      }
     } else {
-      window.location.replace('/');
+      if (isRegister) {
+        showEmailSent(email);
+      } else {
+        window.location.replace('/');
+      }
     }
   } catch (err) {
     errEl.textContent = 'Сетевая ошибка: ' + err.message;
@@ -60,3 +76,30 @@ formEl.addEventListener('submit', async function (e) {
   submitEl.disabled = false;
   submitEl.textContent = isRegister ? 'Зарегистрироваться' : 'Войти';
 });
+
+function showEmailSent(email) {
+  formEl.style.display = 'none';
+  toggleEl.style.display = 'none';
+  msgEl.innerHTML = 'Письмо отправлено на <b>' + email + '</b><br>Перейдите по ссылке в письме чтобы подтвердить аккаунт и войти.';
+  msgEl.style.display = 'block';
+}
+
+function showUnverified(email) {
+  errEl.innerHTML = 'Email не подтверждён. <button id="resend-btn" style="background:none;border:none;color:#f08080;text-decoration:underline;cursor:pointer;padding:0;font-size:13px;">Отправить повторно</button>';
+  errEl.style.display = 'block';
+  document.getElementById('resend-btn').addEventListener('click', async function () {
+    var btn = document.getElementById('resend-btn');
+    btn.textContent = '…'; btn.disabled = true;
+    try {
+      await fetch(API_BASE + '/auth/send-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email, callbackURL: 'https://questtick.com' }),
+      });
+      errEl.textContent = 'Письмо отправлено — проверьте почту.';
+    } catch (err) {
+      errEl.textContent = 'Ошибка отправки. Попробуйте ещё раз.';
+    }
+  });
+}
