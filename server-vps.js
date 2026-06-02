@@ -762,6 +762,7 @@ var httpServer = http.createServer(async function (req, res) {
         if (action === 'get') {
           var r = await redis(['GET', key]);
           var rAI = await redis(['GET', keyAI]);
+          console.log('[Briefing] GET userId=' + userId + ' entries=' + (r.result ? JSON.parse(r.result).length : 0));
           var aiData = rAI.result ? JSON.parse(rAI.result) : {};
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
@@ -772,6 +773,7 @@ var httpServer = http.createServer(async function (req, res) {
           }));
         } else if (action === 'save') {
           if (!parsed.skip_entries) {
+            console.log('[Briefing] SAVE userId=' + userId + ' entries=' + (entries || []).length + ' skip=' + !!parsed.skip_entries);
             await redis(['SET', key, JSON.stringify(entries || [])]);
           }
           if (parsed.ai_summary) {
