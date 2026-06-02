@@ -18,6 +18,12 @@ const { updatePhases, defaultGetMicro, isInPhase } = require('./inplay/phase-det
 const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
 const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi, getOrderbookMetrics } = require('./inplay/orderbook');
 const inplayCfg = require('./inplay/config.json');
+const { ensureAuthTables } = require('./db/setup');
+const { getAuth } = require('./auth');
+const { toNodeHandler } = require('better-auth/node');
+
+// Create DB tables and init auth at startup
+ensureAuthTables();
 
 var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
 
@@ -620,12 +626,32 @@ function startDepthWS() {
 
 // ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
 
+var CORS_ORIGINS = ['https://questtick.com', 'http://localhost:5173'];
+
+async function getSession(req) {
+  try {
+    return await getAuth().api.getSession({ headers: req.headers });
+  } catch (e) { return null; }
+}
+
+function unauthorized(res) {
+  res.writeHead(401, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Unauthorized' }));
+}
+
 var httpServer = http.createServer(async function (req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  var origin = req.headers.origin;
+  res.setHeader('Access-Control-Allow-Origin', CORS_ORIGINS.includes(origin) ? origin : 'https://questtick.com');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+  // Better Auth routes — /auth/sign-in, /auth/sign-up, /auth/sign-out, /auth/session, etc.
+  if (req.url.startsWith('/auth')) {
+    return toNodeHandler(getAuth())(req, res);
+  }
 
   if (req.method === 'POST' && req.url === '/api/analyze') {
     var analyzeBody = '';
@@ -651,21 +677,18 @@ var httpServer = http.createServer(async function (req, res) {
     req.on('data', function (chunk) { body += chunk; });
     req.on('end', async function () {
       try {
+        var session = await getSession(req);
+        if (!session) return unauthorized(res);
+        var userId = session.user.id;
+
         var parsed = JSON.parse(body);
-        var action = parsed.action, code = parsed.code, levels = parsed.levels;
-        // Allow Latin, digits, underscore, hyphen, Cyrillic
-        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid code' }));
-          return;
-        }
-        var key = 'levels:' + code.toLowerCase();
+        var action = parsed.action, levels = parsed.levels;
+        var key = 'levels:' + userId;
         if (action === 'get') {
           var r = await redis(['GET', key]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ levels: r.result ? JSON.parse(r.result) : {} }));
         } else if (action === 'save') {
-          // Normalize sym keys to lowercase before storing
           var normLevels = {};
           Object.keys(levels || {}).forEach(function (s) { normLevels[s.toLowerCase()] = levels[s]; });
           await redis(['SET', key, JSON.stringify(normLevels)]);
@@ -688,28 +711,26 @@ var httpServer = http.createServer(async function (req, res) {
     req.on('data', function (chunk) { body2 += chunk; });
     req.on('end', async function () {
       try {
+        var session = await getSession(req);
+        if (!session) return unauthorized(res);
+        var userId = session.user.id;
+
         var parsed = JSON.parse(body2);
-        var action = parsed.action, code = parsed.code, chatId = parsed.chatId, data = parsed.data;
-        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid code' }));
-          return;
-        }
-        var codeKey = code.toLowerCase();
+        var action = parsed.action, chatId = parsed.chatId, data = parsed.data;
         if (action === 'get') {
-          if (!alertsMemory[codeKey]) {
-            var ar = await redis(['GET', 'alerts:' + codeKey]);
-            alertsMemory[codeKey] = ar.result ? JSON.parse(ar.result) : { chatId: '', data: {} };
+          if (!alertsMemory[userId]) {
+            var ar = await redis(['GET', 'alerts:' + userId]);
+            alertsMemory[userId] = ar.result ? JSON.parse(ar.result) : { chatId: '', data: {} };
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(alertsMemory[codeKey]));
+          res.end(JSON.stringify(alertsMemory[userId]));
         } else if (action === 'save') {
-          if (!alertsMemory[codeKey]) alertsMemory[codeKey] = { chatId: '', data: {} };
-          if (chatId) alertsMemory[codeKey].chatId = String(chatId); // never overwrite with empty
+          if (!alertsMemory[userId]) alertsMemory[userId] = { chatId: '', data: {} };
+          if (chatId) alertsMemory[userId].chatId = String(chatId);
           if (data !== undefined) {
-            alertsMemory[codeKey].data = mergeAlertData(alertsMemory[codeKey].data, data);
+            alertsMemory[userId].data = mergeAlertData(alertsMemory[userId].data, data);
           }
-          await saveAlertsToRedis(codeKey);
+          await saveAlertsToRedis(userId);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else {
@@ -729,15 +750,14 @@ var httpServer = http.createServer(async function (req, res) {
     req.on('data', function (chunk) { bodyBr += chunk; });
     req.on('end', async function () {
       try {
+        var session = await getSession(req);
+        if (!session) return unauthorized(res);
+        var userId = session.user.id;
+
         var parsed = JSON.parse(bodyBr);
-        var action = parsed.action, code = parsed.code, entries = parsed.entries;
-        if (!code || typeof code !== 'string' || !/^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid code' }));
-          return;
-        }
-        var key = 'briefing:' + code.toLowerCase();
-        var keyAI = 'briefing_ai:' + code.toLowerCase();
+        var action = parsed.action, entries = parsed.entries;
+        var key = 'briefing:' + userId;
+        var keyAI = 'briefing_ai:' + userId;
         if (action === 'get') {
           var r = await redis(['GET', key]);
           var rAI = await redis(['GET', keyAI]);
@@ -757,10 +777,9 @@ var httpServer = http.createServer(async function (req, res) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null })]);
           }
           if (typeof parsed.utcOffset === 'number' && isFinite(parsed.utcOffset)) {
-            await redis(['SET', 'briefing_tz:' + code.toLowerCase(), String(parsed.utcOffset)]);
-            if (code.toLowerCase() === BRIEFING_USER_CODE) _userUtcOffset = parsed.utcOffset;
+            await redis(['SET', 'briefing_tz:' + userId, String(parsed.utcOffset)]);
+            _userUtcOffset = parsed.utcOffset; // single-user — always update
           }
-          // Notify all connected clients to refresh briefing (skip when only saving AI)
           if (!parsed.skip_entries) {
             var _bMsg = JSON.stringify({ type: 'briefing_updated' });
             clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(_bMsg); });
@@ -789,10 +808,11 @@ var httpServer = http.createServer(async function (req, res) {
         res.end(JSON.stringify(data));
       }
       try {
+        var proxySession = await getSession(req);
+        if (!proxySession) return proxyJson(401, { error: 'Unauthorized' });
+
         var p = JSON.parse(proxyBody);
-        var service = p.service, payload = p.payload || {}, userCode = p.user_code;
-        var PROXY_SECRET = process.env.PROXY_SECRET;
-        if (!PROXY_SECRET || userCode !== PROXY_SECRET) return proxyJson(401, { error: 'Unauthorized' });
+        var service = p.service, payload = p.payload || {};
 
         if (service === 'binance') {
           var BIN_KEY = process.env.BINANCE_API_KEY;
@@ -917,17 +937,15 @@ wss.on('connection', function (ws) {
       }
 
       else if (msg.type === 'save_alerts') {
-        // Frontend pushes alert data directly — instant alertsMemory update + Redis persist.
-        // Previously only updated in-memory; if HTTP backup failed, 30s Redis reload erased the alert.
-        var code = msg.code;
-        if (code && typeof code === 'string' && /^[a-zA-Z0-9_\-Ѐ-ӿ]{2,40}$/.test(code)) {
-          var ck = code.toLowerCase();
-          if (!alertsMemory[ck]) alertsMemory[ck] = { chatId: '', data: {} };
-          if (msg.chatId) alertsMemory[ck].chatId = String(msg.chatId); // never overwrite with empty
+        // Frontend pushes userId as msg.code (replaces old user-defined code string).
+        var wsUserId = msg.code;
+        if (wsUserId && typeof wsUserId === 'string' && wsUserId.length > 0) {
+          if (!alertsMemory[wsUserId]) alertsMemory[wsUserId] = { chatId: '', data: {} };
+          if (msg.chatId) alertsMemory[wsUserId].chatId = String(msg.chatId);
           if (msg.data !== undefined) {
-            alertsMemory[ck].data = mergeAlertData(alertsMemory[ck].data, msg.data);
+            alertsMemory[wsUserId].data = mergeAlertData(alertsMemory[wsUserId].data, msg.data);
           }
-          saveAlertsToRedis(ck); // persist immediately so 30s reload can't erase it
+          saveAlertsToRedis(wsUserId);
         }
       }
 

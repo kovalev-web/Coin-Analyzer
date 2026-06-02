@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         main:   'index.html',
         phase:  'inplay-phase.html',
+        login:  'login.html',
       },
     },
   },

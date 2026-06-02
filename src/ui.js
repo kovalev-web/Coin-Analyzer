@@ -203,8 +203,13 @@ window.__charts = _charts;
 // ── Levels ─────────────────────────────────────────────────────────────────
 
 var _levels = {}; // symbol → [{price, line}]
-var _userCode = localStorage.getItem('pa_user_code') || null;
+var _userId = null; // set by setUserId() after session check
 var _syncTimer = null;
+
+export function setUserId(id) {
+  _userId = id;
+  _briefingUserCode = id; // briefing section uses its own var
+}
 
 function levelsData() {
   var data = {};
@@ -215,11 +220,12 @@ function levelsData() {
 }
 
 function syncToServer() {
-  if (!_userCode) return;
+  if (!_userId) return;
   fetch(API_BASE + '/api/levels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: _userCode, levels: levelsData() }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', levels: levelsData() }),
   }).catch(function () {});
 }
 
@@ -259,23 +265,22 @@ function applyServerLevels(data) {
   reattachAllLevels();
 }
 
-function fetchServerLevels(code) {
+function fetchServerLevels() {
   fetch(API_BASE + '/api/levels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get', code: code }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'get' }),
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d || !d.levels) return;
     var serverEmpty = Object.keys(d.levels).length === 0;
     var localData = levelsData();
     var localHasData = Object.keys(localData).length > 0;
-    // If server is empty but we have local levels, push them up
     if (serverEmpty && localHasData) {
       syncToServer();
     } else if (!serverEmpty) {
       applyServerLevels(d.levels);
     }
-    // If both empty: do nothing — preserve local state
   }).catch(function () {});
 }
 
@@ -286,64 +291,44 @@ export function loadLevels() {
       _levels[sym.toLowerCase()] = local[sym].map(function (p) { return { price: p, line: null }; });
     });
   } catch (e) {}
-  if (_userCode) fetchServerLevels(_userCode);
+  if (_userId) fetchServerLevels();
 }
 
-export function showCodeModal() {
+export function showSettingsModal() {
   if (document.getElementById('code-modal-backdrop')) return;
   var backdrop = document.createElement('div');
   backdrop.id = 'code-modal-backdrop';
   backdrop.className = 'code-modal-backdrop';
   backdrop.innerHTML =
     '<div class="code-modal">' +
-      '<div class="popup-header"><span class="popup-title">Синхронизация</span><button class="popup-close" id="code-modal-close">' + icon('x', 16) + '</button></div>' +
+      '<div class="popup-header"><span class="popup-title">Настройки</span><button class="popup-close" id="code-modal-close">' + icon('x', 16) + '</button></div>' +
       '<div class="popup-body">' +
-        '<p>Придумайте код — он нужен чтобы видеть ваши уровни на любом устройстве.<br>Латинские буквы и цифры, от 2 до 40 символов.</p>' +
-        '<input id="code-modal-input" type="text" placeholder="например: dmitrii или trader007" maxlength="40" autocomplete="off" spellcheck="false" />' +
-        '<p style="margin-top:16px;margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
+        '<p style="margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
         '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
         '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
-        '<p style="margin-top:16px;margin-bottom:4px;">Proxy ключ <span style="color:var(--graphite);font-size:11px;">(Binance + Gemini)</span></p>' +
-        '<input id="proxy-secret-input" type="password" placeholder="Ключ доступа" maxlength="64" autocomplete="off" spellcheck="false" />' +
         '<div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:16px;">' +
           '<button id="clear-all-alerts-btn" class="code-modal-danger">Удалить все алерты</button>' +
         '</div>' +
       '</div>' +
       '<div class="popup-footer code-modal-actions">' +
         '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
-        '<button class="code-modal-skip" id="code-modal-skip">Пропустить</button>' +
+        '<button class="code-modal-skip" id="code-modal-skip">Отмена</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(backdrop);
 
-  var input = document.getElementById('code-modal-input');
   var chatInput = document.getElementById('chat-id-input');
-  var proxyInput = document.getElementById('proxy-secret-input');
   var saveBtn = document.getElementById('code-modal-save');
   var skipBtn = document.getElementById('code-modal-skip');
   var clearAllBtn = document.getElementById('clear-all-alerts-btn');
 
-  if (_userCode) input.value = _userCode;
   if (_chatId) chatInput.value = _chatId;
-  if (_proxySecret) proxyInput.value = _proxySecret;
 
   function save() {
-    var code = input.value.trim();
-    if (!/^[a-zA-Z0-9_\-]{2,40}$/.test(code)) {
-      input.style.borderColor = 'var(--danger)';
-      input.focus();
-      return;
-    }
     var newChatId = chatInput.value.trim();
     if (newChatId) { _chatId = newChatId; localStorage.setItem('pa_chat_id', newChatId); }
-    var newProxySecret = proxyInput.value.trim();
-    if (newProxySecret) { _proxySecret = newProxySecret; localStorage.setItem('pa_proxy_secret', newProxySecret); }
-    _userCode = code;
-    localStorage.setItem('pa_user_code', code);
     backdrop.remove();
-    fetchServerLevels(code);
-    fetchServerAlerts(code);
-    loadBriefing();
+    syncAlertsToServer();
   }
 
   var _clearTimer = null;
@@ -367,8 +352,8 @@ export function showCodeModal() {
   saveBtn.addEventListener('click', save);
   skipBtn.addEventListener('click', function () { backdrop.remove(); });
   document.getElementById('code-modal-close').addEventListener('click', function () { backdrop.remove(); });
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
-  input.focus();
+  chatInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
+  chatInput.focus();
 }
 
 export function clearAllAlerts() {
@@ -448,7 +433,6 @@ var _aLines = {};       // alertId → { card, fv }
 var _aIdSeed = 0;
 
 var _chatId = localStorage.getItem('pa_chat_id') || '';
-var _proxySecret = localStorage.getItem('pa_proxy_secret') || '';
 var _alertSyncTimer = null;
 
 function _aNewId() { return 'a' + (++_aIdSeed) + '_' + Date.now(); }
@@ -537,22 +521,21 @@ function _updateAlertsBtn(sym) { updateClearBtn(sym); }
 
 function saveAlerts() {
   try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
-  // Push via WS immediately (no debounce) so server is up-to-date before
-  // any pending fetchServerAlerts response can arrive and overwrite local state.
-  if (_userCode) sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: alertsData() });
-  // Debounced HTTP as backup when WS is unavailable.
+  // Push via WS immediately so server is up-to-date before any pending HTTP response.
+  if (_userId) sendWS({ type: 'save_alerts', code: _userId, chatId: _chatId, data: alertsData() });
   clearTimeout(_alertSyncTimer);
   _alertSyncTimer = setTimeout(syncAlertsToServer, 1000);
 }
 
 function syncAlertsToServer() {
-  if (!_userCode) return;
+  if (!_userId) return;
   var data = alertsData();
-  sendWS({ type: 'save_alerts', code: _userCode, chatId: _chatId, data: data });
+  sendWS({ type: 'save_alerts', code: _userId, chatId: _chatId, data: data });
   fetch(API_BASE + '/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: _userCode, chatId: _chatId, data: data }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', chatId: _chatId, data: data }),
   }).catch(function () {});
 }
 
@@ -578,21 +561,18 @@ function applyServerAlerts(entry) {
   _syncAllAlerts();
 }
 
-function fetchServerAlerts(code) {
+function fetchServerAlerts() {
   fetch(API_BASE + '/api/alerts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get', code: code }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'get' }),
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d) return;
     var serverHasData = d.data && Object.keys(d.data).length > 0;
     if (serverHasData) {
-      // Server is the source of truth — always apply.
-      // Race condition (local has alerts not yet synced) is handled by the
-      // immediate WS push in saveAlerts(), so server already has them.
       applyServerAlerts(d);
     } else {
-      // Server empty: push local data up (e.g. first session on this device).
       var localHasData = Object.keys(alertsData()).length > 0;
       if (localHasData) syncAlertsToServer();
     }
@@ -608,7 +588,7 @@ export function loadAlerts() {
       });
     });
   } catch (e) {}
-  if (_userCode) fetchServerAlerts(_userCode);
+  if (_userId) fetchServerAlerts();
 }
 
 function addAlert(sym, price) {
@@ -1614,6 +1594,7 @@ function _topbarHTML() {
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
     + '<button class="burger-dd-item" data-action="open-settings">' + icon('user-round', 14) + 'Настройки</button>'
+    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
     + '</div>'
     + '</div>'
     + '</div>'
@@ -1757,7 +1738,7 @@ var _fvTradeMarkersData = [];
 
 // ── Briefing ───────────────────────────────────────────────────────────────
 
-var _briefingUserCode = localStorage.getItem('pa_user_code') || null;
+var _briefingUserCode = null; // set by setUserId()
 var _briefingSyncTimer = null;
 var _expandedBpKey = null; // sym:date of currently expanded popup row
 var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
@@ -1808,12 +1789,12 @@ function saveBriefingLocal() {
 }
 
 function syncBriefingToServer() {
-  var code = _briefingUserCode || localStorage.getItem('pa_user_code');
-  if (!code) return;
+  if (!_briefingUserCode) return;
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save', code: code, entries: state.briefing, utcOffset: Math.round(new Date().getTimezoneOffset() / -60) }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', entries: state.briefing, utcOffset: Math.round(new Date().getTimezoneOffset() / -60) }),
   }).catch(function () {});
 }
 var _lastSyncAt = 0;
@@ -1827,15 +1808,15 @@ export function syncBriefingNow() {
 export function briefingJustSynced() { return Date.now() - _lastSyncAt < 2000; }
 export function refreshBriefingFromServer() {
   if (briefingJustSynced()) return;
+  if (!_briefingUserCode) return;
   var _versionAtStart = _syncVersion;
-  var code = _briefingUserCode || localStorage.getItem('pa_user_code');
-  if (!code) return;
   var _today = new Date(); var _dow = _today.getDay();
   var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
   var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
   fetch(API_BASE + '/api/briefing', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get', code: code }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'get' }),
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (_syncVersion !== _versionAtStart) return; // sync happened while fetching — discard stale data
     if (!d || !Array.isArray(d.entries)) return;
@@ -1881,22 +1862,22 @@ export function loadBriefing() {
     var savedDate = localStorage.getItem('pa_ai_summary_date');
     if (savedDate) state.aiSummaryDate = savedDate;
   } catch (e) {}
-  var code = localStorage.getItem('pa_user_code');
-  if (!code) return;
-  _briefingUserCode = code;
+  if (!_briefingUserCode) return;
   // If we have AI summary locally — push it to server so other devices can get it
   if (state.aiSummary) {
     fetch(API_BASE + '/api/briefing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save', code: code, entries: state.briefing, skip_entries: true,
+      credentials: 'include',
+      body: JSON.stringify({ action: 'save', entries: state.briefing, skip_entries: true,
         ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys || [], ai_summary_date: state.aiSummaryDate || null }),
     }).catch(function () {});
   }
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get', code: code }),
+    credentials: 'include',
+    body: JSON.stringify({ action: 'get' }),
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (d && Array.isArray(d.entries)) {
       var _serverEntries = d.entries.filter(function (e) { return e.date >= _mondayStr; });

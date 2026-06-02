@@ -865,15 +865,7 @@ function _dateToMs(dateStr, endOfDay) {
   return d.getTime();
 }
 
-function _proxyCode() {
-  return localStorage.getItem('pa_user_code') || '';
-}
-
-// Separate secret for proxy auth — decoupled from user data code.
-// Falls back to pa_user_code for backward compatibility.
-function _proxySecret() {
-  return localStorage.getItem('pa_proxy_secret') || localStorage.getItem('pa_user_code') || '';
-}
+// Proxy calls use session cookie for auth (no user_code needed after auth migration)
 
 // Fetch trades for one symbol on one date. Results cached in state.trades.
 var _fetchTradesInFlight = {};
@@ -892,9 +884,9 @@ export async function fetchTrades(symbol, dateStr) {
       var res = await fetch(API_BASE + '/api/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           service: 'binance',
-          user_code: _proxySecret(),
           payload: {
             symbol: binSym,
             startTime: _dateToMs(dateStr, false),
@@ -1064,9 +1056,9 @@ export async function generateWeeklySummary() {
   var res = await fetch(API_BASE + '/api/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       service: 'gemini',
-      user_code: _proxySecret(),
       payload: { prompt: prompt },
     }),
   });
@@ -1084,15 +1076,13 @@ export async function generateWeeklySummary() {
     localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
     localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
   } catch (e) {}
-  var _aiCode = _proxyCode();
-  if (_aiCode) {
-    fetch(API_BASE + '/api/briefing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save', code: _aiCode, entries: state.briefing,
-        ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys, ai_summary_date: state.aiSummaryDate }),
-    }).catch(function () {});
-  }
+  fetch(API_BASE + '/api/briefing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', entries: state.briefing,
+      ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys, ai_summary_date: state.aiSummaryDate }),
+  }).catch(function () {});
   emit('trades:ai-updated');
   return state.aiSummary;
 }

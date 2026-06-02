@@ -5,13 +5,14 @@ import {
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, showCodeModal, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
+  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, showSettingsModal,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
+  setUserId,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -259,8 +260,15 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     case 'open-settings':
-      showCodeModal();
+      showSettingsModal();
       break;
+    case 'logout': {
+      var _wsEnv2 = import.meta.env.VITE_WS_URL || '';
+      var _apiBase2 = _wsEnv2.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
+      fetch(_apiBase2 + '/auth/sign-out', { method: 'POST', credentials: 'include' })
+        .finally(function () { window.location.replace('/login'); });
+      break;
+    }
     case 'toggle-briefing':
       toggleBriefing(sym);
       break;
@@ -535,11 +543,31 @@ registerRoute('/404', function () {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
-loadCache();
-loadAlerts();
-loadBriefing();
+// Check session first — redirect to /login if not authenticated.
+// On network error (server down) we still load the app so WS reconnect can recover.
+(async function () {
+  var _wsEnv = import.meta.env.VITE_WS_URL || '';
+  var apiBase = _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
+  try {
+    var r = await fetch(apiBase + '/auth/session', { credentials: 'include' });
+    if (r.ok) {
+      var s = await r.json();
+      if (s && s.user && s.user.id) {
+        setUserId(s.user.id);
+      } else {
+        window.location.replace('/login');
+        return;
+      }
+    } else {
+      window.location.replace('/login');
+      return;
+    }
+  } catch (e) {
+    // Server unreachable — continue loading app; WS will surface the error
+  }
 
-// Show code modal on first visit (no code set yet)
-if (!localStorage.getItem('pa_user_code')) showCodeModal();
-
-initRouter('/');
+  loadCache();
+  loadAlerts();
+  loadBriefing();
+  initRouter('/');
+})();
