@@ -1739,6 +1739,7 @@ var _fvTradeMarkersData = [];
 // ── Briefing ───────────────────────────────────────────────────────────────
 
 var _briefingUserCode = null; // set by setUserId()
+var _briefingServerLoaded = false; // true after first successful server GET
 var _briefingSyncTimer = null;
 var _expandedBpKey = null; // sym:date of currently expanded popup row
 var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
@@ -1790,6 +1791,7 @@ function saveBriefingLocal() {
 
 function syncBriefingToServer() {
   if (!_briefingUserCode) return;
+  if (!_briefingServerLoaded) return;
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1834,6 +1836,7 @@ export function refreshBriefingFromServer() {
     });
     var _needsSync = _merged.some(function (e, i) { return e !== _serverEntries[i]; });
     state.briefing = _merged;
+    _briefingServerLoaded = true;
     if (_needsSync) syncBriefingToServer(); // only if local note was newer
     try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {} // no debounce sync — don't push server data back
     renderBriefingPanel();
@@ -1894,6 +1897,7 @@ export function loadBriefing() {
       });
       var _needsSync = _merged.some(function (e, i) { return e !== _serverEntries[i]; });
       state.briefing = _merged;
+      _briefingServerLoaded = true;
       if (_needsSync) syncBriefingToServer();
       saveBriefingLocal();
       renderBriefingPanel();
