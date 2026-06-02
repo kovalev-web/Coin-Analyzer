@@ -6,7 +6,11 @@
 var OLD_CODE = 'dmitrii';
 var NEW_ID   = 'Yvo6BTsNvIZBXkkqTWwWmdNTYGUce4SnF';
 
-require('dotenv').config();
+var fs = require('fs');
+fs.readFileSync('.env', 'utf8').split('\n').forEach(function (line) {
+  var m = line.match(/^([^=]+)=(.*)$/);
+  if (m) process.env[m[1].trim()] = m[2].trim();
+});
 
 var REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
 var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
