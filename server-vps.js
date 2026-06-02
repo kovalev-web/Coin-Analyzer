@@ -1006,7 +1006,7 @@ bootstrapTicker().then(function() {
       initOrderbookState(sym);
       subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
     });
-    logInplay('[Inplay] Subscribed depthWS to', inplaySymbols.length, 'streams');
+    logInplay('[Inplay] Subscribed depthWS to', depthSubscribed.size, 'streams (cap 50, watchlist', inplaySymbols.length, ')' );
 
     // Start score update loop
     setInterval(function () {
