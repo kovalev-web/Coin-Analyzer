@@ -6,7 +6,6 @@
     "api/proxy.js": { "regions": ["sin1"] }
   },
   "rewrites": [
-    { "source": "/inplay-beta",  "destination": "/inplay-beta.html" },
     { "source": "/inplay-phase", "destination": "/inplay-phase.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
