@@ -3,8 +3,9 @@
 // Run on VPS: node migrate-redis.js
 // Copies Redis data from old code 'dmitrii' → new userId
 
-var OLD_CODE = 'dmitrii';
-var NEW_ID   = 'Yvo6BTsNvIZBXkkqTWwWmdNTYGUce4SnF';
+var OLD_CODE          = 'dmitrii';
+var OLD_BRIEFING_CODE = '0208';
+var NEW_ID            = 'Yvo6BTsNvIZBXkkqTWwWmdNTYGUce4SnF';
 
 var fs = require('fs');
 fs.readFileSync('.env', 'utf8').split('\n').forEach(function (line) {
@@ -36,8 +37,9 @@ async function main() {
 
   await copyKey('levels:'     + OLD_CODE, 'levels:'     + NEW_ID);
   await copyKey('alerts:'     + OLD_CODE, 'alerts:'     + NEW_ID);
-  await copyKey('briefing:'   + OLD_CODE, 'briefing:'   + NEW_ID);
-  await copyKey('briefing_tz:' + OLD_CODE, 'briefing_tz:' + NEW_ID);
+  await copyKey('briefing:'    + OLD_BRIEFING_CODE, 'briefing:'    + NEW_ID);
+  await copyKey('briefing_ai:' + OLD_BRIEFING_CODE, 'briefing_ai:' + NEW_ID);
+  await copyKey('briefing_tz:' + OLD_BRIEFING_CODE, 'briefing_tz:' + NEW_ID);
 
   // Add new userId to alert_codes set
   var r = await redis(['SADD', 'alert_codes', NEW_ID]);
