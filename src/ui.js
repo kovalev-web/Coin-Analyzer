@@ -204,12 +204,17 @@ window.__charts = _charts;
 
 var _levels = {}; // symbol → [{price, line}]
 var _userId = null; // set by setUserId() after session check
+var _userEmail = null;
 var _userAvatar = null;
 var _syncTimer = null;
 
 export function setUserId(id) {
   _userId = id;
   _briefingUserCode = id; // briefing section uses its own var
+}
+
+export function setUserEmail(email) {
+  _userEmail = email;
 }
 
 export function setUserAvatar(av) {
@@ -392,13 +397,9 @@ export function showAccountModal() {
         + '<div id="acc-tg-status"></div>'
       + '</div>'
       + '<div class="account-section">'
-        + '<div class="account-section-title">Смена пароля</div>'
-        + '<input type="password" id="acc-pass-cur" placeholder="Текущий пароль" autocomplete="current-password">'
-        + '<div class="acc-field-err" id="acc-pass-cur-err"></div>'
-        + '<input type="password" id="acc-pass-new" placeholder="Новый пароль" autocomplete="new-password">'
-        + '<div class="acc-field-err" id="acc-pass-new-err"></div>'
-        + '<input type="password" id="acc-pass-con" placeholder="Подтвердить пароль" autocomplete="new-password">'
-        + '<div class="acc-field-err" id="acc-pass-con-err"></div>'
+        + '<div class="account-section-title">Пароль</div>'
+        + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
+        + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
       + '</div>'
       + '<div class="account-section">'
         + '<div class="account-section-title">Безопасность</div>'
@@ -504,65 +505,48 @@ export function showAccountModal() {
       });
   });
 
+  document.getElementById('acc-reset-pass-btn').addEventListener('click', function () {
+    var btn = document.getElementById('acc-reset-pass-btn');
+    var msg = document.getElementById('acc-reset-pass-msg');
+    btn.disabled = true; btn.textContent = '…';
+    fetch(API_BASE + '/auth/forget-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email: _userEmail, redirectTo: 'https://questtick.com/reset-password' }),
+    })
+      .then(function (r) {
+        if (r.ok) {
+          msg.style.color = '#80c080';
+          msg.textContent = 'Письмо отправлено на ' + _userEmail;
+        } else {
+          throw new Error('fail');
+        }
+        btn.disabled = false; btn.textContent = 'Изменить пароль по email';
+      })
+      .catch(function () {
+        msg.style.color = '';
+        msg.textContent = 'Ошибка, попробуйте ещё раз';
+        btn.disabled = false; btn.textContent = 'Изменить пароль по email';
+      });
+  });
+
   document.getElementById('account-save').addEventListener('click', async function () {
     var saveBtn = document.getElementById('account-save');
-    var curPass = document.getElementById('acc-pass-cur').value;
-    var newPass = document.getElementById('acc-pass-new').value;
-    var conPass = document.getElementById('acc-pass-con').value;
-    var curErr = document.getElementById('acc-pass-cur-err');
-    var newErr = document.getElementById('acc-pass-new-err');
-    var conErr = document.getElementById('acc-pass-con-err');
-
-    curErr.textContent = newErr.textContent = conErr.textContent = '';
-
-    var passChanged = curPass || newPass || conPass;
-    var hasErr = false;
-
-    if (passChanged) {
-      if (!curPass) { curErr.textContent = 'Введите текущий пароль'; hasErr = true; }
-      if (!newPass) { newErr.textContent = 'Введите новый пароль'; hasErr = true; }
-      if (newPass && newPass.length < 8) { newErr.textContent = 'Минимум 8 символов'; hasErr = true; }
-      if (newPass && conPass !== newPass) { conErr.textContent = 'Пароли не совпадают'; hasErr = true; }
-    }
-    if (hasErr) return;
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = '…';
-
-    var promises = [];
+    saveBtn.disabled = true; saveBtn.textContent = '…';
 
     if (_selectedAvatar && _selectedAvatar !== _userAvatar) {
       setUserAvatar(_selectedAvatar);
-      promises.push(
-        fetch(API_BASE + '/api/account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ action: 'save-avatar', avatar: _selectedAvatar }),
-        }).catch(function () {})
-      );
+      await fetch(API_BASE + '/api/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'save-avatar', avatar: _selectedAvatar }),
+      }).catch(function () {});
     }
 
-    if (passChanged && !hasErr) {
-      promises.push(
-        fetch(API_BASE + '/auth/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ currentPassword: curPass, newPassword: newPass, revokeOtherSessions: true }),
-        }).then(function (r) {
-          return r.json().then(function (d) {
-            if (!r.ok) { curErr.textContent = d.message || 'Неверный текущий пароль'; hasErr = true; }
-          });
-        })
-      );
-    }
-
-    await Promise.all(promises);
-
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Сохранить';
-    if (!hasErr) el.remove();
+    saveBtn.disabled = false; saveBtn.textContent = 'Сохранить';
+    el.remove();
   });
 }
 

@@ -8,7 +8,8 @@
   "rewrites": [
     { "source": "/inplay-phase",  "destination": "/inplay-phase.html" },
     { "source": "/login",         "destination": "/login.html" },
-    { "source": "/verify-email",  "destination": "/verify-email.html" },
+    { "source": "/verify-email",   "destination": "/verify-email.html" },
+    { "source": "/reset-password", "destination": "/reset-password.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

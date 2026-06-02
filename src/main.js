@@ -12,7 +12,7 @@ import {
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
-  setUserId, setUserAvatar, showAccountModal,
+  setUserId, setUserEmail, setUserAvatar, showAccountModal,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -567,6 +567,7 @@ registerRoute('/404', function () {
       var s = await r.json();
       if (s && s.user && s.user.id) {
         setUserId(s.user.id);
+        if (s.user.email) setUserEmail(s.user.email);
         fetch(apiBase + '/api/account', { credentials: 'include' })
           .then(function (ar) { return ar.json(); })
           .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
