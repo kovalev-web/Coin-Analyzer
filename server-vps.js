@@ -650,7 +650,9 @@ var httpServer = http.createServer(async function (req, res) {
 
   // Better Auth routes — rewrite /auth/* → /api/auth/* (BA default basePath)
   if (req.url.startsWith('/auth')) {
-    req.url = '/api/auth' + req.url.slice(5);
+    var rewritten = '/api/auth' + req.url.slice(5);
+    console.log('[Auth] ' + req.method + ' ' + req.url + ' → ' + rewritten);
+    req.url = rewritten;
     return toNodeHandler(getAuth())(req, res);
   }
 
