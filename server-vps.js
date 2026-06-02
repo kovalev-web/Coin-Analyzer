@@ -74,8 +74,9 @@ async function redis(cmd) {
 
 // ── Telegram ─────────────────────────────────────────────────────────────
 
-var TELEGRAM_TOKEN      = process.env.TELEGRAM_BOT_TOKEN;
-var INPLAY_ALERT_CHAT_ID = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
+var TELEGRAM_TOKEN        = process.env.TELEGRAM_BOT_TOKEN;
+var TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
+var INPLAY_ALERT_CHAT_ID  = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
 var BRIEFING_USER_CODE  = (process.env.BRIEFING_USER_CODE || process.env.PROXY_SECRET || '').toLowerCase();
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
 var _userUtcOffset = null; // loaded from Redis briefing_tz:{code} at startup, updated on save
@@ -118,7 +119,25 @@ async function pollTelegram() {
       tgOffset = upd.update_id + 1;
       var msg = upd.message;
       if (msg && msg.text && msg.text.startsWith('/start')) {
-        sendTG(msg.chat.id, 'Ваш Telegram chat_id:\n<code>' + msg.chat.id + '</code>\n\nВведите его на questtick.com → аватарка (правый верхний угол) → Личный кабинет → поле Telegram.');
+        var startToken = msg.text.split(' ')[1];
+        if (startToken) {
+          (async function (chatId, tok) {
+            var linkRes = await redis(['GETDEL', 'tg_link:' + tok]);
+            if (linkRes && linkRes.result) {
+              var linkUserId = linkRes.result;
+              var chatIdStr = String(chatId);
+              await redis(['SET', 'tg_chat:' + linkUserId, chatIdStr]);
+              if (!alertsMemory[linkUserId]) alertsMemory[linkUserId] = { chatId: '', data: {} };
+              alertsMemory[linkUserId].chatId = chatIdStr;
+              await saveAlertsToRedis(linkUserId);
+              sendTG(chatId, '✅ Telegram подключён к Questtick!\n\nАлерты на цену будут приходить в этот чат.');
+            } else {
+              sendTG(chatId, '❌ Ссылка устарела или уже использована.\nСгенерируйте новую в Личном кабинете на questtick.com.');
+            }
+          })(msg.chat.id, startToken);
+        } else {
+          sendTG(msg.chat.id, 'Используйте кнопку "Подключить Telegram" в Личном кабинете на questtick.com.');
+        }
       } else if (msg && msg.text && msg.text.startsWith('/test')) {
         sendTG(msg.chat.id, '🚨 Inplay Phase\n<b>BTC</b> — 🟢 LONG ↑\nRVOL: 9.2x | Δp15m: +10.50% | CVD_z: 1.83\n24h Vol: $48.2B\n\n<i>Test alert — доставка работает ✓</i>');
       } else if (msg && msg.text && msg.text.startsWith('/briefing')) {
@@ -810,8 +829,10 @@ var httpServer = http.createServer(async function (req, res) {
       var userId = session.user.id;
       var r = await redis(['GET', 'avatar:' + userId]);
       var avatar = r && r.result ? r.result : null;
+      var tgRes = await redis(['EXISTS', 'tg_chat:' + userId]);
+      var tgConnected = !!(tgRes && tgRes.result);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
@@ -832,6 +853,16 @@ var httpServer = http.createServer(async function (req, res) {
           await redis(['SET', 'avatar:' + userId, parsed.avatar]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'tg-link-start') {
+          if (!TELEGRAM_BOT_USERNAME) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Bot not configured' }));
+            return;
+          }
+          var token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          await redis(['SET', 'tg_link:' + token, userId, 'EX', '300']);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ url: 'https://t.me/' + TELEGRAM_BOT_USERNAME + '?start=' + token }));
         } else {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Unknown action' }));

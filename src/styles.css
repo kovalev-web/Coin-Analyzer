@@ -347,6 +347,12 @@
     .acc-field-err{font-size:12px;color:#f08080;min-height:18px;margin:2px 0 6px;}
     .account-save-btn{background:var(--primary);color:#fff;border:none;}
     .account-save-btn:hover:not(:disabled){background:var(--primary-bright);opacity:1;}
+    .tg-connect-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:36px;border-radius:8px;background:var(--fog);color:var(--ink);border:1.5px solid var(--steel);font-size:13px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;text-decoration:none;}
+    .tg-connect-btn:hover:not(:disabled){opacity:0.8;}
+    .tg-connect-btn:disabled{opacity:0.5;cursor:default;}
+    .tg-connected{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#4caf7d;}
+    .tg-hint{font-size:12px;color:var(--graphite);margin:8px 0 6px;}
+    .tg-waiting{color:var(--graphite);}
 
     /* ── Tier badge (topbar single button) ── */
     .tier-badge{background:var(--ink);color:var(--on-ink);border:none;padding:0 14px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;}

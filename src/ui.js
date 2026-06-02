@@ -389,8 +389,7 @@ export function showAccountModal() {
       + '</div>'
       + '<div class="account-section">'
         + '<div class="account-section-title">Telegram</div>'
-        + '<input type="text" id="acc-chat-id" placeholder="chat_id для алертов" maxlength="20" autocomplete="off" value="' + (_chatId || '') + '">'
-        + '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту — получите ваш chat_id.</p>'
+        + '<div id="acc-tg-status"></div>'
       + '</div>'
       + '<div class="account-section">'
         + '<div class="account-section-title">Смена пароля</div>'
@@ -410,7 +409,42 @@ export function showAccountModal() {
   document.body.appendChild(el);
   el.classList.add('open');
 
-  // Load saved avatar from server
+  function renderTgStatus(connected) {
+    var s = document.getElementById('acc-tg-status');
+    if (!s) return;
+    if (connected) {
+      s.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
+      return;
+    }
+    s.innerHTML = '<button class="tg-connect-btn" id="acc-tg-btn">Подключить Telegram</button>';
+    document.getElementById('acc-tg-btn').addEventListener('click', function () {
+      var btn = document.getElementById('acc-tg-btn');
+      btn.disabled = true; btn.textContent = '…';
+      fetch(API_BASE + '/api/account', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'tg-link-start' }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.url) { btn.disabled = false; btn.textContent = 'Подключить Telegram'; return; }
+          s.innerHTML =
+            '<p class="tg-hint">Откройте бота и нажмите Start:</p>'
+            + '<a class="tg-connect-btn" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
+            + '<p class="tg-hint tg-waiting">Ожидаю подключения…</p>';
+          var polls = 0;
+          var t = setInterval(function () {
+            if (++polls > 150) { clearInterval(t); return; }
+            fetch(API_BASE + '/api/account', { credentials: 'include' })
+              .then(function (r) { return r.json(); })
+              .then(function (d2) { if (d2.tgConnected) { clearInterval(t); renderTgStatus(true); } })
+              .catch(function () {});
+          }, 2000);
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = 'Подключить Telegram'; });
+    });
+  }
+
+  // Load saved avatar + tg status from server
   fetch(API_BASE + '/api/account', { credentials: 'include' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
@@ -421,8 +455,9 @@ export function showAccountModal() {
           btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
         });
       }
+      renderTgStatus(!!d.tgConnected);
     })
-    .catch(function () {});
+    .catch(function () { renderTgStatus(false); });
 
   var _selectedAvatar = _userAvatar;
 
@@ -458,13 +493,6 @@ export function showAccountModal() {
       if (newPass && conPass !== newPass) { conErr.textContent = 'Пароли не совпадают'; hasErr = true; }
     }
     if (hasErr) return;
-
-    var newChatId = document.getElementById('acc-chat-id').value.trim();
-    if (newChatId !== _chatId) {
-      _chatId = newChatId;
-      localStorage.setItem('pa_chat_id', newChatId);
-      syncAlertsToServer();
-    }
 
     saveBtn.disabled = true;
     saveBtn.textContent = '…';
