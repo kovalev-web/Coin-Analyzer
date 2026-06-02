@@ -102,7 +102,7 @@
     .stat-val.hot{color:var(--bloom-deep);}
     .stat-val.warn{color:var(--caution);}
     .stat-val.dim{color:var(--steel);}
-    .chart-container{height:300px;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 16px 16px;}
+    .chart-container{aspect-ratio:3/2;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 16px 16px;}
     .card-chart-stats{position:absolute;top:calc(36px + 6px);left:14px;z-index:2;display:flex;align-items:center;gap:8px;pointer-events:none;}
     .card-chart-stats .stat-val:nth-child(1){display:inline-block;min-width:58px;text-align:left;}
     .card-head-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;}
