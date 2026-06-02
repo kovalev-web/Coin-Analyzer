@@ -430,11 +430,18 @@ on('trades:ai-updated', function () {
 });
 
 // Sync on hide, pull from server on show — bidirectional cross-device sync
+var _appHiddenAt = null;
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
     syncBriefingNow();
+    _appHiddenAt = Date.now();
   } else {
     refreshBriefingFromServer();
+    // Re-check session after long background (>5 min) — handles iOS killing the tab
+    if (_appHiddenAt && Date.now() - _appHiddenAt > 5 * 60 * 1000) {
+      _revalidateSession();
+    }
+    _appHiddenAt = null;
   }
 });
 
@@ -556,34 +563,52 @@ registerRoute('/404', function () {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
+var _API_BASE = (import.meta.env.VITE_WS_URL || '').replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
+var _sessionVerified = false; // true once session confirmed — prevents double-init on revalidate
+
+// Fetch session and apply user state. Returns true (ok), false (no session → redirected), null (network err).
+async function _applySession() {
+  try {
+    var r = await fetch(_API_BASE + '/auth/get-session', { credentials: 'include' });
+    if (!r.ok) { window.location.replace('/login'); return false; }
+    var s = await r.json();
+    if (!s || !s.user || !s.user.id) { window.location.replace('/login'); return false; }
+    setUserId(s.user.id);
+    if (s.user.email) setUserEmail(s.user.email);
+    setUserEmailVerified(!!s.user.emailVerified);
+    return true;
+  } catch (e) {
+    return null; // network error — caller decides
+  }
+}
+
+// Re-check session when returning from long background.
+// Updates emailVerified badge and catches expired sessions without a full reload.
+async function _revalidateSession() {
+  var result = await _applySession();
+  if (result === null) return; // server unreachable — keep current state, WS will surface it
+  // result === false → already redirected to /login
+  // result === true → userId/emailVerified refreshed; if first successful auth, load user data
+  if (result === true && !_sessionVerified) {
+    _sessionVerified = true;
+    loadAlerts();
+    loadBriefing();
+  }
+}
+
 // Check session first — redirect to /login if not authenticated.
 // On network error (server down) we still load the app so WS reconnect can recover.
 (async function () {
-  var _wsEnv = import.meta.env.VITE_WS_URL || '';
-  var apiBase = _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
-  try {
-    var r = await fetch(apiBase + '/auth/get-session', { credentials: 'include' });
-    if (r.ok) {
-      var s = await r.json();
-      if (s && s.user && s.user.id) {
-        setUserId(s.user.id);
-        if (s.user.email) setUserEmail(s.user.email);
-        setUserEmailVerified(!!s.user.emailVerified);
-        fetch(apiBase + '/api/account', { credentials: 'include' })
-          .then(function (ar) { return ar.json(); })
-          .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
-          .catch(function () {});
-      } else {
-        window.location.replace('/login');
-        return;
-      }
-    } else {
-      window.location.replace('/login');
-      return;
-    }
-  } catch (e) {
-    // Server unreachable — continue loading app; WS will surface the error
+  var result = await _applySession();
+  if (result === false) return; // redirected
+  if (result === true) {
+    _sessionVerified = true;
+    fetch(_API_BASE + '/api/account', { credentials: 'include' })
+      .then(function (ar) { return ar.json(); })
+      .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
+      .catch(function () {});
   }
+  // result === null: server unreachable — load app anyway; WS will surface the error
 
   loadCache();
   loadAlerts();
