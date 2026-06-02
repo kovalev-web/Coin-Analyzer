@@ -215,9 +215,11 @@ export function setUserId(id) {
 export function setUserAvatar(av) {
   _userAvatar = av;
   if (av) localStorage.setItem('pa_avatar', av);
+  var btn = document.getElementById('avatar-btn');
   var iconSpan = document.getElementById('avatar-btn-icon');
   if (!iconSpan) return;
   iconSpan.innerHTML = av ? av : icon('user-round', 16);
+  if (btn) btn.classList.toggle('has-emoji', !!av);
 }
 
 function levelsData() {
@@ -1723,7 +1725,7 @@ function _topbarHTML() {
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="avatar-wrap">'
-    + '<button class="btn-avatar" id="avatar-btn" data-action="toggle-avatar-dd" title="Профиль"><span id="avatar-btn-icon">' + (_userAvatar || localStorage.getItem('pa_avatar') || icon('user-round', 16)) + '</span></button>'
+    + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Профиль"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd" id="avatar-dd">'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
