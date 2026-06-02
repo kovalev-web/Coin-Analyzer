@@ -747,7 +747,6 @@ var httpServer = http.createServer(async function (req, res) {
   }
 
   if (req.method === 'POST' && req.url === '/api/briefing') {
-    console.log('[Briefing] request received');
     var bodyBr = '';
     req.on('data', function (chunk) { bodyBr += chunk; });
     req.on('end', async function () {
@@ -763,7 +762,6 @@ var httpServer = http.createServer(async function (req, res) {
         if (action === 'get') {
           var r = await redis(['GET', key]);
           var rAI = await redis(['GET', keyAI]);
-          console.log('[Briefing] GET key=' + JSON.stringify(key) + ' result=' + (r.result ? r.result.length + 'chars' : 'null'));
           var aiData = rAI.result ? JSON.parse(rAI.result) : {};
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
@@ -776,10 +774,7 @@ var httpServer = http.createServer(async function (req, res) {
           if (!parsed.skip_entries) {
             var _existingR = await redis(['GET', key]);
             var _existingLen = _existingR.result ? JSON.parse(_existingR.result).length : 0;
-            if ((entries || []).length === 0 && _existingLen > 0) {
-              console.log('[Briefing] SKIP save: would overwrite ' + _existingLen + ' entries with 0');
-            } else {
-              console.log('[Briefing] SAVE userId=' + userId + ' entries=' + (entries || []).length + ' skip=' + !!parsed.skip_entries);
+            if (!((entries || []).length === 0 && _existingLen > 0)) {
               await redis(['SET', key, JSON.stringify(entries || [])]);
             }
           }
