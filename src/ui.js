@@ -549,7 +549,7 @@ export function showAccountModal() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ currentPassword: curPass, newPassword: newPass }),
+          body: JSON.stringify({ currentPassword: curPass, newPassword: newPass, revokeOtherSessions: true }),
         }).then(function (r) {
           return r.json().then(function (d) {
             if (!r.ok) { curErr.textContent = d.message || 'Неверный текущий пароль'; hasErr = true; }
