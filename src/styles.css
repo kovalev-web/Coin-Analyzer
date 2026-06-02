@@ -326,7 +326,7 @@
     @media(min-width:1025px){.avatar-wrap{display:block;}}
     .btn-avatar{background:var(--fog);border:none;width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0;color:var(--ink);}
     .btn-avatar:hover{opacity:0.8;}
-    .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:24px;width:auto;height:auto;}
+    .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:22px;width:auto;height:auto;}
     .avatar-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 8px 24px rgba(26,26,26,0.14);overflow:hidden;min-width:160px;z-index:500;}
     .avatar-dd.open{display:block;}
 
