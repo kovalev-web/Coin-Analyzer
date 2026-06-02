@@ -50,6 +50,22 @@ function getAuth() {
         '/forget-password': { window: 60, max: 3 },
       },
     },
+    user: {
+      changeEmail: {
+        enabled: true,
+        sendChangeEmailConfirmation: async function ({ user, newEmail, url }) {
+          var frontendUrl = url.replace('https://api.questtick.com/api/auth/verify-email', 'https://questtick.com/verify-email');
+          await resend.emails.send({
+            from: 'Questtick <noreply@questtick.com>',
+            to: user.email,
+            subject: 'Подтверждение смены email — Questtick',
+            html: '<p>Вы запросили смену email на <b>' + newEmail + '</b>.</p>'
+                + '<p><a href="' + frontendUrl + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Подтвердить смену</a></p>'
+                + '<p style="color:#888;font-size:12px;">Если вы не делали этого запроса — проигнорируйте письмо.</p>',
+          });
+        },
+      },
+    },
     emailVerification: {
       sendVerificationEmail: async function ({ user, url }) {
         var frontendUrl = url.replace('https://api.questtick.com/api/auth/verify-email', 'https://questtick.com/verify-email');

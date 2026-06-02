@@ -393,6 +393,13 @@ export function showAccountModal() {
         + '</div>'
       + '</div>'
       + '<div class="account-section">'
+        + '<div class="account-section-title">Email</div>'
+        + '<div class="acc-email-current" id="acc-email-current"></div>'
+        + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email">'
+        + '<div class="acc-field-err" id="acc-email-msg"></div>'
+        + '<button class="tg-connect-btn" id="acc-email-btn">Сменить email</button>'
+      + '</div>'
+      + '<div class="account-section">'
         + '<div class="account-section-title">Telegram</div>'
         + '<div id="acc-tg-status"></div>'
       + '</div>'
@@ -449,6 +456,45 @@ export function showAccountModal() {
         .catch(function () { btn.disabled = false; btn.textContent = 'Подключить Telegram'; });
     });
   }
+
+  // Show current email
+  if (_userEmail) {
+    var emailEl = document.getElementById('acc-email-current');
+    if (emailEl) emailEl.textContent = 'Текущий: ' + _userEmail;
+  }
+
+  document.getElementById('acc-email-btn').addEventListener('click', function () {
+    var btn    = document.getElementById('acc-email-btn');
+    var newEmail = document.getElementById('acc-email-new').value.trim();
+    var msg    = document.getElementById('acc-email-msg');
+    msg.textContent = ''; msg.style.color = '';
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      msg.textContent = 'Введите корректный email'; return;
+    }
+    if (newEmail === _userEmail) { msg.textContent = 'Это уже ваш email'; return; }
+    btn.disabled = true; btn.textContent = '…';
+    fetch(API_BASE + '/auth/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ newEmail: newEmail, callbackURL: 'https://questtick.com' }),
+    })
+      .then(function (r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          msg.style.color = '#80c080';
+          msg.textContent = 'Письмо с подтверждением отправлено на ' + _userEmail;
+          document.getElementById('acc-email-new').value = '';
+        } else {
+          msg.textContent = res.d.message || 'Ошибка, попробуйте ещё раз';
+        }
+        btn.disabled = false; btn.textContent = 'Сменить email';
+      })
+      .catch(function () {
+        msg.textContent = 'Ошибка сети';
+        btn.disabled = false; btn.textContent = 'Сменить email';
+      });
+  });
 
   // Load saved avatar + tg status from server
   fetch(API_BASE + '/api/account', { credentials: 'include' })
