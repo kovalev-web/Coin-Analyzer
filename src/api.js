@@ -1025,9 +1025,27 @@ export async function generateWeeklySummary() {
   var briefingText = Object.keys(byDate).sort().reverse().map(function (date) {
     return date + ':\n' + byDate[date].map(function (e) {
       var t = state.trades[e.sym + ':' + e.date];
-      var pnlStr = (t && t.status === 'ok' && t.count > 0)
-        ? ' | PnL: $' + t.pnl.toFixed(2) + ' (' + t.count + ' сд.)'
-        : ' | нет сделок';
+      var pnlStr;
+      if (t && t.status === 'ok' && t.count > 0) {
+        // Count round-trips (0→X→0) by positionSide — same logic as fetchWeekTrades
+        var _streams = {};
+        (t.entries || []).sort(function (a, b) { return a.time - b.time; }).forEach(function (f) {
+          var ps = f.positionSide || 'BOTH';
+          if (!_streams[ps]) _streams[ps] = [];
+          _streams[ps].push(f);
+        });
+        var _rt = 0;
+        Object.values(_streams).forEach(function (fs) {
+          var p = 0;
+          fs.forEach(function (f) {
+            p += f.side === 'BUY' ? parseFloat(f.qty) : -parseFloat(f.qty);
+            if (Math.abs(p) < 0.00001) { _rt++; p = 0; }
+          });
+        });
+        pnlStr = ' | PnL: $' + t.pnl.toFixed(2) + ' (' + (_rt || t.count) + ' сд.)';
+      } else {
+        pnlStr = ' | нет сделок';
+      }
       var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
       var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
       return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
