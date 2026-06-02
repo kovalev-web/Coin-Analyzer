@@ -648,8 +648,9 @@ var httpServer = http.createServer(async function (req, res) {
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
-  // Better Auth routes — /auth/sign-in, /auth/sign-up, /auth/sign-out, /auth/session, etc.
+  // Better Auth routes — rewrite /auth/* → /api/auth/* (BA default basePath)
   if (req.url.startsWith('/auth')) {
+    req.url = '/api/auth' + req.url.slice(5);
     return toNodeHandler(getAuth())(req, res);
   }
 

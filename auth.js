@@ -9,7 +9,6 @@ function getAuth() {
   if (_auth) return _auth;
   var { drizzle } = getDb();
   _auth = betterAuth({
-    basePath: '/auth',
     database: drizzleAdapter(drizzle, {
       provider: 'sqlite',
       schema: {
