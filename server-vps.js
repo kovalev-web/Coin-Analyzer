@@ -911,6 +911,48 @@ var httpServer = http.createServer(async function (req, res) {
             res.end(JSON.stringify({ error: 'apiKey and apiSecret required' }));
             return;
           }
+          // Validate keys and check permissions via Binance API
+          try {
+            var rParams = new URLSearchParams({ timestamp: String(Date.now()) });
+            var rSig = crypto.createHmac('sha256', bSec).update(rParams.toString()).digest('hex');
+            var rUrl = 'https://api.binance.com/sapi/v1/account/apiRestrictions?' + rParams.toString() + '&signature=' + rSig;
+            var rRes = await fetch(rUrl, { headers: { 'X-MBX-APIKEY': bKey } });
+            var rData = await rRes.json();
+            if (!rRes.ok) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Неверные ключи: ' + (rData.msg || 'Binance error') }));
+              return;
+            }
+            if (rData.enableWithdrawals) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Ключ разрешает вывод средств — опасно. Создайте Read-only ключ.' }));
+              return;
+            }
+            if (rData.enableSpotAndMarginTrading) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Ключ разрешает торговлю на споте. Создайте Read-only ключ.' }));
+              return;
+            }
+            if (rData.enableInternalTransfer || rData.permitsUniversalTransfer) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Ключ разрешает переводы. Создайте Read-only ключ.' }));
+              return;
+            }
+            if (!rData.enableReading) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Ключ не имеет разрешения на чтение.' }));
+              return;
+            }
+            if (!rData.enableFutures) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Ключ не имеет доступа к Futures. Включите разрешение "Futures" при создании ключа.' }));
+              return;
+            }
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Не удалось проверить ключи: ' + e.message }));
+            return;
+          }
           var enc = JSON.stringify({ key: encryptStr(bKey), secret: encryptStr(bSec) });
           await redis(['SET', 'binance_keys:' + userId, enc]);
           res.writeHead(200, { 'Content-Type': 'application/json' });

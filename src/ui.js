@@ -481,7 +481,7 @@ export function showAccountModal() {
       + '<input type="password" id="acc-bin-sec" placeholder="API Secret" autocomplete="off" style="margin-bottom:6px;">'
       + '<div class="acc-field-err" id="acc-bin-err"></div>'
       + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
-      + '<p class="tg-hint" style="margin-top:8px;">Только Futures Read-only доступ. Ключи хранятся зашифрованно.</p>';
+      + '<p class="tg-hint" style="margin-top:8px;">При создании ключа включите: <b>✅ Чтение</b> и <b>✅ Futures</b>. Всё остальное — выключено. Ключи хранятся зашифрованно.</p>';
     document.getElementById('acc-bin-save').addEventListener('click', function () {
       var btn = document.getElementById('acc-bin-save');
       var key = (document.getElementById('acc-bin-key').value || '').trim();
