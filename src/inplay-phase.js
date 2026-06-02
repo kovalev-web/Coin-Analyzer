@@ -204,6 +204,18 @@ document.getElementById('clear-hist').addEventListener('click', function () {
   if (confirm('Очистить историю?')) clearHistory();
 });
 
+// ── Info popup ────────────────────────────────────────────────────────────
+var infoOverlay = document.getElementById('info-overlay');
+document.getElementById('info-btn').addEventListener('click', function () {
+  infoOverlay.classList.add('open');
+});
+document.getElementById('info-close').addEventListener('click', function () {
+  infoOverlay.classList.remove('open');
+});
+infoOverlay.addEventListener('click', function (e) {
+  if (e.target === infoOverlay) infoOverlay.classList.remove('open');
+});
+
 // Re-render live table every second for Phase Time / cooling countdown
 setInterval(renderRows, 1000);
 

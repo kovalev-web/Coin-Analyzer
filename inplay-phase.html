@@ -52,11 +52,62 @@
       cursor: pointer; font-family: monospace;
     }
     #clear-hist:hover { color: #f44336; border-color: #f44336; }
+
+    /* ── info button & popup ── */
+    #info-btn {
+      font-size: 0.72rem; color: #555; background: none;
+      border: 1px solid #333; border-radius: 50%; width: 18px; height: 18px;
+      line-height: 16px; text-align: center; cursor: pointer;
+      font-family: monospace; vertical-align: middle; margin-left: 8px; padding: 0;
+    }
+    #info-btn:hover { color: #aaa; border-color: #666; }
+    #info-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    #info-overlay.open { display: flex; }
+    #info-box {
+      background: #141414; border: 1px solid #333; border-radius: 6px;
+      padding: 20px 24px; max-width: 520px; width: 90%; font-size: 0.82rem;
+      max-height: 80vh; overflow-y: auto;
+    }
+    #info-box h4 { margin: 0 0 14px; color: #888; font-weight: normal; font-size: 0.82rem; }
+    #info-box dl { margin: 0; }
+    #info-box dt { color: #ccc; margin-top: 10px; }
+    #info-box dd { color: #666; margin: 2px 0 0 0; }
+    #info-close {
+      float: right; background: none; border: none; color: #555;
+      cursor: pointer; font-size: 1rem; line-height: 1; padding: 0;
+    }
+    #info-close:hover { color: #aaa; }
   </style>
 </head>
 <body>
-  <h2>Inplay — Phase Detector <span id="watchlist-count" style="font-size:0.75rem;color:#555;font-weight:normal;margin-left:10px"></span></h2>
+  <h2>Inplay — Phase Detector <span id="watchlist-count" style="font-size:0.75rem;color:#555;font-weight:normal;margin-left:10px"></span><button id="info-btn">?</button></h2>
   <div id="status">connecting…</div>
+
+  <!-- Column info popup -->
+  <div id="info-overlay">
+    <div id="info-box">
+      <button id="info-close">✕</button>
+      <h4>Описание колонок</h4>
+      <dl>
+        <dt>Symbol</dt><dd>Тикер без USDT</dd>
+        <dt>Phase Time</dt><dd>Сколько времени монета в фазе (мм:сс или Хh XXm)</dd>
+        <dt>Direction</dt><dd>LONG ↑ / SHORT ↓</dd>
+        <dt>RVOL_5m</dt><dd>Относительный объём текущей 5м свечи vs средний. 8+ = аномалия</dd>
+        <dt>avg RVOL(3)</dt><dd>Среднее RVOL по последним 3 свечам. Устойчивость импульса</dd>
+        <dt>Δp15m %</dt><dd>Изменение цены за 15 минут. Порог входа ≥8%</dd>
+        <dt>CVD_z</dt><dd>Z-score потока покупок/продаж. Положительный = доминируют байеры</dd>
+        <dt>24h Vol</dt><dd>Объём торгов за сутки в $</dd>
+        <dt>Spr</dt><dd>Спред между лучшей ценой покупки и продажи в стакане. Чем меньше — тем ликвиднее монета. Норма &lt; 2bps</dd>
+        <dt>OBI</dt><dd>Перевес лимитных ордеров в стакане на стороне покупателей или продавцов. От −1 до +1. Зелёный = стакан перекошен на покупку, красный = на продажу</dd>
+        <dt>Vac↑</dt><dd>Расстояние до ближайшей "дыры" в стакане выше текущей цены. Маленькое значение = мало сопротивления, монете легче расти. ∞ = стакан плотный</dd>
+        <dt>Vac↓</dt><dd>То же самое ниже цены. Маленькое значение = мало поддержки, при падении есть куда проваливаться</dd>
+      </dl>
+    </div>
+  </div>
 
   <!-- Live table -->
   <table id="table" style="display:none">
