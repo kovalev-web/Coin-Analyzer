@@ -457,15 +457,14 @@ export function showAccountModal() {
     var promises = [];
 
     if (_selectedAvatar && _selectedAvatar !== _userAvatar) {
+      setUserAvatar(_selectedAvatar);
       promises.push(
         fetch(API_BASE + '/api/account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ action: 'save-avatar', avatar: _selectedAvatar }),
-        }).then(function (r) {
-          if (r.ok) setUserAvatar(_selectedAvatar);
-        })
+        }).catch(function () {})
       );
     }
 
