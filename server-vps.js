@@ -263,7 +263,7 @@ function checkAlertsForSym(fullSym, cur) {
       var alertMarkup = APP_URL ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + sym.toUpperCase() }]] } : undefined;
       sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>', alertMarkup);
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
-      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(payload); });
+      clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === code) c.send(payload); });
     });
     if (dirty) saveAlertsToRedis(code);
   });
@@ -1089,6 +1089,7 @@ wss.on('connection', function (ws) {
         // Frontend pushes userId as msg.code (replaces old user-defined code string).
         var wsUserId = msg.code;
         if (wsUserId && typeof wsUserId === 'string' && wsUserId.length > 0) {
+          ws._userId = wsUserId; // tag connection for targeted broadcasts
           if (!alertsMemory[wsUserId]) alertsMemory[wsUserId] = { chatId: '', data: {} };
           if (msg.chatId) alertsMemory[wsUserId].chatId = String(msg.chatId);
           if (msg.data !== undefined) {
