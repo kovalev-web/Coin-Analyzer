@@ -573,44 +573,37 @@ function startAggTradeWS() {
 
 var depthWS         = null;
 var depthSubscribed = new Set();
-var _depthFirstConnect = true;
 
 function subscribeDepth(streamName) {
   if (depthSubscribed.has(streamName)) return;
-  if (depthSubscribed.size >= 50) return;  // cap: 50 streams × 10msg/s = 500msg/s max
+  if (depthSubscribed.size >= 50) return;  // cap at 50 streams
   depthSubscribed.add(streamName);
-  if (depthWS && depthWS.readyState === WebSocket.OPEN) {
-    depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
-  }
 }
 
+// Called once after bootstrap — encodes all streams in the URL, no SUBSCRIBE messages needed.
 function startDepthWS() {
-  depthWS = new WebSocket(BINANCE_AGGTRADE_WS_URL);
+  var streams = Array.from(depthSubscribed);
+  if (!streams.length) return;
+  var wsUrl = 'wss://fstream.binance.com/stream?streams=' + streams.join('/');
+  depthWS = new WebSocket(wsUrl);
 
   depthWS.on('open', function () {
-    logInplay('[DepthWS] Connected');
-    var params = Array.from(depthSubscribed);
-    for (var i = 0; i < params.length; i += 10) {
-      depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 10), id: i + 300 }));
-    }
-    _depthFirstConnect = false;
+    logInplay('[DepthWS] Connected,', streams.length, 'streams');
   });
 
   depthWS.on('message', function (raw) {
     try {
       var msg = JSON.parse(raw.toString());
-      if (msg.id != null && msg.result === null) return;  // subscription ack
-      // Futures partial depth snapshot: event type 'depthUpdate', fields b/a
-      if (msg.e !== 'depthUpdate' && !msg.lastUpdateId) return;
-      var sym = msg.s || msg.stream;
+      // Combined stream format: { stream: 'sym@depth20@100ms', data: { e, s, b, a } }
+      var payload = msg.data || msg;
+      if (!payload.b && !payload.bids) return;
+      var sym = payload.s
+        ? payload.s.toUpperCase()
+        : (msg.stream ? msg.stream.split('@')[0].toUpperCase() : null);
       if (!sym) return;
-      sym = sym.toUpperCase().replace(/@.*/, '');
-
-      var bids = (msg.b || msg.bids || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
-      var asks = (msg.a || msg.asks || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
-      // Spec: bids descending, asks ascending (Binance sends them sorted)
+      var bids = (payload.b || payload.bids || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
+      var asks = (payload.a || payload.asks || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
       processDepthUpdate(sym, bids, asks);
-      // EMA update on every snapshot (100ms cadence)
       updateEmaOBI(sym, obi(bids, asks, 5));
     } catch (e) {}
   });
@@ -622,7 +615,6 @@ function startDepthWS() {
 
   depthWS.on('error', function (e) {
     console.error('[DepthWS] Error:', e.message);
-    // close event fires automatically after error — don't call close() to avoid double reconnect
   });
 }
 
@@ -1006,7 +998,8 @@ bootstrapTicker().then(function() {
       initOrderbookState(sym);
       subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
     });
-    logInplay('[Inplay] Subscribed depthWS to', depthSubscribed.size, 'streams (cap 50, watchlist', inplaySymbols.length, ')' );
+    logInplay('[Inplay] Depth streams queued:', depthSubscribed.size, '(cap 50, watchlist', inplaySymbols.length, ')');
+    startDepthWS();  // start after depthSubscribed is populated — streams encoded in URL
 
     // Start score update loop
     setInterval(function () {
@@ -1093,7 +1086,7 @@ bootstrapTicker().then(function() {
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
 startAggTradeWS();      // aggTrade WS для CVD и микроструктуры
-startDepthWS();         // depth20@100ms WS для OBI и liquidity vacuum
+// startDepthWS() is called from within bootstrap after depthSubscribed is populated
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
