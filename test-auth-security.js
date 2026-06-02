@@ -34,7 +34,7 @@ function request(method, path, body, cookie) {
     var data    = body ? JSON.stringify(body) : '';
     var url     = new URL(BASE + path);
     var mod     = url.protocol === 'https:' ? https : http;
-    var headers = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) };
+    var headers = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data), 'Origin': BASE };
     if (cookie) headers['Cookie'] = cookie;
     var req = mod.request({
       hostname: url.hostname,
