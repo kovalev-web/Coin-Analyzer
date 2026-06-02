@@ -16,7 +16,7 @@ const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./i
 const { updateAllScores } = require('./inplay/score');
 const { updatePhases, defaultGetMicro, isInPhase } = require('./inplay/phase-detector');
 const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
-const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi } = require('./inplay/orderbook');
+const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi, getOrderbookMetrics } = require('./inplay/orderbook');
 const inplayCfg = require('./inplay/config.json');
 
 var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
@@ -1007,8 +1007,15 @@ bootstrapTicker().then(function() {
         // Phase detector — independent of score, always broadcast
         var phaseResult = updatePhases(inplaySymbols, null, getMicro, logInplay);
         var phaseData = phaseResult.phases.map(function (p) {
-          var tc = tickerCache[p.symbol];
-          return Object.assign({}, p, { vol24h: tc ? parseFloat(tc.q) : null });
+          var tc  = tickerCache[p.symbol];
+          var obm = getOrderbookMetrics(p.symbol);
+          return Object.assign({}, p, {
+            vol24h: tc  ? parseFloat(tc.q)    : null,
+            spr:    obm ? obm.spread           : null,
+            obi:    obm ? obm.emaOBI5          : null,
+            vacU:   obm ? obm.vacuumAbove      : null,
+            vacD:   obm ? obm.vacuumBelow      : null,
+          });
         });
         var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now(), watchlist: inplaySymbols.length });
         clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(phaseMsg); });

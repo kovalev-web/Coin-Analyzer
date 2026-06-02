@@ -139,6 +139,10 @@ function renderRows() {
         '<td class="' + dpClass + '">' + (p.delta_price >= 0 ? '+' : '') + fmtNum(p.delta_price, 2) + '%</td>' +
         '<td>' + fmtNum(p.cvd_z, 2) + '</td>' +
         '<td>' + fmtVol(p.vol24h) + '</td>' +
+        '<td>' + (p.spr  != null ? p.spr.toFixed(1) + 'b'                                          : '—') + '</td>' +
+        '<td class="' + (p.obi > 0.05 ? 'long' : p.obi < -0.05 ? 'short' : '') + '">' + (p.obi != null ? p.obi.toFixed(2) : '—') + '</td>' +
+        '<td>' + (p.vacU != null ? (p.vacU >= 999 ? '∞' : p.vacU + 'b')                            : '—') + '</td>' +
+        '<td>' + (p.vacD != null ? (p.vacD >= 999 ? '∞' : p.vacD + 'b')                            : '—') + '</td>' +
         '<td>' + statusHtml + '</td>' +
         '</tr>';
     });
@@ -151,7 +155,7 @@ function renderRows() {
 function renderHistory() {
   histCountEl.textContent = history.length ? history.length + ' entries' : '';
   if (!history.length) {
-    histTbodyEl.innerHTML = '<tr><td colspan="8" style="color:#444;text-align:center;padding:12px">История пуста</td></tr>';
+    histTbodyEl.innerHTML = '<tr><td colspan="12" style="color:#444;text-align:center;padding:12px">История пуста</td></tr>';
     return;
   }
   // Show newest first
@@ -168,6 +172,7 @@ function renderHistory() {
       '<td class="' + dpClass + '">' + (h.delta_price >= 0 ? '+' : '') + fmtNum(h.delta_price, 2) + '%</td>' +
       '<td>' + fmtNum(h.cvd_z, 2) + '</td>' +
       '<td>' + fmtVol(h.vol24h) + '</td>' +
+      '<td>—</td><td>—</td><td>—</td><td>—</td>' +
       '</tr>';
   });
   histTbodyEl.innerHTML = html;
