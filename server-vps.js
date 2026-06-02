@@ -747,6 +747,7 @@ var httpServer = http.createServer(async function (req, res) {
   }
 
   if (req.method === 'POST' && req.url === '/api/briefing') {
+    console.log('[Briefing] request received');
     var bodyBr = '';
     req.on('data', function (chunk) { bodyBr += chunk; });
     req.on('end', async function () {
