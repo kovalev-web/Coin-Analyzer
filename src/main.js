@@ -290,7 +290,8 @@ document.body.addEventListener('click', function (e) {
       setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
       break;
     case 'go-briefing': {
-      var today = new Date().toISOString().slice(0, 10);
+      var _td = new Date();
+      var today = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
       var first = (state.briefing || []).find(function (e) { return e.date === today; });
       if (!first) {
         // Find the most recent past date and take its first entry

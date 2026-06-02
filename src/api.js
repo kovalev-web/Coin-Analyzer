@@ -950,12 +950,18 @@ export async function fetchWeekTrades(force) {
     + String(monday.getMonth() + 1).padStart(2, '0') + '-'
     + String(monday.getDate()).padStart(2, '0');
 
+  var todayStr = today.getFullYear() + '-'
+    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+    + String(today.getDate()).padStart(2, '0');
+
   var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= weekAgoStr; });
   if (!entries.length) { emit('trades:week-updated'); return null; }
 
-  if (force) {
-    entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
-  }
+  // Always refetch today's entries (day isn't over, new trades may have appeared).
+  // Past dates use cache unless force=true.
+  entries.forEach(function (e) {
+    if (force || e.date === todayStr) delete state.trades[e.sym + ':' + e.date];
+  });
 
   await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
