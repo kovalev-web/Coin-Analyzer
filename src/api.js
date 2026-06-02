@@ -943,25 +943,16 @@ export async function fetchAllBriefingTrades() {
 // Counts by unique orderId (not fills) to match Binance trade count.
 export async function fetchWeekTrades(force) {
   var today = new Date();
-  var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
-  var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  var monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToMonday);
-  var weekAgoStr = monday.getFullYear() + '-'
-    + String(monday.getMonth() + 1).padStart(2, '0') + '-'
-    + String(monday.getDate()).padStart(2, '0');
-
   var todayStr = today.getFullYear() + '-'
     + String(today.getMonth() + 1).padStart(2, '0') + '-'
     + String(today.getDate()).padStart(2, '0');
 
-  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= weekAgoStr; });
+  // Only count today's trades — resets at midnight like the briefing panel.
+  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date === todayStr; });
   if (!entries.length) { emit('trades:week-updated'); return null; }
 
-  // Always refetch today's entries (day isn't over, new trades may have appeared).
-  // Past dates use cache unless force=true.
-  entries.forEach(function (e) {
-    if (force || e.date === todayStr) delete state.trades[e.sym + ':' + e.date];
-  });
+  // Always refetch (day isn't over, new trades may appear). Clear cache every time.
+  entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
 
   await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
 
@@ -1007,7 +998,7 @@ export async function fetchWeekTrades(force) {
     tradeCount: tradeCount,
     winCount: winCount,
     winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
-    fromDate: weekAgoStr,
+    fromDate: todayStr,
   };
   emit('trades:week-updated');
   return state.weekSummary;
