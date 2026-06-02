@@ -388,6 +388,11 @@ export function showAccountModal() {
         + '</div>'
       + '</div>'
       + '<div class="account-section">'
+        + '<div class="account-section-title">Telegram</div>'
+        + '<input type="text" id="acc-chat-id" placeholder="chat_id для алертов" maxlength="20" autocomplete="off" value="' + (_chatId || '') + '">'
+        + '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту — получите ваш chat_id.</p>'
+      + '</div>'
+      + '<div class="account-section">'
         + '<div class="account-section-title">Смена пароля</div>'
         + '<input type="password" id="acc-pass-cur" placeholder="Текущий пароль" autocomplete="current-password">'
         + '<div class="acc-field-err" id="acc-pass-cur-err"></div>'
@@ -453,6 +458,13 @@ export function showAccountModal() {
       if (newPass && conPass !== newPass) { conErr.textContent = 'Пароли не совпадают'; hasErr = true; }
     }
     if (hasErr) return;
+
+    var newChatId = document.getElementById('acc-chat-id').value.trim();
+    if (newChatId !== _chatId) {
+      _chatId = newChatId;
+      localStorage.setItem('pa_chat_id', newChatId);
+      syncAlertsToServer();
+    }
 
     saveBtn.disabled = true;
     saveBtn.textContent = '…';
