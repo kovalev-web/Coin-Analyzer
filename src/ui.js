@@ -431,7 +431,6 @@ export function showAccountModal() {
 
     + '</div>'
     + '<div class="popup-footer">'
-      + '<button class="popup-btn account-save-btn" id="account-save" style="display:none">Сохранить аватарку</button>'
       + '<div class="acc-footer-divider"></div>'
       + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
     + '</div>'
@@ -597,18 +596,21 @@ export function showAccountModal() {
     })
     .catch(function () { renderTgStatus(false); renderBinanceStatus(false); });
 
-  var _selectedAvatar = _userAvatar;
-
   document.getElementById('account-avatar-grid').addEventListener('click', function (e) {
     var btn = e.target.closest('.avatar-preset');
     if (!btn) return;
-    _selectedAvatar = btn.dataset.preset;
+    var picked = btn.dataset.preset;
+    if (picked === _userAvatar) return;
     el.querySelectorAll('.avatar-preset').forEach(function (b) {
       b.classList.toggle('selected', b === btn);
     });
-    // Show save button only when avatar actually changed
-    document.getElementById('account-save').style.display =
-      _selectedAvatar !== _userAvatar ? 'block' : 'none';
+    setUserAvatar(picked);
+    fetch(API_BASE + '/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'save-avatar', avatar: picked }),
+    }).catch(function () {});
   });
 
   document.getElementById('account-close').addEventListener('click', function () { el.remove(); });
@@ -671,23 +673,6 @@ export function showAccountModal() {
       });
   });
 
-  document.getElementById('account-save').addEventListener('click', async function () {
-    var saveBtn = document.getElementById('account-save');
-    saveBtn.disabled = true; saveBtn.textContent = '…';
-
-    if (_selectedAvatar && _selectedAvatar !== _userAvatar) {
-      setUserAvatar(_selectedAvatar);
-      await fetch(API_BASE + '/api/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'save-avatar', avatar: _selectedAvatar }),
-      }).catch(function () {});
-    }
-
-    saveBtn.disabled = false; saveBtn.textContent = 'Сохранить';
-    el.remove();
-  });
 }
 
 export function clearAllAlerts() {
