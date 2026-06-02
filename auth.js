@@ -23,6 +23,7 @@ function getAuth() {
     baseURL: process.env.BETTER_AUTH_URL || 'https://api.questtick.com',
     trustedOrigins: [
       'https://questtick.com',
+      'https://www.questtick.com',
       'http://localhost:5173',
     ],
     advanced: {

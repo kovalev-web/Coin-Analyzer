@@ -626,7 +626,7 @@ function startDepthWS() {
 
 // ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
 
-var CORS_ORIGINS = ['https://questtick.com', 'http://localhost:5173'];
+var CORS_ORIGINS = ['https://questtick.com', 'https://www.questtick.com', 'http://localhost:5173'];
 
 async function getSession(req) {
   try {
