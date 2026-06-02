@@ -46,6 +46,7 @@ var SKIP_TOP     = parseInt(getArg('skip',    '10')); // skip top-N mega-caps (B
 var TOP_N        = parseInt(getArg('top-n',   String(cfg.top_n)));
 var STAGE1_MODE  = process.argv.indexOf('--stage1') >= 0; // force Stage-1 formulas (no micro)
 var STAGE3_MODE  = process.argv.indexOf('--stage3') >= 0; // Stage-3 formulas with proxy OBI
+var COMPARE_MODE = process.argv.indexOf('--compare') >= 0; // run all 3 stages, print comparison table
 
 // ── REST helpers ──────────────────────────────────────────────────────────
 
@@ -173,7 +174,7 @@ function utcMidnight(ts) {
 // Per-symbol slope history, persists across time steps within one simulation run.
 var proxyState = {};
 
-function buildProxyMicro(sym, buf1m, T) {
+function buildProxyMicro(sym, buf1m, T, withOBI) {
   if (!buf1m || buf1m.length < 3) return {};
   if (!proxyState[sym]) proxyState[sym] = { cvdSlopeHist: [] };
 
@@ -239,7 +240,7 @@ function buildProxyMicro(sym, buf1m, T) {
   // Stage-3 proxy: OBI cannot be reconstructed from klines; we approximate via
   // taker buy fraction. Sign always agrees with aggrRatio (correlation ~1.0).
   // Vacuum requires live order book — set to 999 bps (always beyond threshold).
-  if (STAGE3_MODE) {
+  if (withOBI || STAGE3_MODE) {
     result.obiConfirmed = aggrRatio !== null ? (2 * aggrRatio - 1) : 0;
     result.vacuumAbove  = 999;
     result.vacuumBelow  = 999;
@@ -249,6 +250,10 @@ function buildProxyMicro(sym, buf1m, T) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────
+
+function makeStat() {
+  return { hits: 0, total: 0, pos: { hits: 0, total: 0 }, neg: { hits: 0, total: 0 } };
+}
 
 async function main() {
   var endTime   = Date.now();
@@ -272,6 +277,11 @@ async function main() {
   // Per-day hit tracking
   var dayStats = {}; // 'YYYY-MM-DD' → { hits, total }
 
+  // Compare mode: separate stats per stage
+  var cmpS1 = COMPARE_MODE ? makeStat() : null;
+  var cmpS2 = COMPARE_MODE ? makeStat() : null;
+  var cmpS3 = COMPARE_MODE ? makeStat() : null;
+
   // Diagnostics: A/|M|/P per hit vs miss, hit-rate by Inplay sign
   var diag = {
     hits:   { A: [], absM: [], P: [], cvdZ: [], aggrRatio: [], obiConfirmed: [] },
@@ -292,6 +302,57 @@ async function main() {
         return sliceBefore(histData[sym][tf], currentT, 100);
       };
     })(T);
+
+    // ── Compare mode: run all 3 stages, shared outcomes ───────────────────
+    if (COMPARE_MODE) {
+      var _cacheC = {};
+      var getMicroS1C = function () { return {}; };
+      var getMicroS2C = function (sym, buf1m) {
+        if (!_cacheC[sym]) _cacheC[sym] = buildProxyMicro(sym, buf1m, T, false);
+        return _cacheC[sym];
+      };
+      var getMicroS3C = function (sym, buf1m) {
+        var b = _cacheC[sym] || (_cacheC[sym] = buildProxyMicro(sym, buf1m, T, false));
+        return Object.assign({}, b, {
+          obiConfirmed: b.aggrRatio !== null ? (2 * b.aggrRatio - 1) : 0,
+          vacuumAbove: 999, vacuumBelow: 999,
+        });
+      };
+      var topC1 = updateAllScores(symbols, getBuffer, T, getMicroS1C);
+      var topC2 = updateAllScores(symbols, getBuffer, T, getMicroS2C);
+      var topC3 = updateAllScores(symbols, getBuffer, T, getMicroS3C);
+      if (topC1.length < 5 && topC2.length < 5 && topC3.length < 5) { stepsSkipped++; continue; }
+      stepsDone++;
+
+      var outcomesC = {};
+      for (var siC = 0; siC < symbols.length; siC++) {
+        var symC = symbols[siC];
+        var arr1mC = histData[symC] ? histData[symC]['1m'] : [];
+        var bufC = sliceBefore(arr1mC, T, 1);
+        var closeTc = bufC.length ? bufC[0].close : null;
+        var outC = measureOutcome(arr1mC, T, closeTc);
+        if (outC !== null) outcomesC[symC] = outC;
+      }
+      var outValsC = Object.values(outcomesC);
+      if (outValsC.length < 5) continue;
+      var medianC = median(outValsC);
+
+      var stagesList = [[topC1, cmpS1], [topC2, cmpS2], [topC3, cmpS3]];
+      for (var si3 = 0; si3 < stagesList.length; si3++) {
+        var topX = stagesList[si3][0], statX = stagesList[si3][1];
+        for (var riX = 0; riX < topX.length; riX++) {
+          var rX = topX[riX];
+          if (outcomesC[rX.symbol] == null) continue;
+          statX.total++;
+          var hitX = outcomesC[rX.symbol] > medianC;
+          if (hitX) statX.hits++;
+          if (rX.inplay >= 0) { statX.pos.total++; if (hitX) statX.pos.hits++; }
+          else                { statX.neg.total++; if (hitX) statX.neg.hits++; }
+        }
+      }
+      continue;
+    }
+    // ── End compare mode ───────────────────────────────────────────────────
 
     var getMicro = STAGE1_MODE
       ? function () { return {}; }                                          // Stage-1: no micro
@@ -355,6 +416,46 @@ async function main() {
   }
 
   // ── Report ────────────────────────────────────────────────────────────
+
+  if (COMPARE_MODE) {
+    function cmpPct(stat) {
+      return stat.total > 0 ? (stat.hits / stat.total * 100).toFixed(1) + '%' : 'N/A';
+    }
+    function cmpPos(stat) {
+      return stat.pos.total > 0 ? (stat.pos.hits / stat.pos.total * 100).toFixed(1) + '%' : 'N/A';
+    }
+    function cmpNeg(stat) {
+      return stat.neg.total > 0 ? (stat.neg.hits / stat.neg.total * 100).toFixed(1) + '%' : 'N/A';
+    }
+    function delta(a, b) {
+      if (a.total === 0 || b.total === 0) return '  N/A';
+      var d = (b.hits/b.total - a.hits/a.total) * 100;
+      return (d >= 0 ? '+' : '') + d.toFixed(1) + 'pp';
+    }
+    function deltaD(a, b, fn) {
+      var ra = a[fn].total > 0 ? a[fn].hits / a[fn].total : null;
+      var rb = b[fn].total > 0 ? b[fn].hits / b[fn].total : null;
+      if (ra === null || rb === null) return '  N/A';
+      var d = (rb - ra) * 100;
+      return (d >= 0 ? '+' : '') + d.toFixed(1) + 'pp';
+    }
+    console.log('\n══════════════════════════════════════════════════════════');
+    console.log('  INPLAY BACKTEST — STAGE COMPARISON');
+    console.log('══════════════════════════════════════════════════════════');
+    console.log('  Days: ' + DAYS + '   Symbols: ' + symbols.length + '   Steps run: ' + stepsDone + '   (skipped: ' + stepsSkipped + ')');
+    console.log('  Predictions — S1: ' + cmpS1.total + '   S2: ' + cmpS2.total + '   S3: ' + cmpS3.total);
+    console.log('');
+    console.log('  ┌────────────┬─────────┬─────────┬─────────┬──────┬──────┐');
+    console.log('  │            │ Stage-1 │ Stage-2 │ Stage-3*│ Δ2-1 │ Δ3-2 │');
+    console.log('  ├────────────┼─────────┼─────────┼─────────┼──────┼──────┤');
+    console.log('  │ Overall    │ ' + cmpPct(cmpS1).padStart(6) + '  │ ' + cmpPct(cmpS2).padStart(6) + '  │ ' + cmpPct(cmpS3).padStart(6) + '  │ ' + delta(cmpS1, cmpS2).padStart(5) + ' │ ' + delta(cmpS2, cmpS3).padStart(5) + ' │');
+    console.log('  │ Long  >0   │ ' + cmpPos(cmpS1).padStart(6) + '  │ ' + cmpPos(cmpS2).padStart(6) + '  │ ' + cmpPos(cmpS3).padStart(6) + '  │ ' + deltaD(cmpS1, cmpS2, 'pos').padStart(5) + ' │ ' + deltaD(cmpS2, cmpS3, 'pos').padStart(5) + ' │');
+    console.log('  │ Short <0   │ ' + cmpNeg(cmpS1).padStart(6) + '  │ ' + cmpNeg(cmpS2).padStart(6) + '  │ ' + cmpNeg(cmpS3).padStart(6) + '  │ ' + deltaD(cmpS1, cmpS2, 'neg').padStart(5) + ' │ ' + deltaD(cmpS2, cmpS3, 'neg').padStart(5) + ' │');
+    console.log('  └────────────┴─────────┴─────────┴─────────┴──────┴──────┘');
+    console.log('  * Stage-3: OBI proxy = 2·aggrRatio−1 (corr~1.0), vacuum=0');
+    console.log('══════════════════════════════════════════════════════════\n');
+    return;
+  }
 
   var hitRate = totalPredictions > 0 ? totalHits / totalPredictions : 0;
   var modeLabel = STAGE1_MODE ? 'Stage 1' : STAGE3_MODE ? 'Stage 3 proxy' : 'Stage 2 proxy';
