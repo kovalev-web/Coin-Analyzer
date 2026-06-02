@@ -344,6 +344,8 @@
     .account-body input[type="password"],.account-body input[type="text"]{display:block;width:100%;height:40px;border-radius:8px;border:1.5px solid var(--steel);background:var(--canvas);color:var(--ink);font-family:'Manrope',Arial,sans-serif;font-size:14px;padding:0 12px;outline:none;box-sizing:border-box;}
     .account-body input[type="password"]:focus,.account-body input[type="text"]:focus{border-color:var(--primary);}
     .account-body input.error{border-color:#e05555;}
+    .account-section input{width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:'Manrope',Arial,sans-serif;font-size:14px;outline:none;transition:border-color 0.15s;margin-bottom:6px;}
+    .account-section input:focus{border-color:var(--primary);}
     .acc-field-err{font-size:12px;color:#f08080;min-height:18px;margin:2px 0 6px;}
     .account-save-btn{background:var(--primary);color:#fff;border:none;}
     .account-save-btn:hover:not(:disabled){background:var(--primary-bright);opacity:1;}
