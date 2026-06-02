@@ -475,6 +475,34 @@ export function showAccountModal() {
     });
   }
 
+  function bindBinanceSaveBtn(btnLabel) {
+    var btn = document.getElementById('acc-bin-save');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var key = (document.getElementById('acc-bin-key').value || '').trim();
+      var sec = (document.getElementById('acc-bin-sec').value || '').trim();
+      var err = document.getElementById('acc-bin-err');
+      err.textContent = '';
+      if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
+      btn.disabled = true; btn.textContent = '…';
+      fetch(API_BASE + '/api/account', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
+            return d;
+          });
+        })
+        .then(function () { renderBinanceStatus(true); })
+        .catch(function (e) {
+          err.textContent = e.message || 'Ошибка сети';
+          btn.disabled = false; btn.textContent = btnLabel;
+        });
+    });
+  }
+
   function renderBinanceStatus(connected) {
     var s = document.getElementById('acc-bin-status');
     if (!s) return;
@@ -502,25 +530,7 @@ export function showAccountModal() {
           body: JSON.stringify({ action: 'delete-binance' }),
         }).then(function () { renderBinanceStatus(false); }).catch(function () {});
       });
-      document.getElementById('acc-bin-save').addEventListener('click', function () {
-        var btn = document.getElementById('acc-bin-save');
-        var key = (document.getElementById('acc-bin-key').value || '').trim();
-        var sec = (document.getElementById('acc-bin-sec').value || '').trim();
-        var err = document.getElementById('acc-bin-err');
-        err.textContent = '';
-        if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
-        btn.disabled = true; btn.textContent = '…';
-        fetch(API_BASE + '/api/account', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-          .then(function (res) {
-            if (res.ok) { renderBinanceStatus(true); }
-            else { err.textContent = res.d.error || 'Ошибка'; btn.disabled = false; btn.textContent = 'Сохранить новые ключи'; }
-          })
-          .catch(function () { err.textContent = 'Ошибка сети'; btn.disabled = false; btn.textContent = 'Сохранить новые ключи'; });
-      });
+      bindBinanceSaveBtn('Сохранить новые ключи');
       return;
     }
     s.innerHTML =
@@ -529,25 +539,7 @@ export function showAccountModal() {
       + '<div class="acc-field-err" id="acc-bin-err"></div>'
       + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
       + '<p class="tg-hint" style="margin-top:8px;">При создании ключа включите: <b>✅ Чтение</b> и <b>✅ Futures</b>. Всё остальное — выключено. Ключи хранятся зашифрованно.</p>';
-    document.getElementById('acc-bin-save').addEventListener('click', function () {
-      var btn = document.getElementById('acc-bin-save');
-      var key = (document.getElementById('acc-bin-key').value || '').trim();
-      var sec = (document.getElementById('acc-bin-sec').value || '').trim();
-      var err = document.getElementById('acc-bin-err');
-      err.textContent = '';
-      if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
-      btn.disabled = true; btn.textContent = '…';
-      fetch(API_BASE + '/api/account', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
-      })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-        .then(function (res) {
-          if (res.ok) { renderBinanceStatus(true); }
-          else { err.textContent = res.d.error || 'Ошибка'; btn.disabled = false; btn.textContent = 'Сохранить ключи'; }
-        })
-        .catch(function () { err.textContent = 'Ошибка сети'; btn.disabled = false; btn.textContent = 'Сохранить ключи'; });
-    });
+    bindBinanceSaveBtn('Сохранить ключи');
   }
 
   // Show current email
