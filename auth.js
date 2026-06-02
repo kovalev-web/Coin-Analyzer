@@ -22,7 +22,7 @@ function getAuth() {
     }),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: false,
     },
     emailVerification: {
       sendVerificationEmail: async function ({ user, url }) {
