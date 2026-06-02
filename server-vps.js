@@ -577,6 +577,7 @@ var _depthFirstConnect = true;
 
 function subscribeDepth(streamName) {
   if (depthSubscribed.has(streamName)) return;
+  if (depthSubscribed.size >= 50) return;  // cap: 50 streams × 10msg/s = 500msg/s max
   depthSubscribed.add(streamName);
   if (depthWS && depthWS.readyState === WebSocket.OPEN) {
     depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
@@ -589,8 +590,8 @@ function startDepthWS() {
   depthWS.on('open', function () {
     logInplay('[DepthWS] Connected');
     var params = Array.from(depthSubscribed);
-    for (var i = 0; i < params.length; i += 200) {
-      depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 300 }));
+    for (var i = 0; i < params.length; i += 10) {
+      depthWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 10), id: i + 300 }));
     }
     _depthFirstConnect = false;
   });
@@ -621,7 +622,7 @@ function startDepthWS() {
 
   depthWS.on('error', function (e) {
     console.error('[DepthWS] Error:', e.message);
-    depthWS.close();
+    // close event fires automatically after error — don't call close() to avoid double reconnect
   });
 }
 
