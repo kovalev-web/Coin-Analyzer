@@ -774,8 +774,14 @@ var httpServer = http.createServer(async function (req, res) {
           }));
         } else if (action === 'save') {
           if (!parsed.skip_entries) {
-            console.log('[Briefing] SAVE userId=' + userId + ' entries=' + (entries || []).length + ' skip=' + !!parsed.skip_entries);
-            await redis(['SET', key, JSON.stringify(entries || [])]);
+            var _existingR = await redis(['GET', key]);
+            var _existingLen = _existingR.result ? JSON.parse(_existingR.result).length : 0;
+            if ((entries || []).length === 0 && _existingLen > 0) {
+              console.log('[Briefing] SKIP save: would overwrite ' + _existingLen + ' entries with 0');
+            } else {
+              console.log('[Briefing] SAVE userId=' + userId + ' entries=' + (entries || []).length + ' skip=' + !!parsed.skip_entries);
+              await redis(['SET', key, JSON.stringify(entries || [])]);
+            }
           }
           if (parsed.ai_summary) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null })]);
