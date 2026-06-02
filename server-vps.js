@@ -109,9 +109,7 @@ async function redis(cmd) {
 var TELEGRAM_TOKEN        = process.env.TELEGRAM_BOT_TOKEN;
 var TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
 var INPLAY_ALERT_CHAT_ID  = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
-var BRIEFING_USER_CODE  = (process.env.BRIEFING_USER_CODE || process.env.PROXY_SECRET || '').toLowerCase();
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
-var _userUtcOffset = null; // loaded from Redis briefing_tz:{code} at startup, updated on save
 var tgOffset = 0;
 
 async function sendTG(chatId, text, replyMarkup) {
@@ -159,6 +157,7 @@ async function pollTelegram() {
               var linkUserId = linkRes.result;
               var chatIdStr = String(chatId);
               await redis(['SET', 'tg_chat:' + linkUserId, chatIdStr]);
+              await redis(['SET', 'tg_user:' + chatIdStr, linkUserId]); // reverse: chatId → userId
               if (!alertsMemory[linkUserId]) alertsMemory[linkUserId] = { chatId: '', data: {} };
               alertsMemory[linkUserId].chatId = chatIdStr;
               await saveAlertsToRedis(linkUserId);
@@ -850,7 +849,6 @@ var httpServer = http.createServer(async function (req, res) {
           }
           if (typeof parsed.utcOffset === 'number' && isFinite(parsed.utcOffset)) {
             await redis(['SET', 'briefing_tz:' + userId, String(parsed.utcOffset)]);
-            _userUtcOffset = parsed.utcOffset; // single-user — always update
           }
           if (!parsed.skip_entries) {
             var _bMsg = JSON.stringify({ type: 'briefing_updated' });
@@ -1069,14 +1067,6 @@ var httpServer = http.createServer(async function (req, res) {
 var wss = new WebSocketServer({ server: httpServer });
 httpServer.listen(PORT, function () {
   console.log('[Server] Pump Analyzer running on port', PORT);
-  if (BRIEFING_USER_CODE) {
-    redis(['GET', 'briefing_tz:' + BRIEFING_USER_CODE]).then(function (r) {
-      if (r.result !== null) {
-        var v = parseFloat(r.result);
-        if (isFinite(v)) { _userUtcOffset = v; console.log('[Weekly] user utcOffset:', _userUtcOffset); }
-      }
-    }).catch(function () {});
-  }
 });
 
 wss.on('connection', function (ws) {
@@ -1420,21 +1410,52 @@ async function checkNewListings() {
 setInterval(checkNewListings, 2 * 60 * 1000);
 
 // ── Weekly briefing report ────────────────────────────────────────────────
+
+// Find userId by Telegram chatId — first tries fast reverse key, then scans tg_chat:*
+async function getUserIdForChat(chatId) {
+  var chatIdStr = String(chatId);
+  var fast = await redis(['GET', 'tg_user:' + chatIdStr]);
+  if (fast && fast.result) return fast.result;
+  // Fallback: scan all tg_chat:* keys (for users linked before reverse mapping was added)
+  var keysRes = await redis(['KEYS', 'tg_chat:*']);
+  if (!keysRes || !Array.isArray(keysRes.result)) return null;
+  for (var i = 0; i < keysRes.result.length; i++) {
+    var val = await redis(['GET', keysRes.result[i]]);
+    if (val && val.result === chatIdStr) {
+      var uid = keysRes.result[i].replace('tg_chat:', '');
+      await redis(['SET', 'tg_user:' + chatIdStr, uid]); // populate reverse key for next time
+      return uid;
+    }
+  }
+  return null;
+}
+
 async function sendWeeklyBriefingReport(chatId) {
   var GEM_KEY = process.env.GEMINI_API_KEY;
-  var code = BRIEFING_USER_CODE;
   if (!chatId) return;
   if (!GEM_KEY) { await sendTG(chatId, '❌ GEMINI_API_KEY не настроен.'); return; }
-  if (!code) { await sendTG(chatId, '❌ BRIEFING_USER_CODE не настроен.'); return; }
-  var r = await redis(['GET', 'briefing:' + code]);
+
+  // Resolve chatId → userId
+  var userId = await getUserIdForChat(chatId);
+  if (!userId) { await sendTG(chatId, '❌ Аккаунт не найден. Привяжите Telegram в Личном кабинете на questtick.com.'); return; }
+
+  // Get user's local timezone
+  var tzRes = await redis(['GET', 'briefing_tz:' + userId]);
+  var utcOffset = (tzRes && tzRes.result !== null) ? parseFloat(tzRes.result) : 0;
+  if (!isFinite(utcOffset)) utcOffset = 0;
+
+  var r = await redis(['GET', 'briefing:' + userId]);
   var entries = r.result ? JSON.parse(r.result) : [];
-  // Filter current week (Mon–Sun)
-  var now = new Date();
-  var daysToMon = now.getDay() === 0 ? 6 : now.getDay() - 1;
-  var mon = new Date(now.getTime() - daysToMon * 24 * 3600 * 1000);
-  var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+
+  // Filter current week (Mon–Sun) in USER's local time
+  var userNow = new Date(Date.now() + utcOffset * 3600000);
+  var daysToMon = userNow.getUTCDay() === 0 ? 6 : userNow.getUTCDay() - 1;
+  var monUTC = new Date(userNow.getTime() - daysToMon * 24 * 3600000);
+  var monStr = monUTC.getUTCFullYear() + '-' + String(monUTC.getUTCMonth() + 1).padStart(2, '0') + '-' + String(monUTC.getUTCDate()).padStart(2, '0');
   entries = entries.filter(function (e) { return e.date >= monStr; });
+
   if (!entries.length) { await sendTG(chatId, '📋 Брифинг за эту неделю пуст.'); return; }
+
   var byDate = {};
   entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
   var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
@@ -1444,12 +1465,14 @@ async function sendWeeklyBriefingReport(chatId) {
       return '  - ' + e.sym.toUpperCase() + st + (e.note ? ': ' + e.note : '');
     }).join('\n');
   }).join('\n\n');
+
   var prompt = 'Ты торговый аналитик и психолог. Вот мои заметки по монетам за неделю — мысли в моменте и статусы.\n\n'
     + briefText + '\n\n'
     + 'Напиши ответ из двух частей:\n'
     + '1. Психология (1-2 предложения): что повторяющийся паттерн в заметках говорит о моих решениях на этой неделе?\n'
     + '2. На следующую неделю (2-3 конкретных технических правила): что именно делать иначе — точечно, без воды.\n'
     + 'Без перечисления монет. На русском.';
+
   var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
   var gemRes = await fetch(gemUrl, {
     method: 'POST',
@@ -1463,20 +1486,36 @@ async function sendWeeklyBriefingReport(chatId) {
     && gemData.candidates[0].content.parts[0].text) || '';
   if (!summary) { await sendTG(chatId, '❌ Gemini вернул пустой ответ.'); return; }
   await sendTG(chatId, '📋 <b>Итоги недели</b>\n\n' + summary);
-  console.log('[Weekly report] Sent to', chatId);
+  console.log('[Weekly report] Sent to userId=' + userId + ' chatId=' + chatId);
 }
 
-var _weeklyReportSent = false;
+// Per-user sent tracker: userId → true when already sent this Sunday
+var _weeklyReportSent = {};
 setInterval(async function () {
-  if (_userUtcOffset === null) return;
-  var userDate = new Date(Date.now() + _userUtcOffset * 3600000);
-  if (userDate.getUTCDay() !== 0 || userDate.getUTCHours() !== 22 || userDate.getUTCMinutes() !== 0) {
-    _weeklyReportSent = false;
-    return;
+  try {
+    var keysRes = await redis(['KEYS', 'tg_chat:*']);
+    if (!keysRes || !Array.isArray(keysRes.result) || !keysRes.result.length) return;
+    for (var i = 0; i < keysRes.result.length; i++) {
+      var uid = keysRes.result[i].replace('tg_chat:', '');
+      var chatRes = await redis(['GET', keysRes.result[i]]);
+      if (!chatRes || !chatRes.result) continue;
+      var userChatId = chatRes.result;
+      var tzRes = await redis(['GET', 'briefing_tz:' + uid]);
+      if (!tzRes || tzRes.result === null) continue;
+      var offset = parseFloat(tzRes.result);
+      if (!isFinite(offset)) continue;
+      var userDate = new Date(Date.now() + offset * 3600000);
+      if (userDate.getUTCDay() !== 0 || userDate.getUTCHours() !== 22 || userDate.getUTCMinutes() !== 0) {
+        _weeklyReportSent[uid] = false;
+        continue;
+      }
+      if (_weeklyReportSent[uid]) continue;
+      _weeklyReportSent[uid] = true;
+      sendWeeklyBriefingReport(userChatId).catch(function (e) {
+        console.error('[Weekly report]', e.message);
+      });
+    }
+  } catch (e) {
+    console.error('[Weekly scheduler]', e.message);
   }
-  if (_weeklyReportSent) return;
-  _weeklyReportSent = true;
-  sendWeeklyBriefingReport(INPLAY_ALERT_CHAT_ID).catch(function (e) {
-    console.error('[Weekly report]', e.message);
-  });
 }, 60000);
