@@ -23,6 +23,21 @@ function getAuth() {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      minPasswordLength: 8,
+    },
+    session: {
+      expiresIn:  60 * 60 * 24 * 30, // 30 дней
+      updateAge:  60 * 60 * 24,       // обновлять сессию раз в сутки
+    },
+    rateLimit: {
+      enabled: true,
+      window:  60,  // 60 секунд
+      max:     10,  // не более 10 запросов к /api/auth/* за окно
+      customRules: {
+        '/sign-in/email':   { window: 60, max: 5 },
+        '/sign-up/email':   { window: 60, max: 3 },
+        '/forget-password': { window: 60, max: 3 },
+      },
     },
     emailVerification: {
       sendVerificationEmail: async function ({ user, url }) {
