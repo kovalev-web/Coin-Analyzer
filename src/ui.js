@@ -404,6 +404,10 @@ export function showAccountModal() {
         + '<div id="acc-tg-status"></div>'
       + '</div>'
       + '<div class="account-section">'
+        + '<div class="account-section-title">Binance API</div>'
+        + '<div id="acc-bin-status"></div>'
+      + '</div>'
+      + '<div class="account-section">'
         + '<div class="account-section-title">Пароль</div>'
         + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
         + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
@@ -454,6 +458,48 @@ export function showAccountModal() {
           }, 2000);
         })
         .catch(function () { btn.disabled = false; btn.textContent = 'Подключить Telegram'; });
+    });
+  }
+
+  function renderBinanceStatus(connected) {
+    var s = document.getElementById('acc-bin-status');
+    if (!s) return;
+    if (connected) {
+      s.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключено</span>'
+        + '<button class="acc-revoke-btn" id="acc-bin-del" style="margin-left:12px;font-size:12px;height:28px;padding:0 10px;">Отключить</button>';
+      document.getElementById('acc-bin-del').addEventListener('click', function () {
+        if (!confirm('Отключить Binance API?')) return;
+        fetch(API_BASE + '/api/account', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ action: 'delete-binance' }),
+        }).then(function () { renderBinanceStatus(false); }).catch(function () {});
+      });
+      return;
+    }
+    s.innerHTML =
+      '<input type="text" id="acc-bin-key" placeholder="API Key" autocomplete="off" style="margin-bottom:6px;">'
+      + '<input type="password" id="acc-bin-sec" placeholder="API Secret" autocomplete="off" style="margin-bottom:6px;">'
+      + '<div class="acc-field-err" id="acc-bin-err"></div>'
+      + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
+      + '<p class="tg-hint" style="margin-top:8px;">Только Futures Read-only доступ. Ключи хранятся зашифрованно.</p>';
+    document.getElementById('acc-bin-save').addEventListener('click', function () {
+      var btn = document.getElementById('acc-bin-save');
+      var key = (document.getElementById('acc-bin-key').value || '').trim();
+      var sec = (document.getElementById('acc-bin-sec').value || '').trim();
+      var err = document.getElementById('acc-bin-err');
+      err.textContent = '';
+      if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
+      btn.disabled = true; btn.textContent = '…';
+      fetch(API_BASE + '/api/account', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (res.ok) { renderBinanceStatus(true); }
+          else { err.textContent = res.d.error || 'Ошибка'; btn.disabled = false; btn.textContent = 'Сохранить ключи'; }
+        })
+        .catch(function () { err.textContent = 'Ошибка сети'; btn.disabled = false; btn.textContent = 'Сохранить ключи'; });
     });
   }
 
@@ -508,8 +554,9 @@ export function showAccountModal() {
         });
       }
       renderTgStatus(!!d.tgConnected);
+      renderBinanceStatus(!!d.binanceConnected);
     })
-    .catch(function () { renderTgStatus(false); });
+    .catch(function () { renderTgStatus(false); renderBinanceStatus(false); });
 
   var _selectedAvatar = _userAvatar;
 

@@ -23,6 +23,25 @@ const { getAuth } = require('./auth');
 const { toNodeHandler } = require('better-auth/node');
 const { Resend } = require('resend');
 
+// ── Encryption helpers for Binance API keys ──────────────────────────────────
+var _encKey = null;
+function getEncKey() {
+  if (!_encKey) _encKey = crypto.scryptSync(process.env.BETTER_AUTH_SECRET || 'fallback-key', 'qt-binance-salt', 32);
+  return _encKey;
+}
+function encryptStr(text) {
+  var iv = crypto.randomBytes(16);
+  var cipher = crypto.createCipheriv('aes-256-gcm', getEncKey(), iv);
+  var enc = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  return iv.toString('hex') + ':' + cipher.getAuthTag().toString('hex') + ':' + enc.toString('hex');
+}
+function decryptStr(data) {
+  var p = data.split(':');
+  var decipher = crypto.createDecipheriv('aes-256-gcm', getEncKey(), Buffer.from(p[0], 'hex'));
+  decipher.setAuthTag(Buffer.from(p[1], 'hex'));
+  return decipher.update(Buffer.from(p[2], 'hex')) + decipher.final('utf8');
+}
+
 function sendPasswordChangedEmail(email) {
   var resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
@@ -860,8 +879,10 @@ var httpServer = http.createServer(async function (req, res) {
       var avatar = r && r.result ? r.result : null;
       var tgRes = await redis(['EXISTS', 'tg_chat:' + userId]);
       var tgConnected = !!(tgRes && tgRes.result);
+      var binRes = await redis(['EXISTS', 'binance_keys:' + userId]);
+      var binanceConnected = !!(binRes && binRes.result);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
@@ -880,6 +901,22 @@ var httpServer = http.createServer(async function (req, res) {
         var parsed = JSON.parse(bodyAcc);
         if (parsed.action === 'save-avatar') {
           await redis(['SET', 'avatar:' + userId, parsed.avatar]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'save-binance') {
+          var bKey = (parsed.apiKey || '').trim();
+          var bSec = (parsed.apiSecret || '').trim();
+          if (!bKey || !bSec) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'apiKey and apiSecret required' }));
+            return;
+          }
+          var enc = JSON.stringify({ key: encryptStr(bKey), secret: encryptStr(bSec) });
+          await redis(['SET', 'binance_keys:' + userId, enc]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'delete-binance') {
+          await redis(['DEL', 'binance_keys:' + userId]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'tg-link-start') {
@@ -921,8 +958,11 @@ var httpServer = http.createServer(async function (req, res) {
         var service = p.service, payload = p.payload || {};
 
         if (service === 'binance') {
-          var BIN_KEY = process.env.BINANCE_API_KEY;
-          var BIN_SEC = process.env.BINANCE_API_SECRET;
+          var binRaw = await redis(['GET', 'binance_keys:' + proxySession.user.id]);
+          if (!binRaw || !binRaw.result) return proxyJson(403, { error: 'Binance API keys not configured' });
+          var binParsed = JSON.parse(binRaw.result);
+          var BIN_KEY = decryptStr(binParsed.key);
+          var BIN_SEC = decryptStr(binParsed.secret);
           if (!BIN_KEY || !BIN_SEC) return proxyJson(500, { error: 'Binance keys not configured' });
           var sym = payload.symbol;
           if (!sym) return proxyJson(400, { error: 'symbol required' });
@@ -939,8 +979,11 @@ var httpServer = http.createServer(async function (req, res) {
         }
 
         if (service === 'binance-income') {
-          var BIN_KEY = process.env.BINANCE_API_KEY;
-          var BIN_SEC = process.env.BINANCE_API_SECRET;
+          var binRaw2 = await redis(['GET', 'binance_keys:' + proxySession.user.id]);
+          if (!binRaw2 || !binRaw2.result) return proxyJson(403, { error: 'Binance API keys not configured' });
+          var binParsed2 = JSON.parse(binRaw2.result);
+          var BIN_KEY = decryptStr(binParsed2.key);
+          var BIN_SEC = decryptStr(binParsed2.secret);
           if (!BIN_KEY || !BIN_SEC) return proxyJson(500, { error: 'Binance keys not configured' });
           var incParams = new URLSearchParams({ timestamp: String(Date.now()), limit: String(payload.limit || 1000) });
           if (payload.incomeType) incParams.set('incomeType', payload.incomeType);
