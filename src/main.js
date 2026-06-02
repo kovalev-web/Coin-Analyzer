@@ -549,7 +549,7 @@ registerRoute('/404', function () {
   var _wsEnv = import.meta.env.VITE_WS_URL || '';
   var apiBase = _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
   try {
-    var r = await fetch(apiBase + '/auth/session', { credentials: 'include' });
+    var r = await fetch(apiBase + '/auth/get-session', { credentials: 'include' });
     if (r.ok) {
       var s = await r.json();
       if (s && s.user && s.user.id) {
