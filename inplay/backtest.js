@@ -47,6 +47,7 @@ var TOP_N        = parseInt(getArg('top-n',   String(cfg.top_n)));
 var STAGE1_MODE  = process.argv.indexOf('--stage1') >= 0; // force Stage-1 formulas (no micro)
 var STAGE3_MODE  = process.argv.indexOf('--stage3') >= 0; // Stage-3 formulas with proxy OBI
 var COMPARE_MODE = process.argv.indexOf('--compare') >= 0; // run all 3 stages, print comparison table
+var EXCLUDE_SYMS = new Set((getArg('exclude', '') || '').split(',').map(function(s){return s.trim().toUpperCase();}).filter(Boolean));
 
 // ── REST helpers ──────────────────────────────────────────────────────────
 
@@ -101,9 +102,10 @@ async function getTopSymbols(n, skip) {
   console.log('[Backtest] Fetching symbol list...');
   var tickers = await fetchJSON(BINANCE_REST + '/fapi/v1/ticker/24hr');
   var sorted = tickers
-    .filter(function (t) { return t.symbol.endsWith('USDT'); })
+    .filter(function (t) { return t.symbol.endsWith('USDT') && !EXCLUDE_SYMS.has(t.symbol); })
     .sort(function (a, b) { return parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume); });
   if (skip > 0) console.log('[Backtest] Skipping top-' + skip + ' heavy caps');
+  if (EXCLUDE_SYMS.size > 0) console.log('[Backtest] Excluding: ' + Array.from(EXCLUDE_SYMS).join(', '));
   return sorted.slice(skip, skip + n).map(function (t) { return t.symbol; });
 }
 
