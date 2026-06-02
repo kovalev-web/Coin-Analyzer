@@ -509,7 +509,7 @@ export function showAccountModal() {
     var btn = document.getElementById('acc-reset-pass-btn');
     var msg = document.getElementById('acc-reset-pass-msg');
     btn.disabled = true; btn.textContent = '…';
-    fetch(API_BASE + '/auth/forget-password', {
+    fetch(API_BASE + '/auth/request-password-reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
