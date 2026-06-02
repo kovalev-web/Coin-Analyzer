@@ -5,7 +5,7 @@
 
 var OLD_CODE          = 'dmitrii';
 var OLD_BRIEFING_CODE = '0208';
-var NEW_ID            = 'Yvo6BTsNvIZBXkkqTWwWmdNTYGUce4SnF';
+var NEW_ID            = 'Yvo6BTsNvIZBXkkqTWWmdNTYGUce4SnF';
 
 var fs = require('fs');
 fs.readFileSync('.env', 'utf8').split('\n').forEach(function (line) {
