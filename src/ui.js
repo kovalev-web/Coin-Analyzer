@@ -479,14 +479,47 @@ export function showAccountModal() {
     var s = document.getElementById('acc-bin-status');
     if (!s) return;
     if (connected) {
-      s.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключено</span>'
-        + '<button class="acc-revoke-btn" id="acc-bin-del" style="margin-left:12px;font-size:12px;height:28px;padding:0 10px;">Отключить</button>';
+      s.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
+          + '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключено</span>'
+          + '<button class="tg-connect-btn" id="acc-bin-upd" style="font-size:12px;height:28px;padding:0 10px;">Обновить ключи</button>'
+          + '<button class="acc-revoke-btn" id="acc-bin-del" style="font-size:12px;height:28px;padding:0 10px;">Отключить</button>'
+        + '</div>'
+        + '<div id="acc-bin-upd-form" style="display:none">'
+          + '<input type="text" id="acc-bin-key" placeholder="Новый API Key" autocomplete="off" style="margin-bottom:6px;">'
+          + '<input type="password" id="acc-bin-sec" placeholder="Новый API Secret" autocomplete="off" style="margin-bottom:6px;">'
+          + '<div class="acc-field-err" id="acc-bin-err"></div>'
+          + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить новые ключи</button>'
+        + '</div>';
+      document.getElementById('acc-bin-upd').addEventListener('click', function () {
+        var form = document.getElementById('acc-bin-upd-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      });
       document.getElementById('acc-bin-del').addEventListener('click', function () {
         if (!confirm('Отключить Binance API?')) return;
         fetch(API_BASE + '/api/account', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action: 'delete-binance' }),
         }).then(function () { renderBinanceStatus(false); }).catch(function () {});
+      });
+      document.getElementById('acc-bin-save').addEventListener('click', function () {
+        var btn = document.getElementById('acc-bin-save');
+        var key = (document.getElementById('acc-bin-key').value || '').trim();
+        var sec = (document.getElementById('acc-bin-sec').value || '').trim();
+        var err = document.getElementById('acc-bin-err');
+        err.textContent = '';
+        if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
+        btn.disabled = true; btn.textContent = '…';
+        fetch(API_BASE + '/api/account', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            if (res.ok) { renderBinanceStatus(true); }
+            else { err.textContent = res.d.error || 'Ошибка'; btn.disabled = false; btn.textContent = 'Сохранить новые ключи'; }
+          })
+          .catch(function () { err.textContent = 'Ошибка сети'; btn.disabled = false; btn.textContent = 'Сохранить новые ключи'; });
       });
       return;
     }
