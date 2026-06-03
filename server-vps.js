@@ -877,10 +877,14 @@ var httpServer = http.createServer(async function (req, res) {
       var avatar = r && r.result ? r.result : null;
       var tgRes = await redis(['EXISTS', 'tg_chat:' + userId]);
       var tgConnected = !!(tgRes && tgRes.result);
-      var binRes = await redis(['EXISTS', 'binance_keys:' + userId]);
+      var binRes = await redis(['GET', 'binance_keys:' + userId]);
       var binanceConnected = !!(binRes && binRes.result);
+      var binanceKey = null;
+      if (binanceConnected) {
+        try { binanceKey = decryptStr(JSON.parse(binRes.result).key); } catch (e) {}
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
