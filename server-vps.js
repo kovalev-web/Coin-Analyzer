@@ -1069,7 +1069,7 @@ var httpServer = http.createServer(async function (req, res) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Требуется подтверждение: пароль или код из Telegram' })); return;
           }
-          var chgToken = require('crypto').randomBytes(32).toString('hex');
+          var chgToken = crypto.randomBytes(32).toString('hex');
           await redis(['SET', 'email_chg:' + chgToken, JSON.stringify({ userId: userId, newEmail: newEmailReq }), 'EX', '3600']);
           var confirmUrl = 'https://questtick.com/confirm-email-change?token=' + chgToken;
           var resendInst = new Resend(process.env.RESEND_API_KEY);
