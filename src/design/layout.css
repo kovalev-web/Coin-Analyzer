@@ -33,7 +33,7 @@
 .coin-card{background:var(--paper);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
 .coin-card.dd-open{overflow:visible;z-index:10;}
 .card-head{padding:0 14px;height:36px;display:flex;align-items:center;gap:10px;background:var(--canvas);border-radius:16px 16px 0 0;}
-.card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;flex:1;}
+.card-sym{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;white-space:nowrap;flex:1;cursor:pointer;}
 .card-head-left{display:flex;align-items:center;gap:10px;min-width:0;}
 .stat-val{font-size:13px;font-weight:500;color:var(--ink);cursor:default;}
 .stat-val.up{color:var(--bullish);}

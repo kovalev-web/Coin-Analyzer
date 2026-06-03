@@ -72,7 +72,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .tf-picker{position:relative;display:inline-block;}
 .tf-pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:9999px;padding:0 12px;height:22px;font-size:11px;font-weight:500;cursor:pointer;letter-spacing:0;}
 .tf-pill:hover{opacity:0.8;}
-.tf-dd{position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:8px;box-shadow:var(--shadow-md);overflow:hidden;z-index:200;min-width:64px;}
+.tf-dd{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:8px;box-shadow:var(--shadow-md);overflow:hidden;z-index:200;min-width:64px;}
 .tf-dd button{display:block;width:100%;text-align:left;padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink);background:transparent;border:none;border-radius:0;height:auto;letter-spacing:0;}
 .tf-dd button:hover{background:var(--cloud);opacity:1;}
 .tf-dd button.active{color:var(--primary);font-weight:600;}
@@ -232,7 +232,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-info-stats{display:flex;align-items:center;gap:10px;padding-left:2px;}
 .fv-info-stats .stat-val{font-weight:500;padding:0;}
 .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:60px;text-align:left;}
-.fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;}
+.fv-sym-label{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;cursor:pointer;}
 .fv-bottom-bar{display:none;align-items:center;justify-content:space-between;padding:10px 24px 18px;background:var(--paper);border-top:1px solid var(--hairline);flex-shrink:0;}
 .fv-bb-left{display:flex;align-items:center;gap:12px;}
 .fv-bb-right{display:flex;align-items:center;gap:12px;}
@@ -452,3 +452,6 @@ span.bp-status{cursor:default;}
 .search-row-chg.dn{color:var(--bloom-deep);}
 .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:13px;}
 .search-divider{height:1px;background:var(--hairline);margin:4px 0;}
+
+/* ── Ruler label (chart measurement tool) ───────────────────── */
+.ruler-lbl{position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font-size:10px;font-weight:500;line-height:12px;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;flex-direction:column;gap:4px;background:var(--ink);color:var(--on-ink);}

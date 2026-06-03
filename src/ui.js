@@ -32,7 +32,7 @@ function renderCard(coin) {
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
-    '<div class="tf-dd" style="display:none">' +
+    '<div class="tf-dd">' +
     ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
       return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
     }).join('') +
@@ -48,7 +48,7 @@ function renderCard(coin) {
   return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
     '<div class="card-head">' +
     '<div class="card-sym-row">' +
-    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" style="cursor:pointer" title="Копировать тикер">' + coin.symbol.toUpperCase() + '</span>' +
+    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" title="Копировать тикер">' + coin.symbol.toUpperCase() + '</span>' +
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
@@ -438,7 +438,7 @@ export function showAccountModal() {
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="tg-connect-btn" id="acc-email-submit">Подтвердить</button>'
-            + '<button id="acc-email-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
+            + '<button id="acc-email-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
@@ -453,11 +453,11 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
         + '<div id="acc-tz-editor" style="display:none;padding:12px 0 8px;">'
-          + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
+          + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div style="display:flex;gap:8px;">'
             + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
-            + '<button id="acc-tz-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
+            + '<button id="acc-tz-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
         + '</div>'
 
@@ -517,7 +517,7 @@ export function showAccountModal() {
         + '<div id="acc-delete-wrap" style="margin-top:8px;text-align:center;">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm" style="display:none;margin-top:10px;">'
-            + '<div style="font-size:12px;color:#f08080;margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
+            + '<div style="font-size:12px;color:var(--error);margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
             + '<button class="acc-delete-btn acc-delete-confirm-btn" id="acc-delete-yes">Да, удалить аккаунт</button>'
             + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
           + '</div>'
@@ -708,7 +708,7 @@ export function showAccountModal() {
   function _setupEmailVerify() {
     var wrap = document.getElementById('acc-email-verify-wrap');
     if (!_emailHasPassword && !_emailTgConnected) {
-      wrap.innerHTML = '<p style="color:#666;font-size:12px;margin:6px 0;">Для смены email подключите Telegram или войдите через почту с паролем.</p>';
+      wrap.innerHTML = '<p style="color:var(--graphite);font-size:12px;margin:6px 0;">Для смены email подключите Telegram или войдите через почту с паролем.</p>';
       document.getElementById('acc-email-submit').disabled = true;
       return;
     }
@@ -717,7 +717,7 @@ export function showAccountModal() {
       html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" style="margin-bottom:6px;">';
     }
     if (_emailHasPassword && _emailTgConnected) {
-      html += '<div style="text-align:center;color:#444;font-size:12px;margin:4px 0;">или</div>';
+      html += '<div style="text-align:center;color:var(--charcoal);font-size:12px;margin:4px 0;">или</div>';
     }
     if (_emailTgConnected) {
       html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
@@ -741,11 +741,11 @@ export function showAccountModal() {
             var codeEl = document.getElementById('acc-email-tg-code');
             if (codeEl) codeEl.style.display = 'block';
           } else {
-            msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
+            msg.style.color = 'var(--error)'; msg.textContent = d.error || 'Ошибка';
             btn.disabled = false; btn.textContent = 'Получить код в Telegram';
           }
         }).catch(function () {
-          msg.style.color = '#f08080'; msg.textContent = 'Ошибка сети';
+          msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
           btn.disabled = false; btn.textContent = 'Получить код в Telegram';
         });
       });
@@ -768,7 +768,7 @@ export function showAccountModal() {
   document.getElementById('acc-email-submit').addEventListener('click', function () {
     var newEmail = (document.getElementById('acc-email-new').value || '').trim().toLowerCase();
     var msg = document.getElementById('acc-email-msg');
-    msg.textContent = ''; msg.style.color = '#f08080';
+    msg.textContent = ''; msg.style.color = 'var(--error)';
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { msg.textContent = 'Введите корректный email'; return; }
     if (newEmail === (_userEmail || '').toLowerCase()) { msg.textContent = 'Это уже ваш email'; return; }
     var password = (document.getElementById('acc-email-pass') || {}).value || '';
@@ -786,14 +786,14 @@ export function showAccountModal() {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
         document.getElementById('acc-email-row').style.display = '';
-        msg.style.color = '#80c080';
+        msg.style.color = 'var(--success)';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
         msg.textContent = d.error || 'Ошибка';
       }
       btn.disabled = false; btn.textContent = 'Подтвердить';
     }).catch(function () {
-      msg.style.color = '#f08080'; msg.textContent = 'Ошибка сети';
+      msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
       btn.disabled = false; btn.textContent = 'Подтвердить';
     });
   });
@@ -873,11 +873,11 @@ export function showAccountModal() {
         _tzEditor.style.display = 'none';
         _tzRow.style.display = '';
       } else {
-        msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
+        msg.style.color = 'var(--error)'; msg.textContent = d.error || 'Ошибка';
       }
       btn.disabled = false; btn.textContent = 'Сохранить';
     }).catch(function () {
-      msg.style.color = '#f08080'; msg.textContent = 'Ошибка сети';
+      msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
       btn.disabled = false; btn.textContent = 'Сохранить';
     });
   });
@@ -962,7 +962,7 @@ export function showAccountModal() {
     })
       .then(function (r) {
         if (r.ok) {
-          msg.style.color = '#80c080';
+          msg.style.color = 'var(--success)';
           msg.textContent = 'Готово — все другие устройства отключены';
           btn.textContent = 'Выйти со всех других устройств';
           btn.disabled = false;
@@ -990,7 +990,7 @@ export function showAccountModal() {
     })
       .then(function (r) {
         if (r.ok) {
-          msg.style.color = '#80c080';
+          msg.style.color = 'var(--success)';
           msg.textContent = 'Письмо отправлено на ' + _userEmail;
         } else {
           throw new Error('fail');
@@ -1560,8 +1560,6 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     lbl.style.left = p2.x + 'px';
     lbl.style.top = clampedY + 'px';
     lbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
-    lbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
-    lbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
     lbl.innerHTML =
       '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
       (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');
@@ -1826,7 +1824,7 @@ function _initChartForSym(sym) {
   el.style.position = 'relative'; el.appendChild(rc);
   _setCanvasSize(rc, el.offsetWidth || 400, el.offsetHeight || 300);
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/12px Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;flex-direction:column;gap:4px;';
+  lbl.className = 'ruler-lbl';
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
@@ -2956,9 +2954,9 @@ function _fvBottomBarHTML(sym, tf) {
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" style="cursor:pointer" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd" style="display:none">'
+    + '<div class="tf-dd fv-tf-dd">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div></div>'
     + '</div>'
@@ -2992,10 +2990,10 @@ function _fvCoinInfoHTML(sym, tf) {
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" style="cursor:pointer" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd" style="display:none">'
+    + '<div class="tf-dd fv-tf-dd">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
