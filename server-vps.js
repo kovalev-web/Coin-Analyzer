@@ -1076,11 +1076,12 @@ wss.on('connection', function (ws, upgradeReq) {
   clients.add(ws);
   console.log('[Server] Client connected (' + clients.size + ' total)');
   // Authenticate WS connection using session cookie from the HTTP upgrade request.
-  // ws._sessionUserId is used instead of trusting client-supplied msg.code.
-  getSession(upgradeReq).then(function (sess) {
+  // Store the promise so save_alerts can await it if it arrives before resolution.
+  ws._sessionPromise = getSession(upgradeReq).then(function (sess) {
     ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
-    if (ws._sessionUserId) ws._userId = ws._sessionUserId; // tag for alert broadcasts
-  }).catch(function () { ws._sessionUserId = null; });
+    if (ws._sessionUserId) ws._userId = ws._sessionUserId;
+    return ws._sessionUserId;
+  }).catch(function () { ws._sessionUserId = null; return null; });
 
   // Отправить кэш сразу при подключении
   var arr = Object.values(tickerCache);
@@ -1128,7 +1129,8 @@ wss.on('connection', function (ws, upgradeReq) {
 
       else if (msg.type === 'save_alerts') {
         // Use session-authenticated userId — never trust client-supplied msg.code.
-        var wsUserId = ws._sessionUserId;
+        // Await session promise to handle race where message arrives before getSession resolves.
+        var wsUserId = ws._sessionUserId !== undefined ? ws._sessionUserId : await ws._sessionPromise;
         if (!wsUserId) return; // reject unauthenticated WS save attempts
         if (!alertsMemory[wsUserId]) alertsMemory[wsUserId] = { chatId: '', data: {} };
         if (msg.chatId) alertsMemory[wsUserId].chatId = String(msg.chatId);
