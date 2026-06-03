@@ -6,6 +6,7 @@
   <title>Questtick — Design System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="/src/styles.css" />
   <style>
     /* ── Page layout ─────────────────────────────────────────── */
@@ -296,9 +297,10 @@
       <div class="ds-comp-grid">
         <div class="ds-comp-row">
           <div class="ds-comp-label">Topbar</div>
-          <button class="btn-topbar">⚙</button>
-          <button class="btn-topbar btn-burger" style="display:inline-flex">☰</button>
-          <button class="btn-topbar btn-theme" style="display:inline-flex">◑</button>
+          <button class="btn-topbar" data-icon="search,16"></button>
+          <button class="btn-topbar" data-icon="bookmark,16"></button>
+          <button class="btn-topbar" data-icon="moon,16"></button>
+          <button class="btn-topbar" data-icon="menu,16"></button>
         </div>
         <div class="ds-comp-row">
           <div class="ds-comp-label">Filter pills</div>
@@ -322,9 +324,9 @@
           <div class="ds-comp-label">Actions</div>
           <button class="btn-clear-alerts">Clear alerts</button>
           <button class="btn-clear-levels">Clear levels</button>
-          <button class="btn-analyze-one">AI</button>
+          <button class="btn-analyze-one" data-icon="zap,14"></button>
           <button class="btn-retry">Retry</button>
-          <button class="btn-pressed">…</button>
+          <button class="btn-pressed" data-icon="zap,14"></button>
         </div>
         <div class="ds-comp-row">
           <div class="ds-comp-label">Badges</div>
@@ -334,22 +336,22 @@
         </div>
         <div class="ds-comp-row">
           <div class="ds-comp-label">Signal</div>
-          <span class="signal-badge bullish">↑</span>
-          <span class="signal-badge caution">~</span>
-          <span class="signal-badge neutral">–</span>
+          <span class="signal-badge bullish" data-signal="bullish"></span>
+          <span class="signal-badge caution" data-signal="caution"></span>
+          <span class="signal-badge neutral" data-signal="neutral"></span>
         </div>
         <div class="ds-comp-row">
           <div class="ds-comp-label">TF pill</div>
-          <button class="tf-pill">15m ▾</button>
-          <button class="tf-pill">1h ▾</button>
+          <button class="tf-pill">15m</button>
+          <button class="tf-pill">1h</button>
           <button class="tf-pill">4h ▾</button>
         </div>
         <div class="ds-comp-row">
           <div class="ds-comp-label">Star / brief</div>
-          <button class="btn-star">☆</button>
-          <button class="btn-star active">★</button>
-          <button class="btn-briefing">📋</button>
-          <button class="btn-briefing active">📋</button>
+          <button class="btn-star" data-icon="star,16"></button>
+          <button class="btn-star active" data-icon="star,16"></button>
+          <button class="btn-briefing" data-icon="bookmark,16"></button>
+          <button class="btn-briefing active" data-icon="bookmark,16"></button>
         </div>
       </div>
     </div>
@@ -434,24 +436,24 @@
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector">default <span style="color:var(--steel)">(в карточках)</span></div>
             <div class="ds-ctx-demo">
-              <button class="tf-pill">15m ▾</button>
-              <button class="tf-pill">1h ▾</button>
+              <button class="tf-pill">15m</button>
+              <button class="tf-pill">1h</button>
             </div>
             <div class="ds-ctx-note">h=22px · 11px</div>
           </div>
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector"><strong>.fv-info-top</strong> .tf-pill</div>
             <div class="ds-ctx-demo fv-info-top ds-ctx-neutral">
-              <button class="tf-pill">15m ▾</button>
-              <button class="tf-pill">1h ▾</button>
+              <button class="tf-pill">15m</button>
+              <button class="tf-pill">1h</button>
             </div>
             <div class="ds-ctx-note">h=30px</div>
           </div>
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector"><strong>.fv-bb-left</strong> .tf-pill</div>
             <div class="ds-ctx-demo fv-bb-left ds-ctx-neutral">
-              <button class="tf-pill">15m ▾</button>
-              <button class="tf-pill">1h ▾</button>
+              <button class="tf-pill">15m</button>
+              <button class="tf-pill">1h</button>
             </div>
             <div class="ds-ctx-note">h=36px · 12px</div>
           </div>
@@ -465,16 +467,16 @@
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector">default <span style="color:var(--steel)">(топбар)</span></div>
             <div class="ds-ctx-demo">
-              <button class="btn-topbar">⚙</button>
-              <button class="btn-topbar">🔔</button>
+              <button class="btn-topbar" data-icon="search,16"></button>
+              <button class="btn-topbar" data-icon="bookmark,16"></button>
             </div>
             <div class="ds-ctx-note">fog bg · ink color</div>
           </div>
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector"><strong>.sort-bar-btns</strong> .btn-topbar</div>
             <div class="ds-ctx-demo sort-bar-btns ds-ctx-neutral">
-              <button class="btn-topbar">↑↓</button>
-              <button class="btn-topbar active">↑↓</button>
+              <button class="btn-topbar" data-icon="percent,16"></button>
+              <button class="btn-topbar active" data-icon="bar-chart-2,16"></button>
             </div>
             <div class="ds-ctx-note">transparent bg · steel→ink color</div>
           </div>
@@ -490,7 +492,7 @@
             <div class="ds-ctx-demo">
               <button class="btn-clear-alerts">Clear alerts</button>
               <button class="btn-clear-levels">Clear levels</button>
-              <span class="signal-badge bullish">↑</span>
+              <span class="signal-badge bullish" data-signal="bullish"></span>
             </div>
             <div class="ds-ctx-note">tinted bg · h=26px</div>
           </div>
@@ -499,7 +501,7 @@
             <div class="ds-ctx-demo fv-info-top ds-ctx-neutral">
               <button class="btn-clear-alerts">Clear alerts</button>
               <button class="btn-clear-levels">Clear levels</button>
-              <span class="signal-badge bullish">↑</span>
+              <span class="signal-badge bullish" data-signal="bullish"></span>
             </div>
             <div class="ds-ctx-note">fog bg · no border · h=30px</div>
           </div>
@@ -508,7 +510,7 @@
             <div class="ds-ctx-demo fv-bb-right ds-ctx-neutral">
               <button class="btn-clear-alerts">Clear alerts</button>
               <button class="btn-clear-levels">Clear levels</button>
-              <span class="signal-badge bullish">↑</span>
+              <span class="signal-badge bullish" data-signal="bullish"></span>
             </div>
             <div class="ds-ctx-note">fog bg · no border · h=36px</div>
           </div>
@@ -522,24 +524,24 @@
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector">default</div>
             <div class="ds-ctx-demo">
-              <button class="btn-star">☆</button>
-              <button class="btn-star active">★</button>
+              <button class="btn-star" data-icon="star,16"></button>
+              <button class="btn-star active" data-icon="star,16"></button>
             </div>
             <div class="ds-ctx-note">24×24 · transparent</div>
           </div>
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector"><strong>.fv-info-top</strong> .btn-star</div>
             <div class="ds-ctx-demo fv-info-top ds-ctx-neutral">
-              <button class="btn-star">☆</button>
-              <button class="btn-star active">★</button>
+              <button class="btn-star" data-icon="star,16"></button>
+              <button class="btn-star active" data-icon="star,16"></button>
             </div>
             <div class="ds-ctx-note">30×30 · fog bg</div>
           </div>
           <div class="ds-ctx-row">
             <div class="ds-ctx-selector"><strong>.fv-bb-right</strong> .btn-star</div>
             <div class="ds-ctx-demo fv-bb-right ds-ctx-neutral">
-              <button class="btn-star">☆</button>
-              <button class="btn-star active">★</button>
+              <button class="btn-star" data-icon="star,16"></button>
+              <button class="btn-star active" data-icon="star,16"></button>
             </div>
             <div class="ds-ctx-note">36×36 · fog bg · radius-md</div>
           </div>
@@ -571,6 +573,44 @@
   </div>
 
   <script>
+    /* ── Icon helper (mirrors src/utils.js) ──────────────────── */
+    function icon(name, size) {
+      size = size || 14;
+      var key = name.replace(/-([a-z0-9])/g, function(_, c) { return c.toUpperCase(); });
+      key = key.charAt(0).toUpperCase() + key.slice(1);
+      var def = window.lucide && window.lucide[key];
+      if (!def) return '';
+      var base = def[1] || {}, attrs = {};
+      Object.keys(base).forEach(function(k) { attrs[k] = base[k]; });
+      attrs.width = size; attrs.height = size; attrs['stroke-width'] = 2;
+      var attrStr = Object.keys(attrs).map(function(k) { return k + '="' + attrs[k] + '"'; }).join(' ');
+      function kids(arr) {
+        return (arr || []).map(function(c) {
+          var t = c[0], a = c[1] || {}, ch = c[2];
+          var as = Object.keys(a).map(function(k) { return k + '="' + a[k] + '"'; }).join(' ');
+          return ch && ch.length ? '<' + t + ' ' + as + '>' + kids(ch) + '</' + t + '>' : '<' + t + ' ' + as + '/>';
+        }).join('');
+      }
+      return '<svg ' + attrStr + '>' + kids(def[2]) + '</svg>';
+    }
+    function signalIcon(s) {
+      if (s === 'bullish') return icon('arrow-up', 14);
+      if (s === 'caution') return icon('triangle-alert', 14);
+      return icon('eye-off', 14);
+    }
+
+    /* ── Init: fill icon placeholders ───────────────────────── */
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-icon]').forEach(function(el) {
+        var parts = el.dataset.icon.split(',');
+        el.innerHTML = icon(parts[0], parseInt(parts[1]) || 14);
+      });
+      document.querySelectorAll('[data-signal]').forEach(function(el) {
+        el.innerHTML = signalIcon(el.dataset.signal);
+      });
+    });
+
+    /* ── Theme toggle ────────────────────────────────────────── */
     function setTheme(t) {
       if (t === 'system') {
         document.documentElement.removeAttribute('data-theme');
