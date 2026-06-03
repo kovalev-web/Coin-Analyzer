@@ -1027,8 +1027,8 @@ var httpServer = http.createServer(async function (req, res) {
             res.end(JSON.stringify({ error: 'Telegram не подключён' })); return;
           }
           var code = String(Math.floor(100000 + Math.random() * 900000));
-          await redis(['SET', 'email_chg_code:' + userId, code, 'EX', '300']);
-          await sendTG(chatRes2.result, '🔐 Код подтверждения смены email: ' + code + '\n\nКод действителен 5 минут.');
+          await redis(['SET', 'email_chg_code:' + userId, code, 'EX', '60']);
+          await sendTG(chatRes2.result, '🔐 Код подтверждения смены email: ' + code + '\n\nКод действителен 1 минуту.');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'change-email-request') {
