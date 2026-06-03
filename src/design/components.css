@@ -138,8 +138,7 @@ html[data-theme="dark"] .ao-reanalyze{background:var(--fog);}
 .code-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;}
 .code-modal{background:var(--paper);border-radius:16px;padding:0;width:360px;max-width:calc(100vw - 32px);box-shadow:var(--shadow-md);border:1px solid var(--hairline);overflow:hidden;}
 .code-modal p{font-size:13px;color:var(--graphite);line-height:1.55;margin-bottom:20px;}
-.code-modal input:not(.ds-input){width:100%;height:44px;border-radius:10px;border:1.5px solid var(--steel);background:var(--canvas);color:var(--ink);font-size:15px;font-weight:600;padding:0 14px;outline:none;box-sizing:border-box;letter-spacing:0.5px;}
-.code-modal input:not(.ds-input):focus{border-color:var(--primary);}
+
 .code-modal-actions{display:flex;gap:10px;}
 .code-modal-save{flex:1;height:44px;background:var(--ink);color:var(--on-ink);border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
 .code-modal-save:hover{opacity:0.85;}
@@ -281,11 +280,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .avatar-preset{background:var(--fog);border:2px solid transparent;border-radius:10px;width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;transition:border-color 0.15s;}
 .avatar-preset.selected{border-color:var(--primary);}
 .avatar-preset:hover:not(.selected){opacity:0.8;}
-.account-body input[type="password"]:not(.ds-input),.account-body input[type="text"]:not(.ds-input){display:block;width:100%;height:40px;border-radius:8px;border:1.5px solid var(--steel);background:var(--canvas);color:var(--ink);font-size:14px;padding:0 12px;outline:none;box-sizing:border-box;}
-.account-body input[type="password"]:not(.ds-input):focus,.account-body input[type="text"]:not(.ds-input):focus{border-color:var(--primary);}
-.account-body input.error{border-color:var(--danger-soft);}
-.account-section input{width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:14px;outline:none;transition:border-color 0.15s;margin-bottom:6px;}
-.account-section input:focus{border-color:var(--primary);}
+
 .acc-field-err{font-size:12px;color:var(--error);min-height:18px;margin:2px 0 6px;}
 .account-save-btn{background:var(--primary);color:var(--on-ink);border:none;}
 .account-save-btn:hover:not(:disabled){background:var(--primary-bright);opacity:1;}
