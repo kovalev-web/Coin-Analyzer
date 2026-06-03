@@ -552,7 +552,7 @@ export function showAccountModal() {
       + '<input type="password" id="acc-bin-sec" placeholder="API Secret" autocomplete="off" style="margin-bottom:6px;">'
       + '<div class="acc-field-err" id="acc-bin-err"></div>'
       + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
-      + '<p class="tg-hint" style="margin-top:8px;">При создании ключа включите: <b>✅ Чтение</b>. Для истории сделок также <b>✅ Futures</b>. Остальное — выключено. Ключи хранятся зашифрованно.</p>';
+      + '<p class="tg-hint" style="margin-top:8px;">Включите: <b>✅ Чтение</b> и <b>✅ Futures</b> — иначе сделки не отобразятся. Всё остальное выключено. Ключи хранятся зашифрованно.</p>';
     bindBinanceSaveBtn('Сохранить ключи');
   }
 
