@@ -4,26 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Questtick — Подтверждение email</title>
-  <style>
-    body { background:#0e0e0e; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; display:flex; align-items:center; justify-content:center; min-height:100dvh; margin:0; }
-    .card { text-align:center; padding:32px; }
-    .card p { color:#888; font-size:14px; margin-top:8px; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/auth.css" />
   <script>
     var params = window.location.search;
     if (params) {
       window.location.replace('https://api.questtick.com/api/auth/verify-email' + params);
     } else {
       document.addEventListener('DOMContentLoaded', function() {
-        document.querySelector('.card h2').textContent = 'Ссылка недействительна';
-        document.querySelector('.card p').textContent = 'Попробуйте запросить письмо повторно.';
+        document.querySelector('.auth-status h2').textContent = 'Ссылка недействительна';
+        document.querySelector('.auth-status p').textContent = 'Попробуйте запросить письмо повторно.';
       });
     }
   </script>
 </head>
 <body>
-  <div class="card">
-    <h2 style="font-size:18px;font-weight:600;color:#fff;">Подтверждаем email…</h2>
+  <div class="auth-status">
+    <h2>Подтверждаем email…</h2>
     <p>Пожалуйста, подождите</p>
   </div>
 </body>
