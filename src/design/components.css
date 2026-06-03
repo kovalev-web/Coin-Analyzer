@@ -48,19 +48,12 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .logo-wiggle{animation:logo-wiggle 0.45s ease-in-out;}
 
 /* ── Pills ──────────────────────────────────────────────────── */
-.filter-pill{background:var(--canvas);color:var(--charcoal);border:1px solid var(--steel);padding:0 12px;height:30px;font-size:12px;font-weight:500;border-radius:9999px;cursor:pointer;}
-.filter-pill:hover{opacity:0.8;}
-.filter-pill.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
 .nav-pill{background:transparent;color:var(--graphite);border:none;padding:0 10px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
 .nav-pill:hover{color:var(--ink);}
 .nav-pill.active{background:var(--fog);color:var(--ink);}
 .nav-pill.desktop-nav-btn{display:none;}
 @media(min-width:1025px){.nav-pill.desktop-nav-btn{display:inline-flex;}}
 .nav-beta-tag{font-size:9px;font-weight:700;color:var(--danger-soft);letter-spacing:0.03em;text-transform:uppercase;}
-.sort-pill{background:var(--canvas);color:var(--charcoal);border:1px solid var(--steel);padding:0 14px;height:28px;font-size:11px;font-weight:500;border-radius:9999px;}
-.sort-pill.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
-.tier-badge{background:var(--ink);color:var(--on-ink);border:none;padding:0 14px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;flex-shrink:0;}
-.tier-badge:hover{opacity:0.8;}
 .tier-num-btn{background:color-mix(in srgb, var(--fog) 30%, transparent);color:var(--steel);border:none;padding:0 8px;height:26px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;}
 .tier-num-btn:hover{opacity:0.8;}
 .tier-num-btn.active{background:var(--fog);color:var(--ink);}
