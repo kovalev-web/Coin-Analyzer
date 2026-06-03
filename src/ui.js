@@ -398,90 +398,126 @@ export function showAccountModal() {
   el.innerHTML =
     '<div class="account-panel">'
     + '<div class="popup-header"><span class="popup-title">Личный кабинет</span><button class="popup-close" id="account-close">' + icon('x', 16) + '</button></div>'
-    + '<div class="popup-body account-body">'
+    + '<div class="acc-tabs">'
+      + '<button class="acc-tab acc-tab-active" data-tab="profile">Профиль</button>'
+      + '<button class="acc-tab" data-tab="integrations">Интеграции</button>'
+      + '<button class="acc-tab" data-tab="security">Безопасность</button>'
+    + '</div>'
+    + '<div class="account-body">'
 
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Аватарка</div>'
-        + '<div class="avatar-grid" id="account-avatar-grid">'
-        + '<button class="avatar-preset avatar-logo-btn' + (!_userAvatar ? ' selected' : '') + '" data-preset="" title="По умолчанию">' + _LOGO_SVG + '</button>'
-        + _AVATAR_PRESETS.map(function (p) {
-            return '<button class="avatar-preset' + (p === _userAvatar ? ' selected' : '') + '" data-preset="' + p + '">' + p + '</button>';
-          }).join('')
-        + '</div>'
-      + '</div>'
+      + '<div class="acc-pane" id="acc-pane-profile">'
 
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Email</div>'
-        + '<div id="acc-email-display" style="display:flex;align-items:center;gap:10px;min-height:32px;">'
-          + '<span class="acc-email-addr">' + (_userEmail || '') + '</span>'
-          + '<button id="acc-email-change-btn" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;padding:0;text-decoration:underline;flex-shrink:0;">Сменить</button>'
+        + '<div class="acc-profile-hd">'
+          + '<div class="acc-avatar-big" id="acc-avatar-display">'
+            + (_userAvatar ? '<span style="font-size:28px;line-height:1;">' + _userAvatar + '</span>' : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>')
+          + '</div>'
+          + '<div class="acc-profile-info">'
+            + '<div class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</div>'
+            + '<button id="acc-avatar-toggle" class="acc-avatar-toggle">↓ Сменить аватар</button>'
+          + '</div>'
         + '</div>'
-        + '<div id="acc-email-editor" style="display:none;">'
-          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" style="margin-bottom:8px;">'
+
+        + '<div class="avatar-grid acc-avatar-collapsed" id="account-avatar-grid">'
+          + '<button class="avatar-preset avatar-logo-btn' + (!_userAvatar ? ' selected' : '') + '" data-preset="" title="По умолчанию">' + _LOGO_SVG + '</button>'
+          + _AVATAR_PRESETS.map(function (p) {
+              return '<button class="avatar-preset' + (p === _userAvatar ? ' selected' : '') + '" data-preset="' + p + '">' + p + '</button>';
+            }).join('')
+        + '</div>'
+
+        + '<div class="acc-row" id="acc-email-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">EMAIL</div>'
+            + '<span class="acc-email-addr">' + escHtml(_userEmail || '') + '</span>'
+          + '</div>'
+          + '<button id="acc-email-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
+        + '</div>'
+        + '<div id="acc-email-editor" style="display:none;padding:12px 0 8px;">'
+          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:8px;">'
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="tg-connect-btn" id="acc-email-submit">Подтвердить</button>'
             + '<button id="acc-email-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
         + '</div>'
-        + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:6px;"></div>'
-      + '</div>'
+        + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
 
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Telegram</div>'
-        + '<div id="acc-tg-status"></div>'
-      + '</div>'
-
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Binance API</div>'
-        + '<div id="acc-bin-status"></div>'
-      + '</div>'
-
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Часовой пояс</div>'
-        + '<div id="acc-tz-wrap">'
-          + '<div id="acc-tz-display" style="display:flex;align-items:center;gap:10px;min-height:32px;">'
-            + '<span id="acc-tz-current" style="font-size:13px;color:#ccc;"></span>'
-            + '<button id="acc-tz-change-btn" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;padding:0;text-decoration:underline;flex-shrink:0;">Изменить</button>'
+        + '<div class="acc-row" id="acc-tz-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">ЧАСОВОЙ ПОЯС</div>'
+            + '<span id="acc-tz-current" class="acc-row-val"></span>'
           + '</div>'
-          + '<div id="acc-tz-editor" style="display:none;">'
-            + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
-            + '<div class="acc-field-err" id="acc-tz-msg"></div>'
-            + '<div style="display:flex;gap:8px;">'
-              + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
-              + '<button id="acc-tz-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
-            + '</div>'
+          + '<button id="acc-tz-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
+        + '</div>'
+        + '<div id="acc-tz-editor" style="display:none;padding:12px 0 8px;">'
+          + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
+          + '<div class="acc-field-err" id="acc-tz-msg"></div>'
+          + '<div style="display:flex;gap:8px;">'
+            + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
+            + '<button id="acc-tz-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
+        + '</div>'
+
+      + '</div>'
+
+      + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
+        + '<div class="account-section">'
+          + '<div class="account-section-title">Telegram</div>'
+          + '<div id="acc-tg-status"></div>'
+        + '</div>'
+        + '<div class="account-section">'
+          + '<div class="account-section-title">Binance API</div>'
+          + '<div id="acc-bin-status"></div>'
         + '</div>'
       + '</div>'
 
-      + '<div class="account-section">'
-        + '<div class="account-section-title">Безопасность</div>'
+      + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
         + '<div class="acc-security-actions">'
           + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
           + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
           + '<button class="acc-revoke-btn" id="acc-revoke-btn">Выйти со всех других устройств</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
-      + '</div>'
-
-    + '</div>'
-    + '<div class="popup-footer">'
-      + '<div class="acc-footer-divider"></div>'
-      + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
-      + '<div id="acc-delete-wrap" style="margin-top:8px;text-align:center;">'
-        + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
-        + '<div id="acc-delete-confirm" style="display:none;margin-top:10px;">'
-          + '<div style="font-size:12px;color:#f08080;margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
-          + '<button class="acc-delete-btn acc-delete-confirm-btn" id="acc-delete-yes">Да, удалить аккаунт</button>'
-          + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+        + '<div class="acc-footer-divider" style="margin-top:20px;"></div>'
+        + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
+        + '<div id="acc-delete-wrap" style="margin-top:8px;text-align:center;">'
+          + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
+          + '<div id="acc-delete-confirm" style="display:none;margin-top:10px;">'
+            + '<div style="font-size:12px;color:#f08080;margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
+            + '<button class="acc-delete-btn acc-delete-confirm-btn" id="acc-delete-yes">Да, удалить аккаунт</button>'
+            + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+          + '</div>'
         + '</div>'
       + '</div>'
+
     + '</div>'
   + '</div>';
 
   document.body.appendChild(el);
   el.classList.add('open');
+
+  el.querySelectorAll('.acc-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      el.querySelectorAll('.acc-tab').forEach(function (t) { t.classList.remove('acc-tab-active'); });
+      el.querySelectorAll('.acc-pane').forEach(function (p) { p.style.display = 'none'; });
+      tab.classList.add('acc-tab-active');
+      var pane = document.getElementById('acc-pane-' + tab.dataset.tab);
+      if (pane) pane.style.display = 'block';
+    });
+  });
+
+  document.getElementById('acc-avatar-toggle').addEventListener('click', function () {
+    var grid = document.getElementById('account-avatar-grid');
+    var collapsed = grid.classList.toggle('acc-avatar-collapsed');
+    this.textContent = collapsed ? '↓ Сменить аватар' : '↑ Скрыть';
+  });
+
+  function _renderAvatarCircle() {
+    var d = document.getElementById('acc-avatar-display');
+    if (!d) return;
+    d.innerHTML = _userAvatar
+      ? '<span style="font-size:28px;line-height:1;">' + _userAvatar + '</span>'
+      : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>';
+  }
 
   function renderTgStatus(connected) {
     var s = document.getElementById('acc-tg-status');
@@ -649,7 +685,7 @@ export function showAccountModal() {
   }
 
   document.getElementById('acc-email-change-btn').addEventListener('click', function () {
-    document.getElementById('acc-email-display').style.display = 'none';
+    document.getElementById('acc-email-row').style.display = 'none';
     document.getElementById('acc-email-editor').style.display = 'block';
     document.getElementById('acc-email-msg').textContent = '';
     _setupEmailVerify();
@@ -657,7 +693,7 @@ export function showAccountModal() {
 
   document.getElementById('acc-email-cancel').addEventListener('click', function () {
     document.getElementById('acc-email-editor').style.display = 'none';
-    document.getElementById('acc-email-display').style.display = 'flex';
+    document.getElementById('acc-email-row').style.display = 'flex';
     document.getElementById('acc-email-msg').textContent = '';
   });
 
@@ -681,7 +717,7 @@ export function showAccountModal() {
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
-        document.getElementById('acc-email-display').style.display = 'flex';
+        document.getElementById('acc-email-row').style.display = 'flex';
         msg.style.color = '#80c080';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
@@ -721,7 +757,7 @@ export function showAccountModal() {
   var _autoTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   var _tzSel = document.getElementById('acc-tz-select');
   var _tzCurrent = document.getElementById('acc-tz-current');
-  var _tzDisplay = document.getElementById('acc-tz-display');
+  var _tzRow = document.getElementById('acc-tz-row');
   var _tzEditor = document.getElementById('acc-tz-editor');
 
   function _tzSetDisplay(tz, source) {
@@ -744,13 +780,13 @@ export function showAccountModal() {
   _tzSel.value = _autoTz || _TZ_LIST[0][0];
 
   document.getElementById('acc-tz-change-btn').addEventListener('click', function () {
-    _tzDisplay.style.display = 'none';
+    _tzRow.style.display = 'none';
     _tzEditor.style.display = 'block';
   });
 
   document.getElementById('acc-tz-cancel').addEventListener('click', function () {
     _tzEditor.style.display = 'none';
-    _tzDisplay.style.display = 'flex';
+    _tzRow.style.display = 'flex';
     document.getElementById('acc-tz-msg').textContent = '';
   });
 
@@ -767,7 +803,7 @@ export function showAccountModal() {
       if (d.ok) {
         _tzSetDisplay(_tzSel.value, 'сохранено');
         _tzEditor.style.display = 'none';
-        _tzDisplay.style.display = 'flex';
+        _tzRow.style.display = 'flex';
       } else {
         msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
       }
@@ -787,6 +823,7 @@ export function showAccountModal() {
         el.querySelectorAll('.avatar-preset').forEach(function (btn) {
           btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
         });
+        _renderAvatarCircle();
       }
       if (d.timezone) {
         _tzSel.value = d.timezone;
@@ -808,6 +845,7 @@ export function showAccountModal() {
       b.classList.toggle('selected', b === btn);
     });
     setUserAvatar(picked);
+    _renderAvatarCircle();
     fetch(API_BASE + '/api/account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

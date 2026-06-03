@@ -384,6 +384,32 @@
     .acc-delete-cancel{background:none;border:none;color:#555;font-size:12px;cursor:pointer;}
     .tg-waiting{color:var(--graphite);}
 
+    /* ── Account tabs ── */
+    .acc-tabs{display:flex;border-bottom:1px solid var(--hairline);margin:0 -20px;padding:0 20px;}
+    .acc-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--graphite);font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;margin-bottom:-1px;font-family:'Manrope',Arial,sans-serif;transition:color 0.15s;}
+    .acc-tab:hover{color:var(--ink);}
+    .acc-tab.acc-tab-active{color:var(--primary);border-bottom-color:var(--primary);}
+    .acc-pane{padding-top:20px;}
+
+    /* ── Profile header ── */
+    .acc-profile-hd{display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--hairline);margin-bottom:4px;}
+    .acc-avatar-big{width:60px;height:60px;border-radius:50%;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--fog);overflow:hidden;}
+    .acc-avatar-logo{display:flex;align-items:center;justify-content:center;width:34px;height:34px;}
+    .acc-profile-info{display:flex;flex-direction:column;gap:4px;}
+    .acc-username{font-size:16px;font-weight:700;color:var(--ink);}
+    .acc-avatar-toggle{background:none;border:none;color:var(--graphite);font-size:12px;cursor:pointer;padding:0;font-family:'Manrope',Arial,sans-serif;text-decoration:underline;text-underline-offset:2px;text-align:left;}
+    .acc-avatar-toggle:hover{color:var(--ink);}
+    .acc-avatar-collapsed{display:none!important;}
+    #account-avatar-grid.avatar-grid{margin:8px 0 12px;}
+
+    /* ── Profile rows ── */
+    .acc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hairline);gap:12px;}
+    .acc-row-left{flex:1;min-width:0;}
+    .acc-row-label{font-size:10px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;}
+    .acc-row-val{font-size:13px;color:var(--ink);}
+    .acc-row-edit{background:none;border:none;color:var(--graphite);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;display:inline-flex;align-items:center;gap:4px;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;white-space:nowrap;}
+    .acc-row-edit:hover{color:var(--ink);}
+
     /* ── Tier badge (topbar single button) ── */
     .tier-badge{background:var(--ink);color:var(--on-ink);border:none;padding:0 14px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;}
     .tier-badge:hover{opacity:0.8;}
