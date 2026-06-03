@@ -944,8 +944,10 @@ var httpServer = http.createServer(async function (req, res) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
+      var status = (e.message || '').includes('UNIQUE') ? 400 : 500;
+      var msg = (e.message || '').includes('UNIQUE') ? 'Этот email уже используется другим аккаунтом' : e.message;
+      res.writeHead(status, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: msg }));
     }
     return;
   }
@@ -1036,6 +1038,11 @@ var httpServer = http.createServer(async function (req, res) {
           if (!newEmailReq || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailReq)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Некорректный email' })); return;
+          }
+          var existingUser = getDb().sqlite.prepare('SELECT id FROM user WHERE email = ?').get(newEmailReq);
+          if (existingUser) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Этот email уже используется другим аккаунтом' })); return;
           }
           var verified = false;
           if (parsed.password) {

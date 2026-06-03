@@ -12,34 +12,29 @@
     a { color:#277CC2; text-decoration:none; }
   </style>
   <script>
-    var API_BASE = '';
-    var token = new URLSearchParams(window.location.search).get('token');
-    if (!token) {
-      document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
+      var token = new URLSearchParams(window.location.search).get('token');
+      if (!token) {
         document.getElementById('title').textContent = 'Ссылка недействительна';
         document.getElementById('msg').textContent = 'Попробуйте запросить смену email повторно.';
-      });
-    } else {
-      fetch('/api/confirm-email-change?token=' + encodeURIComponent(token))
+        return;
+      }
+      fetch('https://api.questtick.com/api/confirm-email-change?token=' + encodeURIComponent(token))
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          document.addEventListener('DOMContentLoaded', function () {
-            if (d.ok) {
-              document.getElementById('title').textContent = 'Email успешно изменён';
-              document.getElementById('msg').innerHTML = 'Новый email подтверждён. <a href="/">Войти</a>';
-            } else {
-              document.getElementById('title').textContent = 'Ошибка подтверждения';
-              document.getElementById('msg').textContent = d.error || 'Ссылка недействительна или истекла.';
-            }
-          });
+          if (d.ok) {
+            document.getElementById('title').textContent = 'Email успешно изменён';
+            document.getElementById('msg').innerHTML = 'Новый email подтверждён. <a href="/">Войти</a>';
+          } else {
+            document.getElementById('title').textContent = 'Ошибка подтверждения';
+            document.getElementById('msg').textContent = d.error || 'Ссылка недействительна или истекла.';
+          }
         })
         .catch(function () {
-          document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('title').textContent = 'Ошибка сети';
-            document.getElementById('msg').textContent = 'Попробуйте ещё раз позже.';
-          });
+          document.getElementById('title').textContent = 'Ошибка сети';
+          document.getElementById('msg').textContent = 'Попробуйте ещё раз позже.';
         });
-    }
+    });
   </script>
 </head>
 <body>
