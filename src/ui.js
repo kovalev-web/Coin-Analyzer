@@ -2417,7 +2417,8 @@ function _weekAIHTML() {
     .sort().join(',');
   var savedKeys = (state.aiSummaryTradedKeys || []).slice().sort().join(',');
   var hasNewTraded = currentKeys !== savedKeys;
-  var hasMoreTrades = ws && typeof state.aiSummaryTradeCount === 'number' && ws.tradeCount > state.aiSummaryTradeCount;
+  var savedTradeCount = typeof state.aiSummaryTradeCount === 'number' ? state.aiSummaryTradeCount : 0;
+  var hasMoreTrades = ws && ws.tradeCount > savedTradeCount;
   var btnDisabled = !ws || (!!aiText && !hasNewTraded && !hasMoreTrades);
   var dateStr = '';
   if (aiText && state.aiSummaryDate) {
