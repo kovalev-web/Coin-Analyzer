@@ -342,9 +342,7 @@
     .account-overlay{display:none;position:fixed;inset:0;z-index:600;background:var(--canvas);overflow-y:auto;}
     .account-overlay.open{display:block;}
     .account-panel{max-width:440px;margin:0 auto;padding:0 20px 48px;}
-    .account-panel .popup-header{border-bottom:none;padding-bottom:0;margin-bottom:0;}
-    .account-panel .popup-title{font-size:26px;font-weight:500;color:var(--ink);}
-    .account-panel .acc-close{width:26px;height:26px;min-width:26px;background:var(--fog);border-radius:6px;padding:5px 4px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;}
+    .account-panel .popup-header{border-bottom:none;padding-bottom:0;}
     .account-section{margin-bottom:28px;}
     .account-section-title{font-size:11px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;}
     .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
@@ -393,41 +391,16 @@
     .acc-tab.acc-tab-active{background:var(--fog);color:var(--ink);}
     .acc-pane{padding-top:30px;display:flex;flex-direction:column;gap:30px;}
 
-    /* ── Profile: avatar card ── */
-    .acc-avatar-card{display:flex;flex-direction:row;justify-content:space-between;align-items:center;padding:10px 20px;background:rgba(30,37,42,0.2);border-radius:20px;}
-    .acc-avatar-emoji{font-size:42px;line-height:1.4;display:flex;align-items:center;}
-    .acc-avatar-logo{display:flex;align-items:center;justify-content:center;width:42px;height:42px;}
-    .acc-avatar-edit-icon{background:none;border:none;color:var(--charcoal);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-    .acc-avatar-edit-icon:hover{color:var(--ink);}
-    .acc-username{font-size:16px;font-weight:500;color:var(--ink);line-height:1.4;}
     .acc-avatar-collapsed{display:none!important;}
     #account-avatar-grid.avatar-grid{margin:0;}
 
-    /* ── Profile: field rows ── */
-    .acc-field{}
-    .acc-field-row{display:flex;flex-direction:row;justify-content:space-between;align-items:flex-end;gap:9px;}
-    .acc-field-label{font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;}
-    .acc-field-val{font-size:12px;font-weight:500;color:var(--charcoal);line-height:1.4;}
-    .acc-field-link{background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:'Manrope',Arial,sans-serif;line-height:1.4;flex-shrink:0;white-space:nowrap;}
-    .acc-field-link:hover{opacity:0.8;}
-
-    /* ── Integration rows (keep for integrations tab) ── */
+    /* ── Integration rows ── */
     .acc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hairline);gap:12px;}
     .acc-row-left{flex:1;min-width:0;}
     .acc-row-label{font-size:10px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;}
     .acc-row-val{font-size:13px;color:var(--ink);}
     .acc-row-edit{background:none;border:none;color:var(--graphite);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;display:inline-flex;align-items:center;gap:4px;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;white-space:nowrap;}
     .acc-row-edit:hover{color:var(--ink);}
-
-    /* ── Integration rows ── */
-    .acc-int-left{display:flex;align-items:center;gap:12px;}
-    .acc-int-icon{font-size:20px;line-height:1;width:24px;text-align:center;flex-shrink:0;}
-    .acc-int-del-btn{padding:0 12px;height:32px;border-radius:8px;background:transparent;color:#f08080;border:1.5px solid #f08080;font-size:12px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;white-space:nowrap;flex-shrink:0;}
-    .acc-int-del-btn:hover:not(:disabled){background:#f0808018;}
-    .acc-int-del-btn:disabled{opacity:0.5;cursor:default;}
-    .acc-int-x-btn{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
-    .acc-int-cancel-btn{background:none;border:none;color:var(--graphite);font-size:13px;font-weight:600;cursor:pointer;font-family:'Manrope',Arial,sans-serif;padding:0 6px;display:inline-flex;align-items:center;}
-    .acc-int-cancel-btn:hover{color:var(--ink);}
 
     /* ── Tier badge (topbar single button) ── */
     .tier-badge{background:var(--ink);color:var(--on-ink);border:none;padding:0 14px;height:30px;font-size:12px;font-weight:600;border-radius:9999px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;flex-shrink:0;}

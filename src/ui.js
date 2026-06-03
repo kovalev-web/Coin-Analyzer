@@ -397,7 +397,7 @@ export function showAccountModal() {
   el.className = 'account-overlay';
   el.innerHTML =
     '<div class="account-panel">'
-    + '<div class="popup-header"><span class="popup-title">Настройки профиля</span><button class="popup-close acc-close" id="account-close">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title" style="font-size:26px;font-weight:500;">Настройки профиля</span><button class="popup-close" id="account-close" style="width:26px;height:26px;min-width:26px;background:var(--fog);border-radius:6px;padding:0;display:inline-flex;align-items:center;justify-content:center;">' + icon('x', 14) + '</button></div>'
     + '<div class="acc-tabs">'
       + '<button class="acc-tab acc-tab-active" data-tab="profile">Профиль</button>'
       + '<button class="acc-tab" data-tab="integrations">Интеграции</button>'
@@ -407,14 +407,14 @@ export function showAccountModal() {
 
       + '<div class="acc-pane" id="acc-pane-profile">'
 
-        + '<div class="acc-avatar-card">'
-          + '<div class="acc-int-left">'
-            + '<span id="acc-avatar-display" class="acc-avatar-emoji">'
-              + (_userAvatar ? _userAvatar : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>')
+        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:rgba(30,37,42,0.2);border-radius:20px;">'
+          + '<div style="display:flex;align-items:center;gap:13px;">'
+            + '<span id="acc-avatar-display" style="font-size:42px;line-height:1.4;display:flex;align-items:center;">'
+              + (_userAvatar ? _userAvatar : '<span style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;">' + _LOGO_SVG + '</span>')
             + '</span>'
-            + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
+            + '<span style="font-size:16px;font-weight:500;color:var(--ink);">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
           + '</div>'
-          + '<button id="acc-avatar-toggle" class="acc-avatar-edit-icon" title="Сменить аватар">' + icon('pencil', 14) + '</button>'
+          + '<button id="acc-avatar-toggle" style="background:none;border:none;color:var(--graphite);cursor:pointer;padding:4px;display:flex;align-items:center;" title="Сменить аватар">' + icon('pencil', 14) + '</button>'
         + '</div>'
 
         + '<div class="avatar-grid acc-avatar-collapsed" id="account-avatar-grid">'
@@ -424,13 +424,13 @@ export function showAccountModal() {
             }).join('')
         + '</div>'
 
-        + '<div class="acc-field" id="acc-email-row">'
-          + '<div class="acc-field-row">'
+        + '<div id="acc-email-row">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:9px;">'
             + '<div>'
-              + '<div class="acc-field-label">Email</div>'
-              + '<span class="acc-email-addr acc-field-val">' + escHtml(_userEmail || '') + '</span>'
+              + '<div style="font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;">Email</div>'
+              + '<span class="acc-email-addr" style="font-size:12px;color:var(--charcoal);">' + escHtml(_userEmail || '') + '</span>'
             + '</div>'
-            + '<button id="acc-email-change-btn" class="acc-field-link">Изменить Email</button>'
+            + '<button id="acc-email-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:\'Manrope\',Arial,sans-serif;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить Email</button>'
           + '</div>'
         + '</div>'
         + '<div id="acc-email-editor" style="display:none;padding:12px 0 8px;">'
@@ -443,13 +443,13 @@ export function showAccountModal() {
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
 
-        + '<div class="acc-field" id="acc-tz-row">'
-          + '<div class="acc-field-row">'
+        + '<div id="acc-tz-row">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:9px;">'
             + '<div>'
-              + '<div class="acc-field-label">Часовой пояс</div>'
-              + '<span id="acc-tz-current" class="acc-field-val"></span>'
+              + '<div style="font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;">Часовой пояс</div>'
+              + '<span id="acc-tz-current" style="font-size:12px;font-weight:500;color:var(--charcoal);line-height:1.4;"></span>'
             + '</div>'
-            + '<button id="acc-tz-change-btn" class="acc-field-link">Изменить часовой пояс</button>'
+            + '<button id="acc-tz-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:\'Manrope\',Arial,sans-serif;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить часовой пояс</button>'
           + '</div>'
         + '</div>'
         + '<div id="acc-tz-editor" style="display:none;padding:12px 0 8px;">'
@@ -466,8 +466,8 @@ export function showAccountModal() {
       + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
 
         + '<div class="acc-row" id="acc-tg-row">'
-          + '<div class="acc-row-left acc-int-left">'
-            + '<span class="acc-int-icon">✈️</span>'
+          + '<div class="acc-row-left" style="display:flex;align-items:center;gap:12px;">'
+            + '<span style="color:var(--graphite);display:flex;align-items:center;flex-shrink:0;">' + icon('send', 18) + '</span>'
             + '<div>'
               + '<div class="acc-row-label">TELEGRAM</div>'
               + '<div id="acc-tg-badge"></div>'
@@ -478,8 +478,8 @@ export function showAccountModal() {
         + '<div id="acc-tg-link-area" style="display:none;padding:10px 0;"></div>'
 
         + '<div class="acc-row" id="acc-bin-row-hd">'
-          + '<div class="acc-row-left acc-int-left">'
-            + '<span class="acc-int-icon">🔑</span>'
+          + '<div class="acc-row-left" style="display:flex;align-items:center;gap:12px;">'
+            + '<span style="color:var(--graphite);display:flex;align-items:center;flex-shrink:0;">' + icon('key', 18) + '</span>'
             + '<div>'
               + '<div class="acc-row-label">BINANCE API</div>'
               + '<span id="acc-bin-val" class="acc-row-val"></span>'
@@ -499,7 +499,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-cancel-form" class="acc-int-cancel-btn" style="display:none;">Отмена</button>'
+            + '<button id="acc-bin-cancel-form" style="display:none;background:none;border:none;color:var(--graphite);font-size:13px;cursor:pointer;font-family:\'Manrope\',Arial,sans-serif;padding:0 6px;">Отмена</button>'
           + '</div>'
         + '</div>'
 
@@ -551,7 +551,7 @@ export function showAccountModal() {
     if (!d) return;
     d.innerHTML = _userAvatar
       ? _userAvatar
-      : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>';
+      : '<span style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;">' + _LOGO_SVG + '</span>';
   }
 
   function renderTgStatus(connected) {
@@ -561,7 +561,7 @@ export function showAccountModal() {
     if (!badge || !btnWrap) return;
     if (connected) {
       badge.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
-      btnWrap.innerHTML = '<button class="acc-int-del-btn" id="acc-tg-disconnect">Отключить</button>';
+      btnWrap.innerHTML = '<button class="acc-revoke-btn" id="acc-tg-disconnect" style="height:32px;font-size:12px;padding:0 12px;">Отключить</button>';
       if (linkArea) linkArea.style.display = 'none';
       document.getElementById('acc-tg-disconnect').addEventListener('click', function () {
         var btn = this;
@@ -656,7 +656,7 @@ export function showAccountModal() {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
       btnWrap.innerHTML =
         '<button class="acc-row-edit" id="acc-bin-upd">' + icon('pencil', 12) + ' Изменить</button>'
-        + '<button class="acc-int-del-btn acc-int-x-btn" id="acc-bin-del">✕</button>';
+        + '<button class="acc-revoke-btn" id="acc-bin-del" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;">' + icon('x', 14) + '</button>';
       form.style.display = 'none';
       var cf = document.getElementById('acc-bin-cancel-form');
       if (cf) cf.style.display = 'none';
