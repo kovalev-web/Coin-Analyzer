@@ -397,7 +397,7 @@ export function showAccountModal() {
   el.className = 'account-overlay';
   el.innerHTML =
     '<div class="account-panel">'
-    + '<div class="popup-header"><span class="popup-title">Личный кабинет</span><button class="popup-close" id="account-close">' + icon('x', 16) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title">Настройки профиля</span><button class="popup-close acc-close" id="account-close">' + icon('x', 14) + '</button></div>'
     + '<div class="acc-tabs">'
       + '<button class="acc-tab acc-tab-active" data-tab="profile">Профиль</button>'
       + '<button class="acc-tab" data-tab="integrations">Интеграции</button>'
@@ -407,14 +407,14 @@ export function showAccountModal() {
 
       + '<div class="acc-pane" id="acc-pane-profile">'
 
-        + '<div class="acc-profile-hd">'
-          + '<div class="acc-avatar-big" id="acc-avatar-display">'
-            + (_userAvatar ? '<span style="font-size:28px;line-height:1;">' + _userAvatar + '</span>' : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>')
+        + '<div class="acc-avatar-card">'
+          + '<div class="acc-int-left">'
+            + '<span id="acc-avatar-display" class="acc-avatar-emoji">'
+              + (_userAvatar ? _userAvatar : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>')
+            + '</span>'
+            + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
           + '</div>'
-          + '<div class="acc-profile-info">'
-            + '<div class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</div>'
-            + '<button id="acc-avatar-toggle" class="acc-avatar-toggle">↓ Сменить аватар</button>'
-          + '</div>'
+          + '<button id="acc-avatar-toggle" class="acc-avatar-edit-icon" title="Сменить аватар">' + icon('pencil', 14) + '</button>'
         + '</div>'
 
         + '<div class="avatar-grid acc-avatar-collapsed" id="account-avatar-grid">'
@@ -424,12 +424,14 @@ export function showAccountModal() {
             }).join('')
         + '</div>'
 
-        + '<div class="acc-row" id="acc-email-row">'
-          + '<div class="acc-row-left">'
-            + '<div class="acc-row-label">EMAIL</div>'
-            + '<span class="acc-email-addr">' + escHtml(_userEmail || '') + '</span>'
+        + '<div class="acc-field" id="acc-email-row">'
+          + '<div class="acc-field-row">'
+            + '<div>'
+              + '<div class="acc-field-label">Email</div>'
+              + '<span class="acc-email-addr acc-field-val">' + escHtml(_userEmail || '') + '</span>'
+            + '</div>'
+            + '<button id="acc-email-change-btn" class="acc-field-link">Изменить Email</button>'
           + '</div>'
-          + '<button id="acc-email-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
         + '</div>'
         + '<div id="acc-email-editor" style="display:none;padding:12px 0 8px;">'
           + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:8px;">'
@@ -441,12 +443,14 @@ export function showAccountModal() {
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
 
-        + '<div class="acc-row" id="acc-tz-row">'
-          + '<div class="acc-row-left">'
-            + '<div class="acc-row-label">ЧАСОВОЙ ПОЯС</div>'
-            + '<span id="acc-tz-current" class="acc-row-val"></span>'
+        + '<div class="acc-field" id="acc-tz-row">'
+          + '<div class="acc-field-row">'
+            + '<div>'
+              + '<div class="acc-field-label">Часовой пояс</div>'
+              + '<span id="acc-tz-current" class="acc-field-val"></span>'
+            + '</div>'
+            + '<button id="acc-tz-change-btn" class="acc-field-link">Изменить часовой пояс</button>'
           + '</div>'
-          + '<button id="acc-tz-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
         + '</div>'
         + '<div id="acc-tz-editor" style="display:none;padding:12px 0 8px;">'
           + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
@@ -546,7 +550,7 @@ export function showAccountModal() {
     var d = document.getElementById('acc-avatar-display');
     if (!d) return;
     d.innerHTML = _userAvatar
-      ? '<span style="font-size:28px;line-height:1;">' + _userAvatar + '</span>'
+      ? _userAvatar
       : '<span class="acc-avatar-logo">' + _LOGO_SVG + '</span>';
   }
 
@@ -757,7 +761,7 @@ export function showAccountModal() {
 
   document.getElementById('acc-email-cancel').addEventListener('click', function () {
     document.getElementById('acc-email-editor').style.display = 'none';
-    document.getElementById('acc-email-row').style.display = 'flex';
+    document.getElementById('acc-email-row').style.display = '';
     document.getElementById('acc-email-msg').textContent = '';
   });
 
@@ -781,7 +785,7 @@ export function showAccountModal() {
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
-        document.getElementById('acc-email-row').style.display = 'flex';
+        document.getElementById('acc-email-row').style.display = '';
         msg.style.color = '#80c080';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
@@ -850,7 +854,7 @@ export function showAccountModal() {
 
   document.getElementById('acc-tz-cancel').addEventListener('click', function () {
     _tzEditor.style.display = 'none';
-    _tzRow.style.display = 'flex';
+    _tzRow.style.display = '';
     document.getElementById('acc-tz-msg').textContent = '';
   });
 
@@ -867,7 +871,7 @@ export function showAccountModal() {
       if (d.ok) {
         _tzSetDisplay(_tzSel.value, 'сохранено');
         _tzEditor.style.display = 'none';
-        _tzRow.style.display = 'flex';
+        _tzRow.style.display = '';
       } else {
         msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
       }

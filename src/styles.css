@@ -342,7 +342,9 @@
     .account-overlay{display:none;position:fixed;inset:0;z-index:600;background:var(--canvas);overflow-y:auto;}
     .account-overlay.open{display:block;}
     .account-panel{max-width:440px;margin:0 auto;padding:0 20px 48px;}
-    .account-panel .popup-header{border-bottom:1px solid var(--hairline);padding-bottom:16px;}
+    .account-panel .popup-header{border-bottom:none;padding-bottom:0;margin-bottom:0;}
+    .account-panel .popup-title{font-size:26px;font-weight:500;color:var(--ink);}
+    .account-panel .acc-close{width:26px;height:26px;min-width:26px;background:var(--fog);border-radius:6px;padding:5px 4px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;}
     .account-section{margin-bottom:28px;}
     .account-section-title{font-size:11px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;}
     .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
@@ -385,24 +387,31 @@
     .tg-waiting{color:var(--graphite);}
 
     /* ── Account tabs ── */
-    .acc-tabs{display:flex;border-bottom:1px solid var(--hairline);margin:0 -20px;padding:0 20px;}
-    .acc-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--graphite);font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;margin-bottom:-1px;font-family:'Manrope',Arial,sans-serif;transition:color 0.15s;}
+    .acc-tabs{display:flex;gap:9px;margin:12px 0 0;padding:0;border-bottom:none;}
+    .acc-tab{background:none;border:none;border-radius:999px;color:var(--charcoal);font-size:12px;font-weight:500;padding:6px 12px 7px;cursor:pointer;font-family:'Manrope',Arial,sans-serif;line-height:1.4;transition:background 0.15s,color 0.15s;}
     .acc-tab:hover{color:var(--ink);}
-    .acc-tab.acc-tab-active{color:var(--primary);border-bottom-color:var(--primary);}
-    .acc-pane{padding-top:20px;}
+    .acc-tab.acc-tab-active{background:var(--fog);color:var(--ink);}
+    .acc-pane{padding-top:30px;display:flex;flex-direction:column;gap:30px;}
 
-    /* ── Profile header ── */
-    .acc-profile-hd{display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--hairline);margin-bottom:4px;}
-    .acc-avatar-big{width:60px;height:60px;border-radius:50%;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--fog);overflow:hidden;}
-    .acc-avatar-logo{display:flex;align-items:center;justify-content:center;width:34px;height:34px;}
-    .acc-profile-info{display:flex;flex-direction:column;gap:4px;}
-    .acc-username{font-size:16px;font-weight:700;color:var(--ink);}
-    .acc-avatar-toggle{background:none;border:none;color:var(--graphite);font-size:12px;cursor:pointer;padding:0;font-family:'Manrope',Arial,sans-serif;text-decoration:underline;text-underline-offset:2px;text-align:left;}
-    .acc-avatar-toggle:hover{color:var(--ink);}
+    /* ── Profile: avatar card ── */
+    .acc-avatar-card{display:flex;flex-direction:row;justify-content:space-between;align-items:center;padding:10px 20px;background:rgba(30,37,42,0.2);border-radius:20px;}
+    .acc-avatar-emoji{font-size:42px;line-height:1.4;display:flex;align-items:center;}
+    .acc-avatar-logo{display:flex;align-items:center;justify-content:center;width:42px;height:42px;}
+    .acc-avatar-edit-icon{background:none;border:none;color:var(--charcoal);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .acc-avatar-edit-icon:hover{color:var(--ink);}
+    .acc-username{font-size:16px;font-weight:500;color:var(--ink);line-height:1.4;}
     .acc-avatar-collapsed{display:none!important;}
-    #account-avatar-grid.avatar-grid{margin:8px 0 12px;}
+    #account-avatar-grid.avatar-grid{margin:0;}
 
-    /* ── Profile rows ── */
+    /* ── Profile: field rows ── */
+    .acc-field{}
+    .acc-field-row{display:flex;flex-direction:row;justify-content:space-between;align-items:flex-end;gap:9px;}
+    .acc-field-label{font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;}
+    .acc-field-val{font-size:12px;font-weight:500;color:var(--charcoal);line-height:1.4;}
+    .acc-field-link{background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:'Manrope',Arial,sans-serif;line-height:1.4;flex-shrink:0;white-space:nowrap;}
+    .acc-field-link:hover{opacity:0.8;}
+
+    /* ── Integration rows (keep for integrations tab) ── */
     .acc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hairline);gap:12px;}
     .acc-row-left{flex:1;min-width:0;}
     .acc-row-label{font-size:10px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;}
