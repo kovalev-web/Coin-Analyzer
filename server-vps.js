@@ -19,6 +19,7 @@ const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-
 const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi, getOrderbookMetrics } = require('./inplay/orderbook');
 const inplayCfg = require('./inplay/config.json');
 const { ensureAuthTables } = require('./db/setup');
+const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
 const { toNodeHandler } = require('better-auth/node');
 const { Resend } = require('resend');
