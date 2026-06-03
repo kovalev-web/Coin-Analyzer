@@ -281,8 +281,8 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .avatar-preset{background:var(--fog);border:2px solid transparent;border-radius:10px;width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;transition:border-color 0.15s;}
 .avatar-preset.selected{border-color:var(--primary);}
 .avatar-preset:hover:not(.selected){opacity:0.8;}
-.account-body input[type="password"],.account-body input[type="text"]{display:block;width:100%;height:40px;border-radius:8px;border:1.5px solid var(--steel);background:var(--canvas);color:var(--ink);font-size:14px;padding:0 12px;outline:none;box-sizing:border-box;}
-.account-body input[type="password"]:focus,.account-body input[type="text"]:focus{border-color:var(--primary);}
+.account-body input[type="password"]:not(.ds-input),.account-body input[type="text"]:not(.ds-input){display:block;width:100%;height:40px;border-radius:8px;border:1.5px solid var(--steel);background:var(--canvas);color:var(--ink);font-size:14px;padding:0 12px;outline:none;box-sizing:border-box;}
+.account-body input[type="password"]:not(.ds-input):focus,.account-body input[type="text"]:not(.ds-input):focus{border-color:var(--primary);}
 .account-body input.error{border-color:var(--danger-soft);}
 .account-section input{width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:14px;outline:none;transition:border-color 0.15s;margin-bottom:6px;}
 .account-section input:focus{border-color:var(--primary);}
@@ -452,6 +452,11 @@ span.bp-status{cursor:default;}
 .search-row-chg.dn{color:var(--bloom-deep);}
 .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:13px;}
 .search-divider{height:1px;background:var(--hairline);margin:4px 0;}
+
+/* ── Form Fields ─────────────────────────────────────────────── */
+.ds-input{display:block;width:100%;height:38px;padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;transition:border-color 0.15s;}
+.ds-input:focus{border-color:var(--primary);}
+.ds-input.error{border-color:var(--danger-soft);}
 
 /* ── Ruler label (chart measurement tool) ───────────────────── */
 .ruler-lbl{position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font-size:10px;font-weight:500;line-height:12px;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;flex-direction:column;gap:4px;background:var(--ink);color:var(--on-ink);}
