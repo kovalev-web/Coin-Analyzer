@@ -1,0 +1,46 @@
+/* ═══════════════════════════════════════════════════════════════
+   BASE — Reset, global typography, scrollbar
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--steel) transparent;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--steel); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--graphite); }
+
+body {
+  font-family: var(--font-family);
+  background: var(--cloud);
+  color: var(--ink);
+  min-height: 100vh;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#app {
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.last-update {
+  font-size: var(--text-xs);
+  color: var(--graphite);
+  font-weight: var(--font-normal);
+  white-space: nowrap;
+}
