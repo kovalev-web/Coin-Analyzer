@@ -880,11 +880,7 @@ var httpServer = http.createServer(async function (req, res) {
           }));
         } else if (action === 'save') {
           if (!parsed.skip_entries) {
-            var _existingR = await redis(['GET', key]);
-            var _existingLen = _existingR.result ? JSON.parse(_existingR.result).length : 0;
-            if (!((entries || []).length === 0 && _existingLen > 0)) {
-              await redis(['SET', key, JSON.stringify(entries || [])]);
-            }
+            await redis(['SET', key, JSON.stringify(entries || [])]);
           }
           if (parsed.ai_summary) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null, userId: userId })]);

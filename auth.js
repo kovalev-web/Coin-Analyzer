@@ -45,6 +45,7 @@ function getAuth() {
     session: {
       expiresIn:  60 * 60 * 24 * 30, // 30 дней
       updateAge:  60 * 60 * 24,       // обновлять сессию раз в сутки
+      freshAge:   0,                  // не требовать «свежую» сессию для чувствительных операций
     },
     rateLimit: {
       enabled: true,
@@ -58,6 +59,24 @@ function getAuth() {
       },
     },
     user: {
+      deleteUser: {
+        enabled: true,
+        afterDelete: async function (user) {
+          var REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+          var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+          if (!REDIS_URL || !REDIS_TOKEN) return;
+          var uid = user.id;
+          var keys = ['levels', 'briefing', 'briefing_ai', 'briefing_tz', 'tg_chat',
+                      'binance_keys', 'avatar', 'account_tz'].map(function (k) { return k + ':' + uid; });
+          await Promise.all(keys.map(function (k) {
+            return fetch(REDIS_URL, {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + REDIS_TOKEN, 'Content-Type': 'application/json' },
+              body: JSON.stringify(['DEL', k]),
+            });
+          }));
+        },
+      },
       changeEmail: {
         enabled: true,
         sendChangeEmailConfirmation: async function ({ user, newEmail, url }) {
