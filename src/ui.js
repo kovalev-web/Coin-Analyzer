@@ -334,7 +334,7 @@ export function showSettingsModal() {
       '<div class="popup-header"><span class="popup-title">Настройки</span><button class="popup-close" id="code-modal-close">' + icon('x', 16) + '</button></div>' +
       '<div class="popup-body">' +
         '<p style="margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
-        '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" />' +
+        '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" class="ds-input" />' +
         '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
         '<div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:16px;">' +
           '<button id="clear-all-alerts-btn" class="code-modal-danger">Удалить все алерты</button>' +
@@ -714,7 +714,7 @@ export function showAccountModal() {
     }
     var html = '';
     if (_emailHasPassword) {
-      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" style="margin-bottom:6px;">';
+      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:6px;">';
     }
     if (_emailHasPassword && _emailTgConnected) {
       html += '<div style="text-align:center;color:var(--charcoal);font-size:12px;margin:4px 0;">или</div>';
@@ -723,7 +723,7 @@ export function showAccountModal() {
       html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
         + '<button id="acc-email-tg-btn" class="acc-revoke-btn">Получить код в Telegram</button>'
         + '</div>'
-        + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" autocomplete="off" style="display:none;margin-bottom:0;">';
+        + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" autocomplete="off" class="ds-input" style="display:none;margin-bottom:0;">';
     }
     wrap.innerHTML = html;
 
