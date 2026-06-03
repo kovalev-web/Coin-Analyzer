@@ -42,6 +42,29 @@ function decryptStr(data) {
   return decipher.update(Buffer.from(p[2], 'hex')) + decipher.final('utf8');
 }
 
+function _getUserTimeInfo(ianaStr, utcOffset) {
+  if (ianaStr) {
+    try {
+      var now = new Date();
+      var parts = {};
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: ianaStr, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(now).forEach(function (p) { if (p.type !== 'literal') parts[p.type] = p.value; });
+      var days = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      var dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: ianaStr }).format(now);
+      var dp = dateStr.split('-');
+      return {
+        weekday: days[parts.weekday] !== undefined ? days[parts.weekday] : -1,
+        hour: parseInt(parts.hour),
+        minute: parseInt(parts.minute),
+        userNow: new Date(Date.UTC(+dp[0], +dp[1] - 1, +dp[2])),
+      };
+    } catch (e) {}
+  }
+  var d = new Date(Date.now() + (utcOffset || 0) * 3600000);
+  return { weekday: d.getUTCDay(), hour: d.getUTCHours(), minute: d.getUTCMinutes(), userNow: d };
+}
+
 function sendPasswordChangedEmail(email) {
   var resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
@@ -885,8 +908,10 @@ var httpServer = http.createServer(async function (req, res) {
       if (binanceConnected) {
         try { binanceKey = decryptStr(JSON.parse(binRes.result).key); } catch (e) {}
       }
+      var tzIanaRes = await redis(['GET', 'account_tz:' + userId]);
+      var timezone = tzIanaRes && tzIanaRes.result ? tzIanaRes.result : null;
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
@@ -962,6 +987,16 @@ var httpServer = http.createServer(async function (req, res) {
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'delete-binance') {
           await redis(['DEL', 'binance_keys:' + userId]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'save-timezone') {
+          var tz = (parsed.timezone || '').trim();
+          try { new Intl.DateTimeFormat('en', { timeZone: tz }).format(); } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid timezone' }));
+            return;
+          }
+          await redis(['SET', 'account_tz:' + userId, tz]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'tg-link-start') {
@@ -1454,12 +1489,14 @@ async function sendWeeklyBriefingReport(chatId) {
   var tzRes = await redis(['GET', 'briefing_tz:' + userId]);
   var utcOffset = (tzRes && tzRes.result !== null) ? parseFloat(tzRes.result) : 0;
   if (!isFinite(utcOffset)) utcOffset = 0;
+  var tzIanaRes = await redis(['GET', 'account_tz:' + userId]);
+  var ianaStr = tzIanaRes && tzIanaRes.result ? tzIanaRes.result : null;
 
   var r = await redis(['GET', 'briefing:' + userId]);
   var entries = r.result ? JSON.parse(r.result) : [];
 
   // Filter current week (Mon–Sun) in USER's local time
-  var userNow = new Date(Date.now() + utcOffset * 3600000);
+  var userNow = _getUserTimeInfo(ianaStr, utcOffset).userNow;
   var daysToMon = userNow.getUTCDay() === 0 ? 6 : userNow.getUTCDay() - 1;
   var monUTC = new Date(userNow.getTime() - daysToMon * 24 * 3600000);
   var monStr = monUTC.getUTCFullYear() + '-' + String(monUTC.getUTCMonth() + 1).padStart(2, '0') + '-' + String(monUTC.getUTCDate()).padStart(2, '0');
@@ -1512,11 +1549,12 @@ setInterval(async function () {
       if (!chatRes || !chatRes.result) continue;
       var userChatId = chatRes.result;
       var tzRes = await redis(['GET', 'briefing_tz:' + uid]);
-      if (!tzRes || tzRes.result === null) continue;
-      var offset = parseFloat(tzRes.result);
-      if (!isFinite(offset)) continue;
-      var userDate = new Date(Date.now() + offset * 3600000);
-      if (userDate.getUTCDay() !== 0 || userDate.getUTCHours() !== 22 || userDate.getUTCMinutes() !== 0) {
+      var tzIanaRes2 = await redis(['GET', 'account_tz:' + uid]);
+      var ianaStr2 = tzIanaRes2 && tzIanaRes2.result ? tzIanaRes2.result : null;
+      var numOffset = tzRes && tzRes.result !== null ? parseFloat(tzRes.result) : null;
+      if (!ianaStr2 && (numOffset === null || !isFinite(numOffset))) continue;
+      var _ti = _getUserTimeInfo(ianaStr2, numOffset || 0);
+      if (_ti.weekday !== 0 || _ti.hour !== 22 || _ti.minute !== 0) {
         _weeklyReportSent[uid] = false;
         continue;
       }

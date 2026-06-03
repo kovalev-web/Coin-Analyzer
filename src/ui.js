@@ -435,6 +435,15 @@ export function showAccountModal() {
       + '</div>'
 
       + '<div class="account-section">'
+        + '<div class="account-section-title">Часовой пояс</div>'
+        + '<div id="acc-tz-wrap">'
+          + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
+          + '<div class="acc-field-err" id="acc-tz-msg"></div>'
+          + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
+        + '</div>'
+      + '</div>'
+
+      + '<div class="account-section">'
         + '<div class="account-section-title">Безопасность</div>'
         + '<div class="acc-security-actions">'
           + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
@@ -615,6 +624,63 @@ export function showAccountModal() {
       });
   });
 
+  // Populate timezone dropdown
+  var _TZ_LIST = [
+    ['Pacific/Honolulu',    'UTC−10  Гавайи'],
+    ['America/Anchorage',   'UTC−9   Аляска'],
+    ['America/Los_Angeles', 'UTC−8/−7  Los Angeles, Ванкувер'],
+    ['America/Denver',      'UTC−7/−6  Denver'],
+    ['America/Chicago',     'UTC−6/−5  Chicago, Mexico City'],
+    ['America/New_York',    'UTC−5/−4  Нью-Йорк, Торонто'],
+    ['America/Sao_Paulo',   'UTC−3     Сан-Паулу'],
+    ['Atlantic/Reykjavik',  'UTC+0     Рейкьявик'],
+    ['Europe/London',       'UTC+0/+1  Лондон'],
+    ['Europe/Paris',        'UTC+1/+2  Берлин, Париж, Варшава'],
+    ['Europe/Athens',       'UTC+2/+3  Афины, Хельсинки, Рига'],
+    ['Europe/Moscow',       'UTC+3     Москва, Минск'],
+    ['Asia/Dubai',          'UTC+4     Дубай, Тбилиси'],
+    ['Asia/Karachi',        'UTC+5     Карачи, Ташкент'],
+    ['Asia/Kolkata',        'UTC+5:30  Мумбай, Дели'],
+    ['Asia/Almaty',         'UTC+6     Алматы'],
+    ['Asia/Bangkok',        'UTC+7     Бангкок, Джакарта'],
+    ['Asia/Singapore',      'UTC+8     Сингапур, Гонконг, Пекин'],
+    ['Asia/Seoul',          'UTC+9     Сеул, Токио'],
+    ['Australia/Sydney',    'UTC+10/+11  Сидней'],
+    ['Pacific/Auckland',    'UTC+12/+13  Окленд'],
+  ];
+  var _autoTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var _tzSel = document.getElementById('acc-tz-select');
+  _TZ_LIST.forEach(function (item) {
+    var opt = document.createElement('option');
+    opt.value = item[0];
+    opt.textContent = item[1];
+    _tzSel.appendChild(opt);
+  });
+  // Pre-select auto-detected; will be overridden by saved value from server
+  _tzSel.value = _autoTz || _TZ_LIST[0][0];
+
+  document.getElementById('acc-tz-save').addEventListener('click', function () {
+    var btn = document.getElementById('acc-tz-save');
+    var msg = document.getElementById('acc-tz-msg');
+    btn.disabled = true; btn.textContent = '…'; msg.textContent = '';
+    fetch(API_BASE + '/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'save-timezone', timezone: _tzSel.value }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) {
+        msg.style.color = '#80c080'; msg.textContent = 'Сохранено';
+      } else {
+        msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
+      }
+      btn.disabled = false; btn.textContent = 'Сохранить';
+    }).catch(function () {
+      msg.style.color = '#f08080'; msg.textContent = 'Ошибка сети';
+      btn.disabled = false; btn.textContent = 'Сохранить';
+    });
+  });
+
   // Load saved avatar + tg status from server
   fetch(API_BASE + '/api/account', { credentials: 'include' })
     .then(function (r) { return r.json(); })
@@ -625,6 +691,7 @@ export function showAccountModal() {
           btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
         });
       }
+      if (d.timezone) _tzSel.value = d.timezone;
       renderTgStatus(!!d.tgConnected);
       renderBinanceStatus(!!d.binanceConnected, d.binanceKey || '');
     })
