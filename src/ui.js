@@ -560,7 +560,7 @@ export function showAccountModal() {
       + '<input type="password" id="acc-bin-sec" placeholder="API Secret" autocomplete="off" style="margin-bottom:6px;">'
       + '<div class="acc-field-err" id="acc-bin-err"></div>'
       + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
-      + '<p class="tg-hint" style="margin-top:8px;">Включите <b>✅ Чтение</b>. Всё остальное выключено. Ключи хранятся зашифрованно.</p>';
+      + '<p class="tg-hint" style="margin-top:8px;">Включите <b>✅ Чтение</b>. Если ставите IP-ограничение — добавьте <b>202.182.110.25</b> (сервер Questtick). Ключи хранятся зашифрованно.</p>';
     bindBinanceSaveBtn('Сохранить ключи');
   }
 
