@@ -52,7 +52,6 @@ function renderCard(coin) {
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
-    '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + coin.symbol + '" style="display:' + (((_alerts[coin.symbol] && _alerts[coin.symbol].length) || (_levels[coin.symbol] && _levels[coin.symbol].length)) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 14) + '</button>' +
     badge +
     '<button class="btn-star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>' +
     '<button class="btn-expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 16) + '</button>' +
