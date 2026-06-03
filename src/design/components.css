@@ -296,10 +296,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 
 /* ── Briefing buttons ───────────────────────────────────────── */
 .btn-fv-star{background:var(--fog);width:28px;height:28px;border-radius:8px;}
-.btn-briefing{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;flex-shrink:0;}
-.btn-briefing:hover{color:var(--primary);}
-.btn-briefing.active{background:var(--level);color:var(--on-ink);}
-.btn-briefing.active svg{fill:var(--on-ink);}
 .btn-star{background:transparent;color:var(--graphite);border:none;padding:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;flex-shrink:0;}
 .btn-star:hover{color:var(--ink);}
 .btn-star.active{color:var(--level);}
