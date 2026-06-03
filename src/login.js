@@ -11,6 +11,10 @@ var isRegister = false;
 
 var formEl   = document.getElementById('login-form');
 var emailEl  = document.getElementById('email');
+
+// Подставляем сохранённый email если есть
+var savedEmail = localStorage.getItem('pa_last_email');
+if (savedEmail) emailEl.value = savedEmail;
 var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
@@ -128,6 +132,7 @@ formEl.addEventListener('submit', async function (e) {
       if (isRegister) {
         showEmailSent(email);
       } else {
+        try { localStorage.setItem('pa_last_email', email); } catch (e) {}
         window.location.replace('/');
       }
     }
