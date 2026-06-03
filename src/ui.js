@@ -2306,6 +2306,22 @@ export function loadBriefing() {
       if (_drawer && _drawer.classList.contains('open') && state.briefingTab === 'ai') {
         renderFVBriefingDrawer();
       }
+    } else if (d) {
+      // Server returned no AI summary — clear any locally cached data (may belong to another user)
+      state.aiSummary = null;
+      state.aiSummaryTradedKeys = null;
+      state.aiSummaryDate = null;
+      state.aiSummaryTradeCount = null;
+      try {
+        localStorage.removeItem('pa_ai_summary');
+        localStorage.removeItem('pa_ai_traded_keys');
+        localStorage.removeItem('pa_ai_summary_date');
+        localStorage.removeItem('pa_ai_trade_count');
+      } catch (e) {}
+      var _drawer2 = document.getElementById('fv-briefing-drawer');
+      if (_drawer2 && _drawer2.classList.contains('open') && state.briefingTab === 'ai') {
+        renderFVBriefingDrawer();
+      }
     }
   }).catch(function () {});
 }
