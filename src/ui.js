@@ -524,7 +524,7 @@ export function showAccountModal() {
       s.innerHTML =
         // readonly display: key visible, secret masked, both non-selectable
         '<input type="text" id="acc-bin-key-ro" class="acc-bin-ro" value="' + (apiKey || '') + '" readonly tabindex="-1">'
-        + '<input type="password" id="acc-bin-sec-ro" class="acc-bin-ro" value="placeholder_secret" readonly tabindex="-1">'
+        + '<div class="acc-bin-ro acc-bin-sec-mask">••••••••••••••••••••••••</div>'
         + '<div class="acc-bin-actions">'
           + '<button class="tg-connect-btn" id="acc-bin-upd" style="font-size:12px;height:28px;padding:0 10px;">Изменить</button>'
           + '<button class="acc-revoke-btn" id="acc-bin-del" style="font-size:12px;height:28px;padding:0 10px;">Отключить</button>'
