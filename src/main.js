@@ -13,6 +13,7 @@ import {
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserEmailVerified, setUserAvatar, showAccountModal,
+  loadLevels, fetchServerLevels,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -593,6 +594,7 @@ async function _revalidateSession() {
     _sessionVerified = true;
     loadAlerts();
     loadBriefing();
+    fetchServerLevels();
   }
 }
 
@@ -613,5 +615,6 @@ async function _revalidateSession() {
   loadCache();
   loadAlerts();
   loadBriefing();
+  loadLevels();
   initRouter('/');
 })();

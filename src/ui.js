@@ -295,7 +295,7 @@ function applyServerLevels(data) {
   reattachAllLevels();
 }
 
-function fetchServerLevels() {
+export function fetchServerLevels() {
   fetch(API_BASE + '/api/levels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
