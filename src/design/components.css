@@ -23,9 +23,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-refresh-topbar{display:none!important;}
 .desktop-nav-btn{display:none;}
 @media(min-width:1025px){.desktop-nav-btn{display:inline-flex;}}
-/* sort buttons: no bg, icon color only */
-.sort-bar-btns .btn-topbar{color:var(--steel);background:transparent;}
-.sort-bar-btns .btn-topbar.active{color:var(--ink);background:transparent;}
 
 /* ── WS indicator ───────────────────────────────────────────── */
 .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 6px 0 0;}
@@ -109,8 +106,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .popup-btn{display:block;width:100%;padding:0 16px;height:34px;font-size:14px;font-weight:500;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;cursor:pointer;}
 .popup-btn:hover:not(:disabled){opacity:0.85;}
 .popup-btn:disabled{background:var(--fog);color:var(--graphite);border-color:var(--hairline);cursor:default;opacity:0.5;}
-html:not([data-theme="light"]) .popup-btn{background:var(--fog);}
-html[data-theme="dark"] .popup-btn{background:var(--fog);}
 
 /* ── Analysis overlay ───────────────────────────────────────── */
 .analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:14px;line-height:1.55;color:var(--charcoal);}
@@ -124,9 +119,6 @@ html[data-theme="dark"] .popup-btn{background:var(--fog);}
 .ao-reanalyze{display:block;width:100%;margin-top:16px;padding:0 16px;height:34px;font-size:14px;font-weight:500;background:var(--canvas);color:var(--ink);border:1px solid var(--ink);border-radius:8px;cursor:pointer;}
 .ao-reanalyze:hover{opacity:0.85;}
 @media(max-width:768px){.analysis-overlay{min-width:200px;max-width:calc(100vw - 32px);}}
-/* dark override */
-@media(prefers-color-scheme:dark){html:not([data-theme="light"]) .ao-reanalyze{background:var(--fog);}}
-html[data-theme="dark"] .ao-reanalyze{background:var(--fog);}
 
 /* ── Signal badge ───────────────────────────────────────────── */
 .signal-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:26px;padding:0;border-radius:9999px;}
@@ -238,14 +230,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-bottom-bar .tf-dd{top:auto;bottom:calc(100% + 6px);}
 .fv-back-btn{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .fv-back-btn:hover{opacity:0.8;}
-.fv-info-top .btn-star{width:30px;height:30px;border-radius:6px;background:var(--fog);}
-.fv-info-top .btn-analyze-one,.fv-info-top .btn-pressed{width:30px;height:30px;border-radius:6px;}
-.fv-info-top .btn-retry{height:30px;}
-.fv-info-top .btn-clear-alerts,.fv-info-top .btn-clear-levels,.fv-info-top .signal-badge{height:30px;background:var(--fog);border:none;}
-.fv-info-top .btn-clear-alerts{color:var(--danger-soft);}
-.fv-info-top .btn-clear-levels{color:var(--level-deep);}
-.fv-info-top .btn-clear-both{background:var(--fog);color:var(--ink);width:30px;height:30px;}
-.fv-info-top .tf-pill{height:30px;}
 
 /* ── Burger menu ────────────────────────────────────────────── */
 .burger-wrap{position:relative;display:block;}
