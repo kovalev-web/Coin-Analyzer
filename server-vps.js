@@ -22,7 +22,15 @@ const { ensureAuthTables } = require('./db/setup');
 const { getAuth } = require('./auth');
 const { toNodeHandler } = require('better-auth/node');
 const { Resend } = require('resend');
-const { verifyPassword: verifyBaPassword } = require('@better-auth/utils/dist/password.node.cjs');
+function verifyBaPassword(hash, password) {
+  return new Promise(function (resolve) {
+    var parts = (hash || '').split(':');
+    if (parts.length < 2) { resolve(false); return; }
+    crypto.scrypt(password.normalize('NFKC'), parts[0], 64,
+      { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 },
+      function (err, key) { resolve(!err && key.toString('hex') === parts[1]); });
+  });
+}
 
 // ── Encryption helpers for Binance API keys ──────────────────────────────────
 var _encKey = null;
