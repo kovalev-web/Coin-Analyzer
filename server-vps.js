@@ -945,11 +945,7 @@ var httpServer = http.createServer(async function (req, res) {
               res.end(JSON.stringify({ error: 'Ключ не имеет разрешения на чтение.' }));
               return;
             }
-            if (!rData.enableFutures) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Ключ не имеет доступа к Futures. Включите разрешение "Futures" при создании ключа.' }));
-              return;
-            }
+            // enableFutures is optional — without it, income/position data won't load, but the rest works
           } catch (e) {
             res.writeHead(502, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Не удалось проверить ключи: ' + e.message }));
