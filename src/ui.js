@@ -430,11 +430,11 @@ export function showAccountModal() {
               + '<div style="font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;">Email</div>'
               + '<span class="acc-email-addr" style="font-size:12px;color:var(--charcoal);">' + escHtml(_userEmail || '') + '</span>'
             + '</div>'
-            + '<button id="acc-email-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:\'Manrope\',Arial,sans-serif;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить Email</button>'
+            + '<button id="acc-email-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:var(--text-xs);font-weight:400;cursor:pointer;padding:0;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить Email</button>'
           + '</div>'
         + '</div>'
         + '<div id="acc-email-editor" style="display:none;padding:12px 0 8px;">'
-          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:8px;">'
+          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" style="display:block;width:100%;height:38px;padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;margin-bottom:var(--space-4);">'
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="tg-connect-btn" id="acc-email-submit">Подтвердить</button>'
@@ -449,7 +449,7 @@ export function showAccountModal() {
               + '<div style="font-size:12px;font-weight:500;color:var(--graphite);line-height:1.4;margin-bottom:9px;">Часовой пояс</div>'
               + '<span id="acc-tz-current" style="font-size:12px;font-weight:500;color:var(--charcoal);line-height:1.4;"></span>'
             + '</div>'
-            + '<button id="acc-tz-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:12px;font-weight:400;cursor:pointer;padding:0;font-family:\'Manrope\',Arial,sans-serif;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить часовой пояс</button>'
+            + '<button id="acc-tz-change-btn" style="background:none;border:none;color:var(--primary-bright);font-size:var(--text-xs);font-weight:400;cursor:pointer;padding:0;line-height:1.4;white-space:nowrap;flex-shrink:0;">Изменить часовой пояс</button>'
           + '</div>'
         + '</div>'
         + '<div id="acc-tz-editor" style="display:none;padding:12px 0 8px;">'
@@ -490,16 +490,16 @@ export function showAccountModal() {
         + '<div id="acc-bin-form" style="padding:16px 0 8px;">'
           + '<div style="margin-bottom:10px;">'
             + '<div class="acc-row-label" style="margin-bottom:6px;">API Key</div>'
-            + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;">'
+            + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;">'
           + '</div>'
           + '<div style="margin-bottom:10px;">'
             + '<div class="acc-row-label" style="margin-bottom:6px;">Secret Key</div>'
-            + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;">'
+            + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;">'
           + '</div>'
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-cancel-form" style="display:none;background:none;border:none;color:var(--graphite);font-size:13px;cursor:pointer;font-family:\'Manrope\',Arial,sans-serif;padding:0 6px;">Отмена</button>'
+            + '<button id="acc-bin-cancel-form" style="display:none;background:none;border:none;color:var(--graphite);font-size:13px;cursor:pointer;padding:0 var(--space-3);">Отмена</button>'
           + '</div>'
         + '</div>'
 
@@ -3214,7 +3214,7 @@ export function openCoinFullView(sym) {
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
-  fvLblEl.style.cssText = 'position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font:500 10px/12px Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:4px;padding:2px 4px;flex-direction:column;gap:4px;';
+  fvLblEl.className = 'ruler-lbl';
   wrap.appendChild(fvLblEl);
   _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
 
@@ -3410,8 +3410,6 @@ export function openCoinFullView(sym) {
       fvLbl.style.left = pt.x + 'px';
       fvLbl.style.top = fvClampedY + 'px';
       fvLbl.style.transform = flipLeft ? 'translate(calc(-100% - 16px),-50%)' : 'translate(16px,-50%)';
-      fvLbl.style.background = isDark() ? '#f2f6f8' : '#1a1a1a';
-      fvLbl.style.color = isDark() ? '#1a1a1a' : '#ffffff';
       fvLbl.innerHTML =
         '<div style="display:flex"><span style="min-width:.55em;text-align:right">' + sign + '</span><span>' + digits + '</span></div>' +
         (durStr ? '<div style="display:flex"><span style="min-width:.55em"></span><span>' + durStr + '</span></div>' : '');

@@ -20,6 +20,10 @@
 ::-webkit-scrollbar-thumb { background: var(--steel); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--graphite); }
 
+input, select, textarea {
+  font-family: inherit;
+}
+
 body {
   font-family: var(--font-family);
   background: var(--cloud);
