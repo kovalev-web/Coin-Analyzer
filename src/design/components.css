@@ -313,7 +313,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-delete-cancel{background:none;border:none;color:var(--graphite);font-size:12px;cursor:pointer;}
 .tg-waiting{color:var(--graphite);}
 .acc-tabs{display:flex;gap:9px;margin:12px 0 0;padding:0;border-bottom:none;}
-.acc-tab{background:none;border:none;border-radius:999px;color:var(--charcoal);font-size:12px;font-weight:500;padding:6px 12px 7px;cursor:pointer;line-height:1.4;transition:background 0.15s,color 0.15s;}
+.acc-tab{background:none;border:none;border-radius:999px;color:var(--charcoal);font-size:12px;font-weight:500;padding:6px 12px 7px;height:auto;cursor:pointer;line-height:1.4;transition:background 0.15s,color 0.15s;}
 .acc-tab:hover{color:var(--ink);}
 .acc-tab.acc-tab-active{background:var(--fog);color:var(--ink);}
 .acc-pane{padding-top:30px;display:flex;flex-direction:column;gap:30px;}
