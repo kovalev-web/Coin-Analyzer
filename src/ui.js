@@ -2264,16 +2264,6 @@ export function loadBriefing() {
     if (savedCount !== null) state.aiSummaryTradeCount = parseInt(savedCount, 10) || 0;
   } catch (e) {}
   if (!_briefingUserCode) return;
-  // If we have AI summary locally — push it to server so other devices can get it
-  if (state.aiSummary) {
-    fetch(API_BASE + '/api/briefing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ action: 'save', entries: state.briefing, skip_entries: true,
-        ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys || [], ai_summary_date: state.aiSummaryDate || null }),
-    }).catch(function () {});
-  }
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
