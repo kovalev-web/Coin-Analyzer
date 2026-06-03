@@ -13,7 +13,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-icon.star.active svg{fill:var(--level);}
 .btn-icon.analyze{background:var(--fog);color:var(--charcoal);}
 .btn-icon.pressed{background:var(--cloud);border:1px solid var(--steel);color:var(--graphite);cursor:default;opacity:0.6;}
-.btn-icon.clear:hover{background:var(--fog);opacity:1;}
 
 /* ── Topbar buttons ─────────────────────────────────────────── */
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}

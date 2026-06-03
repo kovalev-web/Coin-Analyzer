@@ -54,7 +54,7 @@ function renderCard(coin) {
     '<div class="card-head-right">' +
     badge +
     '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>' +
-    '<button class="btn-icon expand" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 16) + '</button>' +
+    '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 16) + '</button>' +
     '</div>' +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
@@ -2961,7 +2961,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div>'
     + '<div class="fv-bb-right">'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>';
@@ -2997,7 +2997,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>'
     + '</div>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '<div class="fv-info-stats">'
