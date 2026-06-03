@@ -33,6 +33,7 @@ export const state = {
   aiSummary: null,     // текст от Gemini
   aiSummaryTradedKeys: null, // 'sym:date' traded-записей на момент генерации
   aiSummaryDate: null,      // ISO timestamp последней генерации
+  aiSummaryTradeCount: null, // tradeCount из weekSummary на момент генерации
   briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
 };
 

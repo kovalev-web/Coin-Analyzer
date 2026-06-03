@@ -2219,6 +2219,8 @@ export function loadBriefing() {
     if (savedKeys) state.aiSummaryTradedKeys = JSON.parse(savedKeys);
     var savedDate = localStorage.getItem('pa_ai_summary_date');
     if (savedDate) state.aiSummaryDate = savedDate;
+    var savedCount = localStorage.getItem('pa_ai_trade_count');
+    if (savedCount !== null) state.aiSummaryTradeCount = parseInt(savedCount, 10) || 0;
   } catch (e) {}
   if (!_briefingUserCode) return;
   // If we have AI summary locally — push it to server so other devices can get it
@@ -2415,7 +2417,8 @@ function _weekAIHTML() {
     .sort().join(',');
   var savedKeys = (state.aiSummaryTradedKeys || []).slice().sort().join(',');
   var hasNewTraded = currentKeys !== savedKeys;
-  var btnDisabled = !ws || (!!aiText && !hasNewTraded);
+  var hasMoreTrades = ws && typeof state.aiSummaryTradeCount === 'number' && ws.tradeCount > state.aiSummaryTradeCount;
+  var btnDisabled = !ws || (!!aiText && !hasNewTraded && !hasMoreTrades);
   var dateStr = '';
   if (aiText && state.aiSummaryDate) {
     var d = new Date(state.aiSummaryDate);

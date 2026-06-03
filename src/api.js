@@ -1076,10 +1076,12 @@ export async function generateWeeklySummary() {
     .sort();
   state.aiSummaryTradedKeys = tradedKeys;
   state.aiSummaryDate = new Date().toISOString();
+  state.aiSummaryTradeCount = state.weekSummary ? state.weekSummary.tradeCount : 0;
   try {
     localStorage.setItem('pa_ai_summary', state.aiSummary);
     localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
     localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
+    localStorage.setItem('pa_ai_trade_count', String(state.aiSummaryTradeCount));
   } catch (e) {}
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
