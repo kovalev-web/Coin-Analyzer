@@ -1103,6 +1103,14 @@ var httpServer = http.createServer(async function (req, res) {
           await redis(['SET', 'tg_link:' + token, userId, 'EX', '300']);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ url: 'https://t.me/' + TELEGRAM_BOT_USERNAME + '?start=' + token }));
+        } else if (parsed.action === 'tg-disconnect') {
+          var tgChatRes = await redis(['GET', 'tg_chat:' + userId]);
+          if (tgChatRes && tgChatRes.result) {
+            await redis(['DEL', 'tg_user:' + tgChatRes.result]);
+          }
+          await redis(['DEL', 'tg_chat:' + userId]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
         } else {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Unknown action' }));

@@ -460,14 +460,45 @@ export function showAccountModal() {
       + '</div>'
 
       + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
-        + '<div class="account-section">'
-          + '<div class="account-section-title">Telegram</div>'
-          + '<div id="acc-tg-status"></div>'
+
+        + '<div class="acc-row" id="acc-tg-row">'
+          + '<div class="acc-row-left acc-int-left">'
+            + '<span class="acc-int-icon">✈️</span>'
+            + '<div>'
+              + '<div class="acc-row-label">TELEGRAM</div>'
+              + '<div id="acc-tg-badge"></div>'
+            + '</div>'
+          + '</div>'
+          + '<div id="acc-tg-btn-wrap"></div>'
         + '</div>'
-        + '<div class="account-section">'
-          + '<div class="account-section-title">Binance API</div>'
-          + '<div id="acc-bin-status"></div>'
+        + '<div id="acc-tg-link-area" style="display:none;padding:10px 0;"></div>'
+
+        + '<div class="acc-row" id="acc-bin-row-hd">'
+          + '<div class="acc-row-left acc-int-left">'
+            + '<span class="acc-int-icon">🔑</span>'
+            + '<div>'
+              + '<div class="acc-row-label">BINANCE API</div>'
+              + '<span id="acc-bin-val" class="acc-row-val"></span>'
+            + '</div>'
+          + '</div>'
+          + '<div id="acc-bin-btn-wrap" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></div>'
         + '</div>'
+        + '<div id="acc-bin-form" style="padding:16px 0 8px;">'
+          + '<div style="margin-bottom:10px;">'
+            + '<div class="acc-row-label" style="margin-bottom:6px;">API Key</div>'
+            + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;">'
+          + '</div>'
+          + '<div style="margin-bottom:10px;">'
+            + '<div class="acc-row-label" style="margin-bottom:6px;">Secret Key</div>'
+            + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" style="display:block;width:100%;height:38px;padding:0 12px;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;color:var(--ink);font-family:\'Manrope\',Arial,sans-serif;font-size:14px;outline:none;box-sizing:border-box;">'
+          + '</div>'
+          + '<div class="acc-field-err" id="acc-bin-err"></div>'
+          + '<div style="display:flex;gap:8px;margin-top:4px;">'
+            + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить</button>'
+            + '<button id="acc-bin-cancel-form" class="acc-int-cancel-btn" style="display:none;">Отмена</button>'
+          + '</div>'
+        + '</div>'
+
       + '</div>'
 
       + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
@@ -520,13 +551,28 @@ export function showAccountModal() {
   }
 
   function renderTgStatus(connected) {
-    var s = document.getElementById('acc-tg-status');
-    if (!s) return;
+    var badge = document.getElementById('acc-tg-badge');
+    var btnWrap = document.getElementById('acc-tg-btn-wrap');
+    var linkArea = document.getElementById('acc-tg-link-area');
+    if (!badge || !btnWrap) return;
     if (connected) {
-      s.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
+      badge.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
+      btnWrap.innerHTML = '<button class="acc-int-del-btn" id="acc-tg-disconnect">Отключить</button>';
+      if (linkArea) linkArea.style.display = 'none';
+      document.getElementById('acc-tg-disconnect').addEventListener('click', function () {
+        var btn = this;
+        btn.disabled = true; btn.textContent = '…';
+        fetch(API_BASE + '/api/account', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ action: 'tg-disconnect' }),
+        })
+          .then(function () { renderTgStatus(false); })
+          .catch(function () { btn.disabled = false; btn.textContent = 'Отключить'; });
+      });
       return;
     }
-    s.innerHTML = '<button class="tg-connect-btn" id="acc-tg-btn">Подключить Telegram</button>';
+    badge.innerHTML = '';
+    btnWrap.innerHTML = '<button class="tg-connect-btn" id="acc-tg-btn">Подключить</button>';
     document.getElementById('acc-tg-btn').addEventListener('click', function () {
       var btn = document.getElementById('acc-tg-btn');
       btn.disabled = true; btn.textContent = '…';
@@ -536,11 +582,15 @@ export function showAccountModal() {
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (!d.url) { btn.disabled = false; btn.textContent = 'Подключить Telegram'; return; }
-          s.innerHTML =
-            '<p class="tg-hint">Откройте бота и нажмите Start:</p>'
-            + '<a class="tg-connect-btn" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
-            + '<p class="tg-hint tg-waiting">Ожидаю подключения…</p>';
+          if (!d.url) { btn.disabled = false; btn.textContent = 'Подключить'; return; }
+          if (linkArea) {
+            linkArea.style.display = 'block';
+            linkArea.innerHTML =
+              '<p class="tg-hint">Откройте бота и нажмите Start:</p>'
+              + '<a class="tg-connect-btn" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
+              + '<p class="tg-hint tg-waiting">Ожидаю подключения…</p>';
+          }
+          btnWrap.innerHTML = '';
           var polls = 0;
           var t = setInterval(function () {
             if (++polls > 150) { clearInterval(t); return; }
@@ -550,14 +600,14 @@ export function showAccountModal() {
               .catch(function () {});
           }, 2000);
         })
-        .catch(function () { btn.disabled = false; btn.textContent = 'Подключить Telegram'; });
+        .catch(function () { btn.disabled = false; btn.textContent = 'Подключить'; });
     });
   }
 
-  function bindBinanceSaveBtn(btnLabel) {
+  function bindBinanceSaveBtn(btnLabel, onSuccess) {
     var btn = document.getElementById('acc-bin-save');
     if (!btn) return;
-    btn.addEventListener('click', function () {
+    btn.onclick = function () {
       var key = (document.getElementById('acc-bin-key').value || '').trim();
       var sec = (document.getElementById('acc-bin-sec').value || '').trim();
       var err = document.getElementById('acc-bin-err');
@@ -574,38 +624,57 @@ export function showAccountModal() {
             return d;
           });
         })
-        .then(function () { renderBinanceStatus(true); })
+        .then(function () {
+          btn.disabled = false; btn.textContent = btnLabel;
+          if (onSuccess) onSuccess();
+        })
         .catch(function (e) {
           err.textContent = e.message || 'Ошибка сети';
           btn.disabled = false; btn.textContent = btnLabel;
         });
-    });
+    };
   }
 
   function renderBinanceStatus(connected, apiKey) {
-    var s = document.getElementById('acc-bin-status');
-    if (!s) return;
+    var val = document.getElementById('acc-bin-val');
+    var btnWrap = document.getElementById('acc-bin-btn-wrap');
+    var form = document.getElementById('acc-bin-form');
+    if (!val || !btnWrap || !form) return;
+
+    function _afterSave() {
+      fetch(API_BASE + '/api/account', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { renderBinanceStatus(true, d.binanceKey || ''); })
+        .catch(function () { renderBinanceStatus(true, apiKey || ''); });
+    }
+
     if (connected) {
-      s.innerHTML =
-        // readonly display: key visible, secret masked, both non-selectable
-        '<input type="text" id="acc-bin-key-ro" class="acc-bin-ro" value="' + (apiKey || '') + '" readonly tabindex="-1">'
-        + '<div class="acc-bin-ro acc-bin-sec-mask">••••••••••••••••••••••••</div>'
-        + '<div class="acc-bin-actions">'
-          + '<button class="tg-connect-btn" id="acc-bin-upd" style="font-size:12px;height:28px;padding:0 10px;">Изменить</button>'
-          + '<button class="acc-revoke-btn" id="acc-bin-del" style="font-size:12px;height:28px;padding:0 10px;">Отключить</button>'
-        + '</div>'
-        + '<div id="acc-bin-upd-form" style="display:none;margin-top:8px;">'
-          + '<input type="text" id="acc-bin-key" placeholder="Новый API Key" autocomplete="off" style="margin-bottom:6px;">'
-          + '<input type="password" id="acc-bin-sec" placeholder="Новый API Secret" autocomplete="off" style="margin-bottom:6px;">'
-          + '<div class="acc-field-err" id="acc-bin-err"></div>'
-          + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить</button>'
-        + '</div>';
+      val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
+      btnWrap.innerHTML =
+        '<button class="acc-row-edit" id="acc-bin-upd">' + icon('pencil', 12) + ' Изменить</button>'
+        + '<button class="acc-int-del-btn acc-int-x-btn" id="acc-bin-del">✕</button>';
+      form.style.display = 'none';
+      var cf = document.getElementById('acc-bin-cancel-form');
+      if (cf) cf.style.display = 'none';
+
       document.getElementById('acc-bin-upd').addEventListener('click', function () {
-        var form = document.getElementById('acc-bin-upd-form');
-        var open = form.style.display !== 'none';
-        form.style.display = open ? 'none' : 'block';
-        this.textContent = open ? 'Изменить' : 'Отмена';
+        document.getElementById('acc-bin-key').value = '';
+        document.getElementById('acc-bin-sec').value = '';
+        document.getElementById('acc-bin-err').textContent = '';
+        form.style.display = 'block';
+        btnWrap.innerHTML = '';
+        var cf2 = document.getElementById('acc-bin-cancel-form');
+        if (cf2) {
+          cf2.style.display = 'inline-flex';
+          cf2.onclick = function () {
+            form.style.display = 'none';
+            cf2.style.display = 'none';
+            renderBinanceStatus(connected, apiKey);
+          };
+        }
+        bindBinanceSaveBtn('Сохранить', _afterSave);
       });
+
       document.getElementById('acc-bin-del').addEventListener('click', function () {
         if (!confirm('Отключить Binance API?')) return;
         var delBtn = this;
@@ -615,22 +684,17 @@ export function showAccountModal() {
           body: JSON.stringify({ action: 'delete-binance' }),
         })
           .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
-          .catch(function (e) {
-            delBtn.disabled = false; delBtn.textContent = 'Отключить';
-            var err = document.getElementById('acc-bin-err');
-            if (err) err.textContent = e.message || 'Ошибка сети';
-          });
+          .catch(function () { delBtn.disabled = false; delBtn.textContent = '✕'; });
       });
-      bindBinanceSaveBtn('Сохранить');
-      return;
+
+    } else {
+      val.textContent = '';
+      btnWrap.innerHTML = '';
+      form.style.display = 'block';
+      var cf3 = document.getElementById('acc-bin-cancel-form');
+      if (cf3) cf3.style.display = 'none';
+      bindBinanceSaveBtn('Сохранить', _afterSave);
     }
-    s.innerHTML =
-      '<input type="text" id="acc-bin-key" placeholder="API Key" autocomplete="off" style="margin-bottom:6px;">'
-      + '<input type="password" id="acc-bin-sec" placeholder="API Secret" autocomplete="off" style="margin-bottom:6px;">'
-      + '<div class="acc-field-err" id="acc-bin-err"></div>'
-      + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить ключи</button>'
-      + '<p class="tg-hint" style="margin-top:8px;">Включите <b>✅ Чтение</b>. Если ставите IP-ограничение — добавьте <b>202.182.110.25</b> (сервер Questtick). Ключи хранятся зашифрованно.</p>';
-    bindBinanceSaveBtn('Сохранить ключи');
   }
 
   // Email change section
