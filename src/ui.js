@@ -448,6 +448,14 @@ export function showAccountModal() {
     + '<div class="popup-footer">'
       + '<div class="acc-footer-divider"></div>'
       + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
+      + '<div id="acc-delete-wrap" style="margin-top:8px;text-align:center;">'
+        + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
+        + '<div id="acc-delete-confirm" style="display:none;margin-top:10px;">'
+          + '<div style="font-size:12px;color:#f08080;margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
+          + '<button class="acc-delete-btn acc-delete-confirm-btn" id="acc-delete-yes">Да, удалить аккаунт</button>'
+          + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+        + '</div>'
+      + '</div>'
     + '</div>'
   + '</div>';
 
@@ -644,6 +652,28 @@ export function showAccountModal() {
   document.getElementById('acc-logout-btn').addEventListener('click', function () {
     fetch(API_BASE + '/auth/sign-out', { method: 'POST', credentials: 'include' })
       .finally(function () { window.location.replace('/login'); });
+  });
+
+  document.getElementById('acc-delete-btn').addEventListener('click', function () {
+    document.getElementById('acc-delete-confirm').style.display = 'block';
+    this.style.display = 'none';
+  });
+  document.getElementById('acc-delete-no').addEventListener('click', function () {
+    document.getElementById('acc-delete-confirm').style.display = 'none';
+    document.getElementById('acc-delete-btn').style.display = '';
+  });
+  document.getElementById('acc-delete-yes').addEventListener('click', function () {
+    var btn = this;
+    btn.disabled = true; btn.textContent = '…';
+    fetch(API_BASE + '/auth/delete-user', { method: 'POST', credentials: 'include' })
+      .then(function (r) {
+        if (r.ok) {
+          window.location.replace('/login');
+        } else {
+          btn.disabled = false; btn.textContent = 'Да, удалить аккаунт';
+        }
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = 'Да, удалить аккаунт'; });
   });
 
   document.getElementById('acc-revoke-btn').addEventListener('click', function () {
