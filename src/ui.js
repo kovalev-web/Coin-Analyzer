@@ -601,7 +601,6 @@ export function showAccountModal() {
     .then(function (d) {
       if (d.avatar) {
         _userAvatar = d.avatar;
-        _selectedAvatar = d.avatar;
         el.querySelectorAll('.avatar-preset').forEach(function (btn) {
           btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
         });
