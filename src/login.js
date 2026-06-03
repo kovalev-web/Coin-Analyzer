@@ -33,8 +33,28 @@ function setMode(reg) {
   forgotEl.style.display = reg ? 'none' : 'block';
 }
 
-googleEl.addEventListener('click', function () {
-  window.location.href = API_BASE + '/auth/sign-in/social?provider=google&callbackURL=' + encodeURIComponent('https://questtick.com');
+googleEl.addEventListener('click', async function () {
+  googleEl.disabled = true;
+  try {
+    var res = await fetch(API_BASE + '/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ provider: 'google', callbackURL: 'https://questtick.com' }),
+    });
+    var data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      errEl.textContent = data.message || 'Ошибка входа через Google';
+      errEl.style.display = 'block';
+      googleEl.disabled = false;
+    }
+  } catch (err) {
+    errEl.textContent = 'Сетевая ошибка: ' + err.message;
+    errEl.style.display = 'block';
+    googleEl.disabled = false;
+  }
 });
 
 toggleEl.addEventListener('click', function () { setMode(!isRegister); });
