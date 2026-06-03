@@ -656,7 +656,13 @@ export function showAccountModal() {
     opt.textContent = item[1];
     _tzSel.appendChild(opt);
   });
-  // Pre-select auto-detected; will be overridden by saved value from server
+  // If auto-detected TZ is not in the curated list, add it as the first option
+  if (_autoTz && !_TZ_LIST.some(function (item) { return item[0] === _autoTz; })) {
+    var _autoOpt = document.createElement('option');
+    _autoOpt.value = _autoTz;
+    _autoOpt.textContent = _autoTz + ' (автодетект)';
+    _tzSel.insertBefore(_autoOpt, _tzSel.firstChild);
+  }
   _tzSel.value = _autoTz || _TZ_LIST[0][0];
 
   document.getElementById('acc-tz-save').addEventListener('click', function () {
