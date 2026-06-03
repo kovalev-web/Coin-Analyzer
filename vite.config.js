@@ -18,6 +18,7 @@ export default defineConfig({
         verifyEmail:         'verify-email.html',
         resetPassword:       'reset-password.html',
         confirmEmailChange:  'confirm-email-change.html',
+        design:              'design.html',
       },
     },
   },
