@@ -31,7 +31,7 @@ function renderCard(coin) {
   else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
 
   var tfPicker = '<div class="tf-picker">' +
-    '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
+    '<button class="pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
     '<div class="tf-dd">' +
     ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
       return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
@@ -398,9 +398,9 @@ export function showAccountModal() {
     '<div class="account-panel">'
     + '<div class="popup-header"><span class="popup-title" style="font-size:26px;font-weight:500;">Настройки профиля</span><button class="popup-close" id="account-close" style="width:26px;height:26px;min-width:26px;background:var(--fog);border-radius:6px;padding:0;display:inline-flex;align-items:center;justify-content:center;">' + icon('x', 14) + '</button></div>'
     + '<div class="acc-tabs">'
-      + '<button class="acc-tab acc-tab-active" data-tab="profile">Профиль</button>'
-      + '<button class="acc-tab" data-tab="integrations">Интеграции</button>'
-      + '<button class="acc-tab" data-tab="security">Безопасность</button>'
+      + '<button class="pill active" data-tab="profile">Профиль</button>'
+      + '<button class="pill" data-tab="integrations">Интеграции</button>'
+      + '<button class="pill" data-tab="security">Безопасность</button>'
     + '</div>'
     + '<div class="account-body">'
 
@@ -529,11 +529,11 @@ export function showAccountModal() {
   document.body.appendChild(el);
   el.classList.add('open');
 
-  el.querySelectorAll('.acc-tab').forEach(function (tab) {
+  el.querySelectorAll('.acc-tabs .pill').forEach(function (tab) {
     tab.addEventListener('click', function () {
-      el.querySelectorAll('.acc-tab').forEach(function (t) { t.classList.remove('acc-tab-active'); });
+      el.querySelectorAll('.acc-tabs .pill').forEach(function (t) { t.classList.remove('active'); });
       el.querySelectorAll('.acc-pane').forEach(function (p) { p.style.display = 'none'; });
-      tab.classList.add('acc-tab-active');
+      tab.classList.add('active');
       var pane = document.getElementById('acc-pane-' + tab.dataset.tab);
       if (pane) pane.style.display = 'block';
     });
@@ -1413,7 +1413,7 @@ export function setChartTF(symbol, tf) {
   clearRuler(symbol);
   var card = document.querySelector('.coin-card[data-sym="' + symbol + '"]');
   if (card) {
-    var pill = card.querySelector('.tf-pill');
+    var pill = card.querySelector('.pill');
     if (pill) pill.textContent = tf;
     card.querySelectorAll('.tf-dd button').forEach(function (btn) {
       btn.className = btn.dataset.tf === tf ? 'active' : '';
@@ -2266,9 +2266,9 @@ function _sortBarHTML(coins) {
   return '<div class="sort-bar">'
     + (_screenerMode ? '' :
         '<div class="tier-num-group">'
-        + '<button class="tier-num-btn' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high" title=">100M USDT">&gt;100</button>'
-        + '<button class="tier-num-btn' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid"  title="50M – 100M USDT">&gt;50</button>'
-        + '<button class="tier-num-btn' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low"  title="12M – 50M USDT">&gt;12</button>'
+        + '<button class="pill' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high" title=">100M USDT">&gt;100</button>'
+        + '<button class="pill' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid"  title="50M – 100M USDT">&gt;50</button>'
+        + '<button class="pill' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low"  title="12M – 50M USDT">&gt;12</button>'
         + '</div>')
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
@@ -2954,7 +2954,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '<div class="fv-bb-left">'
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
-    + '<div class="tf-picker"><button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
+    + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div></div>'
@@ -2991,7 +2991,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
-    + '<button class="tf-pill" data-action="fv-tf-pick">' + tf + '</button>'
+    + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
@@ -3669,7 +3669,7 @@ export function setFVChartTF(tf) {
   if (!_fvSym || !_fvSeries) return;
   state.chartTF[_fvSym] = tf;
   window.__fvTF = tf;
-  document.querySelectorAll('#fv-overlay .tf-pill').forEach(function (pill) { pill.textContent = tf; });
+  document.querySelectorAll('#fv-overlay .pill').forEach(function (pill) { pill.textContent = tf; });
   document.querySelectorAll('#fv-overlay .fv-tf-dd').forEach(function (dd) {
     dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
   });
