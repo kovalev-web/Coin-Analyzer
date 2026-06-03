@@ -6,12 +6,12 @@
 button{cursor:pointer;border:none;border-radius:8px;font-family:var(--font-family);font-size:14px;font-weight:500;letter-spacing:0;padding:0 20px;height:40px;transition:opacity 0.15s;white-space:nowrap;}
 button:hover{opacity:0.85;}
 button:disabled{opacity:0.4;cursor:not-allowed;}
-.btn-expand{background:transparent;color:var(--graphite);border:none;padding:7px;height:auto;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
+.btn-expand{background:transparent;color:var(--graphite);border:none;padding:7px;width:30px;height:30px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .btn-expand:hover{color:var(--ink);}
 
 /* ── Topbar buttons ─────────────────────────────────────────── */
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
-.btn-topbar{background:var(--fog);color:var(--ink);border:none;padding:7px;height:auto;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
+.btn-topbar{background:var(--fog);color:var(--ink);border:none;padding:7px;width:30px;height:30px;box-sizing:border-box;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
 .btn-topbar:hover{opacity:0.8;}
 .desktop-nav-btn{display:none;}
 @media(min-width:1025px){.desktop-nav-btn{display:inline-flex;}}
@@ -60,7 +60,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .tf-dd button.active{color:var(--primary);font-weight:600;}
 
 /* ── Chart action buttons ───────────────────────────────────── */
-.btn-clear-both{background:transparent;color:var(--graphite);border:none;padding:7px;height:auto;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
+.btn-clear-both{background:transparent;color:var(--graphite);border:none;padding:7px;width:30px;height:30px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .btn-clear-both:hover{background:var(--fog);}
 .clear-popup{position:fixed;z-index:99999;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-md);min-width:200px;overflow:hidden;}
 .clear-popup-title{padding:10px 14px 6px;font-size:11px;font-weight:700;color:var(--graphite);text-transform:uppercase;letter-spacing:0.5px;}
@@ -69,7 +69,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .clear-count{border-radius:9999px;padding:1px 7px;font-size:11px;font-weight:700;}
 .clear-count--level{background:color-mix(in srgb,var(--level-deep) 15%,transparent);color:var(--level-deep);}
 .clear-count--alert{background:color-mix(in srgb,var(--danger-soft) 12%,transparent);color:var(--danger-soft);}
-.btn-analyze-one,.btn-pressed{display:inline-flex;align-items:center;justify-content:center;padding:7px;height:auto;border-radius:6px;flex-shrink:0;}
+.btn-analyze-one,.btn-pressed{display:inline-flex;align-items:center;justify-content:center;padding:7px;width:30px;height:30px;box-sizing:border-box;border-radius:6px;flex-shrink:0;}
 .btn-analyze-one{background:var(--fog);color:var(--charcoal);border:none;cursor:pointer;}
 .btn-pressed{background:var(--cloud);border:1px solid var(--steel);color:var(--graphite);cursor:default;opacity:0.6;}
 .btn-retry{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 10px;font-size:12px;font-weight:500;border-radius:6px;background:var(--retry-bg);color:var(--bloom-deep);border:1px solid var(--retry-border);}
@@ -219,7 +219,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Avatar button ──────────────────────────────────────────── */
 .avatar-wrap{position:relative;display:none;}
 @media(min-width:1025px){.avatar-wrap{display:block;}}
-.btn-avatar{background:var(--fog);border:none;padding:7px;height:auto;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;color:var(--ink);}
+.btn-avatar{background:var(--fog);border:none;padding:7px;width:30px;height:30px;box-sizing:border-box;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;color:var(--ink);}
 .btn-avatar:hover{opacity:0.8;}
 .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:22px;width:auto;height:auto;}
 .avatar-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
@@ -281,7 +281,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-row-edit:hover{color:var(--ink);}
 
 /* ── Briefing buttons ───────────────────────────────────────── */
-.btn-star{background:transparent;color:var(--graphite);border:none;padding:7px;height:auto;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
+.btn-star{background:transparent;color:var(--graphite);border:none;padding:7px;width:30px;height:30px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .btn-star:hover{color:var(--ink);}
 .btn-star.active{color:var(--level);}
 .btn-star.active svg{fill:var(--level);}
