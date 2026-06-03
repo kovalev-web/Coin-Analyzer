@@ -142,7 +142,7 @@ async function redis(cmd) {
 var TELEGRAM_TOKEN        = process.env.TELEGRAM_BOT_TOKEN;
 var TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
 var INPLAY_ALERT_CHAT_ID  = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
-var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
+var APP_URL = (process.env.APP_URL || 'https://questtick.com').replace(/\/$/, '');
 var tgOffset = 0;
 
 async function sendTG(chatId, text, replyMarkup) {
