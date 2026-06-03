@@ -15,7 +15,7 @@ var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
 var forgotEl = document.getElementById('forgot-btn');
-var magicEl  = document.getElementById('magic-btn');
+var googleEl = document.getElementById('google-btn');
 var errEl    = document.getElementById('login-error');
 var msgEl    = document.getElementById('login-msg');
 
@@ -31,23 +31,13 @@ function setMode(reg) {
   passEl.required = true;
   toggleEl.style.display = 'block';
   forgotEl.style.display = reg ? 'none' : 'block';
-  magicEl.style.display  = reg ? 'none' : 'block';
 }
 
-toggleEl.addEventListener('click', function () { setMode(!isRegister); });
-
-magicEl.addEventListener('click', function () {
-  errEl.style.display = 'none';
-  msgEl.style.display = 'none';
-  passEl.style.display = 'none';
-  passEl.required = false;
-  toggleEl.style.display = 'none';
-  forgotEl.style.display = 'none';
-  magicEl.style.display = 'none';
-  submitEl.textContent = 'Отправить ссылку';
-  isRegister = false;
-  formEl.dataset.mode = 'magic';
+googleEl.addEventListener('click', function () {
+  window.location.href = API_BASE + '/auth/sign-in/social?provider=google&callbackURL=' + encodeURIComponent('https://questtick.com');
 });
+
+toggleEl.addEventListener('click', function () { setMode(!isRegister); });
 
 forgotEl.addEventListener('click', function () {
   errEl.style.display = 'none';
@@ -70,36 +60,9 @@ formEl.addEventListener('submit', async function (e) {
 
   var email = emailEl.value.trim();
 
-  if (formEl.dataset.mode === 'magic') {
-    try {
-      var r = await fetch(API_BASE + '/auth/magic-link/send-magic-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, callbackURL: 'https://questtick.com' }),
-      });
-      if (!r.ok) {
-        var d = await r.json();
-        errEl.textContent = d.message || 'Ошибка отправки';
-        errEl.style.display = 'block';
-        submitEl.disabled = false;
-        submitEl.textContent = 'Отправить ссылку';
-      } else {
-        formEl.style.display = 'none';
-        msgEl.innerHTML = 'Письмо отправлено на <b>' + email + '</b><br>Перейдите по ссылке в письме чтобы войти.';
-        msgEl.style.display = 'block';
-      }
-    } catch (err) {
-      errEl.textContent = 'Сетевая ошибка: ' + err.message;
-      errEl.style.display = 'block';
-      submitEl.disabled = false;
-      submitEl.textContent = 'Отправить ссылку';
-    }
-    return;
-  }
-
   if (formEl.dataset.mode === 'forgot') {
     try {
-      var r = await fetch(API_BASE + '/auth/request-password-reset', {
+      await fetch(API_BASE + '/auth/request-password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, redirectTo: 'https://questtick.com/reset-password' }),

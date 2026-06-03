@@ -1,5 +1,4 @@
 const { betterAuth } = require('better-auth');
-const { magicLink } = require('better-auth/plugins');
 const { drizzleAdapter } = require('better-auth/adapters/drizzle');
 const { getDb } = require('./db/index');
 const schema = require('./db/schema');
@@ -37,19 +36,24 @@ function getAuth() {
         });
       },
     },
+    socialProviders: {
+      google: {
+        clientId:     process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      },
+    },
     session: {
       expiresIn:  60 * 60 * 24 * 30, // 30 дней
       updateAge:  60 * 60 * 24,       // обновлять сессию раз в сутки
     },
     rateLimit: {
       enabled: true,
-      window:  60,  // 60 секунд
-      max:     10,  // не более 10 запросов к /api/auth/* за окно
+      window:  60,
+      max:     10,
       customRules: {
-        '/sign-in/email':   { window: 60, max: 5 },
-        '/sign-up/email':   { window: 60, max: 3 },
+        '/sign-in/email':          { window: 60, max: 5 },
+        '/sign-up/email':          { window: 60, max: 3 },
         '/request-password-reset': { window: 60, max: 3 },
-        '/magic-link/send-magic-link': { window: 60, max: 3 },
         '/change-email':           { window: 60, max: 3 },
       },
     },
@@ -81,20 +85,6 @@ function getAuth() {
       },
       autoSignInAfterVerification: true,
     },
-    plugins: [
-      magicLink({
-        sendMagicLink: async function ({ email, url }) {
-          await resend.emails.send({
-            from: 'Questtick <noreply@questtick.com>',
-            to: email,
-            subject: 'Ссылка для входа — Questtick',
-            html: '<p>Нажмите кнопку ниже, чтобы войти в Questtick. Ссылка действует 5 минут.</p>'
-                + '<p><a href="' + url + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Войти</a></p>'
-                + '<p style="color:#888;font-size:12px;">Если вы не запрашивали вход — просто проигнорируйте это письмо.</p>',
-          });
-        },
-      }),
-    ],
     secret:  process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL || 'https://api.questtick.com',
     trustedOrigins: [
