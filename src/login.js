@@ -27,6 +27,7 @@ function setMode(reg) {
   msgEl.style.display = 'none';
   formEl.style.display = 'block';
   passEl.style.display = 'block';
+  passEl.required = true;
   toggleEl.style.display = 'block';
   forgotEl.style.display = reg ? 'none' : 'block';
 }
@@ -37,6 +38,7 @@ forgotEl.addEventListener('click', function () {
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
   passEl.style.display = 'none';
+  passEl.required = false;
   toggleEl.style.display = 'none';
   forgotEl.style.display = 'none';
   submitEl.textContent = 'Отправить письмо';
