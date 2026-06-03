@@ -25,10 +25,10 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isL) badge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
+  if (isL) badge = '<span class="btn-pressed">' + icon('zap', 16) + '</span>';
   else if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
   else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
-  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 14) + '</button>';
+  else badge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="tf-pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
@@ -115,10 +115,10 @@ export function updateCardBadge(symbol) {
   var signal = hasA ? cache.result.signal : null;
   var tag = 'span';
   var html = '';
-  if (isL) { tag = 'span'; html = '' + icon('zap', 14) + ''; }
+  if (isL) { tag = 'span'; html = '' + icon('zap', 16) + ''; }
   else if (isE) { tag = 'button'; html = 'Повтор'; }
   else if (hasA) { tag = 'span'; html = signalLabel(signal); }
-  else { tag = 'button'; html = '' + icon('zap', 14) + ''; }
+  else { tag = 'button'; html = '' + icon('zap', 16) + ''; }
 
   var newEl = document.createElement(tag);
   if (isE) { newEl.className = 'btn-retry'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
@@ -2944,10 +2944,10 @@ function _fvBottomBarHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
+  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 16) + '</span>';
   else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 14) + '</button>';
+  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
@@ -2960,8 +2960,8 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div></div>'
     + '</div>'
     + '<div class="fv-bb-right">'
-    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 14) + '</button>'
-    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 14) + '</button>'
+    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
+    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>';
@@ -2978,10 +2978,10 @@ function _fvCoinInfoHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 14) + '</span>';
+  if (isL) fvBadge = '<span class="btn-pressed">' + icon('zap', 16) + '</span>';
   else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 14) + '</button>';
+  else fvBadge = '<button class="btn-analyze-one" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
 
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
@@ -2996,8 +2996,8 @@ function _fvCoinInfoHTML(sym, tf) {
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
-    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 14) + '</button>'
-    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 14) + '</button>'
+    + '<button class="btn-star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>'
+    + '<button class="btn-clear-both" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '<div class="fv-info-stats">'
