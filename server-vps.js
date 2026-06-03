@@ -22,6 +22,7 @@ const { ensureAuthTables } = require('./db/setup');
 const { getAuth } = require('./auth');
 const { toNodeHandler } = require('better-auth/node');
 const { Resend } = require('resend');
+const { verifyPassword: verifyBaPassword } = require('@better-auth/utils/dist/password.node.cjs');
 
 // ── Encryption helpers for Binance API keys ──────────────────────────────────
 var _encKey = null;
@@ -910,10 +911,31 @@ var httpServer = http.createServer(async function (req, res) {
       }
       var tzIanaRes = await redis(['GET', 'account_tz:' + userId]);
       var timezone = tzIanaRes && tzIanaRes.result ? tzIanaRes.result : null;
+      var credRow = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(userId, 'credential');
+      var hasPassword = !!(credRow && credRow.password);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone, hasPassword: hasPassword }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/confirm-email-change')) {
+    try {
+      var confirmToken = new URL(req.url, 'https://questtick.com').searchParams.get('token') || '';
+      if (!confirmToken) { res.writeHead(400); res.end('Missing token'); return; }
+      var pendingRes = await redis(['GET', 'email_chg:' + confirmToken]);
+      if (!pendingRes || !pendingRes.result) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Ссылка недействительна или истекла' })); return; }
+      var pending = JSON.parse(pendingRes.result);
+      getDb().sqlite.prepare('UPDATE user SET email = ?, email_verified = 1, updated_at = ? WHERE id = ?')
+        .run(pending.newEmail, Math.floor(Date.now() / 1000), pending.userId);
+      await redis(['DEL', 'email_chg:' + confirmToken]);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
     }
     return;
@@ -987,6 +1009,62 @@ var httpServer = http.createServer(async function (req, res) {
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'delete-binance') {
           await redis(['DEL', 'binance_keys:' + userId]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'send-email-change-code') {
+          var chatRes2 = await redis(['GET', 'tg_chat:' + userId]);
+          if (!chatRes2 || !chatRes2.result) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Telegram не подключён' })); return;
+          }
+          var code = String(Math.floor(100000 + Math.random() * 900000));
+          await redis(['SET', 'email_chg_code:' + userId, code, 'EX', '300']);
+          await sendTG(chatRes2.result, '🔐 Код подтверждения смены email: ' + code + '\n\nКод действителен 5 минут.');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'change-email-request') {
+          var newEmailReq = (parsed.newEmail || '').trim().toLowerCase();
+          if (!newEmailReq || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailReq)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Некорректный email' })); return;
+          }
+          var verified = false;
+          if (parsed.password) {
+            var credRow2 = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(userId, 'credential');
+            if (!credRow2 || !credRow2.password) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'У вашего аккаунта нет пароля' })); return;
+            }
+            verified = await verifyBaPassword(credRow2.password, parsed.password);
+            if (!verified) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Неверный пароль' })); return;
+            }
+          } else if (parsed.tgCode) {
+            var storedCode = await redis(['GET', 'email_chg_code:' + userId]);
+            if (!storedCode || !storedCode.result || storedCode.result !== String(parsed.tgCode).trim()) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Неверный или устаревший код' })); return;
+            }
+            await redis(['DEL', 'email_chg_code:' + userId]);
+            verified = true;
+          }
+          if (!verified) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Требуется подтверждение: пароль или код из Telegram' })); return;
+          }
+          var chgToken = require('crypto').randomBytes(32).toString('hex');
+          await redis(['SET', 'email_chg:' + chgToken, JSON.stringify({ userId: userId, newEmail: newEmailReq }), 'EX', '3600']);
+          var confirmUrl = 'https://questtick.com/confirm-email-change?token=' + chgToken;
+          var resendInst = new Resend(process.env.RESEND_API_KEY);
+          await resendInst.emails.send({
+            from: 'Questtick <noreply@questtick.com>',
+            to: newEmailReq,
+            subject: 'Подтвердите новый email — Questtick',
+            html: '<p>Для завершения смены email нажмите кнопку ниже.</p>'
+              + '<p><a href="' + confirmUrl + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Подтвердить новый email</a></p>'
+              + '<p style="color:#888;font-size:12px;">Ссылка действительна 1 час. Если вы не запрашивали смену — проигнорируйте письмо.</p>',
+          });
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'save-timezone') {

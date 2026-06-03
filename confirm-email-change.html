@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questtick — Подтверждение нового email</title>
+  <style>
+    body { background:#0e0e0e; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; display:flex; align-items:center; justify-content:center; min-height:100dvh; margin:0; }
+    .card { text-align:center; padding:32px; max-width:360px; }
+    h2 { font-size:18px; font-weight:600; color:#fff; margin:0 0 8px; }
+    p { color:#888; font-size:14px; margin:0; }
+    a { color:#277CC2; text-decoration:none; }
+  </style>
+  <script>
+    var API_BASE = '';
+    var token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('title').textContent = 'Ссылка недействительна';
+        document.getElementById('msg').textContent = 'Попробуйте запросить смену email повторно.';
+      });
+    } else {
+      fetch('/api/confirm-email-change?token=' + encodeURIComponent(token))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          document.addEventListener('DOMContentLoaded', function () {
+            if (d.ok) {
+              document.getElementById('title').textContent = 'Email успешно изменён';
+              document.getElementById('msg').innerHTML = 'Новый email подтверждён. <a href="/">Войти</a>';
+            } else {
+              document.getElementById('title').textContent = 'Ошибка подтверждения';
+              document.getElementById('msg').textContent = d.error || 'Ссылка недействительна или истекла.';
+            }
+          });
+        })
+        .catch(function () {
+          document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('title').textContent = 'Ошибка сети';
+            document.getElementById('msg').textContent = 'Попробуйте ещё раз позже.';
+          });
+        });
+    }
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h2 id="title">Подтверждаем новый email…</h2>
+    <p id="msg">Пожалуйста, подождите</p>
+  </div>
+</body>
+</html>
