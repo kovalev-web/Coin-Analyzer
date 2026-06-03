@@ -2232,6 +2232,17 @@ export function refreshBriefingFromServer() {
 }
 
 export function loadBriefing() {
+  // Clear cached data if user switched to prevent cross-user data leakage
+  try {
+    var _storedUserId = localStorage.getItem('pa_user_id');
+    if (_userId && _storedUserId !== _userId) {
+      ['pa_briefing', 'pa_ai_summary', 'pa_ai_traded_keys', 'pa_ai_summary_date', 'pa_ai_trade_count'].forEach(function (k) {
+        localStorage.removeItem(k);
+      });
+      localStorage.setItem('pa_user_id', _userId);
+    }
+  } catch (e) {}
+
   // Always filter to current week — old entries disappear automatically each Monday
   var _today = new Date();
   var _dow = _today.getDay();
