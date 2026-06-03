@@ -6,13 +6,6 @@
 button{cursor:pointer;border:none;border-radius:8px;font-family:var(--font-family);font-size:14px;font-weight:500;letter-spacing:0;padding:0 20px;height:40px;transition:opacity 0.15s;white-space:nowrap;}
 button:hover{opacity:0.85;}
 button:disabled{opacity:0.4;cursor:not-allowed;}
-.btn-refresh{background:var(--canvas);color:var(--ink);border:1px solid var(--ink);}
-.btn-settings{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
-.btn-settings:hover{color:var(--primary);}
-.btn-settings-mob{display:none;}
-.btn-tv{background:var(--fog);color:var(--ink);border:none;padding:0 16px;font-size:13px;font-weight:500;letter-spacing:0.3px;}
-.btn-theme{background:var(--fog);color:var(--ink);border:none;padding:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
-.btn-refresh-icon{display:none;width:36px;height:36px;padding:0;border-radius:9999px;background:transparent;border:1px solid var(--steel);color:var(--ink);align-items:center;justify-content:center;flex-shrink:0;}
 .btn-expand{background:transparent;color:var(--graphite);border:none;padding:0;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .btn-expand:hover{color:var(--ink);}
 
@@ -20,7 +13,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
 .btn-topbar{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
 .btn-topbar:hover{opacity:0.8;}
-.btn-refresh-topbar{display:none!important;}
 .desktop-nav-btn{display:none;}
 @media(min-width:1025px){.desktop-nav-btn{display:inline-flex;}}
 
@@ -173,8 +165,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .ms-card:hover{box-shadow:var(--shadow-lg);}
 .ms-card-sub{font-size:11px;color:var(--graphite);font-weight:500;margin-top:2px;}
 .ms-popup{position:absolute;pointer-events:auto;z-index:100;background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:0;box-shadow:var(--shadow-md);width:400px;max-width:calc(100% - 12px);}
-.ms-refresh-btn{background:none;border:none;cursor:pointer;font-size:15px;color:var(--graphite);padding:2px 4px;height:auto;line-height:1;border-radius:4px;flex-shrink:0;}
-.ms-refresh-btn:hover{color:var(--ink);}
 .ms-tip-wrap{display:inline-block;vertical-align:middle;margin-left:5px;outline:none;cursor:default;}
 .ms-tip-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--steel);color:var(--on-ink);font-size:8px;font-weight:700;font-style:normal;vertical-align:middle;line-height:1;flex-shrink:0;}
 .ms-tip-text{display:none;position:fixed;width:210px;background:var(--ink);color:var(--on-ink);font-size:12px;font-weight:400;line-height:1.55;padding:10px 13px;border-radius:10px;z-index:999999;white-space:normal;text-transform:none;letter-spacing:0;pointer-events:none;}
@@ -223,8 +213,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Burger menu ────────────────────────────────────────────── */
 .burger-wrap{position:relative;display:block;}
 @media(min-width:1025px){.burger-wrap{display:none;}}
-.btn-burger{background:var(--fog);color:var(--ink);border:none;padding:0;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;cursor:pointer;flex-shrink:0;}
-.btn-burger:hover{opacity:0.8;}
 .burger-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
 .burger-dd.open{display:block;}
 .burger-dd-item{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;height:auto;border-radius:0;letter-spacing:0;text-decoration:none;}
