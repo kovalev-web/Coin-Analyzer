@@ -49,8 +49,6 @@
 .card-sym-row .card-sym{flex:none;}
 
 /* card action buttons — visible only in full view */
-.card-head-right .btn-clear-alerts,
-.card-head-right .btn-clear-levels,
 .card-head-right .btn-clear-both,
 .card-head-right .btn-analyze-one,
 .card-head-right .btn-retry,

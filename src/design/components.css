@@ -68,10 +68,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .tf-dd button.active{color:var(--primary);font-weight:600;}
 
 /* ── Chart action buttons ───────────────────────────────────── */
-.btn-clear-alerts{display:inline-flex;align-items:center;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:color-mix(in srgb,var(--danger-soft) 10%,transparent);color:var(--danger-soft);border:1px solid color-mix(in srgb,var(--danger-soft) 30%,transparent);cursor:pointer;white-space:nowrap;}
-.btn-clear-alerts:hover{background:color-mix(in srgb,var(--danger-soft) 20%,transparent);}
-.btn-clear-levels{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 8px;font-size:11px;font-weight:700;border-radius:9999px;background:color-mix(in srgb,var(--level) 12%,transparent);color:var(--level);border:1px solid color-mix(in srgb,var(--level) 35%,transparent);cursor:pointer;white-space:nowrap;}
-.btn-clear-levels:hover{background:color-mix(in srgb,var(--level) 22%,transparent);}
 .btn-clear-both{background:transparent;color:var(--graphite);border:none;padding:0;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;flex-shrink:0;}
 .btn-clear-both:hover{background:var(--fog);}
 .clear-popup{position:fixed;z-index:99999;background:var(--paper);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-md);min-width:200px;overflow:hidden;}
