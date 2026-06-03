@@ -62,19 +62,21 @@ function getAuth() {
       deleteUser: {
         enabled: true,
         afterDelete: async function (user) {
-          var REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-          var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-          if (!REDIS_URL || !REDIS_TOKEN) return;
-          var uid = user.id;
-          var keys = ['levels', 'briefing', 'briefing_ai', 'briefing_tz', 'tg_chat',
-                      'binance_keys', 'avatar', 'account_tz'].map(function (k) { return k + ':' + uid; });
-          await Promise.all(keys.map(function (k) {
-            return fetch(REDIS_URL, {
-              method: 'POST',
-              headers: { 'Authorization': 'Bearer ' + REDIS_TOKEN, 'Content-Type': 'application/json' },
-              body: JSON.stringify(['DEL', k]),
-            });
-          }));
+          try {
+            var REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+            var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+            if (!REDIS_URL || !REDIS_TOKEN) return;
+            var uid = user.id;
+            var keys = ['levels', 'briefing', 'briefing_ai', 'briefing_tz', 'tg_chat',
+                        'binance_keys', 'avatar', 'account_tz'].map(function (k) { return k + ':' + uid; });
+            await Promise.all(keys.map(function (k) {
+              return fetch(REDIS_URL, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + REDIS_TOKEN, 'Content-Type': 'application/json' },
+                body: JSON.stringify(['DEL', k]),
+              });
+            }));
+          } catch (e) {}
         },
       },
       changeEmail: {

@@ -940,7 +940,7 @@ export function showAccountModal() {
   document.getElementById('acc-delete-yes').addEventListener('click', function () {
     var btn = this;
     btn.disabled = true; btn.textContent = '…';
-    fetch(API_BASE + '/auth/delete-user', { method: 'POST', credentials: 'include' })
+    fetch(API_BASE + '/auth/delete-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })
       .then(function (r) {
         if (r.ok) {
           window.location.replace('/login');
