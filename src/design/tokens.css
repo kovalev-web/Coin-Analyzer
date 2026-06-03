@@ -1,0 +1,188 @@
+/* ═══════════════════════════════════════════════════════════════
+   QUESTTICK — Design Tokens
+   Single source of truth. All other CSS files read from here only.
+   Rule: every numeric value is a multiple of 2.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── Typeface ───────────────────────────────────────────────── */
+  --font-family: 'Manrope', Arial, sans-serif;
+
+  /* ── Typography: size (all ×2) ─────────────────────────────── */
+  --text-2xs:  10px;   /* badges, uppercase labels          */
+  --text-xs:   12px;   /* notes, secondary meta             */
+  --text-sm:   14px;   /* buttons, inputs, body text        */
+  --text-base: 16px;   /* card tickers, popup titles        */
+  --text-lg:   18px;   /* vol label, large numbers          */
+  --text-xl:   20px;   /* metric card values, MS verdict    */
+  --text-2xl:  22px;   /* large headings                    */
+  --text-3xl:  26px;   /* hero numbers                      */
+
+  /* ── Typography: weight ────────────────────────────────────── */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semi:   600;
+  --font-bold:   700;
+
+  /* ── Typography: line-height ───────────────────────────────── */
+  --leading-tight:   1.2;
+  --leading-normal:  1.4;
+  --leading-relaxed: 1.6;
+
+  /* ── Spacing (all ×2) ──────────────────────────────────────── */
+  --space-1:   2px;
+  --space-2:   4px;
+  --space-3:   6px;
+  --space-4:   8px;
+  --space-5:  10px;
+  --space-6:  12px;
+  --space-7:  14px;
+  --space-8:  16px;
+  --space-10: 20px;
+  --space-12: 24px;
+  --space-16: 32px;
+  --space-20: 40px;
+  --space-24: 48px;
+  --space-32: 64px;
+
+  /* ── Border radius (all ×2) ────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-full: 9999px;
+
+  /* ── Component heights (all ×2) ────────────────────────────── */
+  --h-btn-sm:   26px;   /* small inline action buttons       */
+  --h-btn-md:   30px;   /* topbar buttons, popup controls    */
+  --h-btn-lg:   36px;   /* account row buttons               */
+  --h-btn-xl:   40px;   /* primary CTA buttons               */
+  --h-input:    40px;   /* form inputs                       */
+  --h-input-lg: 44px;   /* modal form elements               */
+
+  /* ── Shadow ────────────────────────────────────────────────── */
+  --shadow-sm:   0 2px 8px rgba(26, 26, 26, 0.08);
+  --shadow-md:   0 8px 24px rgba(26, 26, 26, 0.12);
+  --shadow-lg:   0 8px 24px rgba(26, 26, 26, 0.14);
+  --shadow-soft: var(--shadow-sm);   /* alias — prefer --shadow-sm */
+
+  /* ── Color: Surface ────────────────────────────────────────── */
+  --canvas:  #ffffff;   /* page background, chart bg         */
+  --paper:   #ffffff;   /* card / popup surface              */
+  --cloud:   #f7f7f7;   /* page bg, hover fills              */
+  --fog:     #e8e8e8;   /* muted fills, secondary controls   */
+
+  /* ── Color: Border ─────────────────────────────────────────── */
+  --hairline: #e8e8e8;  /* dividers, card borders            */
+  --steel:    #c2c2c2;  /* input borders, scrollbar          */
+
+  /* ── Color: Text ───────────────────────────────────────────── */
+  --ink:      #1a1a1a;  /* primary text                      */
+  --ink-deep: #000000;  /* maximum contrast                  */
+  --on-ink:   #ffffff;  /* text on dark/filled surfaces      */
+  --charcoal: #3d3d3d;  /* secondary text                    */
+  --graphite: #636363;  /* muted / placeholder text          */
+
+  /* ── Color: Brand ──────────────────────────────────────────── */
+  --primary:        #024ad8;
+  --primary-bright: #296ef9;
+  --primary-deep:   #0e3191;
+  --primary-soft:   #c9e0fc;
+
+  /* ── Color: Semantic ───────────────────────────────────────── */
+  --bullish:     #16a34a;
+  --bullish-bg:  #f0fdf4;
+  --caution:     #b45309;
+  --caution-bg:  #fffbeb;
+  --danger:      #dc2626;   /* destructive actions            */
+  --danger-soft: #ef4444;   /* alerts, clear buttons          */
+  --error:       #f08080;   /* form validation errors         */
+  --success:     #4caf7d;   /* connected / positive states    */
+  --level:       #f59e0b;   /* price levels, briefing active  */
+  --level-deep:  #d97706;
+  --bloom-coral: #ff5050;   /* hot NATR                       */
+  --bloom-deep:  #b3262b;   /* bearish signal                 */
+
+  /* ── Color: Status ─────────────────────────────────────────── */
+  --ws-on:  #22c55e;
+  --ws-off: #ef4444;
+
+  /* ── Color: Chart ──────────────────────────────────────────── */
+  --chart-level: #277cc2;   /* price level lines in chart     */
+  --candle-up:   #242424;
+  --candle-dn:   #9badb8;
+  --vol-up:      rgba(26, 26, 26, 0.35);
+  --vol-dn:      rgba(153, 153, 153, 0.35);
+
+  /* ── Color: Feedback ───────────────────────────────────────── */
+  --retry-bg:     #fff1f1;
+  --retry-border: #fca5a5;
+
+  /* ── Deprecated aliases (remove in Phase 3) ────────────────── */
+  --neutral-bar: var(--steel);
+}
+
+
+/* ── Dark mode: system preference ────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas:   #121517;
+    --paper:    #181d21;
+    --cloud:    #0a0d0f;
+    --fog:      #1e252a;
+    --steel:    #2d3940;
+    --hairline: #252d33;
+
+    --ink:      #e3eaed;
+    --ink-deep: #f2f6f8;
+    --on-ink:   #121517;
+    --charcoal: #a8b5bb;
+    --graphite: #637880;
+
+    --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
+    --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
+
+    --bullish-bg:   rgba(22, 163, 74, 0.15);
+    --caution-bg:   rgba(180, 83, 9, 0.15);
+    --retry-bg:     rgba(179, 38, 43, 0.12);
+    --retry-border: rgba(179, 38, 43, 0.4);
+
+    --candle-up: #c2ccd0;
+    --candle-dn: #3b4b54;
+    --vol-up:    rgba(227, 234, 237, 0.2);
+    --vol-dn:    rgba(99, 120, 128, 0.3);
+  }
+}
+
+/* ── Dark mode: manual override ──────────────────────────────── */
+/* Keep in sync with media query block above.                     */
+:root[data-theme="dark"] {
+  --canvas:   #121517;
+  --paper:    #181d21;
+  --cloud:    #0a0d0f;
+  --fog:      #1e252a;
+  --steel:    #2d3940;
+  --hairline: #252d33;
+
+  --ink:      #e3eaed;
+  --ink-deep: #f2f6f8;
+  --on-ink:   #121517;
+  --charcoal: #a8b5bb;
+  --graphite: #637880;
+
+  --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
+  --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
+
+  --bullish-bg:   rgba(22, 163, 74, 0.15);
+  --caution-bg:   rgba(180, 83, 9, 0.15);
+  --retry-bg:     rgba(179, 38, 43, 0.12);
+  --retry-border: rgba(179, 38, 43, 0.4);
+
+  --candle-up: #c2ccd0;
+  --candle-dn: #3b4b54;
+  --vol-up:    rgba(227, 234, 237, 0.2);
+  --vol-dn:    rgba(99, 120, 128, 0.3);
+}
