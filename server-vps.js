@@ -259,7 +259,14 @@ async function loadAlertsOnStartup() {
     for (var i = 0; i < codes.length; i++) {
       var code = codes[i];
       var ar = await redis(['GET', 'alerts:' + code]);
-      if (ar.result) alertsMemory[code] = JSON.parse(ar.result);
+      if (ar.result) {
+        var loaded = JSON.parse(ar.result);
+        if (alertsMemory[code]) {
+          // Preserve in-memory triggered=true — prevents double-fire if reload races with a trigger
+          loaded.data = mergeAlertData(alertsMemory[code].data, loaded.data);
+        }
+        alertsMemory[code] = loaded;
+      }
     }
     console.log('[Alerts] Loaded', codes.length, 'codes from Redis');
   } catch (e) {
