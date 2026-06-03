@@ -437,9 +437,18 @@ export function showAccountModal() {
       + '<div class="account-section">'
         + '<div class="account-section-title">Часовой пояс</div>'
         + '<div id="acc-tz-wrap">'
-          + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
-          + '<div class="acc-field-err" id="acc-tz-msg"></div>'
-          + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
+          + '<div id="acc-tz-display" style="display:flex;align-items:center;gap:10px;min-height:32px;">'
+            + '<span id="acc-tz-current" style="font-size:13px;color:#ccc;"></span>'
+            + '<button id="acc-tz-change-btn" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;padding:0;text-decoration:underline;flex-shrink:0;">Изменить</button>'
+          + '</div>'
+          + '<div id="acc-tz-editor" style="display:none;">'
+            + '<select id="acc-tz-select" style="width:100%;padding:0 10px;height:38px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:10px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;"></select>'
+            + '<div class="acc-field-err" id="acc-tz-msg"></div>'
+            + '<div style="display:flex;gap:8px;">'
+              + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
+              + '<button id="acc-tz-cancel" style="background:none;border:1px solid #333;color:#666;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
+            + '</div>'
+          + '</div>'
         + '</div>'
       + '</div>'
 
@@ -624,7 +633,7 @@ export function showAccountModal() {
       });
   });
 
-  // Populate timezone dropdown
+  // Timezone section
   var _TZ_LIST = [
     ['Pacific/Honolulu',    'UTC−10  Гавайи'],
     ['America/Anchorage',   'UTC−9   Аляска'],
@@ -650,20 +659,39 @@ export function showAccountModal() {
   ];
   var _autoTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   var _tzSel = document.getElementById('acc-tz-select');
+  var _tzCurrent = document.getElementById('acc-tz-current');
+  var _tzDisplay = document.getElementById('acc-tz-display');
+  var _tzEditor = document.getElementById('acc-tz-editor');
+
+  function _tzSetDisplay(tz, source) {
+    _tzCurrent.textContent = tz + ' · ' + source;
+  }
+  _tzSetDisplay(_autoTz, 'автодетект');
+
+  // Populate select
   _TZ_LIST.forEach(function (item) {
     var opt = document.createElement('option');
-    opt.value = item[0];
-    opt.textContent = item[1];
+    opt.value = item[0]; opt.textContent = item[1];
     _tzSel.appendChild(opt);
   });
-  // If auto-detected TZ is not in the curated list, add it as the first option
+  // Add auto-detected zone if not in list
   if (_autoTz && !_TZ_LIST.some(function (item) { return item[0] === _autoTz; })) {
     var _autoOpt = document.createElement('option');
-    _autoOpt.value = _autoTz;
-    _autoOpt.textContent = _autoTz + ' (автодетект)';
+    _autoOpt.value = _autoTz; _autoOpt.textContent = _autoTz;
     _tzSel.insertBefore(_autoOpt, _tzSel.firstChild);
   }
   _tzSel.value = _autoTz || _TZ_LIST[0][0];
+
+  document.getElementById('acc-tz-change-btn').addEventListener('click', function () {
+    _tzDisplay.style.display = 'none';
+    _tzEditor.style.display = 'block';
+  });
+
+  document.getElementById('acc-tz-cancel').addEventListener('click', function () {
+    _tzEditor.style.display = 'none';
+    _tzDisplay.style.display = 'flex';
+    document.getElementById('acc-tz-msg').textContent = '';
+  });
 
   document.getElementById('acc-tz-save').addEventListener('click', function () {
     var btn = document.getElementById('acc-tz-save');
@@ -676,7 +704,9 @@ export function showAccountModal() {
       body: JSON.stringify({ action: 'save-timezone', timezone: _tzSel.value }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
-        msg.style.color = '#80c080'; msg.textContent = 'Сохранено';
+        _tzSetDisplay(_tzSel.value, 'сохранено');
+        _tzEditor.style.display = 'none';
+        _tzDisplay.style.display = 'flex';
       } else {
         msg.style.color = '#f08080'; msg.textContent = d.error || 'Ошибка';
       }
@@ -697,7 +727,10 @@ export function showAccountModal() {
           btn.classList.toggle('selected', btn.dataset.preset === d.avatar);
         });
       }
-      if (d.timezone) _tzSel.value = d.timezone;
+      if (d.timezone) {
+        _tzSel.value = d.timezone;
+        _tzSetDisplay(d.timezone, 'сохранено');
+      }
       renderTgStatus(!!d.tgConnected);
       renderBinanceStatus(!!d.binanceConnected, d.binanceKey || '');
     })
