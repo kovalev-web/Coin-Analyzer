@@ -910,7 +910,7 @@ var httpServer = http.createServer(async function (req, res) {
           var bSec = (parsed.apiSecret || '').trim();
           if (!bKey || !bSec) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'apiKey and apiSecret required' }));
+            res.end(JSON.stringify({ error: 'Заполните оба поля' }));
             return;
           }
           // Validate keys and check permissions via Binance API
@@ -921,18 +921,18 @@ var httpServer = http.createServer(async function (req, res) {
             var rRes = await fetch(rUrl, { headers: { 'X-MBX-APIKEY': bKey } });
             var rData = await rRes.json();
             if (!rRes.ok) {
+              // -2015 = wrong key or IP restriction
+              var binMsg = rData.msg || '';
+              var errText = (rData.code === -2015 || binMsg.toLowerCase().includes('ip'))
+                ? 'Неверный ключ или IP-ограничение. Проверьте правильность и снимите ограничение по IP при создании ключа.'
+                : 'Неверные ключи: ' + (binMsg || 'Binance error');
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Неверные ключи: ' + (rData.msg || 'Binance error') }));
+              res.end(JSON.stringify({ error: errText }));
               return;
             }
             if (rData.enableWithdrawals) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Ключ разрешает вывод средств — опасно. Создайте Read-only ключ.' }));
-              return;
-            }
-            if (rData.enableSpotAndMarginTrading) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Ключ разрешает торговлю на споте. Создайте Read-only ключ.' }));
               return;
             }
             if (rData.enableInternalTransfer || rData.permitsUniversalTransfer) {

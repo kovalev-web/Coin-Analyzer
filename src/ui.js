@@ -539,10 +539,18 @@ export function showAccountModal() {
       });
       document.getElementById('acc-bin-del').addEventListener('click', function () {
         if (!confirm('Отключить Binance API?')) return;
+        var delBtn = document.getElementById('acc-bin-del');
+        delBtn.disabled = true; delBtn.textContent = '…';
         fetch(API_BASE + '/api/account', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action: 'delete-binance' }),
-        }).then(function () { renderBinanceStatus(false); }).catch(function () {});
+        })
+          .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
+          .catch(function (e) {
+            delBtn.disabled = false; delBtn.textContent = 'Отключить';
+            var err = document.getElementById('acc-bin-err');
+            if (err) err.textContent = e.message || 'Ошибка сети';
+          });
       });
       bindBinanceSaveBtn('Сохранить новые ключи');
       return;
