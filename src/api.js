@@ -939,8 +939,13 @@ export async function fetchWeekTrades(force) {
     + String(today.getMonth() + 1).padStart(2, '0') + '-'
     + String(today.getDate()).padStart(2, '0');
 
-  // Only count today's trades — resets at midnight like the briefing panel.
-  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date === todayStr; });
+  // Compute Monday of current week
+  var daysToMon = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  var mon = new Date(today.getTime() - daysToMon * 24 * 3600 * 1000);
+  var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+
+  // All briefing entries Mon–today
+  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= monStr && e.date <= todayStr; });
   if (!entries.length) { emit('trades:week-updated'); return null; }
 
   // Always refetch (day isn't over, new trades may appear). Clear cache every time.
