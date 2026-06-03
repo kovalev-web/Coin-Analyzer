@@ -119,8 +119,12 @@
   --retry-bg:     #fff1f1;
   --retry-border: #fca5a5;
 
-  /* ── Deprecated aliases (remove in Phase 3) ────────────────── */
-  --neutral-bar: var(--steel);
+  /* ── Color: UI state bg ────────────────────────────────────── */
+  --badge-ok-bg:     #1a3a1a;   /* verified badge background     */
+  --badge-warn-bg:   #3a2a1a;   /* warning badge background      */
+  --delete-bg:       #5a1a1a;   /* destructive confirm bg        */
+  --delete-bg-hover: #7a2a2a;   /* destructive confirm bg hover  */
+  --caution-line:    #fde68a;   /* caution border, inplay pill   */
 }
 
 
