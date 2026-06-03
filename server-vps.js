@@ -852,7 +852,7 @@ var httpServer = http.createServer(async function (req, res) {
           }
           if (!parsed.skip_entries) {
             var _bMsg = JSON.stringify({ type: 'briefing_updated' });
-            clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(_bMsg); });
+            clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === userId) c.send(_bMsg); });
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -1072,9 +1072,15 @@ httpServer.listen(PORT, function () {
   console.log('[Server] Pump Analyzer running on port', PORT);
 });
 
-wss.on('connection', function (ws) {
+wss.on('connection', function (ws, upgradeReq) {
   clients.add(ws);
   console.log('[Server] Client connected (' + clients.size + ' total)');
+  // Authenticate WS connection using session cookie from the HTTP upgrade request.
+  // ws._sessionUserId is used instead of trusting client-supplied msg.code.
+  getSession(upgradeReq).then(function (sess) {
+    ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
+    if (ws._sessionUserId) ws._userId = ws._sessionUserId; // tag for alert broadcasts
+  }).catch(function () { ws._sessionUserId = null; });
 
   // Отправить кэш сразу при подключении
   var arr = Object.values(tickerCache);
@@ -1121,17 +1127,15 @@ wss.on('connection', function (ws) {
       }
 
       else if (msg.type === 'save_alerts') {
-        // Frontend pushes userId as msg.code (replaces old user-defined code string).
-        var wsUserId = msg.code;
-        if (wsUserId && typeof wsUserId === 'string' && wsUserId.length > 0) {
-          ws._userId = wsUserId; // tag connection for targeted broadcasts
-          if (!alertsMemory[wsUserId]) alertsMemory[wsUserId] = { chatId: '', data: {} };
-          if (msg.chatId) alertsMemory[wsUserId].chatId = String(msg.chatId);
-          if (msg.data !== undefined) {
-            alertsMemory[wsUserId].data = mergeAlertData(alertsMemory[wsUserId].data, msg.data);
-          }
-          saveAlertsToRedis(wsUserId);
+        // Use session-authenticated userId — never trust client-supplied msg.code.
+        var wsUserId = ws._sessionUserId;
+        if (!wsUserId) return; // reject unauthenticated WS save attempts
+        if (!alertsMemory[wsUserId]) alertsMemory[wsUserId] = { chatId: '', data: {} };
+        if (msg.chatId) alertsMemory[wsUserId].chatId = String(msg.chatId);
+        if (msg.data !== undefined) {
+          alertsMemory[wsUserId].data = mergeAlertData(alertsMemory[wsUserId].data, msg.data);
         }
+        saveAlertsToRedis(wsUserId);
       }
 
       else if (msg.type === 'subscribe_klines') {
