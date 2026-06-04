@@ -3754,9 +3754,9 @@ export function renderFVBriefingDrawer() {
   var dates = Object.keys(dateMap).sort().reverse();
   var tab = state.briefingTab || 'coins';
   var tabs = '<div class="fvbd-tabs">'
-    + '<button class="fvbd-tab nav-pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Монеты</button>'
-    + '<button class="fvbd-tab nav-pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Итоги</button>'
-    + '<button class="fvbd-tab nav-pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI анализ</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Монеты</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Итоги</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI анализ</button>'
     + '</div>';
   var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>' + tabs;
   if (tab === 'week') { drawer.innerHTML = html + _weekStatsHTML(); _refreshBriefingPct(); return; }
