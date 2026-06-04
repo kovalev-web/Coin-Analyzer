@@ -78,6 +78,17 @@
     /* ── Stat vals ───────────────────────────────────────────── */
     .ds-stat-row { display: flex; gap: 20px; flex-wrap: wrap; }
 
+    /* ── Vertical spacing ────────────────────────────────────── */
+    .ds-vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 28px; }
+    .ds-vrows { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .ds-vrow  { display: flex; align-items: center; gap: 10px; }
+    .ds-vstk  { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .ds-vel   { width: 36px; height: 10px; background: var(--fog); border-radius: 2px; }
+    .ds-vgap  { width: 2px; background: var(--primary); opacity: 0.5; }
+    .ds-vmeta { display: flex; flex-direction: column; gap: 1px; }
+    .ds-vtoken { font-size: 10px; font-weight: var(--font-semi); color: var(--ink); font-family: monospace; }
+    .ds-vval  { font-size: 10px; color: var(--graphite); }
+
   </style>
 </head>
 <body>
@@ -412,6 +423,52 @@
         <span class="acc-badge acc-badge-ok">✓ Verified</span>
         <span class="acc-badge acc-badge-warn">! Unverified</span>
         <span class="tg-connected"><span data-icon="check-circle,14"></span> Подключён</span>
+      </div>
+    </div>
+
+    <!-- Vertical Spacing -->
+    <div class="ds-section">
+      <div class="ds-section-title">Vertical Spacing — Roles</div>
+      <div class="ds-vgrid">
+
+        <div>
+          <div class="ds-swatch-group-label">Micro · 2–8px</div>
+          <div class="ds-vrows">
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:2px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-1 · 2px</span><span class="ds-vval">иконки в чипах, ws-dot margin</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:4px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-2 · 4px</span><span class="ds-vval">badge padding-y, bp-today-tag padding</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:6px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-3 · 6px</span><span class="ds-vval">acc-tabs gap, bp-date-nav gap</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:8px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-4 · 8px</span><span class="ds-vval">btn-topbar padding, tf-dd item padding</span></div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="ds-swatch-group-label">Compact · 10–16px</div>
+          <div class="ds-vrows">
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:10px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-5 · 10px</span><span class="ds-vval">pill padding-x, clear-popup-row padding-y</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:12px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-6 · 12px</span><span class="ds-vval">popup header gap, bp-note-row padding-x</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:14px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-7 · 14px</span><span class="ds-vval">acc-row padding-y, burger-dd-item padding-y</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:16px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-8 · 16px</span><span class="ds-vval">popup header/body/footer padding, bp-list top</span></div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="ds-swatch-group-label">Section · 20–32px</div>
+          <div class="ds-vrows">
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:20px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-10 · 20px</span><span class="ds-vval">acc-panel padding-x, bp-row gap, ms-panel margin</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:24px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-12 · 24px</span><span class="ds-vval">fvbd-header padding, ms-panel padding</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:32px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-16 · 32px</span><span class="ds-vval">acc-pane gap, ms-metrics-grid col-gap</span></div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="ds-swatch-group-label">Layout · 40–64px</div>
+          <div class="ds-vrows">
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:40px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-20 · 40px</span><span class="ds-vval">крупные секции, section spacer</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:48px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-24 · 48px</span><span class="ds-vval">account-panel padding-bottom</span></div></div>
+            <div class="ds-vrow"><div class="ds-vstk"><div class="ds-vel"></div><div class="ds-vgap" style="height:64px"></div><div class="ds-vel"></div></div><div class="ds-vmeta"><span class="ds-vtoken">--space-32 · 64px</span><span class="ds-vval">максимальный page-level отступ</span></div></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
