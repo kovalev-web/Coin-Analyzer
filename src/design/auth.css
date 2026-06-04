@@ -98,7 +98,7 @@ body {
   width: 100%;
   padding: 11px;
   background: var(--primary);
-  color: var(--on-ink);
+  color: var(--canvas);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
