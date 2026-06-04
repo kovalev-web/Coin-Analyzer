@@ -59,12 +59,10 @@
   --radius-full: 9999px;
 
   /* ── Component heights (all ×2) ────────────────────────────── */
-  --h-btn-sm:   26px;   /* small inline action buttons       */
-  --h-btn-md:   30px;   /* topbar buttons, popup controls    */
-  --h-btn-lg:   36px;   /* account row buttons               */
-  --h-btn-xl:   40px;   /* primary CTA buttons               */
-  --h-input:    40px;   /* form inputs                       */
-  --h-input-lg: 44px;   /* modal form elements               */
+  --h-btn-sm:  26px;   /* small inline action buttons        */
+  --h-btn-md:  30px;   /* topbar buttons, popup controls     */
+  --h-btn-lg:  36px;   /* cta, card-head, account buttons   */
+  --h-input:   40px;   /* form inputs                        */
 
   /* ── Shadow ────────────────────────────────────────────────── */
   --shadow-sm:   0 2px 8px rgba(26, 26, 26, 0.08);

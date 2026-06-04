@@ -95,14 +95,18 @@ body {
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .auth-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 11px;
+  height: var(--h-btn-lg);
+  padding: 0 var(--space-7);
   background: var(--primary);
   color: var(--canvas);
   border: none;
   border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semi);
   font-family: var(--font-family);
   cursor: pointer;
   margin-top: 4px;
@@ -116,15 +120,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-5);
   width: 100%;
-  padding: 10px;
+  height: var(--h-btn-lg);
+  padding: 0 var(--space-7);
   background: #fff;
   color: #1f1f1f;
   border: none;
   border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semi);
   font-family: var(--font-family);
   cursor: pointer;
 }
