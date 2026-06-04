@@ -210,7 +210,7 @@ document.body.addEventListener('click', function (e) {
           var _tip = document.createElement('div');
           _tip.className = '_ctip';
           _tip.textContent = 'Тикер скопирован';
-          _tip.style.cssText = 'position:absolute;left:' + Math.round(_tr.left - _ar.left) + 'px;top:' + Math.round(_tr.bottom - _ar.top + 4) + 'px;background:rgba(20,20,30,0.92);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:4px 10px;border-radius:6px;pointer-events:none;z-index:50;white-space:nowrap;';
+          _tip.style.cssText = 'position:absolute;left:' + Math.round(_tr.left - _ar.left) + 'px;top:' + Math.round(_tr.bottom - _ar.top + 4) + 'px;background:rgba(20,20,30,0.92);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:4px 10px;border-radius:8px;pointer-events:none;z-index:50;white-space:nowrap;';
           _anchor.appendChild(_tip);
           setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
         }
