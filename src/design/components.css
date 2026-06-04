@@ -95,10 +95,10 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 @media(max-width:768px){.analysis-overlay{min-width:200px;max-width:calc(100vw - 32px);}}
 
 /* ── Signal badge ───────────────────────────────────────────── */
-.signal-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:var(--h-btn-sm);padding:0;border-radius:var(--radius-full);}
-.signal-badge.bullish{background:var(--fog);color:var(--bullish);}
-.signal-badge.caution{background:var(--fog);color:var(--level-deep);}
-.signal-badge.neutral{background:var(--fog);color:var(--graphite);}
+.signal-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:var(--h-btn-sm);padding:0;border-radius:var(--radius-md);}
+.signal-badge.bullish{background:transparent;color:var(--bullish);}
+.signal-badge.caution{background:transparent;color:var(--level-deep);}
+.signal-badge.neutral{background:transparent;color:var(--graphite);}
 
 
 /* ── TradingView attribution ────────────────────────────────── */
