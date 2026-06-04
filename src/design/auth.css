@@ -48,7 +48,7 @@ body {
 
 #login-msg {
   display: none;
-  background: color-mix(in srgb,var(--bullish) 12%,transparent);
+  background: var(--fog);
   border: 1px solid color-mix(in srgb, var(--bullish) 30%, transparent);
   color: var(--bullish);
   padding: 12px 14px;
