@@ -23,7 +23,7 @@ body {
   padding: 32px 28px;
   background: var(--paper);
   border: 1px solid var(--steel);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .auth-title {
@@ -82,7 +82,7 @@ body {
   height: var(--h-input);
   background: var(--canvas);
   border: 1px solid var(--steel);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   color: var(--ink-deep);
   font-size: var(--text-sm);
   font-family: var(--font-family);
