@@ -70,7 +70,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .clear-count{border-radius:var(--radius-full);padding:var(--space-1) var(--space-4);font-size:var(--text-2xs);font-weight:var(--font-bold);}
 .clear-count--level{background:var(--fog);color:var(--level-deep);}
 .clear-count--alert{background:var(--fog);color:var(--danger);}
-.btn-retry{display:inline-flex;align-items:center;justify-content:center;height:var(--h-btn-sm);padding:0 var(--space-5);font-size:var(--text-xs);font-weight:var(--font-medium);border-radius:var(--radius-md);background:var(--retry-bg);color:var(--danger);border:1px solid var(--retry-border);}
+.btn-retry{display:inline-flex;align-items:center;justify-content:center;height:var(--h-btn-sm);padding:0 var(--space-5);font-size:var(--text-xs);font-weight:var(--font-medium);border-radius:var(--radius-md);background:transparent;color:var(--danger);border:1px solid var(--danger);}
 
 /* ── Popup component ────────────────────────────────────────── */
 .popup-header{display:flex;align-items:center;gap:8px;padding:var(--space-8) var(--space-6) 0;}
@@ -81,8 +81,8 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-3);height:var(--h-btn-lg);padding:0 var(--space-7);font-size:var(--text-xs);font-weight:var(--font-semi);border-radius:var(--radius-md);background:transparent;color:var(--ink);border:1px solid var(--steel);cursor:pointer;white-space:nowrap;}
 .btn-cta:hover:not(:disabled){opacity:0.8;}
 .btn-cta:disabled{opacity:0.5;cursor:default;}
-.btn-cta.danger{color:var(--danger);border-color:var(--danger);background:var(--delete-bg);}
-.btn-cta.danger:hover:not(:disabled){background:var(--delete-bg-hover);opacity:1;}
+.btn-cta.danger{color:var(--danger);border-color:var(--danger);background:transparent;}
+.btn-cta.danger:hover:not(:disabled){opacity:1;}
 
 /* ── Analysis overlay ───────────────────────────────────────── */
 .analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:var(--text-sm);line-height:1.55;color:var(--charcoal);}
@@ -133,7 +133,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .ms-bar-pct{font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--charcoal);min-width:24px;text-align:left;}
 .ms-oi-badge{font-size:var(--text-xs);font-weight:var(--font-medium);padding:var(--space-2) var(--space-5);border-radius:var(--radius-full);display:inline-flex;align-items:center;gap:var(--space-2);}
 .ms-oi-badge.up{background:var(--fog);color:var(--bullish);}
-.ms-oi-badge.down{background:var(--retry-bg);color:var(--danger);}
+.ms-oi-badge.down{background:transparent;color:var(--danger);}
 .ms-oi-badge.neutral{background:var(--fog);color:var(--graphite);}
 .ms-inplay{border-top:1px solid var(--hairline);padding-top:var(--space-6);margin-top:var(--space-2);}
 .ms-inplay-label{font-size:var(--text-2xs);font-weight:var(--font-medium);text-transform:uppercase;letter-spacing:0.7px;color:var(--graphite);margin-bottom:var(--space-4);}
@@ -236,8 +236,8 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-email-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .acc-email-addr{font-size:var(--text-xs);font-weight:var(--font-semi);color:var(--ink);}
 .acc-badge{font-size:var(--text-2xs);font-weight:var(--font-semi);padding:var(--space-1) var(--space-4);border-radius:var(--radius-xl);white-space:nowrap;}
-.acc-badge-ok{background:var(--badge-ok-bg);color:var(--bullish);}
-.acc-badge-warn{background:var(--badge-warn-bg);color:var(--level-deep);}
+.acc-badge-ok{background:transparent;color:var(--bullish);}
+.acc-badge-warn{background:transparent;color:var(--level-deep);}
 .acc-security-actions{display:flex;flex-direction:column;gap:var(--v-sm);}
 .acc-footer-divider{height:1px;background:var(--hairline);margin:var(--v-md) 0 var(--v-sm);}
 .acc-delete-btn{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}

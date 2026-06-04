@@ -37,8 +37,8 @@ body {
 /* ── Error / success banners ─────────────────────────────────── */
 .auth-error {
   display: none;
-  background: var(--retry-bg);
-  border: 1px solid var(--retry-border);
+  background: transparent;
+  border: 1px solid var(--danger);
   color: var(--danger);
   padding: 10px 12px;
   border-radius: var(--radius-md);

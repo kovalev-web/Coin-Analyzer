@@ -109,15 +109,6 @@
   --vol-up:      rgba(26, 26, 26, 0.35);
   --vol-dn:      rgba(153, 153, 153, 0.35);
 
-  /* ── Color: Feedback ───────────────────────────────────────── */
-  --retry-bg:     #fff1f1;
-  --retry-border: #fca5a5;
-
-  /* ── Color: UI state bg ────────────────────────────────────── */
-  --badge-ok-bg:     #1a3a1a;   /* verified badge background     */
-  --badge-warn-bg:   #3a2a1a;   /* warning badge background      */
-  --delete-bg:       #5a1a1a;   /* destructive confirm bg        */
-  --delete-bg-hover: #7a2a2a;   /* destructive confirm bg hover  */
 }
 
 
@@ -140,9 +131,6 @@
     --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
     --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
     --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
-
-    --retry-bg:     rgba(179, 38, 43, 0.12);
-    --retry-border: rgba(179, 38, 43, 0.4);
 
     --candle-up: #c2ccd0;
     --candle-dn: #3b4b54;
@@ -170,9 +158,6 @@
   --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
   --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
-
-  --retry-bg:     rgba(179, 38, 43, 0.12);
-  --retry-border: rgba(179, 38, 43, 0.4);
 
   --candle-up: #c2ccd0;
   --candle-dn: #3b4b54;
