@@ -14,23 +14,23 @@
     .ds-wrap { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
 
     /* ── Section ─────────────────────────────────────────────── */
-    .ds-section { background: var(--paper); border: 1px solid var(--hairline); border-radius: var(--radius-xl); padding: 28px 32px; }
+    .ds-section { background: var(--paper); border: 1px solid var(--steel); border-radius: var(--radius-xl); padding: 28px 32px; }
     .ds-section-title { font-size: var(--text-xs); font-weight: var(--font-bold); color: var(--graphite); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
 
     /* ── Header ──────────────────────────────────────────────── */
     .ds-header { display: flex; align-items: center; justify-content: space-between; }
-    .ds-h1 { font-size: var(--text-3xl); font-weight: var(--font-bold); color: var(--ink); letter-spacing: -0.5px; }
+    .ds-h1 { font-size: var(--text-3xl); font-weight: var(--font-bold); color: var(--ink-deep); letter-spacing: -0.5px; }
     .ds-h1 span { color: var(--primary); }
     .ds-subtitle { font-size: var(--text-sm); color: var(--graphite); margin-top: 4px; }
     .ds-theme-row { display: flex; gap: 8px; }
-    .ds-theme-btn { height: var(--h-btn-md); padding: 0 14px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-semi); cursor: pointer; border: 1px solid var(--hairline); background: var(--fog); color: var(--ink); }
-    .ds-theme-btn.active { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+    .ds-theme-btn { height: var(--h-btn-md); padding: 0 14px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: var(--font-semi); cursor: pointer; border: 1px solid var(--steel); background: var(--fog); color: var(--ink-deep); }
+    .ds-theme-btn.active { background: var(--ink-deep); color: var(--canvas); border-color: var(--ink-deep); }
 
     /* ── Swatches ────────────────────────────────────────────── */
     .ds-swatches { display: flex; flex-wrap: wrap; gap: 12px; }
     .ds-swatch { display: flex; flex-direction: column; gap: 6px; min-width: 80px; }
-    .ds-swatch-color { width: 80px; height: 48px; border-radius: var(--radius-md); border: 1px solid var(--hairline); }
-    .ds-swatch-name { font-size: 10px; font-weight: var(--font-semi); color: var(--ink); }
+    .ds-swatch-color { width: 80px; height: 48px; border-radius: var(--radius-md); border: 1px solid var(--steel); }
+    .ds-swatch-name { font-size: 10px; font-weight: var(--font-semi); color: var(--ink-deep); }
     .ds-swatch-val  { font-size: 10px; color: var(--graphite); font-variant-numeric: tabular-nums; }
     .ds-swatch-group { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 200px; }
     .ds-swatch-group-label { font-size: var(--text-2xs); font-weight: var(--font-bold); text-transform: uppercase; letter-spacing: 0.8px; color: var(--steel); margin-bottom: 2px; }
@@ -38,12 +38,12 @@
     .ds-groups { display: flex; flex-wrap: wrap; gap: 28px; }
 
     /* ── Typography ──────────────────────────────────────────── */
-    .ds-type-row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+    .ds-type-row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--steel); }
     .ds-type-row:last-child { border-bottom: none; }
     .ds-type-meta { min-width: 120px; flex-shrink: 0; }
     .ds-type-token { font-size: var(--text-2xs); font-weight: var(--font-semi); color: var(--graphite); font-family: monospace; }
     .ds-type-size  { font-size: var(--text-2xs); color: var(--steel); }
-    .ds-type-sample { color: var(--ink); }
+    .ds-type-sample { color: var(--ink-deep); }
 
     /* ── Spacing ─────────────────────────────────────────────── */
     .ds-space-rows { display: flex; flex-direction: column; gap: 10px; }
@@ -62,7 +62,7 @@
     .ds-height-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .ds-height-bar { width: 56px; background: color-mix(in srgb, var(--primary) 20%, transparent); border: 1px solid var(--primary); border-radius: var(--radius-md); }
     .ds-height-label { font-size: var(--text-2xs); color: var(--graphite); text-align: center; }
-    .ds-height-val { font-size: var(--text-2xs); font-weight: var(--font-semi); color: var(--ink); }
+    .ds-height-val { font-size: var(--text-2xs); font-weight: var(--font-semi); color: var(--ink-deep); }
 
     /* ── Shadows ─────────────────────────────────────────────── */
     .ds-shadows-row { display: flex; gap: 24px; flex-wrap: wrap; }
@@ -86,7 +86,7 @@
     .ds-vel   { width: 36px; height: 10px; background: var(--fog); border-radius: 2px; }
     .ds-vgap  { width: 2px; background: var(--primary); opacity: 0.5; }
     .ds-vmeta { display: flex; flex-direction: column; gap: 1px; }
-    .ds-vtoken { font-size: 10px; font-weight: var(--font-semi); color: var(--ink); font-family: monospace; }
+    .ds-vtoken { font-size: 10px; font-weight: var(--font-semi); color: var(--ink-deep); font-family: monospace; }
     .ds-vval  { font-size: 10px; color: var(--graphite); }
 
   </style>
@@ -400,26 +400,26 @@
       <div class="ds-section-title">Vertical Spacing — Roles</div>
 
       <!-- Semantic tokens -->
-      <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--hairline);">
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--steel);">
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--fog);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-family:monospace;">
           <span style="width:2px;height:16px;background:var(--primary);border-radius:1px;opacity:.5;flex-shrink:0;"></span>
-          <span style="font-weight:600;color:var(--ink);">--v-xs · 6px</span><span style="color:var(--graphite);">label → input</span>
+          <span style="font-weight:600;color:var(--ink-deep);">--v-xs · 6px</span><span style="color:var(--graphite);">label → input</span>
         </span>
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--fog);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-family:monospace;">
           <span style="width:2px;height:22px;background:var(--primary);border-radius:1px;opacity:.5;flex-shrink:0;"></span>
-          <span style="font-weight:600;color:var(--ink);">--v-sm · 10px</span><span style="color:var(--graphite);">field → field, btn → btn</span>
+          <span style="font-weight:600;color:var(--ink-deep);">--v-sm · 10px</span><span style="color:var(--graphite);">field → field, btn → btn</span>
         </span>
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--fog);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-family:monospace;">
           <span style="width:2px;height:28px;background:var(--primary);border-radius:1px;opacity:.5;flex-shrink:0;"></span>
-          <span style="font-weight:600;color:var(--ink);">--v-row · 14px</span><span style="color:var(--graphite);">row / list item padding</span>
+          <span style="font-weight:600;color:var(--ink-deep);">--v-row · 14px</span><span style="color:var(--graphite);">row / list item padding</span>
         </span>
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--fog);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-family:monospace;">
           <span style="width:2px;height:34px;background:var(--primary);border-radius:1px;opacity:.5;flex-shrink:0;"></span>
-          <span style="font-weight:600;color:var(--ink);">--v-md · 16px</span><span style="color:var(--graphite);">заголовок → контент</span>
+          <span style="font-weight:600;color:var(--ink-deep);">--v-md · 16px</span><span style="color:var(--graphite);">заголовок → контент</span>
         </span>
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--fog);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-family:monospace;">
           <span style="width:2px;height:48px;background:var(--primary);border-radius:1px;opacity:.5;flex-shrink:0;"></span>
-          <span style="font-weight:600;color:var(--ink);">--v-lg · 32px</span><span style="color:var(--graphite);">section → section</span>
+          <span style="font-weight:600;color:var(--ink-deep);">--v-lg · 32px</span><span style="color:var(--graphite);">section → section</span>
         </span>
       </div>
 

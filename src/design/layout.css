@@ -24,7 +24,7 @@
 /* ── Cards area ─────────────────────────────────────────────── */
 .cards-area{padding:0 var(--space-16) var(--space-32);}
 .cards-area--scr{padding-top:var(--space-8);}
-.cards-sort{display:flex;align-items:center;gap:var(--space-4);margin-bottom:14px;margin-top:14px;}
+.cards-sort{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-7);margin-top:var(--space-7);}
 .cards-sort span{font-size:var(--text-2xs);color:var(--graphite);font-weight:var(--font-medium);text-transform:uppercase;letter-spacing:0.8px;}
 .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);}
 @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}

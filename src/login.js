@@ -153,7 +153,7 @@ function showEmailSent(email) {
 }
 
 function showUnverified(email) {
-  errEl.innerHTML = 'Email не подтверждён. <button id="resend-btn" style="background:none;border:none;color:#ff5050;text-decoration:underline;cursor:pointer;padding:0;font-size:13px;">Отправить повторно</button>';
+  errEl.innerHTML = 'Email не подтверждён. <button id="resend-btn" style="background:none;border:none;color:var(--danger);text-decoration:underline;cursor:pointer;padding:0;font-size:var(--text-xs);">Отправить повторно</button>';
   errEl.style.display = 'block';
   document.getElementById('resend-btn').addEventListener('click', async function () {
     var btn = document.getElementById('resend-btn');

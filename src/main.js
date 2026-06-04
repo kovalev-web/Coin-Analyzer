@@ -210,7 +210,7 @@ document.body.addEventListener('click', function (e) {
           var _tip = document.createElement('div');
           _tip.className = '_ctip';
           _tip.textContent = 'Тикер скопирован';
-          _tip.style.cssText = 'position:absolute;left:' + Math.round(_tr.left - _ar.left) + 'px;top:' + Math.round(_tr.bottom - _ar.top + 4) + 'px;background:rgba(20,20,30,0.92);color:#fff;font-size:11px;font-family:Manrope,Arial,sans-serif;font-weight:500;padding:4px 10px;border-radius:8px;pointer-events:none;z-index:50;white-space:nowrap;';
+          _tip.style.cssText = 'position:absolute;left:' + Math.round(_tr.left - _ar.left) + 'px;top:' + Math.round(_tr.bottom - _ar.top + 4) + 'px;background:var(--ink-deep);color:var(--canvas);font-size:var(--text-xs);font-family:var(--font-family);font-weight:var(--font-medium);padding:var(--space-2) var(--space-5);border-radius:var(--radius-md);pointer-events:none;z-index:50;white-space:nowrap;';
           _anchor.appendChild(_tip);
           setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
         }
@@ -536,29 +536,29 @@ registerRoute('/screener', function () {
 
 registerRoute('/settings', function () {
   var app = document.getElementById('app');
-  app.innerHTML = '<div class="topbar" style="padding:24px 32px;margin:20px 32px 0;">' +
-    '<h2 style="font-size:18px;font-weight:700;margin-bottom:12px;">⚙️ Настройки</h2>' +
-    '<p style="color:var(--graphite);font-size:14px;">Страница настроек — в разработке.</p>' +
-    '<p style="color:var(--graphite);font-size:14px;margin-top:8px;">Здесь будут: уведомления, фильтры по умолчанию, управление подписками.</p>' +
-    '<a href="#/" style="display:inline-block;margin-top:16px;color:var(--primary);font-weight:600;text-decoration:none;">← На главную</a>' +
+  app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">⚙️ Настройки</h2>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);">Страница настроек — в разработке.</p>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Здесь будут: уведомления, фильтры по умолчанию, управление подписками.</p>' +
+    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
     '</div>';
 });
 
 registerRoute('/profile', function () {
   var app = document.getElementById('app');
-  app.innerHTML = '<div class="topbar" style="padding:24px 32px;margin:20px 32px 0;">' +
-    '<h2 style="font-size:18px;font-weight:700;margin-bottom:12px;">👤 Профиль</h2>' +
-    '<p style="color:var(--graphite);font-size:14px;">Страница профиля — в разработке.</p>' +
-    '<p style="color:var(--graphite);font-size:14px;margin-top:8px;">Здесь будут: история анализов, избранные монеты, настройки аккаунта.</p>' +
-    '<a href="#/" style="display:inline-block;margin-top:16px;color:var(--primary);font-weight:600;text-decoration:none;">← На главную</a>' +
+  app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">👤 Профиль</h2>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);">Страница профиля — в разработке.</p>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Здесь будут: история анализов, избранные монеты, настройки аккаунта.</p>' +
+    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
     '</div>';
 });
 
 registerRoute('/404', function () {
   var app = document.getElementById('app');
-  app.innerHTML = '<div class="topbar" style="padding:24px 32px;margin:20px 32px 0;">' +
-    '<h2 style="font-size:18px;font-weight:700;margin-bottom:12px;">404 — Страница не найдена</h2>' +
-    '<a href="#/" style="color:var(--primary);font-weight:600;text-decoration:none;">← На главную</a>' +
+  app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">404 — Страница не найдена</h2>' +
+    '<a href="#/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
     '</div>';
 });
 

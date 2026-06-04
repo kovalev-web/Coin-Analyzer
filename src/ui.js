@@ -1068,7 +1068,7 @@ function alertsData() {
 }
 
 function alertLineOpts(a) {
-  return { color: a.triggered ? (isDark() ? '#6B6060' : '#D1BDBD') : '#ff5050', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
+  return { color: a.triggered ? (isDark() ? '#6B6060' : '#D1BDBD') : getCSSVar('--danger'), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 // Create or update the price lines for a single alert (idempotent).
@@ -2011,10 +2011,10 @@ export function updateAnalysisPopup(sym) {
         newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
       }
     }
-    content.innerHTML = '<div style="font-size:16px;font-weight:700;color:var(--ink-deep);letter-spacing:0.4px;margin-bottom:10px;">' + escHtml(sym.toUpperCase()) + '</div>' +
+    content.innerHTML = '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink-deep);letter-spacing:0.4px;margin-bottom:var(--space-5);">' + escHtml(sym.toUpperCase()) + '</div>' +
       '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
-      (ts ? '<div style="margin-top:12px;font-size:11px;color:var(--graphite);font-weight:600;">Анализ: ' + ts + '</div>' : '') +
+      (ts ? '<div style="margin-top:var(--space-6);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-semi);">Анализ: ' + ts + '</div>' : '') +
       '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
   } else {
     content.innerHTML = '<div class="ao-err">' + (cache.error || 'Ошибка') + '</div>' +
@@ -2046,21 +2046,21 @@ function msCardInner() {
   var ms = state.marketStrength;
   if (!ms) {
     return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">Оценить →</div>';
+      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Оценить →</div>';
   }
   if (ms.status === 'loading') {
     return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">Анализирую...</div>';
+      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Анализирую...</div>';
   }
   if (ms.status === 'error') {
     return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:16px;font-weight:700;color:var(--danger);margin-top:8px;">Ошибка</div>' +
+      '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--danger);margin-top:var(--space-4);">Ошибка</div>' +
       '<div class="ms-card-sub">Нажмите для повтора</div>';
   }
   var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
   var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--level-deep)' : 'var(--danger)';
   return '<div class="label">Сила рынка</div>' +
-    '<div style="font-size:20px;font-weight:700;color:' + vColor + ';margin-top:6px;">' + vLabel + '</div>';
+    '<div style="font-size:var(--text-xl);font-weight:var(--font-bold);color:' + vColor + ';margin-top:var(--space-3);">' + vLabel + '</div>';
 }
 
 function msPopupInner() {
@@ -2073,7 +2073,7 @@ function msPopupInner() {
   }
   if (ms.status === 'error') {
     return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div style="color:var(--danger);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div></div>' +
+      '<div class="popup-body"><div style="color:var(--danger);font-size:var(--text-xs);font-weight:var(--font-semi);margin-bottom:var(--space-6);">Ошибка загрузки данных</div></div>' +
       '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Повторить</button></div>';
   }
   var m = ms.metrics;
@@ -2101,7 +2101,7 @@ function msPopupInner() {
   };
 
   return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:10px;">' + phase.label + ' · ' + phase.time + ' МСК</div><div class="ms-metrics-grid">' +
+    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:var(--space-5);">' + phase.label + ' · ' + phase.time + ' МСК</div><div class="ms-metrics-grid">' +
     '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Волатильность' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
