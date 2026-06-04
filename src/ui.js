@@ -373,7 +373,7 @@ export function showAccountModal() {
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
-            + '<button id="acc-email-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
+            + '<button id="acc-email-cancel" class="btn-cta">Отмена</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
@@ -392,7 +392,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div style="display:flex;gap:8px;">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
-            + '<button id="acc-tz-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
+            + '<button id="acc-tz-cancel" class="btn-cta">Отмена</button>'
           + '</div>'
         + '</div>'
 
