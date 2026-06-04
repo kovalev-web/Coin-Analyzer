@@ -1258,7 +1258,7 @@ function getChartColors() {
     bg: getCSSVar('--canvas'),
     text: isDark() ? getCSSVar('--graphite') : getCSSVar('--steel'),
     grid: isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(232,232,232,0.5)',
-    border: getCSSVar('--hairline'),
+    border: getCSSVar('--steel'),
   };
 }
 

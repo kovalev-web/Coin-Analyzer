@@ -81,7 +81,6 @@
   --fog:     #e8e8e8;   /* muted fills, secondary controls   */
 
   /* ── Color: Border ─────────────────────────────────────────── */
-  --hairline: #e8e8e8;  /* dividers, card borders            */
   --steel:    #c2c2c2;  /* input borders, scrollbar          */
 
   /* ── Color: Text ───────────────────────────────────────────── */
@@ -120,7 +119,6 @@
     --cloud:    #0a0d0f;
     --fog:      #1e252a;
     --steel:    #2d3940;
-    --hairline: #252d33;
 
     --ink:      #e3eaed;
     --ink-deep: #f2f6f8;
@@ -147,7 +145,6 @@
   --cloud:    #0a0d0f;
   --fog:      #1e252a;
   --steel:    #2d3940;
-  --hairline: #252d33;
 
   --ink:      #e3eaed;
   --ink-deep: #f2f6f8;

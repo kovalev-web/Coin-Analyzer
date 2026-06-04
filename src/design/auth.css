@@ -22,7 +22,7 @@ body {
   max-width: 360px;
   padding: 32px 28px;
   background: var(--paper);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--steel);
   border-radius: var(--radius-lg);
 }
 
@@ -163,7 +163,7 @@ body {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--hairline);
+  background: var(--steel);
 }
 
 /* ── Simple status pages (verify-email, confirm-email-change) ── */

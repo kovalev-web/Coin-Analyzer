@@ -57,13 +57,13 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .pill{background:var(--fog);color:var(--charcoal);border:none;border-radius:var(--radius-full);padding:0 var(--space-6);height:22px;font-size:var(--text-xs);font-weight:var(--font-medium);cursor:pointer;letter-spacing:0;display:inline-flex;align-items:center;}
 .pill:hover{opacity:0.8;}
 .pill.active{background:var(--ink);color:var(--on-ink);}
-.tf-dd{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-md);overflow:hidden;z-index:200;min-width:64px;}
+.tf-dd{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-md);box-shadow:var(--shadow-md);overflow:hidden;z-index:200;min-width:64px;}
 .tf-dd button{display:block;width:100%;text-align:left;padding:var(--space-4) var(--space-8);font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink);background:transparent;border:none;border-radius:0;height:auto;letter-spacing:0;}
 .tf-dd button:hover{background:var(--cloud);opacity:1;}
 .tf-dd button.active{color:var(--primary);font-weight:var(--font-semi);}
 
 /* ── Chart action buttons ───────────────────────────────────── */
-.clear-popup{position:fixed;z-index:99999;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);min-width:200px;overflow:hidden;}
+.clear-popup{position:fixed;z-index:99999;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);min-width:200px;overflow:hidden;}
 .clear-popup-title{padding:var(--space-5) var(--space-7) var(--space-3);font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.5px;}
 .clear-popup-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:var(--space-5) var(--space-7);height:auto;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink);background:transparent;border:none;cursor:pointer;gap:12px;text-align:left;}
 .clear-popup-row:hover{background:var(--cloud);}
@@ -85,7 +85,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-cta.danger:hover:not(:disabled){opacity:1;}
 
 /* ── Analysis overlay ───────────────────────────────────────── */
-.analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:var(--text-sm);line-height:1.55;color:var(--charcoal);}
+.analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:var(--text-sm);line-height:1.55;color:var(--charcoal);}
 .ao-spinner{display:flex;align-items:center;justify-content:center;padding:32px 24px;}
 .ao-content{display:none;}
 .ao-content.show{display:block;}
@@ -135,7 +135,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .ms-oi-badge.up{background:var(--fog);color:var(--bullish);}
 .ms-oi-badge.down{background:transparent;color:var(--danger);}
 .ms-oi-badge.neutral{background:var(--fog);color:var(--graphite);}
-.ms-inplay{border-top:1px solid var(--hairline);padding-top:var(--space-6);margin-top:var(--space-2);}
+.ms-inplay{border-top:1px solid var(--steel);padding-top:var(--space-6);margin-top:var(--space-2);}
 .ms-inplay-label{font-size:var(--text-2xs);font-weight:var(--font-medium);text-transform:uppercase;letter-spacing:0.7px;color:var(--graphite);margin-bottom:var(--space-4);}
 .ms-inplay-coins{display:flex;flex-wrap:wrap;gap:var(--space-3);}
 .ms-inplay-pill{background:var(--fog);color:var(--level-deep);border:1px solid var(--level-deep);padding:var(--space-1) var(--space-5);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:var(--font-medium);}
@@ -144,7 +144,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .ms-card{cursor:pointer;transition:box-shadow 0.15s;}
 .ms-card:hover{box-shadow:var(--shadow-lg);}
 .ms-card-sub{font-size:var(--text-2xs);color:var(--graphite);font-weight:var(--font-medium);margin-top:var(--space-1);}
-.ms-popup{position:absolute;pointer-events:auto;z-index:100;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);width:400px;max-width:calc(100% - 12px);}
+.ms-popup{position:absolute;pointer-events:auto;z-index:100;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);width:400px;max-width:calc(100% - 12px);}
 .ms-tip-wrap{display:inline-block;vertical-align:middle;margin-left:var(--space-3);outline:none;cursor:default;}
 .ms-tip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--steel);color:var(--on-ink);font-size:var(--text-2xs);font-weight:var(--font-bold);font-style:normal;vertical-align:middle;line-height:1;flex-shrink:0;}
 .ms-tip-text{display:none;position:fixed;width:210px;background:var(--ink);color:var(--on-ink);font-size:var(--text-xs);font-weight:var(--font-normal);line-height:1.55;padding:var(--space-5) var(--space-6);border-radius:var(--radius-md);z-index:999999;white-space:normal;text-transform:none;letter-spacing:0;pointer-events:none;}
@@ -152,9 +152,9 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 
 /* ── TV Mode ────────────────────────────────────────────────── */
 .tv-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--cloud);z-index:99999;display:none;}
-.tv-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);height:100%;gap:2px;background:var(--hairline);}
+.tv-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);height:100%;gap:2px;background:var(--steel);}
 .tv-slot{background:var(--paper);display:flex;flex-direction:column;overflow:hidden;}
-.tv-slot-head{padding:var(--space-4) var(--space-7);display:flex;align-items:baseline;gap:10px;flex-shrink:0;border-bottom:1px solid var(--hairline);}
+.tv-slot-head{padding:var(--space-4) var(--space-7);display:flex;align-items:baseline;gap:10px;flex-shrink:0;border-bottom:1px solid var(--steel);}
 .tv-sym{font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink);letter-spacing:0.3px;}
 .tv-chg{font-size:var(--text-sm);font-weight:var(--font-medium);}
 .tv-price{font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--graphite);margin-left:auto;}
@@ -170,7 +170,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
 .fv-vol-label{position:absolute;left:14px;bottom:60px;font-size:var(--text-lg);font-weight:var(--font-medium);color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
 .fv-add-btn{position:absolute;right:70px;width:28px;height:28px;border-radius:50%;background:var(--level-deep);color:var(--on-ink);border:none;display:none;align-items:center;justify-content:center;z-index:20;padding:0;box-shadow:var(--shadow-lg);cursor:pointer;}
-.fv-touch-menu{position:absolute;right:76px;width:fit-content;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);z-index:30;overflow:hidden;}
+.fv-touch-menu{position:absolute;right:76px;width:fit-content;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);z-index:30;overflow:hidden;}
 .fv-touch-menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:var(--space-7) var(--space-8);background:transparent;border:none;font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink);cursor:pointer;text-align:left;height:auto;border-radius:0;white-space:nowrap;}
 .fv-touch-menu-item:active{background:var(--fog);}
 .fv-tmi-icon{flex-shrink:0;display:flex;align-items:center;color:var(--graphite);}
@@ -183,7 +183,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-info-stats .stat-val{font-weight:var(--font-medium);padding:0;}
 .fv-info-stats .stat-val:nth-child(1){display:inline-block;min-width:60px;text-align:left;}
 .fv-sym-label{font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink);white-space:nowrap;cursor:pointer;}
-.fv-bottom-bar{display:none;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-12) 18px;background:var(--paper);border-top:1px solid var(--hairline);flex-shrink:0;}
+.fv-bottom-bar{display:none;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-12) 18px;background:var(--paper);border-top:1px solid var(--steel);flex-shrink:0;}
 .fv-bb-left{display:flex;align-items:center;gap:12px;}
 .fv-bb-right{display:flex;align-items:center;gap:12px;}
 .fv-bottom-bar .tf-dd{top:auto;bottom:calc(100% + 6px);}
@@ -191,7 +191,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Burger menu ────────────────────────────────────────────── */
 .burger-wrap{position:relative;display:block;}
 @media(min-width:1025px){.burger-wrap{display:none;}}
-.burger-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
+.burger-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
 .burger-dd.open{display:block;}
 .burger-dd-item{display:flex;align-items:center;gap:10px;padding:var(--space-6) var(--space-8);font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;height:auto;border-radius:0;letter-spacing:0;text-decoration:none;}
 .burger-dd-item:hover{background:var(--fog);opacity:1;}
@@ -202,7 +202,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .btn-avatar{background:var(--fog);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:var(--text-base);line-height:1;flex-shrink:0;color:var(--ink);}
 .btn-avatar:hover{opacity:0.8;}
 .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:var(--text-2xl);width:auto;height:auto;}
-.avatar-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
+.avatar-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
 .avatar-dd.open{display:block;}
 
 /* ── Account overlay ────────────────────────────────────────── */
@@ -214,7 +214,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .account-section{margin-bottom:28px;}
 .account-section-title{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:var(--space-6);}
 .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
-.acc-bin-sec-mask{height:var(--h-input);border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--cloud);padding:0 var(--space-6);display:flex;align-items:center;font-size:var(--text-lg);letter-spacing:2px;color:var(--ink);}
+.acc-bin-sec-mask{height:var(--h-input);border-radius:var(--radius-md);border:1px solid var(--steel);background:var(--cloud);padding:0 var(--space-6);display:flex;align-items:center;font-size:var(--text-lg);letter-spacing:2px;color:var(--ink);}
 .acc-bin-actions{display:flex;gap:var(--v-sm);margin-top:var(--space-2);}
 .acc-avatar-card{display:flex;justify-content:space-between;align-items:center;padding:var(--space-5) var(--space-10);background:var(--fog);border-radius:var(--radius-xl);}
 .acc-avatar-inner{display:flex;align-items:center;gap:var(--space-7);}
@@ -239,7 +239,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-badge-ok{background:transparent;color:var(--bullish);}
 .acc-badge-warn{background:transparent;color:var(--level-deep);}
 .acc-security-actions{display:flex;flex-direction:column;gap:var(--v-sm);}
-.acc-footer-divider{height:1px;background:var(--hairline);margin:var(--v-md) 0 var(--v-sm);}
+.acc-footer-divider{height:1px;background:var(--steel);margin:var(--v-md) 0 var(--v-sm);}
 .acc-delete-btn{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
 .acc-delete-btn:hover{color:var(--danger);}
 .acc-delete-cancel{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
@@ -249,7 +249,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-pane .acc-field-err:empty{display:none;}
 .acc-avatar-collapsed{display:none!important;}
 #account-avatar-grid.avatar-grid{margin:0;}
-.acc-row{display:flex;align-items:center;justify-content:space-between;padding:var(--v-row) 0;border-bottom:1px solid var(--hairline);gap:var(--space-6);}
+.acc-row{display:flex;align-items:center;justify-content:space-between;padding:var(--v-row) 0;border-bottom:1px solid var(--steel);gap:var(--space-6);}
 .acc-row-left{flex:1;min-width:0;}
 .acc-row-label{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;}
 .acc-row-val{font-size:var(--text-xs);color:var(--ink);}
@@ -259,11 +259,11 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Briefing buttons ───────────────────────────────────────── */
 
 /* ── Briefing popup ─────────────────────────────────────────── */
-#bp-popup{position:absolute;pointer-events:auto;z-index:1000;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);width:360px;max-width:calc(100vw - var(--space-8));display:none;overscroll-behavior:contain;}
+#bp-popup{position:absolute;pointer-events:auto;z-index:1000;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);width:360px;max-width:calc(100vw - var(--space-8));display:none;overscroll-behavior:contain;}
 .bp-date-nav{display:flex;align-items:center;gap:var(--space-3);}
 .bp-date-label{font-size:var(--text-xs);font-weight:var(--font-normal);color:var(--ink);white-space:nowrap;}
 .bp-today-tag{font-size:var(--text-2xs);font-weight:var(--font-semi);background:var(--primary);color:var(--on-ink);border-radius:var(--radius-sm);padding:var(--space-1) var(--space-3);margin-left:var(--space-2);vertical-align:middle;}
-.bp-nav-btn{background:transparent;border:1px solid var(--hairline);color:var(--graphite);padding:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;}
+.bp-nav-btn{background:transparent;border:1px solid var(--steel);color:var(--graphite);padding:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;}
 .bp-nav-btn:hover:not(:disabled){border-color:var(--steel);color:var(--ink);}
 .bp-nav-btn:disabled{opacity:0.3;cursor:default;}
 .bp-list{padding:var(--space-8) 0 0;}
@@ -308,7 +308,7 @@ span.bp-status{cursor:default;}
 .bp-trade-none{background:var(--fog);color:var(--graphite);}
 .bp-trade-loading{background:var(--fog);color:var(--graphite);animation:bp-pulse 1.2s ease-in-out infinite;}
 @keyframes bp-pulse{0%,100%{opacity:0.4}50%{opacity:1}}
-.bp-week{border-top:1px solid var(--hairline);padding:var(--space-7) var(--space-6) var(--space-4);margin-top:var(--space-2);}
+.bp-week{border-top:1px solid var(--steel);padding:var(--space-7) var(--space-6) var(--space-4);margin-top:var(--space-2);}
 .bp-week-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5);}
 .bp-week-title{font-size:var(--text-xs);font-weight:var(--font-bold);color:var(--ink);}
 .bp-week-load-btn .spinner{margin-right:0;}
@@ -328,12 +328,12 @@ span.bp-status{cursor:default;}
 
 /* ── FV Briefing Drawer ─────────────────────────────────────── */
 #fv-briefing-drawer{width:0;overflow:hidden;background:var(--paper);transition:width 0.2s ease;flex-shrink:0;}
-#fv-briefing-drawer.open{width:360px;overflow-y:auto;border-left:1px solid var(--hairline);}
+#fv-briefing-drawer.open{width:360px;overflow-y:auto;border-left:1px solid var(--steel);}
 .fvbd-header{display:flex;align-items:center;padding:var(--space-8) var(--space-6);flex-shrink:0;}
 .fvbd-title{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink);flex:1;}
 .fvbd-date-label{font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);padding:var(--space-8) var(--space-6) var(--space-3);}
 .fvbd-tabs{display:flex;gap:var(--space-1);padding:0 var(--space-4) var(--space-4);}
-.fvbd-divider{border-top:1px solid var(--hairline);}
+.fvbd-divider{border-top:1px solid var(--steel);}
 .fvbd-history{margin-top:var(--space-5);padding:0 0 var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);}
 .fvbd-history-date{display:block;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);margin-bottom:var(--space-1);}
 .fvbd-history-row{display:flex;align-items:flex-start;gap:var(--space-4);}
@@ -345,9 +345,9 @@ span.bp-status{cursor:default;}
 .fvbd-empty{padding:var(--space-12) var(--space-8);color:var(--graphite);font-size:var(--text-xs);text-align:center;}
 
 /* ── Search popup ───────────────────────────────────────────── */
-#search-popup{position:absolute;z-index:1010;background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);width:360px;max-width:calc(100vw - var(--space-8));flex-direction:column;display:none;overflow:hidden;overscroll-behavior:contain;}
+#search-popup{position:absolute;z-index:1010;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);width:360px;max-width:calc(100vw - var(--space-8));flex-direction:column;display:none;overflow:hidden;overscroll-behavior:contain;}
 .search-popup-input-wrap{padding:0 var(--space-6) var(--space-5);margin-top:var(--space-8);}
-.search-popup-input{width:100%;height:var(--h-input);border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--cloud);color:var(--ink);font-size:var(--text-sm);font-weight:var(--font-normal);padding:0 var(--space-6);outline:none;transition:border-color 0.15s;}
+.search-popup-input{width:100%;height:var(--h-input);border:1px solid var(--steel);border-radius:var(--radius-md);background:var(--cloud);color:var(--ink);font-size:var(--text-sm);font-weight:var(--font-normal);padding:0 var(--space-6);outline:none;transition:border-color 0.15s;}
 .search-popup-input:focus{border-color:var(--primary);}
 .search-popup-list{overflow-y:auto;max-height:340px;padding-bottom:8px;}
 .search-popup-row{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;border-radius:0;height:44px;padding:0 var(--space-8);text-align:left;cursor:pointer;}
@@ -358,10 +358,10 @@ span.bp-status{cursor:default;}
 .search-row-chg.up{color:var(--bullish);}
 .search-row-chg.dn{color:var(--danger);}
 .search-popup-empty{padding:24px 16px;text-align:center;color:var(--graphite);font-size:var(--text-xs);}
-.search-divider{height:1px;background:var(--hairline);margin:4px 0;}
+.search-divider{height:1px;background:var(--steel);margin:4px 0;}
 
 /* ── Form Fields ─────────────────────────────────────────────── */
-.ds-input{display:block;width:100%;height:var(--h-input);padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--hairline);border-radius:var(--radius-md);color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;transition:border-color 0.15s;}
+.ds-input{display:block;width:100%;height:var(--h-input);padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--steel);border-radius:var(--radius-md);color:var(--ink);font-size:var(--text-sm);outline:none;box-sizing:border-box;transition:border-color 0.15s;}
 .ds-input:focus{border-color:var(--primary);}
 .ds-input.error{border-color:var(--danger);}
 
