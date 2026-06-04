@@ -37,8 +37,8 @@
 .card-head-left{display:flex;align-items:center;gap:var(--space-5);min-width:0;}
 .stat-val{font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink);cursor:default;}
 .stat-val.up{color:var(--bullish);}
-.stat-val.dn{color:var(--bloom-deep);}
-.stat-val.hot{color:var(--bloom-deep);}
+.stat-val.dn{color:var(--danger);}
+.stat-val.hot{color:var(--danger);}
 .stat-val.warn{color:var(--caution);}
 .stat-val.dim{color:var(--steel);}
 .chart-container{aspect-ratio:3/2;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 var(--radius-xl) var(--radius-xl);}
@@ -55,7 +55,7 @@
 .card-head-right .signal-badge{display:none!important;}
 
 /* ── Error / empty states ───────────────────────────────────── */
-.error-banner{margin:var(--space-8) var(--space-16) 0;background:var(--retry-bg);border:1px solid var(--retry-border);border-radius:var(--radius-md);padding:var(--space-6) var(--space-8);color:var(--bloom-deep);font-size:var(--text-xs);font-weight:var(--font-normal);display:flex;align-items:center;gap:var(--space-4);}
+.error-banner{margin:var(--space-8) var(--space-16) 0;background:var(--retry-bg);border:1px solid var(--retry-border);border-radius:var(--radius-md);padding:var(--space-6) var(--space-8);color:var(--danger);font-size:var(--text-xs);font-weight:var(--font-normal);display:flex;align-items:center;gap:var(--space-4);}
 .empty-state{text-align:center;padding:var(--space-32) var(--space-12);color:var(--graphite);font-size:var(--text-sm);font-weight:var(--font-normal);}
 
 /* ── Sort bar ───────────────────────────────────────────────── */

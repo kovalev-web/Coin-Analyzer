@@ -102,18 +102,13 @@
   --bullish-bg:  #f0fdf4;
   --caution:     #b45309;
   --caution-bg:  #fffbeb;
-  --danger:      #ff5050;   /* one red — destructive, alerts, bearish */
-  --danger-soft: var(--danger);
-  --error:       var(--danger);
+  --danger:      #ff5050;   /* destructive, alerts, bearish   */
   --success:     #4caf7d;   /* connected / positive states    */
   --level:       #f59e0b;   /* price levels, briefing active  */
   --level-deep:  #d97706;
-  --bloom-coral: var(--danger);   /* hot NATR                       */
-  --bloom-deep:  var(--danger);   /* bearish signal                 */
 
   /* ── Color: Status ─────────────────────────────────────────── */
   --ws-on:  #22c55e;
-  --ws-off: var(--danger);
 
   /* ── Color: Chart ──────────────────────────────────────────── */
   --chart-level: #277cc2;   /* price level lines in chart     */

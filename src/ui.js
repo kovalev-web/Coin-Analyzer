@@ -448,7 +448,7 @@ export function showAccountModal() {
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
-            + '<div style="font-size:var(--text-xs);color:var(--error);margin-bottom:var(--v-sm);">Все данные будут удалены безвозвратно. Вы уверены?</div>'
+            + '<div style="font-size:var(--text-xs);color:var(--danger);margin-bottom:var(--v-sm);">Все данные будут удалены безвозвратно. Вы уверены?</div>'
             + '<button class="btn-cta danger" id="acc-delete-yes" style="width:100%">Да, удалить аккаунт</button>'
             + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
           + '</div>'
@@ -588,7 +588,7 @@ export function showAccountModal() {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
       btnWrap.innerHTML =
         '<button class="acc-row-edit" id="acc-bin-upd">' + icon('pencil', 12) + ' Изменить</button>'
-        + '<button class="btn-icon" id="acc-bin-del" style="color:var(--error)">' + icon('x', 14) + '</button>';
+        + '<button class="btn-icon" id="acc-bin-del" style="color:var(--danger)">' + icon('x', 14) + '</button>';
       form.style.display = 'none';
       var cf = document.getElementById('acc-bin-cancel-form');
       if (cf) cf.style.display = 'none';
@@ -673,11 +673,11 @@ export function showAccountModal() {
             var codeEl = document.getElementById('acc-email-tg-code');
             if (codeEl) codeEl.style.display = 'block';
           } else {
-            msg.style.color = 'var(--error)'; msg.textContent = d.error || 'Ошибка';
+            msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
             btn.disabled = false; btn.textContent = 'Получить код в Telegram';
           }
         }).catch(function () {
-          msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
+          msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
           btn.disabled = false; btn.textContent = 'Получить код в Telegram';
         });
       });
@@ -700,7 +700,7 @@ export function showAccountModal() {
   document.getElementById('acc-email-submit').addEventListener('click', function () {
     var newEmail = (document.getElementById('acc-email-new').value || '').trim().toLowerCase();
     var msg = document.getElementById('acc-email-msg');
-    msg.textContent = ''; msg.style.color = 'var(--error)';
+    msg.textContent = ''; msg.style.color = 'var(--danger)';
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { msg.textContent = 'Введите корректный email'; return; }
     if (newEmail === (_userEmail || '').toLowerCase()) { msg.textContent = 'Это уже ваш email'; return; }
     var password = (document.getElementById('acc-email-pass') || {}).value || '';
@@ -725,7 +725,7 @@ export function showAccountModal() {
       }
       btn.disabled = false; btn.textContent = 'Подтвердить';
     }).catch(function () {
-      msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
+      msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
       btn.disabled = false; btn.textContent = 'Подтвердить';
     });
   });
@@ -805,11 +805,11 @@ export function showAccountModal() {
         _tzEditor.style.display = 'none';
         _tzRow.style.display = '';
       } else {
-        msg.style.color = 'var(--error)'; msg.textContent = d.error || 'Ошибка';
+        msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
       }
       btn.disabled = false; btn.textContent = 'Сохранить';
     }).catch(function () {
-      msg.style.color = 'var(--error)'; msg.textContent = 'Ошибка сети';
+      msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
       btn.disabled = false; btn.textContent = 'Сохранить';
     });
   });
@@ -2020,11 +2020,11 @@ function msCardInner() {
   }
   if (ms.status === 'error') {
     return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:16px;font-weight:700;color:var(--bloom-deep);margin-top:8px;">Ошибка</div>' +
+      '<div style="font-size:16px;font-weight:700;color:var(--danger);margin-top:8px;">Ошибка</div>' +
       '<div class="ms-card-sub">Нажмите для повтора</div>';
   }
   var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
-  var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--caution)' : 'var(--bloom-deep)';
+  var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--caution)' : 'var(--danger)';
   return '<div class="label">Сила рынка</div>' +
     '<div style="font-size:20px;font-weight:700;color:' + vColor + ';margin-top:6px;">' + vLabel + '</div>';
 }
@@ -2039,7 +2039,7 @@ function msPopupInner() {
   }
   if (ms.status === 'error') {
     return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div style="color:var(--bloom-deep);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div></div>' +
+      '<div class="popup-body"><div style="color:var(--danger);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div></div>' +
       '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Повторить</button></div>';
   }
   var m = ms.metrics;
