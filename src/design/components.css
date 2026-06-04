@@ -84,7 +84,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-cta.danger:hover:not(:disabled){opacity:1;}
 
 /* ── Analysis overlay ───────────────────────────────────────── */
-.analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:transparent;border:1px solid var(--steel);border-radius:var(--radius-md);padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:var(--text-sm);line-height:1.55;color:var(--charcoal);}
+.analysis-overlay{position:absolute;pointer-events:auto;z-index:1;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);padding:0;box-shadow:var(--shadow-md);min-width:260px;max-width:380px;font-size:var(--text-sm);line-height:1.55;color:var(--charcoal);}
 .ao-spinner{display:flex;align-items:center;justify-content:center;padding:32px 24px;}
 .ao-content{display:none;}
 .ao-content.show{display:block;}
