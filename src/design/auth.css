@@ -8,7 +8,7 @@
 body {
   font-family: var(--font-family);
   background: var(--cloud);
-  color: var(--ink);
+  color: var(--ink-deep);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,7 +31,7 @@ body {
   font-weight: var(--font-semi);
   letter-spacing: -0.3px;
   margin-bottom: 28px;
-  color: var(--ink);
+  color: var(--ink-deep);
 }
 
 /* ── Error / success banners ─────────────────────────────────── */
@@ -83,7 +83,7 @@ body {
   background: var(--canvas);
   border: 1px solid var(--steel);
   border-radius: var(--radius-lg);
-  color: var(--ink);
+  color: var(--ink-deep);
   font-size: var(--text-sm);
   font-family: var(--font-family);
   outline: none;
@@ -146,7 +146,7 @@ body {
   text-align: center;
 }
 
-.auth-btn-link:hover { color: var(--charcoal); }
+.auth-btn-link:hover { color: var(--graphite); }
 
 /* ── Divider ─────────────────────────────────────────────────── */
 .auth-divider {
@@ -176,7 +176,7 @@ body {
 .auth-status h2 {
   font-size: var(--text-lg);
   font-weight: var(--font-semi);
-  color: var(--ink);
+  color: var(--ink-deep);
   margin: 0 0 8px;
 }
 
@@ -201,4 +201,4 @@ body {
   text-decoration: none;
 }
 
-.auth-back:hover { color: var(--ink); }
+.auth-back:hover { color: var(--ink-deep); }

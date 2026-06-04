@@ -84,10 +84,8 @@
   --steel:    #c2c2c2;  /* input borders, scrollbar          */
 
   /* ── Color: Text ───────────────────────────────────────────── */
-  --ink:      #1a1a1a;  /* primary text                      */
   --ink-deep: #000000;  /* maximum contrast                  */
   --on-ink:   #ffffff;  /* text on dark/filled surfaces      */
-  --charcoal: #3d3d3d;  /* secondary text                    */
   --graphite: #636363;  /* muted / placeholder text          */
 
   /* ── Color: Brand ──────────────────────────────────────────── */
@@ -120,10 +118,8 @@
     --fog:      #1e252a;
     --steel:    #2d3940;
 
-    --ink:      #e3eaed;
     --ink-deep: #f2f6f8;
     --on-ink:   #121517;
-    --charcoal: #a8b5bb;
     --graphite: #637880;
 
     --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
@@ -146,10 +142,8 @@
   --fog:      #1e252a;
   --steel:    #2d3940;
 
-  --ink:      #e3eaed;
   --ink-deep: #f2f6f8;
   --on-ink:   #121517;
-  --charcoal: #a8b5bb;
   --graphite: #637880;
 
   --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);

@@ -27,7 +27,7 @@ input, select, textarea {
 body {
   font-family: var(--font-family);
   background: var(--cloud);
-  color: var(--ink);
+  color: var(--ink-deep);
   min-height: 100vh;
   font-size: var(--text-base);
   line-height: var(--leading-normal);

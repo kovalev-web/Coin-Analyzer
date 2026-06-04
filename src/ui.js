@@ -649,7 +649,7 @@ export function showAccountModal() {
       html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:6px;">';
     }
     if (_emailHasPassword && _emailTgConnected) {
-      html += '<div style="text-align:center;color:var(--charcoal);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
+      html += '<div style="text-align:center;color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
     }
     if (_emailTgConnected) {
       html += '<div style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--v-xs);">'
@@ -1467,13 +1467,13 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
       durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
     }
   }
-  var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
+  var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--graphite');
   var priceAxisW = 0; try { if (chart) priceAxisW = chart.priceScale('right').width(); } catch (_) {}
   // Fill zone between the two price levels
   ctx.fillStyle = 'rgba(150,150,150,0.07)';
   ctx.fillRect(0, Math.min(p1.y, p2.y), cw, Math.abs(p2.y - p1.y) || 1);
   // Horizontal dashed line at start price level only
-  ctx.strokeStyle = isDark() ? getCSSVar('--charcoal') : getCSSVar('--graphite'); ctx.lineWidth = 1;
+  ctx.strokeStyle = isDark() ? getCSSVar('--graphite') : getCSSVar('--graphite'); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke();
   // Diagonal line from start to end point
   ctx.strokeStyle = color; ctx.lineWidth = 1;
@@ -1977,7 +1977,7 @@ export function updateAnalysisPopup(sym) {
         newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
       }
     }
-    content.innerHTML = '<div style="font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.4px;margin-bottom:10px;">' + escHtml(sym.toUpperCase()) + '</div>' +
+    content.innerHTML = '<div style="font-size:16px;font-weight:700;color:var(--ink-deep);letter-spacing:0.4px;margin-bottom:10px;">' + escHtml(sym.toUpperCase()) + '</div>' +
       '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
       (ts ? '<div style="margin-top:12px;font-size:11px;color:var(--graphite);font-weight:600;">Анализ: ' + ts + '</div>' : '') +
@@ -3302,7 +3302,7 @@ export function openCoinFullView(sym) {
     var cw = rc.width / dpr, ch = rc.height / dpr;
     _drawFVOverlays(ctx, rc, sym);
     var p1 = ruler.start.pt, pr1 = ruler.start.price;
-    var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--charcoal');
+    var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--graphite');
     var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
     var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
     var durStr = '';
@@ -3323,7 +3323,7 @@ export function openCoinFullView(sym) {
     }
     ctx.fillStyle = 'rgba(150,150,150,0.07)';
     ctx.fillRect(0, Math.min(p1.y, pt.y), cw, Math.abs(pt.y - p1.y) || 1);
-    ctx.strokeStyle = isDark() ? getCSSVar('--charcoal') : getCSSVar('--graphite'); ctx.lineWidth = 1;
+    ctx.strokeStyle = isDark() ? getCSSVar('--graphite') : getCSSVar('--graphite'); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, p1.y); ctx.lineTo(cw, p1.y); ctx.stroke();
     ctx.strokeStyle = color; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
