@@ -88,7 +88,7 @@
   --graphite: #636363;  /* muted / placeholder text          */
 
   /* ── Color: Brand ──────────────────────────────────────────── */
-  --primary: #024ad8;
+  --primary: #277cc2;
 
   /* ── Color: Semantic ───────────────────────────────────────── */
   --bullish:    #16a34a;   /* bullish data, positive states  */
@@ -96,7 +96,6 @@
   --level-deep: #d97706;   /* price levels, caution, inplay  */
 
   /* ── Color: Chart ──────────────────────────────────────────── */
-  --chart-level: #277cc2;   /* price level lines in chart     */
   --candle-up:   #242424;
   --candle-dn:   #9badb8;
   --vol-up:      rgba(26, 26, 26, 0.35);
