@@ -384,7 +384,7 @@ export function showAccountModal() {
           + '<button id="acc-tz-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
         + '</div>'
         + '<div id="acc-tz-editor" class="acc-editor">'
-          + '<select id="acc-tz-select" class="ds-input" style="margin-bottom:var(--v-sm);"></select>'
+          + '<div class="ds-select" id="acc-tz-select" style="margin-bottom:var(--v-sm);"><button class="ds-select-btn" type="button"><span class="ds-select-val"></span><span class="ds-select-chevron">' + icon('chevron-down',14) + '</span></button><div class="ds-select-dd"></div></div>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
@@ -755,7 +755,41 @@ export function showAccountModal() {
     ['Pacific/Auckland',    'UTC+12/+13  Окленд'],
   ];
   var _autoTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  var _tzSel = document.getElementById('acc-tz-select');
+  var _tzEl = document.getElementById('acc-tz-select');
+  var _tzDd = _tzEl.querySelector('.ds-select-dd');
+  var _tzValEl = _tzEl.querySelector('.ds-select-val');
+  var _tzSel = (function () {
+    var _v = '';
+    function _makeItem(opt) {
+      var item = document.createElement('div');
+      item.className = 'ds-select-item';
+      item.dataset.value = opt.value;
+      item.textContent = opt.textContent;
+      item.addEventListener('click', function () {
+        _v = opt.value;
+        _tzValEl.textContent = opt.textContent;
+        _tzDd.querySelectorAll('.ds-select-item').forEach(function (i) { i.classList.toggle('selected', i.dataset.value === _v); });
+        _tzEl.classList.remove('open');
+      });
+      return item;
+    }
+    _tzEl.querySelector('.ds-select-btn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      _tzEl.classList.toggle('open');
+    });
+    document.addEventListener('click', function () { _tzEl.classList.remove('open'); });
+    return {
+      get value() { return _v; },
+      set value(v) {
+        _v = v;
+        var found = _tzDd.querySelector('[data-value="' + v + '"]');
+        _tzValEl.textContent = found ? found.textContent : v;
+        _tzDd.querySelectorAll('.ds-select-item').forEach(function (i) { i.classList.toggle('selected', i.dataset.value === v); });
+      },
+      appendChild: function (opt) { _tzDd.appendChild(_makeItem(opt)); },
+      insertBefore: function (opt) { _tzDd.insertBefore(_makeItem(opt), _tzDd.firstChild); }
+    };
+  })();
   var _tzCurrent = document.getElementById('acc-tz-current');
   var _tzRow = document.getElementById('acc-tz-row');
   var _tzEditor = document.getElementById('acc-tz-editor');
