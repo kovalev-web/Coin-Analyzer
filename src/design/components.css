@@ -163,7 +163,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .tv-exit-btn:hover{opacity:1;}
 
 /* ── Full View overlay ──────────────────────────────────────── */
-#fv-overlay{display:none;position:fixed;inset:0;z-index:400;flex-direction:row;background:var(--canvas);overscroll-behavior:contain;}
+#fv-overlay{display:none;position:fixed;inset:0;z-index:400;background:var(--canvas);overscroll-behavior:contain;}
 .fv-body{flex:1;display:flex;flex-direction:column;overflow:hidden;gap:0;min-height:0;}
 .fv-chart-wrap{flex:1;min-width:0;min-height:0;overflow:hidden;background:var(--paper);position:relative;}
 #fv-chart{position:absolute;inset:0;}
