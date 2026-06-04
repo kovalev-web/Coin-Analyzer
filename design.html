@@ -336,10 +336,10 @@
         <div class="ds-comp-row">
           <div class="ds-comp-label">Status chip<br><span style="font-weight:400;color:var(--steel)">pill · 12/semi · icon 16 · on fog</span></div>
           <div style="display:flex;gap:var(--space-3);align-items:center;background:var(--fog);border-radius:var(--radius-md);padding:var(--space-4) var(--space-5);">
-            <button class="bp-status-btn bp-status bp-s-watching"><span data-icon="eye,16"></span><span class="bp-status-text">Наблюдение</span></button>
-            <button class="bp-status-btn bp-status bp-s-traded"><span data-icon="check-check,16"></span><span class="bp-status-text">Отработка</span></button>
-            <button class="bp-status-btn bp-status bp-s-skip"><span data-icon="ban,16"></span><span class="bp-status-text">Отмена</span></button>
-            <button class="bp-status-btn bp-status bp-s-missed"><span data-icon="clock,16"></span><span class="bp-status-text">Упущено</span></button>
+            <button class="bp-status-btn bp-status bp-s-watching"><span data-svgicon="eye,16"></span><span class="bp-status-text">Наблюдение</span></button>
+            <button class="bp-status-btn bp-status bp-s-traded"><span data-svgicon="check-check,16"></span><span class="bp-status-text">Отработка</span></button>
+            <button class="bp-status-btn bp-status bp-s-skip"><span data-svgicon="ban,16"></span><span class="bp-status-text">Отмена</span></button>
+            <button class="bp-status-btn bp-status bp-s-missed"><span data-svgicon="clock,16"></span><span class="bp-status-text">Упущено</span></button>
           </div>
         </div>
       </div>
@@ -461,6 +461,13 @@
       document.querySelectorAll('[data-icon]').forEach(function(el) {
         var parts = el.dataset.icon.split(',');
         el.innerHTML = icon(parts[0], parseInt(parts[1]) || 14);
+      });
+      // data-svgicon: replaces the element itself with raw SVG (matches production structure)
+      document.querySelectorAll('[data-svgicon]').forEach(function(el) {
+        var parts = el.dataset.svgicon.split(',');
+        var tmp = document.createElement('template');
+        tmp.innerHTML = icon(parts[0], parseInt(parts[1]) || 16);
+        el.replaceWith(tmp.content.firstChild);
       });
       document.querySelectorAll('[data-signal]').forEach(function(el) {
         el.innerHTML = signalIcon(el.dataset.signal);
