@@ -367,7 +367,7 @@ export function showAccountModal() {
           + '<button id="acc-email-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
         + '</div>'
         + '<div id="acc-email-editor" class="acc-editor">'
-          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input" style="margin-bottom:var(--space-4);">'
+          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input" style="margin-bottom:var(--v-sm);">'
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
@@ -384,7 +384,7 @@ export function showAccountModal() {
           + '<button id="acc-tz-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
         + '</div>'
         + '<div id="acc-tz-editor" class="acc-editor">'
-          + '<select id="acc-tz-select" class="ds-input" style="margin-bottom:var(--space-4);"></select>'
+          + '<select id="acc-tz-select" class="ds-input" style="margin-bottom:var(--v-sm);"></select>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
@@ -419,11 +419,11 @@ export function showAccountModal() {
           + '<div id="acc-bin-btn-wrap" style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;"></div>'
         + '</div>'
         + '<div id="acc-bin-form">'
-          + '<div style="margin-bottom:var(--space-5);">'
+          + '<div style="margin-bottom:var(--v-sm);">'
             + '<div class="acc-row-label">API Key</div>'
             + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" class="ds-input">'
           + '</div>'
-          + '<div style="margin-bottom:var(--space-5);">'
+          + '<div style="margin-bottom:var(--v-sm);">'
             + '<div class="acc-row-label">Secret Key</div>'
             + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" class="ds-input">'
           + '</div>'
@@ -448,7 +448,7 @@ export function showAccountModal() {
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
-            + '<div style="font-size:var(--text-xs);color:var(--error);margin-bottom:var(--space-4);">Все данные будут удалены безвозвратно. Вы уверены?</div>'
+            + '<div style="font-size:var(--text-xs);color:var(--error);margin-bottom:var(--v-sm);">Все данные будут удалены безвозвратно. Вы уверены?</div>'
             + '<button class="btn-cta danger" id="acc-delete-yes" style="width:100%">Да, удалить аккаунт</button>'
             + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
           + '</div>'
@@ -639,7 +639,7 @@ export function showAccountModal() {
   function _setupEmailVerify() {
     var wrap = document.getElementById('acc-email-verify-wrap');
     if (!_emailHasPassword && !_emailTgConnected) {
-      wrap.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-xs);margin:var(--space-3) 0;">Для смены email подключите Telegram или войдите через почту с паролем.</p>';
+      wrap.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">Для смены email подключите Telegram или войдите через почту с паролем.</p>';
       document.getElementById('acc-email-submit').disabled = true;
       return;
     }
@@ -648,10 +648,10 @@ export function showAccountModal() {
       html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:6px;">';
     }
     if (_emailHasPassword && _emailTgConnected) {
-      html += '<div style="text-align:center;color:var(--charcoal);font-size:var(--text-xs);margin:var(--space-2) 0;">или</div>';
+      html += '<div style="text-align:center;color:var(--charcoal);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
     }
     if (_emailTgConnected) {
-      html += '<div style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--space-3);">'
+      html += '<div style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--v-xs);">'
         + '<button id="acc-email-tg-btn" class="btn-cta">Получить код в Telegram</button>'
         + '</div>'
         + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" autocomplete="off" class="ds-input" style="display:none;margin-bottom:0;">';

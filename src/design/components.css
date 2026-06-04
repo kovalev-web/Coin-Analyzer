@@ -215,17 +215,17 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .account-section-title{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:var(--space-6);}
 .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
 .acc-bin-sec-mask{height:var(--h-input);border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--cloud);padding:0 var(--space-6);display:flex;align-items:center;font-size:var(--text-lg);letter-spacing:2px;color:var(--ink);}
-.acc-bin-actions{display:flex;gap:var(--space-4);margin-top:var(--space-2);}
+.acc-bin-actions{display:flex;gap:var(--v-sm);margin-top:var(--space-2);}
 .acc-avatar-card{display:flex;justify-content:space-between;align-items:center;padding:var(--space-5) var(--space-10);background:var(--fog);border-radius:var(--radius-xl);}
 .acc-avatar-inner{display:flex;align-items:center;gap:var(--space-7);}
 #acc-avatar-display{font-size:42px;line-height:1;display:flex;align-items:center;}
 .acc-username{font-size:var(--text-base);font-weight:var(--font-medium);color:var(--ink);}
-.acc-editor{display:none;padding:var(--space-6) 0 var(--space-4);}
-#acc-tg-link-area{padding:var(--space-5) 0;}
-#acc-bin-form{padding:var(--space-8) 0 var(--space-4);}
-#acc-bin-form .acc-row-label{margin-bottom:var(--space-3);}
+.acc-editor{display:none;padding:var(--v-sm) 0 var(--v-xs);}
+#acc-tg-link-area{padding:var(--v-sm) 0;}
+#acc-bin-form{padding:var(--v-md) 0 var(--v-xs);}
+#acc-bin-form .acc-row-label{margin-bottom:var(--v-xs);}
 #acc-delete-wrap{margin-top:var(--space-4);text-align:center;}
-#acc-delete-confirm{display:none;margin-top:var(--space-5);}
+#acc-delete-confirm{display:none;margin-top:var(--v-sm);}
 .avatar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .avatar-preset{background:var(--fog);border:2px solid transparent;border-radius:var(--radius-md);width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:var(--text-2xl);cursor:pointer;transition:border-color 0.15s;}
 .avatar-preset.selected{border-color:var(--primary);}
@@ -238,17 +238,17 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-badge{font-size:var(--text-2xs);font-weight:var(--font-semi);padding:var(--space-1) var(--space-4);border-radius:var(--radius-xl);white-space:nowrap;}
 .acc-badge-ok{background:var(--badge-ok-bg);color:var(--success);}
 .acc-badge-warn{background:var(--badge-warn-bg);color:var(--level-deep);}
-.acc-security-actions{display:flex;flex-direction:column;gap:var(--space-5);}
-.acc-footer-divider{height:1px;background:var(--hairline);margin:var(--space-8) 0 var(--space-6);}
+.acc-security-actions{display:flex;flex-direction:column;gap:var(--v-sm);}
+.acc-footer-divider{height:1px;background:var(--hairline);margin:var(--v-md) 0 var(--v-sm);}
 .acc-delete-btn{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
 .acc-delete-btn:hover{color:var(--error);}
 .acc-delete-cancel{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
 .tg-waiting{color:var(--graphite);}
 .acc-tabs{display:flex;gap:var(--space-3);margin:var(--space-6) 0 0;padding:0;border-bottom:none;}
-.acc-pane{padding-top:var(--space-16);display:flex;flex-direction:column;gap:var(--space-16);}
+.acc-pane{padding-top:var(--v-lg);display:flex;flex-direction:column;gap:var(--v-lg);}
 .acc-avatar-collapsed{display:none!important;}
 #account-avatar-grid.avatar-grid{margin:0;}
-.acc-row{display:flex;align-items:center;justify-content:space-between;padding:var(--space-7) 0;border-bottom:1px solid var(--hairline);gap:var(--space-6);}
+.acc-row{display:flex;align-items:center;justify-content:space-between;padding:var(--v-row) 0;border-bottom:1px solid var(--hairline);gap:var(--space-6);}
 .acc-row-left{flex:1;min-width:0;}
 .acc-row-label{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;}
 .acc-row-val{font-size:var(--text-xs);color:var(--ink);}
