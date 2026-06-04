@@ -1156,7 +1156,11 @@ function fetchServerAlerts() {
     if (!d) return;
     var serverHasData = d.data && Object.keys(d.data).length > 0;
     if (serverHasData) {
-      applyServerAlerts(d);
+      // Skip applying server data if there's a pending local save — the save will
+      // commit the correct state (including newly added alerts) to the server.
+      // Without this guard, a fast GET response can overwrite a just-added alert
+      // before the 1s debounced syncAlertsToServer fires.
+      if (!_alertSyncTimer) applyServerAlerts(d);
     } else {
       var localHasData = Object.keys(alertsData()).length > 0;
       if (localHasData) syncAlertsToServer();
