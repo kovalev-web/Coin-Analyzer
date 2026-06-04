@@ -168,7 +168,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-chart-wrap{flex:1;min-width:0;min-height:0;overflow:hidden;background:var(--paper);position:relative;}
 #fv-chart{position:absolute;inset:0;}
 .fv-canvas{position:absolute;inset:0;pointer-events:none;z-index:5;}
-.fv-vol-label{position:absolute;left:14px;bottom:60px;font-size:var(--text-lg);font-weight:var(--font-medium);color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
+.fv-vol-label{position:absolute;left:var(--space-7);bottom:60px;font-size:var(--text-lg);font-weight:var(--font-medium);color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
 .fv-add-btn{position:absolute;right:70px;width:28px;height:28px;border-radius:50%;background:var(--level-deep);color:var(--canvas);border:none;display:none;align-items:center;justify-content:center;z-index:20;padding:0;box-shadow:var(--shadow-md);cursor:pointer;}
 .fv-touch-menu{position:absolute;right:76px;width:fit-content;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);z-index:30;overflow:hidden;}
 .fv-touch-menu-item{display:flex;align-items:center;gap:var(--space-6);width:100%;padding:var(--space-7) var(--space-8);background:transparent;border:none;font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink-deep);cursor:pointer;text-align:left;height:auto;border-radius:0;white-space:nowrap;}

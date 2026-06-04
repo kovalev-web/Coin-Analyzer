@@ -2006,7 +2006,7 @@ export function updateAnalysisPopup(sym) {
     if (r.news_summary) {
       var hasRealNews = r.news_url && !r.news_summary.toLowerCase().includes('не найдено');
       if (hasRealNews) {
-        newsBlock = '<div class="ao-row"><a href="' + escHtml(r.news_url) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:700;text-decoration:none;">Новости' + extIcon + '</a><br>' + escHtml(r.news_summary) + '</div>';
+        newsBlock = '<div class="ao-row"><a href="' + escHtml(r.news_url) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:var(--font-bold);text-decoration:none;">Новости' + extIcon + '</a><br>' + escHtml(r.news_summary) + '</div>';
       } else {
         newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
       }
