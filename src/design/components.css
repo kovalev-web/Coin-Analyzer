@@ -209,7 +209,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .account-overlay{display:none;position:fixed;inset:0;z-index:600;background:var(--canvas);overflow-y:auto;}
 .account-overlay.open{display:block;}
 .account-panel{max-width:440px;margin:0 auto;padding:0 var(--space-10) var(--space-24);}
-.account-panel .popup-header{border-bottom:none;padding-bottom:0;}
+.account-panel .popup-header{border-bottom:none;padding:var(--space-8) 0 0;}
 .account-section{margin-bottom:28px;}
 .account-section-title{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:var(--space-6);}
 .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
@@ -233,7 +233,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-delete-btn:hover{color:var(--error);}
 .acc-delete-cancel{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
 .tg-waiting{color:var(--graphite);}
-.acc-tabs{display:flex;gap:var(--space-5);margin:var(--space-6) 0 0;padding:0;border-bottom:none;}
+.acc-tabs{display:flex;gap:var(--space-3);margin:var(--space-6) 0 0;padding:0;border-bottom:none;}
 .acc-pane{padding-top:30px;display:flex;flex-direction:column;gap:30px;}
 .acc-avatar-collapsed{display:none!important;}
 #account-avatar-grid.avatar-grid{margin:0;}
