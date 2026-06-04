@@ -2829,9 +2829,9 @@ export function renderBriefingPanel() {
       '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
         '<div class="bp-expand-bar">' +
           (tradeLocked
-            ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
+            ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Отработка</span></span>'
             : '<button class="btn-icon bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
-          '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>' +
+          '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>' +
         '</div>' +
         '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
           '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
@@ -3781,9 +3781,9 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
         + (tradeLocked
-          ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
+          ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Отработка</span></span>'
           : '<button class="btn-icon bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
-        + '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>'
+        + '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>'
         + '</div>'
         + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
         + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
