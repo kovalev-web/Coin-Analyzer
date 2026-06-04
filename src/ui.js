@@ -372,7 +372,7 @@ export function showAccountModal() {
           + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input" style="margin-bottom:var(--space-4);">'
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
-            + '<button class="tg-connect-btn" id="acc-email-submit">Подтвердить</button>'
+            + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
             + '<button id="acc-email-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
         + '</div>'
@@ -391,7 +391,7 @@ export function showAccountModal() {
           + '<select id="acc-tz-select" class="ds-input" style="margin-bottom:8px;"></select>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div style="display:flex;gap:8px;">'
-            + '<button class="tg-connect-btn" id="acc-tz-save">Сохранить</button>'
+            + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
             + '<button id="acc-tz-cancel" style="background:none;border:1px solid var(--steel);color:var(--graphite);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Отмена</button>'
           + '</div>'
         + '</div>'
@@ -433,7 +433,7 @@ export function showAccountModal() {
           + '</div>'
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
-            + '<button class="tg-connect-btn" id="acc-bin-save">Сохранить</button>'
+            + '<button class="btn-cta" id="acc-bin-save">Сохранить</button>'
             + '<button id="acc-bin-cancel-form" style="display:none;background:none;border:none;color:var(--graphite);font-size:13px;cursor:pointer;padding:0 var(--space-3);">Отмена</button>'
           + '</div>'
         + '</div>'
@@ -442,18 +442,18 @@ export function showAccountModal() {
 
       + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
         + '<div class="acc-security-actions">'
-          + '<button class="acc-revoke-btn" id="acc-reset-pass-btn">Изменить пароль по email</button>'
+          + '<button class="btn-cta" id="acc-reset-pass-btn">Изменить пароль по email</button>'
           + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
-          + '<button class="acc-revoke-btn" id="acc-revoke-btn">Выйти со всех других устройств</button>'
+          + '<button class="btn-cta danger" id="acc-revoke-btn">Выйти со всех других устройств</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
         + '<div class="acc-footer-divider" style="margin-top:20px;"></div>'
-        + '<button class="acc-logout-btn" id="acc-logout-btn">Выйти из аккаунта</button>'
+        + '<button class="btn-cta danger" id="acc-logout-btn" style="width:100%">Выйти из аккаунта</button>'
         + '<div id="acc-delete-wrap" style="margin-top:8px;text-align:center;">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm" style="display:none;margin-top:10px;">'
             + '<div style="font-size:12px;color:var(--error);margin-bottom:8px;">Все данные будут удалены безвозвратно. Вы уверены?</div>'
-            + '<button class="acc-delete-btn acc-delete-confirm-btn" id="acc-delete-yes">Да, удалить аккаунт</button>'
+            + '<button class="btn-cta danger" id="acc-delete-yes" style="width:100%">Да, удалить аккаунт</button>'
             + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
           + '</div>'
         + '</div>'
@@ -496,7 +496,7 @@ export function showAccountModal() {
     if (!badge || !btnWrap) return;
     if (connected) {
       badge.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
-      btnWrap.innerHTML = '<button class="acc-revoke-btn" id="acc-tg-disconnect" style="height:32px;font-size:12px;padding:0 12px;">Отключить</button>';
+      btnWrap.innerHTML = '<button class="btn-cta danger" id="acc-tg-disconnect">Отключить</button>';
       if (linkArea) linkArea.style.display = 'none';
       document.getElementById('acc-tg-disconnect').addEventListener('click', function () {
         var btn = this;
@@ -511,7 +511,7 @@ export function showAccountModal() {
       return;
     }
     badge.innerHTML = '';
-    btnWrap.innerHTML = '<button class="tg-connect-btn" id="acc-tg-btn">Подключить</button>';
+    btnWrap.innerHTML = '<button class="btn-cta" id="acc-tg-btn">Подключить</button>';
     document.getElementById('acc-tg-btn').addEventListener('click', function () {
       var btn = document.getElementById('acc-tg-btn');
       btn.disabled = true; btn.textContent = '…';
@@ -526,7 +526,7 @@ export function showAccountModal() {
             linkArea.style.display = 'block';
             linkArea.innerHTML =
               '<p class="tg-hint">Откройте бота и нажмите Start:</p>'
-              + '<a class="tg-connect-btn" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
+              + '<a class="btn-cta" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
               + '<p class="tg-hint tg-waiting">Ожидаю подключения…</p>';
           }
           btnWrap.innerHTML = '';
@@ -591,7 +591,7 @@ export function showAccountModal() {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
       btnWrap.innerHTML =
         '<button class="acc-row-edit" id="acc-bin-upd">' + icon('pencil', 12) + ' Изменить</button>'
-        + '<button class="acc-revoke-btn" id="acc-bin-del" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;">' + icon('x', 14) + '</button>';
+        + '<button class="btn-icon" id="acc-bin-del" style="color:var(--error)">' + icon('x', 14) + '</button>';
       form.style.display = 'none';
       var cf = document.getElementById('acc-bin-cancel-form');
       if (cf) cf.style.display = 'none';
@@ -656,7 +656,7 @@ export function showAccountModal() {
     }
     if (_emailTgConnected) {
       html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
-        + '<button id="acc-email-tg-btn" class="acc-revoke-btn">Получить код в Telegram</button>'
+        + '<button id="acc-email-tg-btn" class="btn-cta">Получить код в Telegram</button>'
         + '</div>'
         + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" autocomplete="off" class="ds-input" style="display:none;margin-bottom:0;">';
     }
@@ -1980,10 +1980,10 @@ export function updateAnalysisPopup(sym) {
       '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
       (ts ? '<div style="margin-top:12px;font-size:11px;color:var(--graphite);font-weight:600;">Анализ: ' + ts + '</div>' : '') +
-      '<button class="popup-btn" style="margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
   } else {
     content.innerHTML = '<div class="ao-err">' + (cache.error || 'Ошибка') + '</div>' +
-      '<button class="popup-btn" style="margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
   }
 }
 
@@ -2039,7 +2039,7 @@ function msPopupInner() {
   if (ms.status === 'error') {
     return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
       '<div class="popup-body"><div style="color:var(--bloom-deep);font-size:13px;font-weight:600;margin-bottom:12px;">Ошибка загрузки данных</div></div>' +
-      '<div class="popup-footer"><button class="popup-btn" data-action="refresh-ms">Повторить</button></div>';
+      '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Повторить</button></div>';
   }
   var m = ms.metrics;
   var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
@@ -2074,7 +2074,7 @@ function msPopupInner() {
     '</div>' +
     inPlayHtml +
     '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-20 по объёму · ' + ts + '</div></div>' +
-    '<div class="popup-footer"><button class="popup-btn" data-action="refresh-ms">Обновить</button></div>';
+    '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Обновить</button></div>';
 }
 
 export function openMSPopup() {
@@ -2846,7 +2846,7 @@ export function renderBriefingPanel() {
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
-      (state.briefing && state.briefing.length ? '<button class="popup-btn" data-action="go-briefing">Режим брифинг</button>' : '') +
+      (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Режим брифинг</button>' : '') +
     '</div>';
 
   _refreshBriefingPct();
