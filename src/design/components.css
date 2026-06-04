@@ -187,8 +187,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-bb-left{display:flex;align-items:center;gap:12px;}
 .fv-bb-right{display:flex;align-items:center;gap:12px;}
 .fv-bottom-bar .tf-dd{top:auto;bottom:calc(100% + 6px);}
-.fv-back-btn{background:var(--fog);color:var(--ink);border:none;padding:0;width:30px;height:var(--h-btn-md);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}
-.fv-back-btn:hover{opacity:0.8;}
 
 /* ── Burger menu ────────────────────────────────────────────── */
 .burger-wrap{position:relative;display:block;}
@@ -222,8 +220,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .avatar-preset.selected{border-color:var(--primary);}
 .avatar-preset:hover:not(.selected){opacity:0.8;}
 .acc-field-err{font-size:var(--text-xs);color:var(--error);min-height:18px;margin:2px 0 6px;}
-.account-save-btn{background:var(--primary);color:var(--on-ink);border:none;}
-.account-save-btn:hover:not(:disabled){background:var(--primary-bright);opacity:1;}
 .tg-connected{display:inline-flex;align-items:center;gap:var(--space-3);font-size:var(--text-xs);font-weight:var(--font-semi);color:var(--success);}
 .tg-hint{font-size:var(--text-xs);color:var(--graphite);margin:8px 0 6px;}
 .acc-email-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
@@ -273,18 +269,13 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .bp-chg{flex:1;font-size:var(--text-xs);font-weight:var(--font-normal);}
 #bp-popup .bp-chg,#fv-briefing-drawer .bp-chg{color:var(--graphite);}
 .bp-row-status{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;}
-.bp-status{width:30px;height:var(--h-btn-md);border-radius:var(--radius-md);padding:0;background:transparent;border:none;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
-.bp-status:hover{background:transparent;}
 span.bp-status{cursor:default;}
 .bp-status.bp-s-none,.bp-row-status.bp-s-none{color:var(--graphite);}
 .bp-status.bp-s-watching,.bp-row-status.bp-s-watching{color:var(--graphite);}
 .bp-status.bp-s-traded,.bp-row-status.bp-s-traded{color:var(--bullish);}
 .bp-status.bp-s-skip,.bp-row-status.bp-s-skip{color:var(--danger);}
 .bp-status.bp-s-missed,.bp-row-status.bp-s-missed{color:var(--level);}
-.bp-note-btn{background:transparent;border:none;color:var(--graphite);padding:0;width:30px;height:var(--h-btn-md);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}
-.bp-note-btn:hover{opacity:0.8;}
 .bp-note-btn.has-note{color:var(--ink);}
-.bp-remove{background:transparent;border:none;color:var(--graphite);padding:0;width:30px;height:var(--h-btn-md);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}
 .bp-remove:hover{color:var(--danger);opacity:1;}
 .bp-note-row{padding:0 12px 0;}
 .bp-note-row:has(.bp-note-wrap:not([style*="display:none"])){padding-bottom:10px;}

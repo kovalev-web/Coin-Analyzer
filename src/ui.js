@@ -2823,14 +2823,14 @@ export function renderBriefingPanel() {
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
       (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
-      '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
-      '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
+      '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
+      '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
       '</div>' +
       '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
         '<div class="bp-expand-bar">' +
           (tradeLocked
             ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
-            : '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
+            : '<button class="btn-icon bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
           '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>' +
         '</div>' +
         '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
@@ -2887,7 +2887,7 @@ function _fvBottomBarHTML(sym, tf) {
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
+    + '<button class="btn-topbar" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd">'
@@ -2922,7 +2922,7 @@ function _fvCoinInfoHTML(sym, tf) {
 
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
-    + '<button class="fv-back-btn" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
+    + '<button class="btn-topbar" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
@@ -3773,16 +3773,16 @@ export function renderFVBriefingDrawer() {
         + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
         + (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
-        + '<button class="bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
+        + '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
-          ? '<button class="bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
+          ? '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
           : '')
         + '</div>'
         + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
         + (tradeLocked
           ? '<span class="bp-status bp-s-traded bp-status-locked">' + icon('check-check', 14) + '<span class="bp-status-text">Отработка</span></span>'
-          : '<button class="bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
+          : '<button class="btn-icon bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
         + '<button class="bp-note-action" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>'
         + '</div>'
         + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
