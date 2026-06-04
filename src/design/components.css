@@ -374,7 +374,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .ds-select-val{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ds-select-chevron{flex-shrink:0;color:var(--graphite);transition:transform 0.15s;display:flex;align-items:center;margin-left:var(--space-4);}
 .ds-select.open .ds-select-chevron{transform:rotate(180deg);}
-.ds-select-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-md);box-shadow:var(--shadow-md);max-height:240px;overflow-y:auto;z-index:300;}
+.ds-select-dd{display:none;position:absolute;top:calc(100% + var(--space-2));left:0;right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-md);box-shadow:var(--shadow-md);max-height:240px;overflow-y:auto;z-index:300;}
 .ds-select.open .ds-select-dd{display:block;}
 .ds-select-item{padding:var(--space-4) var(--space-6);font-size:var(--text-sm);color:var(--ink-deep);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ds-select-item:hover{background:var(--cloud);}
