@@ -88,10 +88,7 @@
   --graphite: #636363;  /* muted / placeholder text          */
 
   /* ── Color: Brand ──────────────────────────────────────────── */
-  --primary:        #024ad8;
-  --primary-bright: #296ef9;
-  --primary-deep:   #0e3191;
-  --primary-soft:   #c9e0fc;
+  --primary: #024ad8;
 
   /* ── Color: Semantic ───────────────────────────────────────── */
   --bullish:    #16a34a;   /* bullish data, positive states  */
