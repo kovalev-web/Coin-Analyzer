@@ -460,6 +460,7 @@ export function showAccountModal() {
 
   document.body.appendChild(el);
   el.classList.add('open');
+  lockScroll();
 
   el.querySelectorAll('.acc-tabs .nav-pill').forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -853,7 +854,7 @@ export function showAccountModal() {
     }).catch(function () {});
   });
 
-  document.getElementById('account-close').addEventListener('click', function () { el.remove(); });
+  document.getElementById('account-close').addEventListener('click', function () { unlockScroll(); el.remove(); });
 
   document.getElementById('acc-logout-btn').addEventListener('click', function () {
     fetch(API_BASE + '/auth/sign-out', { method: 'POST', credentials: 'include' })
