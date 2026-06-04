@@ -1980,10 +1980,10 @@ export function updateAnalysisPopup(sym) {
       '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
       (ts ? '<div style="margin-top:12px;font-size:11px;color:var(--graphite);font-weight:600;">Анализ: ' + ts + '</div>' : '') +
-      '<button class="ao-reanalyze" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+      '<button class="popup-btn" style="margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
   } else {
     content.innerHTML = '<div class="ao-err">' + (cache.error || 'Ошибка') + '</div>' +
-      '<button class="ao-reanalyze" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+      '<button class="popup-btn" style="margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
   }
 }
 
