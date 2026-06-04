@@ -104,19 +104,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .signal-badge.caution{background:var(--caution-bg);color:var(--caution);}
 .signal-badge.neutral{background:var(--fog);color:var(--graphite);}
 
-/* ── Code modal ─────────────────────────────────────────────── */
-.code-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;}
-.code-modal{background:var(--paper);border-radius:var(--radius-xl);padding:0;width:360px;max-width:calc(100vw - 32px);box-shadow:var(--shadow-md);border:1px solid var(--hairline);overflow:hidden;}
-.code-modal p{font-size:var(--text-xs);color:var(--graphite);line-height:1.55;margin-bottom:var(--space-10);}
-.code-modal-actions{display:flex;gap:10px;}
-.code-modal-save{flex:1;height:var(--h-input-lg);background:var(--ink);color:var(--on-ink);border:none;border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:var(--font-bold);cursor:pointer;}
-.code-modal-save:hover{opacity:0.85;}
-.code-modal-skip{height:var(--h-input-lg);padding:0 var(--space-10);background:transparent;color:var(--graphite);border:1.5px solid var(--steel);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:var(--font-medium);cursor:pointer;}
-.code-modal-skip:hover{opacity:0.75;}
-.code-modal-danger{width:100%;height:var(--h-btn-xl);background:transparent;color:var(--danger);border:1.5px solid var(--danger);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:var(--font-semi);cursor:pointer;opacity:0.65;transition:opacity 0.15s,background 0.15s,color 0.15s;}
-.code-modal-danger:hover{opacity:1;}
-.code-modal-danger.confirm{background:var(--danger);color:var(--on-ink);opacity:1;}
-.code-modal-danger:disabled{opacity:0.5;cursor:default;}
 
 /* ── TradingView attribution ────────────────────────────────── */
 a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bottom right;}

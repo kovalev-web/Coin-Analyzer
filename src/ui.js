@@ -323,67 +323,6 @@ export function loadLevels() {
   if (_userId) fetchServerLevels();
 }
 
-export function showSettingsModal() {
-  if (document.getElementById('code-modal-backdrop')) return;
-  var backdrop = document.createElement('div');
-  backdrop.id = 'code-modal-backdrop';
-  backdrop.className = 'code-modal-backdrop';
-  backdrop.innerHTML =
-    '<div class="code-modal">' +
-      '<div class="popup-header"><span class="popup-title">Настройки</span><button class="popup-close" id="code-modal-close">' + icon('x', 16) + '</button></div>' +
-      '<div class="popup-body">' +
-        '<p style="margin-bottom:4px;">Telegram chat_id <span style="color:var(--graphite);font-size:11px;">(для алертов на цену)</span></p>' +
-        '<input id="chat-id-input" type="text" placeholder="например: 123456789" maxlength="20" autocomplete="off" class="ds-input" />' +
-        '<p style="font-size:11px;color:var(--graphite);margin-top:6px;">Напишите /start боту, получите ваш chat_id.</p>' +
-        '<div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:16px;">' +
-          '<button id="clear-all-alerts-btn" class="code-modal-danger">Удалить все алерты</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="popup-footer code-modal-actions">' +
-        '<button class="code-modal-save" id="code-modal-save">Сохранить</button>' +
-        '<button class="code-modal-skip" id="code-modal-skip">Отмена</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(backdrop);
-
-  var chatInput = document.getElementById('chat-id-input');
-  var saveBtn = document.getElementById('code-modal-save');
-  var skipBtn = document.getElementById('code-modal-skip');
-  var clearAllBtn = document.getElementById('clear-all-alerts-btn');
-
-  if (_chatId) chatInput.value = _chatId;
-
-  function save() {
-    var newChatId = chatInput.value.trim();
-    if (newChatId) { _chatId = newChatId; localStorage.setItem('pa_chat_id', newChatId); }
-    backdrop.remove();
-    syncAlertsToServer();
-  }
-
-  var _clearTimer = null;
-  clearAllBtn.addEventListener('click', function () {
-    if (clearAllBtn.classList.contains('confirm')) {
-      clearTimeout(_clearTimer);
-      clearAllAlerts();
-      clearAllBtn.textContent = 'Удалено ✓';
-      clearAllBtn.disabled = true;
-    } else {
-      clearAllBtn.classList.add('confirm');
-      clearAllBtn.textContent = 'Нажмите ещё раз для подтверждения';
-      clearTimeout(_clearTimer);
-      _clearTimer = setTimeout(function () {
-        clearAllBtn.classList.remove('confirm');
-        clearAllBtn.textContent = 'Удалить все алерты';
-      }, 3000);
-    }
-  });
-
-  saveBtn.addEventListener('click', save);
-  skipBtn.addEventListener('click', function () { backdrop.remove(); });
-  document.getElementById('code-modal-close').addEventListener('click', function () { backdrop.remove(); });
-  chatInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
-  chatInput.focus();
-}
 
 var _AVATAR_PRESETS = ['🐋','🚀','🎯','🦊','🌙','💎','🔥','⚡','🐂','🐻','🧠','👾'];
 
