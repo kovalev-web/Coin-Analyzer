@@ -2644,7 +2644,7 @@ function _tradeInlineHTML(sym, date) {
 
 function _weekStatsHTML() {
   var ws = state.weekSummary;
-  var loadBtn = '<button class="bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 14) + '</button>';
+  var loadBtn = '<button class="btn-topbar bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 16) + '</button>';
   var statsHTML = ws
     ? (function () {
         var pnlSign = ws.pnl >= 0 ? '+' : '';
