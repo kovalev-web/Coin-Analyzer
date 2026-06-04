@@ -332,7 +332,7 @@ export function showAccountModal() {
   el.className = 'account-overlay';
   el.innerHTML =
     '<div class="account-panel">'
-    + '<div class="popup-header"><span class="popup-title" style="font-size:26px;font-weight:500;">Настройки профиля</span><button class="popup-close" id="account-close" style="width:26px;height:26px;min-width:26px;background:var(--fog);border-radius:6px;padding:0;display:inline-flex;align-items:center;justify-content:center;">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title" style="font-size:26px;font-weight:500;">Настройки профиля</span><button class="btn-topbar" id="account-close">' + icon('x', 14) + '</button></div>'
     + '<div class="acc-tabs">'
       + '<button class="pill active" data-tab="profile">Профиль</button>'
       + '<button class="pill" data-tab="integrations">Интеграции</button>'
@@ -1837,7 +1837,7 @@ function getOverlay() {
     el.className = 'analysis-overlay';
     el.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
-        '<button class="popup-close" data-action="close-analysis">' + icon('x', 16) + '</button>' +
+        '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
         '<div class="ao-spinner"><span class="spinner"></span></div>' +
@@ -1867,7 +1867,7 @@ export function openAnalysisPopup(sym, btn) {
     popup.className = 'analysis-overlay';
     popup.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
-        '<button class="popup-close" data-action="close-analysis">' + icon('x', 16) + '</button>' +
+        '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
         '<div class="ao-spinner"><span class="spinner"></span></div>' +
@@ -2031,7 +2031,7 @@ function msCardInner() {
 function msPopupInner() {
   var ms = state.marketStrength;
   var phase = getMSKPhase();
-  var closeBtn = '<button class="popup-close" data-action="close-ms">' + icon('x', 16) + '</button>';
+  var closeBtn = '<button class="btn-topbar" data-action="close-ms">' + icon('x', 16) + '</button>';
   if (!ms || ms.status === 'loading') {
     return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
       '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div></div>';
@@ -2842,7 +2842,7 @@ export function renderBriefingPanel() {
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Брифинг</span>' +
-      '<button class="popup-close" data-action="close-briefing">' + icon('x', 16) + '</button>' +
+      '<button class="btn-topbar" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
@@ -3926,7 +3926,7 @@ export function openSearchPopup() {
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Поиск монеты</span>' +
-      '<button class="popup-close" data-action="close-search">' + icon('x', 16) + '</button>' +
+      '<button class="btn-topbar" data-action="close-search">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="search-popup-input-wrap">' +
       '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +

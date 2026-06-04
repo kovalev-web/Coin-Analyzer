@@ -75,8 +75,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 /* ── Popup component ────────────────────────────────────────── */
 .popup-header{display:flex;align-items:center;gap:8px;padding:var(--space-8) var(--space-6) 0;}
 .popup-title{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink);flex:1;}
-.popup-close{background:var(--fog);border:none;color:var(--ink);padding:0;width:30px;height:var(--h-btn-md);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}
-.popup-close:hover{opacity:0.8;}
 .popup-body{padding:var(--space-8) var(--space-6) 0;}
 .analysis-overlay .popup-body{padding-bottom:var(--space-8);}
 .popup-footer{margin-top:var(--space-8);padding:0 var(--space-6) var(--space-8);}
