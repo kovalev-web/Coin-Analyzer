@@ -20,7 +20,7 @@ body {
 .auth-card {
   width: 100%;
   max-width: 360px;
-  padding: 32px 28px;
+  padding: var(--space-16) var(--space-12);
   background: var(--paper);
   border: 1px solid var(--steel);
   border-radius: var(--radius-xl);
@@ -30,7 +30,7 @@ body {
   font-size: var(--text-2xl);
   font-weight: var(--font-semi);
   letter-spacing: -0.3px;
-  margin-bottom: 28px;
+  margin-bottom: var(--space-8);
   color: var(--ink-deep);
 }
 
@@ -40,10 +40,10 @@ body {
   background: transparent;
   border: 1px solid var(--danger);
   color: var(--danger);
-  padding: 10px 12px;
+  padding: var(--space-5) var(--space-6);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
-  margin-bottom: 16px;
+  margin-bottom: var(--v-md);
 }
 
 #login-msg {
@@ -51,24 +51,24 @@ body {
   background: var(--fog);
   border: 1px solid color-mix(in srgb, var(--bullish) 30%, transparent);
   color: var(--bullish);
-  padding: 12px 14px;
+  padding: var(--space-6) var(--space-7);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   line-height: var(--leading-relaxed);
-  margin-bottom: 16px;
+  margin-bottom: var(--v-md);
 }
 
 .auth-err-inline {
   font-size: var(--text-xs);
   color: var(--danger);
-  margin: -6px 0 10px;
+  margin: calc(-1 * var(--space-3)) 0 var(--space-5);
   min-height: 18px;
 }
 
 .auth-ok {
   font-size: var(--text-sm);
   color: var(--bullish);
-  margin-top: 16px;
+  margin-top: var(--v-md);
   text-align: center;
 }
 
@@ -78,16 +78,16 @@ body {
 .auth-card input {
   display: block;
   width: 100%;
-  padding: 0 12px;
+  padding: 0 var(--space-6);
   height: var(--h-input);
-  background: var(--canvas);
+  background: var(--cloud);
   border: 1px solid var(--steel);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   color: var(--ink-deep);
   font-size: var(--text-sm);
   font-family: var(--font-family);
   outline: none;
-  margin-bottom: 10px;
+  margin-bottom: var(--v-sm);
   transition: border-color 0.15s;
 }
 
@@ -109,7 +109,7 @@ body {
   font-weight: var(--font-semi);
   font-family: var(--font-family);
   cursor: pointer;
-  margin-top: 4px;
+  margin-top: var(--space-2);
   transition: opacity 0.15s;
 }
 
@@ -140,8 +140,8 @@ body {
 .auth-btn-link {
   display: block;
   width: 100%;
-  margin-top: 14px;
-  padding: 8px;
+  margin-top: var(--v-sm);
+  padding: var(--space-4);
   background: none;
   border: none;
   color: var(--graphite);
@@ -157,8 +157,8 @@ body {
 .auth-divider {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 16px 0;
+  gap: var(--space-5);
+  margin: var(--v-md) 0;
   color: var(--graphite);
   font-size: var(--text-xs);
 }
@@ -174,7 +174,7 @@ body {
 /* ── Simple status pages (verify-email, confirm-email-change) ── */
 .auth-status {
   text-align: center;
-  padding: 32px;
+  padding: var(--space-16);
   max-width: 360px;
 }
 
@@ -182,7 +182,7 @@ body {
   font-size: var(--text-lg);
   font-weight: var(--font-semi);
   color: var(--ink-deep);
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .auth-status p {
@@ -200,7 +200,7 @@ body {
 .auth-back {
   display: block;
   text-align: center;
-  margin-top: 16px;
+  margin-top: var(--v-md);
   font-size: var(--text-xs);
   color: var(--graphite);
   text-decoration: none;
