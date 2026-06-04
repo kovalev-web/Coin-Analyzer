@@ -311,9 +311,6 @@ span.bp-status{cursor:default;}
 .bp-ai-block{margin-top:var(--space-3);}
 .bp-ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);}
 .bp-ai-label{font-size:var(--text-2xs);font-weight:var(--font-semi);color:var(--graphite);text-transform:uppercase;letter-spacing:0.05em;}
-.bp-ai-btn{background:var(--fog);color:var(--charcoal);border:none;border-radius:var(--radius-full);padding:0 var(--space-6);height:var(--h-btn-sm);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;letter-spacing:0;}
-.bp-ai-btn:hover{opacity:0.8;}
-.bp-ai-btn:disabled{opacity:0.4;cursor:default;}
 .bp-ai-date{font-size:var(--text-2xs);color:var(--graphite);flex:1;}
 .bp-ai-text{font-size:var(--text-xs);line-height:1.5;color:var(--ink);white-space:pre-wrap;background:var(--fog);border-radius:var(--radius-md);padding:var(--space-5) var(--space-6);}
 .bp-ai-spinner{color:var(--graphite);font-size:var(--text-xs);padding:var(--space-4) 0;}
