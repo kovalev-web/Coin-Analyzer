@@ -12,7 +12,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-icon:hover{opacity:0.8;}
 .btn-icon.star.active{color:var(--level-deep);}
 .btn-icon.star.active svg{fill:var(--level-deep);}
-.btn-icon.analyze{background:var(--fog);color:var(--charcoal);}
+.btn-icon.analyze{color:var(--charcoal);}
 
 /* ── Topbar buttons ─────────────────────────────────────────── */
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
