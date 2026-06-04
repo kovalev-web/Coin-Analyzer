@@ -16,7 +16,7 @@ function natrDisplay(symbol) {
 
 function renderCard(coin) {
   var cache = state.analysisCache[coin.symbol];
-  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var tf = state.chartTF[coin.symbol] || '5m';
   var change = (coin.open_24h > 0 && coin.current_price > 0)
@@ -25,8 +25,7 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isL) badge = '<span class="btn-icon pressed">' + icon('zap', 16) + '</span>';
-  else if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
+  if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
   else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
   else badge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
 
@@ -111,19 +110,17 @@ export function updateCardBadge(symbol) {
   if (!el) el = document.querySelector('[data-action="open-analysis"][data-sym="' + symbol + '"]');
   if (!el) el = document.querySelector('[data-action="analyze"][data-sym="' + symbol + '"]');
   var cache = state.analysisCache[symbol];
-  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var tag = 'span';
   var html = '';
-  if (isL) { tag = 'span'; html = '' + icon('zap', 16) + ''; }
-  else if (isE) { tag = 'button'; html = 'Повтор'; }
+  if (isE) { tag = 'button'; html = 'Повтор'; }
   else if (hasA) { tag = 'span'; html = signalLabel(signal); }
   else { tag = 'button'; html = '' + icon('zap', 16) + ''; }
 
   var newEl = document.createElement(tag);
   if (isE) { newEl.className = 'btn-retry'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
   else if (hasA) { newEl.className = 'signal-badge ' + signal; newEl.dataset.action = 'open-analysis'; newEl.dataset.sym = symbol; }
-  else if (isL) { newEl.className = 'btn-icon pressed'; }
   else { newEl.className = 'btn-icon analyze'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
   newEl.innerHTML = html;
 
@@ -2880,11 +2877,10 @@ export function renderBriefingPanel() {
 
 function _fvBottomBarHTML(sym, tf) {
   var cache = state.analysisCache[sym];
-  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isL) fvBadge = '<span class="btn-icon pressed">' + icon('zap', 16) + '</span>';
-  else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
   else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
@@ -2914,11 +2910,10 @@ function _fvCoinInfoHTML(sym, tf) {
   var nd = natrDisplay(sym);
 
   var cache = state.analysisCache[sym];
-  var hasA = cache && cache.status === 'ok', isL = cache && cache.status === 'loading', isE = cache && cache.status === 'error';
+  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isL) fvBadge = '<span class="btn-icon pressed">' + icon('zap', 16) + '</span>';
-  else if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
   else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
 
