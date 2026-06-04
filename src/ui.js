@@ -468,7 +468,7 @@ export function showAccountModal() {
       el.querySelectorAll('.acc-pane').forEach(function (p) { p.style.display = 'none'; });
       tab.classList.add('active');
       var pane = document.getElementById('acc-pane-' + tab.dataset.tab);
-      if (pane) pane.style.display = 'block';
+      if (pane) pane.style.display = 'flex';
     });
   });
 
