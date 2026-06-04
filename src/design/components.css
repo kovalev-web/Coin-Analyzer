@@ -16,8 +16,8 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 
 /* ── Topbar buttons ─────────────────────────────────────────── */
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
-.btn-topbar{background:var(--fog);color:var(--ink);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
-.btn-topbar:hover{opacity:0.8;}
+.btn-topbar,.btn-avatar{background:var(--fog);color:var(--ink);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
+.btn-topbar:hover,.btn-avatar:hover{opacity:0.8;}
 .desktop-nav-btn{display:none;}
 @media(min-width:1025px){.desktop-nav-btn{display:inline-flex;}}
 
@@ -199,8 +199,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Avatar button ──────────────────────────────────────────── */
 .avatar-wrap{position:relative;display:none;}
 @media(min-width:1025px){.avatar-wrap{display:block;}}
-.btn-avatar{background:var(--fog);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:var(--text-base);line-height:1;flex-shrink:0;color:var(--ink);}
-.btn-avatar:hover{opacity:0.8;}
+.btn-avatar{font-size:var(--text-base);line-height:1;}
 .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:var(--text-2xl);width:auto;height:auto;}
 .avatar-dd{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;min-width:160px;z-index:500;}
 .avatar-dd.open{display:block;}
