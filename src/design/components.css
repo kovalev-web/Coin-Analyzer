@@ -362,6 +362,9 @@ span.bp-status{cursor:default;}
 .ds-input{display:block;width:100%;height:var(--h-input);padding:0 var(--space-6);background:var(--cloud);border:1px solid var(--steel);border-radius:var(--radius-md);color:var(--ink-deep);font-size:var(--text-sm);outline:none;box-sizing:border-box;transition:border-color 0.15s;}
 .ds-input:focus{border-color:var(--primary);}
 .ds-input.error{border-color:var(--danger);}
+select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23636363' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right var(--space-6) center;background-size:14px;padding-right:var(--space-16);}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) select.ds-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23637880' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");}}
+:root[data-theme="dark"] select.ds-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23637880' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");}
 
 /* ── Ruler label (chart measurement tool) ───────────────────── */
 .ruler-lbl{position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font-size:var(--text-2xs);font-weight:var(--font-medium);line-height:12px;font-variant-numeric:tabular-nums;border-radius:var(--radius-md);padding:2px 4px;flex-direction:column;gap:4px;background:var(--ink-deep);color:var(--canvas);}
