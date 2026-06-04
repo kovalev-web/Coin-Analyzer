@@ -718,7 +718,7 @@ export function showAccountModal() {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
         document.getElementById('acc-email-row').style.display = '';
-        msg.style.color = 'var(--success)';
+        msg.style.color = 'var(--bullish)';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
         msg.textContent = d.error || 'Ошибка';
@@ -894,7 +894,7 @@ export function showAccountModal() {
     })
       .then(function (r) {
         if (r.ok) {
-          msg.style.color = 'var(--success)';
+          msg.style.color = 'var(--bullish)';
           msg.textContent = 'Готово — все другие устройства отключены';
           btn.textContent = 'Выйти со всех других устройств';
           btn.disabled = false;
@@ -922,7 +922,7 @@ export function showAccountModal() {
     })
       .then(function (r) {
         if (r.ok) {
-          msg.style.color = 'var(--success)';
+          msg.style.color = 'var(--bullish)';
           msg.textContent = 'Письмо отправлено на ' + _userEmail;
         } else {
           throw new Error('fail');
@@ -2024,7 +2024,7 @@ function msCardInner() {
       '<div class="ms-card-sub">Нажмите для повтора</div>';
   }
   var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
-  var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--caution)' : 'var(--danger)';
+  var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--level-deep)' : 'var(--danger)';
   return '<div class="label">Сила рынка</div>' +
     '<div style="font-size:20px;font-weight:700;color:' + vColor + ';margin-top:6px;">' + vLabel + '</div>';
 }

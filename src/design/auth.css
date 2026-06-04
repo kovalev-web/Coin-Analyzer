@@ -48,7 +48,7 @@ body {
 
 #login-msg {
   display: none;
-  background: var(--bullish-bg);
+  background: color-mix(in srgb,var(--bullish) 12%,transparent);
   border: 1px solid color-mix(in srgb, var(--bullish) 30%, transparent);
   color: var(--bullish);
   padding: 12px 14px;
@@ -67,12 +67,12 @@ body {
 
 .auth-ok {
   font-size: var(--text-sm);
-  color: var(--success);
+  color: var(--bullish);
   margin-top: 16px;
   text-align: center;
 }
 
-.auth-ok a { color: var(--success); }
+.auth-ok a { color: var(--bullish); }
 
 /* ── Inputs ──────────────────────────────────────────────────── */
 .auth-card input {

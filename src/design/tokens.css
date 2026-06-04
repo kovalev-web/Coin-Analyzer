@@ -98,17 +98,9 @@
   --primary-soft:   #c9e0fc;
 
   /* ── Color: Semantic ───────────────────────────────────────── */
-  --bullish:     #16a34a;
-  --bullish-bg:  #f0fdf4;
-  --caution:     #b45309;
-  --caution-bg:  #fffbeb;
-  --danger:      #ff5050;   /* destructive, alerts, bearish   */
-  --success:     #4caf7d;   /* connected / positive states    */
-  --level:       #f59e0b;   /* price levels, briefing active  */
-  --level-deep:  #d97706;
-
-  /* ── Color: Status ─────────────────────────────────────────── */
-  --ws-on:  #22c55e;
+  --bullish:    #16a34a;   /* bullish data, positive states  */
+  --danger:     #ff5050;   /* destructive, alerts, bearish   */
+  --level-deep: #d97706;   /* price levels, caution, inplay  */
 
   /* ── Color: Chart ──────────────────────────────────────────── */
   --chart-level: #277cc2;   /* price level lines in chart     */
@@ -126,7 +118,6 @@
   --badge-warn-bg:   #3a2a1a;   /* warning badge background      */
   --delete-bg:       #5a1a1a;   /* destructive confirm bg        */
   --delete-bg-hover: #7a2a2a;   /* destructive confirm bg hover  */
-  --caution-line:    #fde68a;   /* caution border, inplay pill   */
 }
 
 
@@ -150,8 +141,6 @@
     --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
     --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
 
-    --bullish-bg:   rgba(22, 163, 74, 0.15);
-    --caution-bg:   rgba(180, 83, 9, 0.15);
     --retry-bg:     rgba(179, 38, 43, 0.12);
     --retry-border: rgba(179, 38, 43, 0.4);
 
@@ -182,8 +171,6 @@
   --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
 
-  --bullish-bg:   rgba(22, 163, 74, 0.15);
-  --caution-bg:   rgba(180, 83, 9, 0.15);
   --retry-bg:     rgba(179, 38, 43, 0.12);
   --retry-border: rgba(179, 38, 43, 0.4);
 

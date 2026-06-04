@@ -39,7 +39,7 @@
 .stat-val.up{color:var(--bullish);}
 .stat-val.dn{color:var(--danger);}
 .stat-val.hot{color:var(--danger);}
-.stat-val.warn{color:var(--caution);}
+.stat-val.warn{color:var(--level-deep);}
 .stat-val.dim{color:var(--steel);}
 .chart-container{aspect-ratio:3/2;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 var(--radius-xl) var(--radius-xl);}
 .card-chart-stats{position:absolute;top:calc(var(--h-btn-lg) + 6px);left:var(--space-7);z-index:2;display:flex;align-items:center;gap:var(--space-4);pointer-events:none;}
