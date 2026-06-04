@@ -65,10 +65,7 @@
   --h-input:   40px;   /* form inputs                        */
 
   /* ── Shadow ────────────────────────────────────────────────── */
-  --shadow-sm:   0 2px 8px rgba(26, 26, 26, 0.08);
-  --shadow-md:   0 8px 24px rgba(26, 26, 26, 0.12);
-  --shadow-lg:   0 8px 24px rgba(26, 26, 26, 0.14);
-  --shadow-soft: var(--shadow-sm);   /* alias — prefer --shadow-sm */
+  --shadow-md: 0 8px 24px rgba(26, 26, 26, 0.12);
 
   /* ── Color: Surface ────────────────────────────────────────── */
   --canvas:  #ffffff;   /* page background, chart bg         */
@@ -112,9 +109,7 @@
     --ink-deep: #f2f6f8;
     --graphite: #637880;
 
-    --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
-    --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
-    --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
 
     --candle-up: #c2ccd0;
     --candle-dn: #3b4b54;
@@ -135,9 +130,7 @@
   --ink-deep: #f2f6f8;
   --graphite: #637880;
 
-  --shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.6);
-  --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   --candle-up: #c2ccd0;
   --candle-dn: #3b4b54;

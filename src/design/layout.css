@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Topbar ─────────────────────────────────────────────────── */
-.topbar{background:var(--paper);border-radius:var(--radius-xl);box-shadow:var(--shadow-soft);margin:var(--space-10) var(--space-16) 0;overflow:visible;}
+.topbar{background:var(--paper);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);margin:var(--space-10) var(--space-16) 0;overflow:visible;}
 .filters{padding:var(--space-7) var(--space-7);display:flex;align-items:center;gap:var(--space-6);flex-wrap:nowrap;}
 .filters-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-5);}
 .filter-group{display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-medium);}
@@ -15,7 +15,7 @@
 
 /* ── Metrics ────────────────────────────────────────────────── */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-6);padding:var(--space-12) var(--space-16) 0;}
-.metric-card{background:var(--paper);border-radius:var(--radius-xl);padding:var(--space-10) var(--space-12);box-shadow:var(--shadow-soft);}
+.metric-card{background:var(--paper);border-radius:var(--radius-xl);padding:var(--space-10) var(--space-12);box-shadow:var(--shadow-md);}
 .metric-card .label{font-size:var(--text-2xs);color:var(--graphite);text-transform:uppercase;letter-spacing:1px;font-weight:var(--font-medium);margin-bottom:var(--space-4);}
 .metric-card .value{font-size:var(--text-3xl);font-weight:var(--font-bold);color:var(--ink-deep);line-height:1.0;}
 .metric-card .value.blue{color:var(--primary);}
