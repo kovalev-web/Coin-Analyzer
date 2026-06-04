@@ -373,7 +373,7 @@ export function showAccountModal() {
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
-            + '<button id="acc-email-cancel" class="btn-cta">Отмена</button>'
+            + '<button id="acc-email-cancel" class="acc-delete-cancel">Отмена</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg" style="margin-top:4px;"></div>'
@@ -392,7 +392,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div style="display:flex;gap:8px;">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
-            + '<button id="acc-tz-cancel" class="btn-cta">Отмена</button>'
+            + '<button id="acc-tz-cancel" class="acc-delete-cancel">Отмена</button>'
           + '</div>'
         + '</div>'
 
@@ -434,7 +434,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div style="display:flex;gap:8px;margin-top:4px;">'
             + '<button class="btn-cta" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-cancel-form" style="display:none;background:none;border:none;color:var(--graphite);font-size:13px;cursor:pointer;padding:0 var(--space-3);">Отмена</button>'
+            + '<button id="acc-bin-cancel-form" class="acc-delete-cancel" style="display:none">Отмена</button>'
           + '</div>'
         + '</div>'
 
