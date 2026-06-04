@@ -2972,7 +2972,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     if (y == null || x == null || x < 0 || x > cssW || y < 0 || y > cssH) return;
     var hb = 8, h = 14; // equilateral: halfBase=8, height≈8×√3
     ctx.save();
-    ctx.fillStyle = m.buy ? '#22c55e' : '#ef4444';
+    ctx.fillStyle = m.buy ? '#22c55e' : '#ff5050';
     ctx.beginPath();
     if (m.buy) { ctx.moveTo(x, y); ctx.lineTo(x - hb, y + h); ctx.lineTo(x + hb, y + h); }
     else        { ctx.moveTo(x, y); ctx.lineTo(x - hb, y - h); ctx.lineTo(x + hb, y - h); }
