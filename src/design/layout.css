@@ -49,7 +49,7 @@
 .card-sym-row .card-sym{flex:none;}
 
 /* card action buttons — visible only in full view */
-.card-head-right .btn-analyze-one,
+.card-head-right .btn-icon.analyze,
 .card-head-right .btn-retry,
 .card-head-right .btn-pressed,
 .card-head-right .signal-badge{display:none!important;}
