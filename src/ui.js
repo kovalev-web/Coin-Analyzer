@@ -2244,8 +2244,8 @@ function _sortBarHTML(coins) {
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
     + '<div class="sort-bar-btns">'
-    + '<button class="btn-topbar' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 16) + '</button>'
-    + '<button class="btn-topbar' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 16) + '</button>'
+    + '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 16) + '</button>'
+    + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 16) + '</button>'
     + '</div>'
     + '</div>';
 }

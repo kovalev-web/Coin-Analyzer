@@ -10,6 +10,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 /* ── Icon action buttons ────────────────────────────────────── */
 .btn-icon{background:transparent;color:var(--graphite);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}
 .btn-icon:hover{opacity:0.8;}
+.btn-icon.active{color:var(--ink-deep);}
 .btn-icon.star.active{color:var(--level-deep);}
 .btn-icon.star.active svg{fill:var(--level-deep);}
 
