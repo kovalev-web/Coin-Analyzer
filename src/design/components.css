@@ -185,7 +185,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-vol-label{position:absolute;left:var(--space-7);bottom:60px;font-size:var(--text-lg);font-weight:var(--font-medium);color:var(--graphite);pointer-events:none;z-index:10;white-space:nowrap;}
 .fv-add-btn{position:absolute;right:70px;width:28px;height:28px;border-radius:50%;background:var(--level-deep);color:var(--canvas);border:none;display:none;align-items:center;justify-content:center;z-index:20;padding:0;box-shadow:var(--shadow-md);cursor:pointer;}
 .fv-touch-menu{position:absolute;right:76px;width:fit-content;z-index:30;}
-.fv-touch-menu-item{display:flex;align-items:center;gap:var(--space-6);width:100%;padding:var(--space-7) var(--space-8);background:transparent;border:none;font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink-deep);cursor:pointer;text-align:left;height:auto;border-radius:0;white-space:nowrap;}
+.fv-touch-menu-item{display:flex;align-items:center;gap:var(--space-6);width:100%;padding:var(--space-5) var(--space-7);background:transparent;border:none;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink-deep);cursor:pointer;text-align:left;height:auto;border-radius:0;white-space:nowrap;}
 .fv-touch-menu-item:active{background:var(--fog);}
 .fv-tmi-icon{flex-shrink:0;display:flex;align-items:center;color:var(--graphite);}
 .fv-tmi-danger{color:var(--danger);}
