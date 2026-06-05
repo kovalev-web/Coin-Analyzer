@@ -453,9 +453,12 @@ export function showAccountModal() {
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
-            + '<div style="font-size:var(--text-xs);color:var(--danger);margin-bottom:var(--v-sm);">Все данные будут удалены безвозвратно. Вы уверены?</div>'
-            + '<button class="btn-cta danger" id="acc-delete-yes" style="width:100%">Да, удалить аккаунт</button>'
-            + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+            + '<div style="font-size:var(--text-xs);color:var(--graphite);margin-bottom:var(--v-sm);">Введите «удалить аккаунт» для подтверждения:</div>'
+            + '<input type="text" id="acc-delete-input" placeholder="удалить аккаунт" autocomplete="off" class="ds-input">'
+            + '<div class="acc-bin-actions">'
+              + '<button class="btn-cta danger" id="acc-delete-yes" disabled>Удалить аккаунт</button>'
+              + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+            + '</div>'
           + '</div>'
         + '</div>'
       + '</div>'
@@ -952,9 +955,15 @@ export function showAccountModal() {
   document.getElementById('acc-delete-btn').addEventListener('click', function () {
     document.getElementById('acc-delete-confirm').style.display = 'block';
     this.style.display = 'none';
+    document.getElementById('acc-delete-input').focus();
+  });
+  document.getElementById('acc-delete-input').addEventListener('input', function () {
+    document.getElementById('acc-delete-yes').disabled = this.value.toLowerCase() !== 'удалить аккаунт';
   });
   document.getElementById('acc-delete-no').addEventListener('click', function () {
     document.getElementById('acc-delete-confirm').style.display = 'none';
+    document.getElementById('acc-delete-input').value = '';
+    document.getElementById('acc-delete-yes').disabled = true;
     document.getElementById('acc-delete-btn').style.display = '';
   });
   document.getElementById('acc-delete-yes').addEventListener('click', function () {
@@ -965,10 +974,10 @@ export function showAccountModal() {
         if (r.ok) {
           window.location.replace('/login');
         } else {
-          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Да, удалить аккаунт';
+          btn.disabled = false; btn.classList.remove('btn-loading');
         }
       })
-      .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Да, удалить аккаунт'; });
+      .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); });
   });
 
   document.getElementById('acc-revoke-btn').addEventListener('click', function () {
