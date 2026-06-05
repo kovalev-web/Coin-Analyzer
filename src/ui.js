@@ -432,7 +432,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-cancel-form" class="acc-delete-cancel" style="display:none">Отмена</button>'
+            + '<button id="acc-bin-del" class="acc-delete-cancel" style="display:none">Удалить</button>'
           + '</div>'
         + '</div>'
 
@@ -587,48 +587,47 @@ export function showAccountModal() {
 
     if (connected) {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
-      btnWrap.innerHTML =
-        '<button class="acc-row-edit" id="acc-bin-upd">Изменить</button>'
-        + '<button class="btn-icon" id="acc-bin-del">' + icon('x', 14) + '</button>';
+      btnWrap.innerHTML = '<button class="acc-row-edit" id="acc-bin-upd">Изменить</button>';
       form.style.display = 'none';
-      var cf = document.getElementById('acc-bin-cancel-form');
-      if (cf) cf.style.display = 'none';
+      var delBtn = document.getElementById('acc-bin-del');
+      if (delBtn) delBtn.style.display = 'none';
 
       document.getElementById('acc-bin-upd').addEventListener('click', function () {
-        document.getElementById('acc-bin-key').value = '';
-        document.getElementById('acc-bin-sec').value = '';
-        document.getElementById('acc-bin-err').textContent = '';
-        form.style.display = 'block';
-        btnWrap.innerHTML = '';
-        var cf2 = document.getElementById('acc-bin-cancel-form');
-        if (cf2) {
-          cf2.style.display = 'inline-flex';
-          cf2.onclick = function () {
-            form.style.display = 'none';
-            cf2.style.display = 'none';
-            renderBinanceStatus(connected, apiKey);
-          };
+        var upd = this;
+        if (form.style.display === 'block') {
+          form.style.display = 'none';
+          upd.textContent = 'Изменить';
+          if (delBtn) delBtn.style.display = 'none';
+          document.getElementById('acc-bin-err').textContent = '';
+        } else {
+          document.getElementById('acc-bin-key').value = '';
+          document.getElementById('acc-bin-sec').value = '';
+          document.getElementById('acc-bin-err').textContent = '';
+          form.style.display = 'block';
+          upd.textContent = 'Отменить';
+          if (delBtn) delBtn.style.display = 'inline-flex';
+          bindBinanceSaveBtn('Сохранить', _afterSave);
         }
-        bindBinanceSaveBtn('Сохранить', _afterSave);
       });
 
-      document.getElementById('acc-bin-del').addEventListener('click', function () {
-        if (!confirm('Отключить Binance API?')) return;
-        var delBtn = this;
-        delBtn.disabled = true; delBtn.classList.add('btn-loading');
-        fetch(API_BASE + '/api/account', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ action: 'delete-binance' }),
-        })
-          .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
-          .catch(function () { delBtn.disabled = false; delBtn.classList.remove('btn-loading'); delBtn.textContent = '✕'; });
-      });
+      if (delBtn) {
+        delBtn.onclick = function () {
+          if (!confirm('Отключить Binance API?')) return;
+          delBtn.disabled = true; delBtn.classList.add('btn-loading');
+          fetch(API_BASE + '/api/account', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ action: 'delete-binance' }),
+          })
+            .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
+            .catch(function () { delBtn.disabled = false; delBtn.classList.remove('btn-loading'); });
+        };
+      }
 
     } else {
       val.textContent = '';
       btnWrap.innerHTML = '';
       form.style.display = 'block';
-      var cf3 = document.getElementById('acc-bin-cancel-form');
+      var cf3 = document.getElementById('acc-bin-del');
       if (cf3) cf3.style.display = 'none';
       bindBinanceSaveBtn('Сохранить', _afterSave);
     }
