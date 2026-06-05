@@ -418,7 +418,6 @@ export function showAccountModal() {
       + '</div>'
 
       + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
-        + '<div id="acc-pass-change-section"></div>'
 
         + '<div class="acc-row" id="acc-email-row">'
           + '<div class="acc-row-left">'
@@ -443,6 +442,8 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg"></div>'
+
+        + '<div id="acc-pass-change-section"></div>'
 
         + '<div class="acc-security-actions">'
           + '<button class="btn-cta danger" id="acc-revoke-btn">Выйти со всех других устройств</button>'
