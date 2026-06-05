@@ -80,7 +80,7 @@ formEl.addEventListener('submit', async function (e) {
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
   submitEl.disabled = true;
-  submitEl.textContent = '…';
+  submitEl.classList.add('btn-loading');
 
   var email = emailEl.value.trim();
 
@@ -99,7 +99,7 @@ formEl.addEventListener('submit', async function (e) {
       errEl.textContent = 'Сетевая ошибка: ' + err.message;
       errEl.style.display = 'block';
       submitEl.disabled = false;
-      submitEl.textContent = 'Отправить письмо';
+      submitEl.classList.remove('btn-loading');
     }
     return;
   }
@@ -142,7 +142,7 @@ formEl.addEventListener('submit', async function (e) {
   }
 
   submitEl.disabled = false;
-  submitEl.textContent = isRegister ? 'Зарегистрироваться' : 'Войти';
+  submitEl.classList.remove('btn-loading');
 });
 
 function showEmailSent(email) {
@@ -157,7 +157,7 @@ function showUnverified(email) {
   errEl.style.display = 'block';
   document.getElementById('resend-btn').addEventListener('click', async function () {
     var btn = document.getElementById('resend-btn');
-    btn.textContent = '…'; btn.disabled = true;
+    btn.classList.add('btn-loading'); btn.disabled = true;
     try {
       await fetch(API_BASE + '/auth/send-verification-email', {
         method: 'POST',

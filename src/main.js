@@ -368,17 +368,17 @@ document.body.addEventListener('click', function (e) {
       renderFVBriefingDrawer();
       break;
     case 'bp-load-week':
-      target.innerHTML = '<span class="spinner" style="margin-right:0"></span>';
       target.disabled = true;
+      target.classList.add('btn-loading');
       fetchWeekTrades(true);
       break;
     case 'bp-gen-ai': {
       var _aiBtn = target;
       _aiBtn.disabled = true;
-      _aiBtn.textContent = 'Генерирую...';
+      _aiBtn.classList.add('btn-loading');
       generateWeeklySummary().catch(function (e) { console.error('AI summary:', e); }).finally(function () {
         _aiBtn.disabled = false;
-        _aiBtn.textContent = 'Обновить';
+        _aiBtn.classList.remove('btn-loading');
       });
       break;
     }

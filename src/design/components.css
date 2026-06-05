@@ -119,6 +119,8 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Spinner / states ───────────────────────────────────────── */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--fog);border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:var(--space-3);flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}
+.btn-loading{position:relative;color:transparent!important;pointer-events:none;}
+.btn-loading::after{content:'';position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid var(--fog);border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;}
 .loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 64px);background:var(--cloud);}
 .loading-overlay .big-spinner{width:40px;height:40px;border:3px solid var(--fog);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:var(--space-8);}
 .loading-overlay p{font-size:var(--text-sm);font-weight:var(--font-normal);color:var(--graphite);}

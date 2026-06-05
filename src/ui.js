@@ -497,13 +497,13 @@ export function showAccountModal() {
       if (linkArea) linkArea.style.display = 'none';
       document.getElementById('acc-tg-disconnect').addEventListener('click', function () {
         var btn = this;
-        btn.disabled = true; btn.textContent = '…';
+        btn.disabled = true; btn.classList.add('btn-loading');
         fetch(API_BASE + '/api/account', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action: 'tg-disconnect' }),
         })
           .then(function () { renderTgStatus(false); })
-          .catch(function () { btn.disabled = false; btn.textContent = 'Отключить'; });
+          .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Отключить'; });
       });
       return;
     }
@@ -511,14 +511,14 @@ export function showAccountModal() {
     btnWrap.innerHTML = '<button class="btn-cta" id="acc-tg-btn">Подключить</button>';
     document.getElementById('acc-tg-btn').addEventListener('click', function () {
       var btn = document.getElementById('acc-tg-btn');
-      btn.disabled = true; btn.textContent = '…';
+      btn.disabled = true; btn.classList.add('btn-loading');
       fetch(API_BASE + '/api/account', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ action: 'tg-link-start' }),
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (!d.url) { btn.disabled = false; btn.textContent = 'Подключить'; return; }
+          if (!d.url) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подключить'; return; }
           if (linkArea) {
             linkArea.style.display = 'block';
             linkArea.innerHTML =
@@ -536,7 +536,7 @@ export function showAccountModal() {
               .catch(function () {});
           }, 2000);
         })
-        .catch(function () { btn.disabled = false; btn.textContent = 'Подключить'; });
+        .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подключить'; });
     });
   }
 
@@ -549,7 +549,7 @@ export function showAccountModal() {
       var err = document.getElementById('acc-bin-err');
       err.textContent = '';
       if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
-      btn.disabled = true; btn.textContent = '…';
+      btn.disabled = true; btn.classList.add('btn-loading');
       fetch(API_BASE + '/api/account', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ action: 'save-binance', apiKey: key, apiSecret: sec }),
@@ -561,12 +561,12 @@ export function showAccountModal() {
           });
         })
         .then(function () {
-          btn.disabled = false; btn.textContent = btnLabel;
+          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = btnLabel;
           if (onSuccess) onSuccess();
         })
         .catch(function (e) {
           err.textContent = e.message || 'Ошибка сети';
-          btn.disabled = false; btn.textContent = btnLabel;
+          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = btnLabel;
         });
     };
   }
@@ -614,13 +614,13 @@ export function showAccountModal() {
       document.getElementById('acc-bin-del').addEventListener('click', function () {
         if (!confirm('Отключить Binance API?')) return;
         var delBtn = this;
-        delBtn.disabled = true; delBtn.textContent = '…';
+        delBtn.disabled = true; delBtn.classList.add('btn-loading');
         fetch(API_BASE + '/api/account', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action: 'delete-binance' }),
         })
           .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
-          .catch(function () { delBtn.disabled = false; delBtn.textContent = '✕'; });
+          .catch(function () { delBtn.disabled = false; delBtn.classList.remove('btn-loading'); delBtn.textContent = '✕'; });
       });
 
     } else {
@@ -663,22 +663,22 @@ export function showAccountModal() {
       document.getElementById('acc-email-tg-btn').addEventListener('click', function () {
         var btn = document.getElementById('acc-email-tg-btn');
         var msg = document.getElementById('acc-email-msg');
-        btn.disabled = true; btn.textContent = '…'; msg.textContent = '';
+        btn.disabled = true; btn.classList.add('btn-loading'); msg.textContent = '';
         fetch(API_BASE + '/api/account', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action: 'send-email-change-code' }),
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d.ok) {
-            btn.textContent = 'Отправлено ✓';
+            btn.classList.remove('btn-loading'); btn.textContent = 'Отправлено ✓';
             var codeEl = document.getElementById('acc-email-tg-code');
             if (codeEl) codeEl.style.display = 'block';
           } else {
             msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
-            btn.disabled = false; btn.textContent = 'Получить код в Telegram';
+            btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Получить код в Telegram';
           }
         }).catch(function () {
           msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-          btn.disabled = false; btn.textContent = 'Получить код в Telegram';
+          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Получить код в Telegram';
         });
       });
     }
@@ -707,7 +707,7 @@ export function showAccountModal() {
     var tgCode = ((document.getElementById('acc-email-tg-code') || {}).value || '').trim();
     if (!password && !tgCode) { msg.textContent = 'Введите пароль или код из Telegram'; return; }
     var btn = document.getElementById('acc-email-submit');
-    btn.disabled = true; btn.textContent = '…';
+    btn.disabled = true; btn.classList.add('btn-loading');
     var body = { action: 'change-email-request', newEmail: newEmail };
     if (password) body.password = password;
     if (tgCode) body.tgCode = tgCode;
@@ -723,10 +723,10 @@ export function showAccountModal() {
       } else {
         msg.textContent = d.error || 'Ошибка';
       }
-      btn.disabled = false; btn.textContent = 'Подтвердить';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подтвердить';
     }).catch(function () {
       msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-      btn.disabled = false; btn.textContent = 'Подтвердить';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подтвердить';
     });
   });
 
@@ -827,7 +827,7 @@ export function showAccountModal() {
   document.getElementById('acc-tz-save').addEventListener('click', function () {
     var btn = document.getElementById('acc-tz-save');
     var msg = document.getElementById('acc-tz-msg');
-    btn.disabled = true; btn.textContent = '…'; msg.textContent = '';
+    btn.disabled = true; btn.classList.add('btn-loading'); msg.textContent = '';
     fetch(API_BASE + '/api/account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -841,10 +841,10 @@ export function showAccountModal() {
       } else {
         msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
       }
-      btn.disabled = false; btn.textContent = 'Сохранить';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Сохранить';
     }).catch(function () {
       msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-      btn.disabled = false; btn.textContent = 'Сохранить';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Сохранить';
     });
   });
 
@@ -905,23 +905,23 @@ export function showAccountModal() {
   });
   document.getElementById('acc-delete-yes').addEventListener('click', function () {
     var btn = this;
-    btn.disabled = true; btn.textContent = '…';
+    btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/auth/delete-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })
       .then(function (r) {
         if (r.ok) {
           window.location.replace('/login');
         } else {
-          btn.disabled = false; btn.textContent = 'Да, удалить аккаунт';
+          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Да, удалить аккаунт';
         }
       })
-      .catch(function () { btn.disabled = false; btn.textContent = 'Да, удалить аккаунт'; });
+      .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Да, удалить аккаунт'; });
   });
 
   document.getElementById('acc-revoke-btn').addEventListener('click', function () {
     var btn = document.getElementById('acc-revoke-btn');
     var msg = document.getElementById('acc-revoke-msg');
     btn.disabled = true;
-    btn.textContent = '…';
+    btn.classList.add('btn-loading');
     fetch(API_BASE + '/auth/revoke-other-sessions', {
       method: 'POST',
       credentials: 'include',
@@ -930,7 +930,7 @@ export function showAccountModal() {
         if (r.ok) {
           msg.style.color = 'var(--bullish)';
           msg.textContent = 'Готово — все другие устройства отключены';
-          btn.textContent = 'Выйти со всех других устройств';
+          btn.classList.remove('btn-loading'); btn.textContent = 'Выйти со всех других устройств';
           btn.disabled = false;
         } else {
           throw new Error('fail');
@@ -939,7 +939,7 @@ export function showAccountModal() {
       .catch(function () {
         msg.style.color = '';
         msg.textContent = 'Ошибка, попробуйте ещё раз';
-        btn.textContent = 'Выйти со всех других устройств';
+        btn.classList.remove('btn-loading'); btn.textContent = 'Выйти со всех других устройств';
         btn.disabled = false;
       });
   });
@@ -947,7 +947,7 @@ export function showAccountModal() {
   document.getElementById('acc-reset-pass-btn').addEventListener('click', function () {
     var btn = document.getElementById('acc-reset-pass-btn');
     var msg = document.getElementById('acc-reset-pass-msg');
-    btn.disabled = true; btn.textContent = '…';
+    btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/auth/request-password-reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -961,12 +961,12 @@ export function showAccountModal() {
         } else {
           throw new Error('fail');
         }
-        btn.disabled = false; btn.textContent = 'Изменить пароль по email';
+        btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Изменить пароль по email';
       })
       .catch(function () {
         msg.style.color = '';
         msg.textContent = 'Ошибка, попробуйте ещё раз';
-        btn.disabled = false; btn.textContent = 'Изменить пароль по email';
+        btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Изменить пароль по email';
       });
   });
 
