@@ -1188,10 +1188,12 @@ var httpServer = http.createServer(async function (req, res) {
           if (!GEM_KEY) return proxyJson(500, { error: 'Gemini key not configured' });
           if (!payload.prompt) return proxyJson(400, { error: 'prompt required' });
           var gemUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY;
-          var gemRes = await fetch(gemUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: payload.prompt }] }] }) });
+          var gemRes = await fetch(gemUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: payload.prompt }] }], generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }) });
           var gemData = await gemRes.json();
-          if (!gemRes.ok) return proxyJson(502, { error: 'Gemini error' });
-          var text = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content && gemData.candidates[0].content.parts && gemData.candidates[0].content.parts[0] && gemData.candidates[0].content.parts[0].text) || '';
+          if (!gemRes.ok) return proxyJson(502, { error: 'Gemini error: ' + (gemData.error && gemData.error.message || gemRes.status) });
+          var gemParts = (gemData.candidates && gemData.candidates[0] && gemData.candidates[0].content && gemData.candidates[0].content.parts) || [];
+          var gemPart = gemParts.find(function (p) { return !p.thought; }) || gemParts[0] || {};
+          var text = gemPart.text || '';
           return proxyJson(200, { text: text });
         }
 
