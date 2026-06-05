@@ -238,6 +238,8 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 #acc-email-s3-hint{font-size:var(--text-sm);color:var(--graphite);margin-bottom:var(--v-sm);}
 #acc-pass-editor{display:none;padding:0 0 var(--v-xs);margin-top:var(--v-md);}
 #acc-logout-btn{width:100%;}
+#acc-pane-integrations,#acc-pane-security{display:none;}
+#acc-email-tg-code-wrap{display:none;}
 #acc-delete-wrap{margin-top:var(--space-4);text-align:center;}
 #acc-delete-confirm{display:none;margin-top:var(--v-sm);text-align:left;}
 #acc-delete-hint{font-size:var(--text-xs);color:var(--graphite);margin-bottom:var(--v-sm);}

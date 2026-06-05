@@ -381,7 +381,7 @@ export function showAccountModal() {
 
       + '</div>'
 
-      + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
+      + '<div class="acc-pane" id="acc-pane-integrations">'
 
         + '<div class="acc-row" id="acc-bin-row-hd">'
           + '<div class="acc-row-left">'
@@ -417,7 +417,7 @@ export function showAccountModal() {
 
       + '</div>'
 
-      + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
+      + '<div class="acc-pane" id="acc-pane-security">'
 
         + '<div class="acc-row" id="acc-email-row">'
           + '<div class="acc-row-left">'
@@ -671,7 +671,7 @@ export function showAccountModal() {
         + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>';
     } else if (_emailTgConnected) {
       s1.innerHTML = '<button class="btn-cta" id="acc-email-send-tg-btn">Получить код в Telegram</button>'
-        + '<div id="acc-email-tg-code-wrap" style="display:none">'
+        + '<div id="acc-email-tg-code-wrap">'
           + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" inputmode="numeric" maxlength="6" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>'
         + '</div>';
