@@ -3165,11 +3165,11 @@ function _fvCoinInfoHTML(sym, tf) {
     + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
+    + '</div>'
     + '<div class="fv-info-stats">'
     + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
     + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
     + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0).replace('$', '') + '</span>'
-    + '</div>'
     + '</div>';
 }
 
