@@ -31,7 +31,7 @@ function renderCard(coin) {
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
-    '<div class="tf-dd">' +
+    '<div class="tf-dd dropdown">' +
     ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
       return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
     }).join('') +
@@ -2210,14 +2210,14 @@ function _topbarHTML() {
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Профиль"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
-    + '<div class="avatar-dd" id="avatar-dd">'
+    + '<div class="avatar-dd dropdown" id="avatar-dd">'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
     + '</div>'
     + '</div>'
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
-    + '<div class="burger-dd" id="burger-dd">'
+    + '<div class="burger-dd dropdown" id="burger-dd">'
     + '<a class="burger-dd-item" href="/inplay-phase">' + icon('activity', 14) + 'Phase <span class="nav-beta-tag">beta</span></a>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
@@ -2925,7 +2925,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '<button class="btn-topbar" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd">'
+    + '<div class="tf-dd fv-tf-dd dropdown">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div></div>'
     + '</div>'
@@ -2961,7 +2961,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd">'
+    + '<div class="tf-dd fv-tf-dd dropdown">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'

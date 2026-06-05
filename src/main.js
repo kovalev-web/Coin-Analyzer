@@ -29,7 +29,7 @@ import './styles.css';
 // Close tf-dd on touch outside .tf-picker (mobile — click doesn't fire over chart)
 document.body.addEventListener('touchstart', function (e) {
   if (!e.target.closest('.tf-picker')) {
-    document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
     document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
   }
 }, { passive: true });
@@ -72,7 +72,7 @@ document.body.addEventListener('click', function (e) {
 
   // Close tf-dd on any click outside .tf-picker
   if (!e.target.closest('.tf-picker')) {
-    document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
     document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
   }
 
@@ -105,13 +105,13 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'analyze': {
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       var c = state.coins.find(function (x) { return x.symbol === sym; });
       if (c) { openAnalysisPopup(sym, target); }
       break;
     }
     case 'open-analysis': {
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       openAnalysisPopup(sym, target);
       break;
     }
@@ -140,17 +140,17 @@ document.body.addEventListener('click', function (e) {
       e.stopPropagation();
       var dd = target.parentElement.querySelector('.tf-dd');
       if (dd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
         document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
-        dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        dd.classList.toggle('open');
         var _card = target.closest('.coin-card');
-        if (_card && dd.style.display === 'block') _card.classList.add('dd-open');
+        if (_card && dd.classList.contains('open')) _card.classList.add('dd-open');
       }
       break;
     }
     case 'tf-opt': {
       e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       document.querySelectorAll('.coin-card.dd-open').forEach(function (el) { el.classList.remove('dd-open'); });
       if (sym) setChartTF(sym, tf);
       break;
@@ -223,14 +223,14 @@ document.body.addEventListener('click', function (e) {
       if (_ao && _ao.style.display === 'block') { if (_ao._popupCard) { _ao._popupCard.style.overflow = ''; _ao._popupCard = null; } _ao.style.display = 'none'; }
       var fvDd = target.closest('.tf-picker').querySelector('.tf-dd');
       if (fvDd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
-        fvDd.style.display = fvDd.style.display === 'none' ? 'block' : 'none';
+        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
+        fvDd.classList.toggle('open');
       }
       break;
     }
     case 'fv-tf-opt': {
       e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       setFVChartTF(target.dataset.tf);
       break;
     }
@@ -486,7 +486,7 @@ window.addEventListener('orientationchange', function () {
   }
   var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
-  document.querySelectorAll('.tf-dd').forEach(function (el) { el.style.display = 'none'; });
+  document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
   clearAllCrosshairs();
 
   // iOS needs ~300ms after orientationchange before the new viewport dimensions
