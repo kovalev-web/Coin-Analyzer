@@ -264,7 +264,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-delete-cancel{background:none;border:none;color:var(--graphite);font-size:var(--text-xs);cursor:pointer;padding:0 var(--space-4);height:var(--h-btn-lg);display:inline-flex;align-items:center;}
 .tg-waiting{color:var(--graphite);}
 .acc-tabs{display:flex;gap:var(--space-3);margin:var(--v-lg) 0 0;padding:0;border-bottom:none;}
-.acc-pane{padding-top:var(--v-md);display:flex;flex-direction:column;gap:var(--v-lg);}
+.acc-pane{padding-top:var(--space-12);display:flex;flex-direction:column;gap:var(--v-lg);}
 .acc-pane .acc-field-err:empty{display:none;}
 .acc-avatar-collapsed{display:none!important;}
 #account-avatar-grid.avatar-grid{margin-top:calc(var(--v-sm) - var(--v-lg));}
