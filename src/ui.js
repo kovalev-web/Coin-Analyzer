@@ -8,7 +8,7 @@ import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, 
 function natrDisplay(symbol) {
   var nd = state.natrData[symbol];
   if (!nd || nd === 'loading' || nd === 'error') return { val: '—', cls: 'dim' };
-  var v = nd.value, cls = v < 1 ? 'hot' : v < 2.0 ? 'warn' : 'up';
+  var v = nd.value, cls = v >= 2.0 ? 'natr-hi' : '';
   return { val: v.toFixed(2), cls: cls };
 }
 
