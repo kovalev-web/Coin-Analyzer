@@ -75,14 +75,19 @@ function _getUserTimeInfo(ianaStr, utcOffset) {
   return { weekday: d.getUTCDay(), hour: d.getUTCHours(), minute: d.getUTCMinutes(), userNow: d };
 }
 
-function sendPasswordChangedEmail(email) {
+function sendPasswordChangedEmail(email, notMeUrl) {
   var resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
     from: 'Questtick <noreply@questtick.com>',
     to: email,
     subject: 'Пароль был изменён — Questtick',
     html: '<p>Пароль вашего аккаунта <b>' + email + '</b> был успешно изменён.</p>'
-        + '<p>Если это были не вы — немедленно восстановите доступ через форму входа.</p>'
+        + '<p>Если это сделали вы — всё в порядке, это письмо можно проигнорировать.</p>'
+        + (notMeUrl
+          ? '<p>Если вы <b>не меняли</b> пароль — немедленно защитите аккаунт:</p>'
+            + '<p><a href="' + notMeUrl + '" style="display:inline-block;padding:12px 24px;background:#c0392b;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Это не я — защитить аккаунт</a></p>'
+            + '<p style="color:#888;font-size:12px;">Ссылка действительна 24 часа. По клику все сессии будут сброшены.</p>'
+          : '<p>Если это были не вы — восстановите доступ через форму входа.</p>')
         + '<p style="color:#888;font-size:12px;">Questtick — автоматическое уведомление</p>',
   });
 }
@@ -747,11 +752,19 @@ var httpServer = http.createServer(async function (req, res) {
     if (req.url === '/api/auth/change-password' && req.method === 'POST') {
       var sess = await getSession(req);
       var notifyEmail = sess && sess.user ? sess.user.email : null;
-      if (notifyEmail) {
+      var notifyUserId = sess && sess.user ? sess.user.id : null;
+      if (notifyEmail && notifyUserId) {
         var _origEnd = res.end.bind(res);
         res.end = function () {
           if (res.statusCode === 200) {
-            sendPasswordChangedEmail(notifyEmail).catch(function () {});
+            var notMeTok = crypto.randomBytes(32).toString('hex');
+            redis(['SET', 'pwd_notme:' + notMeTok, JSON.stringify({ userId: notifyUserId, email: notifyEmail }), 'EX', '86400'])
+              .then(function () {
+                var notMeUrl = 'https://api.questtick.com/api/not-me-password?token=' + notMeTok;
+                sendPasswordChangedEmail(notifyEmail, notMeUrl).catch(function () {});
+              }).catch(function () {
+                sendPasswordChangedEmail(notifyEmail, null).catch(function () {});
+              });
           }
           return _origEnd.apply(res, arguments);
         };
@@ -935,6 +948,41 @@ var httpServer = http.createServer(async function (req, res) {
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/not-me-password')) {
+    try {
+      var notMeToken = new URL(req.url, 'https://questtick.com').searchParams.get('token') || '';
+      var notMeHtml = function (msg) {
+        return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Questtick</title>'
+          + '<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}'
+          + 'div{background:#fff;border-radius:12px;padding:40px;max-width:420px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.08)}'
+          + 'h2{margin:0 0 12px}p{color:#666;margin:0 0 24px}a{display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600}</style>'
+          + '</head><body><div>' + msg + '</div></body></html>';
+      };
+      if (!notMeToken) { res.writeHead(400); res.end('Missing token'); return; }
+      var notMeEntry = await redis(['GET', 'pwd_notme:' + notMeToken]);
+      if (!notMeEntry || !notMeEntry.result) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(notMeHtml('<h2>Ссылка недействительна</h2><p>Ссылка уже использована или истёк срок действия (24 часа).</p><a href="https://questtick.com/login">Войти</a>'));
+        return;
+      }
+      var notMeData = JSON.parse(notMeEntry.result);
+      await redis(['DEL', 'pwd_notme:' + notMeToken]);
+      // Revoke ALL sessions for this user
+      getDb().sqlite.prepare('DELETE FROM session WHERE user_id = ?').run(notMeData.userId);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(notMeHtml(
+        '<h2>Аккаунт защищён</h2>'
+        + '<p>Все активные сессии сброшены. Никто не может войти с прежним паролем.</p>'
+        + '<p>Восстановите пароль через форму входа:</p>'
+        + '<a href="https://questtick.com/login">Восстановить пароль</a>'
+      ));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<html><body>Внутренняя ошибка</body></html>');
     }
     return;
   }
