@@ -1853,6 +1853,20 @@ function initCharts() {
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
+function _popupFullscreen(popup) {
+  popup.style.position = 'fixed';
+  popup.style.top = '0';
+  popup.style.left = '0';
+  popup.style.right = '0';
+  popup.style.bottom = '0';
+  popup.style.width = '100%';
+  popup.style.maxWidth = '100%';
+  popup.style.maxHeight = '100%';
+  popup.style.borderRadius = '0';
+  popup.style.border = 'none';
+  popup.style.overscrollBehavior = 'contain';
+}
+
 function getPopupHost() {
   var el = document.getElementById('popup-host');
   if (!el) {
@@ -1915,19 +1929,9 @@ export function openAnalysisPopup(sym, btn) {
 
   if (_useFullscreenPopup()) {
     document.body.appendChild(popup);
-    popup.style.position = 'fixed';
-    popup.style.top = '0';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.bottom = '0';
-    popup.style.width = '100%';
-    popup.style.maxWidth = '100%';
+    _popupFullscreen(popup);
     popup.style.height = '100%';
-    popup.style.maxHeight = '100%';
-    popup.style.borderRadius = '0';
-    popup.style.border = 'none';
     popup.style.overflowY = 'auto';
-    popup.style.overscrollBehavior = 'contain';
     popup.style.zIndex = '99999';
     popup._lockedScroll = true;
     lockScroll();
@@ -2798,19 +2802,9 @@ export function openBriefingPanel() {
   if (_bpSyms.length) sendWS({ type: 'subscribe_klines', symbols: _bpSyms, tf: '5m' });
 
   if (_useFullscreenPopup()) {
-    popup.style.position = 'fixed';
-    popup.style.top = '0';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.bottom = '0';
-    popup.style.width = '100%';
-    popup.style.maxWidth = '100%';
+    _popupFullscreen(popup);
     popup.style.height = '100%';
-    popup.style.maxHeight = '100%';
-    popup.style.borderRadius = '0';
-    popup.style.border = 'none';
     popup.style.overflowY = 'auto';
-    popup.style.overscrollBehavior = 'contain';
     lockScroll();
   } else if (btn) {
     var btnRect = btn.getBoundingClientRect();
@@ -2879,7 +2873,7 @@ export function renderBriefingPanel() {
       '<span class="popup-title">Брифинг</span>' +
       '<button class="btn-topbar" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
-    '<div class="bp-list">' + rowsHTML + '</div>' +
+    '<div class="popup-body bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
       (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Режим брифинг</button>' : '') +
     '</div>';
@@ -3963,7 +3957,7 @@ export function openSearchPopup() {
       '<span class="popup-title">Поиск монеты</span>' +
       '<button class="btn-topbar" data-action="close-search">' + icon('x', 16) + '</button>' +
     '</div>' +
-    '<div class="search-popup-input-wrap">' +
+    '<div class="popup-body search-popup-input-wrap">' +
       '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
     '</div>' +
     '<div class="search-popup-list"></div>';
@@ -3980,19 +3974,9 @@ export function openSearchPopup() {
   popup._isFullscreenMode = _useFullscreenPopup();
 
   if (_useFullscreenPopup()) {
-    popup.style.position = 'fixed';
-    popup.style.top = '0';
-    popup.style.left = '0';
-    popup.style.right = '0';
-    popup.style.bottom = '0';
-    popup.style.width = '100%';
-    popup.style.maxWidth = '100%';
-    popup.style.maxHeight = '100%';
-    popup.style.borderRadius = '0';
-    popup.style.border = 'none';
+    _popupFullscreen(popup);
     var _list = popup.querySelector('.search-popup-list');
     if (_list) { _list.style.flex = '1'; _list.style.maxHeight = 'none'; _list.style.overflowY = 'auto'; _list.style.overscrollBehavior = 'contain'; }
-    popup.style.overscrollBehavior = 'contain';
     lockScroll();
   } else {
     var btn = document.querySelector('[data-action="open-search"]');
