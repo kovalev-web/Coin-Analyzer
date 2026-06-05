@@ -1869,7 +1869,7 @@ function getOverlay() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'analysis-overlay';
-    el.className = 'analysis-overlay';
+    el.className = 'analysis-overlay popup';
     el.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
         '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
@@ -1899,7 +1899,7 @@ export function openAnalysisPopup(sym, btn) {
   if (!popup) {
     popup = document.createElement('div');
     popup.id = 'analysis-overlay';
-    popup.className = 'analysis-overlay';
+    popup.className = 'analysis-overlay popup';
     popup.innerHTML =
       '<div class="popup-header"><span class="popup-title">Анализ</span>' +
         '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
@@ -2123,7 +2123,7 @@ export function openMSPopup() {
   if (!popup) {
     popup = document.createElement('div');
     popup.id = 'ms-popup';
-    popup.className = 'ms-popup';
+    popup.className = 'ms-popup popup';
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
   document.body.appendChild(popup);
@@ -2778,7 +2778,7 @@ export function openBriefingPanel() {
   if (!popup) {
     popup = document.createElement('div');
     popup.id = 'bp-popup';
-    popup.className = 'bp-popup';
+    popup.className = 'bp-popup popup';
     document.body.appendChild(popup);
   } else if (!popup.parentNode || popup.parentNode !== document.body) {
     document.body.appendChild(popup);
@@ -3954,7 +3954,7 @@ export function openSearchPopup() {
   if (!popup) {
     popup = document.createElement('div');
     popup.id = 'search-popup';
-    popup.className = 'search-popup';
+    popup.className = 'search-popup popup';
   }
   if (popup.parentNode) popup.parentNode.removeChild(popup);
 
