@@ -646,7 +646,7 @@ export function showAccountModal() {
     }
     var html = '';
     if (_emailHasPassword) {
-      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:6px;">';
+      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:var(--space-3);">';
     }
     if (_emailHasPassword && _emailTgConnected) {
       html += '<div style="text-align:center;color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
