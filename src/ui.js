@@ -405,8 +405,8 @@ export function showAccountModal() {
       + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
 
         + '<div class="acc-row" id="acc-tg-row">'
-          + '<div class="acc-row-left" style="display:flex;align-items:center;gap:var(--space-6);">'
-            + '<span style="color:var(--graphite);display:flex;align-items:center;flex-shrink:0;">' + icon('send', 18) + '</span>'
+          + '<div class="acc-row-left">'
+            + '<span>' + icon('send', 18) + '</span>'
             + '<div>'
               + '<div class="acc-row-label">TELEGRAM</div>'
               + '<div id="acc-tg-badge"></div>'
@@ -417,14 +417,14 @@ export function showAccountModal() {
         + '<div id="acc-tg-link-area" style="display:none;"></div>'
 
         + '<div class="acc-row" id="acc-bin-row-hd">'
-          + '<div class="acc-row-left" style="display:flex;align-items:center;gap:var(--space-6);">'
-            + '<span style="color:var(--graphite);display:flex;align-items:center;flex-shrink:0;">' + icon('key', 18) + '</span>'
+          + '<div class="acc-row-left">'
+            + '<span>' + icon('key', 18) + '</span>'
             + '<div>'
               + '<div class="acc-row-label">BINANCE API</div>'
               + '<span id="acc-bin-val" class="acc-row-val"></span>'
             + '</div>'
           + '</div>'
-          + '<div id="acc-bin-btn-wrap" style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;"></div>'
+          + '<div id="acc-bin-btn-wrap"></div>'
         + '</div>'
         + '<div id="acc-bin-form">'
           + '<div style="margin-bottom:var(--v-sm);">'
@@ -451,7 +451,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
         + '<div class="acc-footer-divider"></div>'
-        + '<button class="btn-cta danger" id="acc-logout-btn" style="width:100%">Выйти из аккаунта</button>'
+        + '<button class="btn-cta danger" id="acc-logout-btn">Выйти из аккаунта</button>'
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
@@ -595,7 +595,7 @@ export function showAccountModal() {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
       btnWrap.innerHTML =
         '<button class="acc-row-edit" id="acc-bin-upd">Изменить</button>'
-        + '<button class="btn-icon" id="acc-bin-del" style="color:var(--danger)">' + icon('x', 14) + '</button>';
+        + '<button class="btn-icon" id="acc-bin-del">' + icon('x', 14) + '</button>';
       form.style.display = 'none';
       var cf = document.getElementById('acc-bin-cancel-form');
       if (cf) cf.style.display = 'none';
@@ -1013,7 +1013,7 @@ export function showAccountModal() {
           + '</div>'
           + '<button class="acc-row-edit" id="acc-pass-change-btn">Изменить</button>'
         + '</div>'
-        + '<div id="acc-pass-editor" style="display:none;padding:0 0 var(--v-xs)">'
+        + '<div id="acc-pass-editor">'
           + '<input type="password" id="acc-pass-current" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
           + '<input type="password" id="acc-pass-new" placeholder="Новый пароль (мин. 8 символов)" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<input type="password" id="acc-pass-confirm" placeholder="Подтвердите новый пароль" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
