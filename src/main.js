@@ -537,28 +537,28 @@ registerRoute('/screener', function () {
 registerRoute('/settings', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">⚙️ Настройки</h2>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);">Страница настроек — в разработке.</p>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Здесь будут: уведомления, фильтры по умолчанию, управление подписками.</p>' +
-    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">⚙️ Settings</h2>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);">Settings page — coming soon.</p>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Planned: notifications, default filters, subscription management.</p>' +
+    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
 
 registerRoute('/profile', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">👤 Профиль</h2>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);">Страница профиля — в разработке.</p>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Здесь будут: история анализов, избранные монеты, настройки аккаунта.</p>' +
-    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">👤 Profile</h2>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);">Profile page — coming soon.</p>' +
+    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Planned: analysis history, favourite coins, account settings.</p>' +
+    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
 
 registerRoute('/404', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">404 — Страница не найдена</h2>' +
-    '<a href="#/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← На главную</a>' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">404 — Page not found</h2>' +
+    '<a href="#/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
 

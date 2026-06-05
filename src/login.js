@@ -26,8 +26,8 @@ var msgEl    = document.getElementById('login-msg');
 function setMode(reg) {
   isRegister = reg;
   formEl.dataset.mode = '';
-  submitEl.textContent = reg ? 'Зарегистрироваться' : 'Войти';
-  toggleEl.textContent = reg ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
+  submitEl.textContent = reg ? 'Sign up' : 'Sign in';
+  toggleEl.textContent = reg ? 'Already have an account? Sign in' : 'No account? Sign up';
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
   formEl.style.display = 'block';
@@ -50,12 +50,12 @@ googleEl.addEventListener('click', async function () {
     if (data.url) {
       window.location.href = data.url;
     } else {
-      errEl.textContent = data.message || 'Ошибка входа через Google';
+      errEl.textContent = data.message || 'Google sign-in error';
       errEl.style.display = 'block';
       googleEl.disabled = false;
     }
   } catch (err) {
-    errEl.textContent = 'Сетевая ошибка: ' + err.message;
+    errEl.textContent = 'Network error: ' + err.message;
     errEl.style.display = 'block';
     googleEl.disabled = false;
   }
@@ -70,7 +70,7 @@ forgotEl.addEventListener('click', function () {
   passEl.required = false;
   toggleEl.style.display = 'none';
   forgotEl.style.display = 'none';
-  submitEl.textContent = 'Отправить письмо';
+  submitEl.textContent = 'Send email';
   isRegister = false;
   formEl.dataset.mode = 'forgot';
 });
@@ -92,11 +92,11 @@ formEl.addEventListener('submit', async function (e) {
         body: JSON.stringify({ email: email, redirectTo: 'https://questtick.com/reset-password' }),
       });
       formEl.style.display = 'none';
-      msgEl.innerHTML = 'Письмо отправлено на <b>' + email + '</b><br>Перейдите по ссылке в письме чтобы задать новый пароль.';
+      msgEl.innerHTML = 'Email sent to <b>' + email + '</b><br>Click the link in the email to set a new password.';
       msgEl.style.display = 'block';
       forgotEl.style.display = 'none';
     } catch (err) {
-      errEl.textContent = 'Сетевая ошибка: ' + err.message;
+      errEl.textContent = 'Network error: ' + err.message;
       errEl.style.display = 'block';
       submitEl.disabled = false;
       submitEl.classList.remove('btn-loading');
@@ -125,7 +125,7 @@ formEl.addEventListener('submit', async function (e) {
       if (isUnverified) {
         showUnverified(email);
       } else {
-        errEl.textContent = data.message || (isRegister ? 'Ошибка регистрации' : 'Неверный email или пароль');
+        errEl.textContent = data.message || (isRegister ? 'Sign up error' : 'Invalid email or password');
         errEl.style.display = 'block';
       }
     } else {
@@ -137,7 +137,7 @@ formEl.addEventListener('submit', async function (e) {
       }
     }
   } catch (err) {
-    errEl.textContent = 'Сетевая ошибка: ' + err.message;
+    errEl.textContent = 'Network error: ' + err.message;
     errEl.style.display = 'block';
   }
 
@@ -148,12 +148,12 @@ formEl.addEventListener('submit', async function (e) {
 function showEmailSent(email) {
   formEl.style.display = 'none';
   toggleEl.style.display = 'none';
-  msgEl.innerHTML = 'Письмо отправлено на <b>' + email + '</b><br>Перейдите по ссылке в письме чтобы подтвердить аккаунт и войти.';
+  msgEl.innerHTML = 'Email sent to <b>' + email + '</b><br>Click the link in the email to verify your account and sign in.';
   msgEl.style.display = 'block';
 }
 
 function showUnverified(email) {
-  errEl.innerHTML = 'Email не подтверждён. <button id="resend-btn" style="background:none;border:none;color:var(--danger);text-decoration:underline;cursor:pointer;padding:0;font-size:var(--text-xs);">Отправить повторно</button>';
+  errEl.innerHTML = 'Email not verified. <button id="resend-btn" style="background:none;border:none;color:var(--danger);text-decoration:underline;cursor:pointer;padding:0;font-size:var(--text-xs);">Resend</button>';
   errEl.style.display = 'block';
   document.getElementById('resend-btn').addEventListener('click', async function () {
     var btn = document.getElementById('resend-btn');
@@ -165,9 +165,9 @@ function showUnverified(email) {
         credentials: 'include',
         body: JSON.stringify({ email: email, callbackURL: 'https://questtick.com' }),
       });
-      errEl.textContent = 'Письмо отправлено — проверьте почту.';
+      errEl.textContent = 'Email sent — check your inbox.';
     } catch (err) {
-      errEl.textContent = 'Ошибка отправки. Попробуйте ещё раз.';
+      errEl.textContent = 'Failed to send. Please try again.';
     }
   });
 }

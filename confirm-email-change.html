@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Questtick — Подтверждение нового email</title>
+  <title>Questtick — Email change confirmation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/auth.css" />
@@ -11,32 +11,32 @@
     document.addEventListener('DOMContentLoaded', function () {
       var token = new URLSearchParams(window.location.search).get('token');
       if (!token) {
-        document.getElementById('title').textContent = 'Ссылка недействительна';
-        document.getElementById('msg').textContent = 'Попробуйте запросить смену email повторно.';
+        document.getElementById('title').textContent = 'Link is invalid';
+        document.getElementById('msg').textContent = 'Try requesting an email change again.';
         return;
       }
       fetch('https://api.questtick.com/api/confirm-email-change?token=' + encodeURIComponent(token))
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d.ok) {
-            document.getElementById('title').textContent = 'Email успешно изменён';
-            document.getElementById('msg').innerHTML = 'Новый email подтверждён. <a href="/">Войти</a>';
+            document.getElementById('title').textContent = 'Email changed successfully';
+            document.getElementById('msg').innerHTML = 'New email confirmed. <a href="/">Sign in</a>';
           } else {
-            document.getElementById('title').textContent = 'Ошибка подтверждения';
-            document.getElementById('msg').textContent = d.error || 'Ссылка недействительна или истекла.';
+            document.getElementById('title').textContent = 'Confirmation error';
+            document.getElementById('msg').textContent = d.error || 'Link is invalid or has expired.';
           }
         })
         .catch(function () {
-          document.getElementById('title').textContent = 'Ошибка сети';
-          document.getElementById('msg').textContent = 'Попробуйте ещё раз позже.';
+          document.getElementById('title').textContent = 'Network error';
+          document.getElementById('msg').textContent = 'Please try again later.';
         });
     });
   </script>
 </head>
 <body>
   <div class="auth-status">
-    <h2 id="title">Подтверждаем новый email…</h2>
-    <p id="msg">Пожалуйста, подождите</p>
+    <h2 id="title">Confirming new email…</h2>
+    <p id="msg">Please wait</p>
   </div>
 </body>
 </html>

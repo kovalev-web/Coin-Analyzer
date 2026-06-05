@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Questtick — Подтверждение email</title>
+  <title>Questtick — Email verification</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/auth.css" />
@@ -13,16 +13,16 @@
       window.location.replace('https://api.questtick.com/api/auth/verify-email' + params);
     } else {
       document.addEventListener('DOMContentLoaded', function() {
-        document.querySelector('.auth-status h2').textContent = 'Ссылка недействительна';
-        document.querySelector('.auth-status p').textContent = 'Попробуйте запросить письмо повторно.';
+        document.querySelector('.auth-status h2').textContent = 'Link is invalid';
+        document.querySelector('.auth-status p').textContent = 'Try requesting a new verification email.';
       });
     }
   </script>
 </head>
 <body>
   <div class="auth-status">
-    <h2>Подтверждаем email…</h2>
-    <p>Пожалуйста, подождите</p>
+    <h2>Verifying email…</h2>
+    <p>Please wait</p>
   </div>
 </body>
 </html>

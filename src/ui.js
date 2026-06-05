@@ -25,7 +25,7 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Повтор</button>';
+  if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Retry</button>';
   else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
   else badge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
 
@@ -39,21 +39,21 @@ function renderCard(coin) {
     '</div>';
 
   var statsHtml = '<div class="card-chart-stats">' +
-    '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="Изменение за 24ч">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
-    '<span class="stat-val ' + natr.cls + '" title="NATR — волатильность (5m × 30 свечей)">' + natr.val + '</span>' +
-    '<span class="stat-val" title="Объём торгов за 24ч">' + fmt(coin.total_volume).replace('$', '') + '</span>' +
+    '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="24h change">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
+    '<span class="stat-val ' + natr.cls + '" title="NATR — volatility (5m × 30 candles)">' + natr.val + '</span>' +
+    '<span class="stat-val" title="24h trading volume">' + fmt(coin.total_volume).replace('$', '') + '</span>' +
     '</div>';
 
   return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
     '<div class="card-head">' +
     '<div class="card-sym-row">' +
-    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" title="Копировать тикер">' + coin.symbol.toUpperCase() + '</span>' +
+    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" title="Copy ticker">' + coin.symbol.toUpperCase() + '</span>' +
     tfPicker +
     '</div>' +
     '<div class="card-head-right">' +
     badge +
-    '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>' +
-    '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Полный экран">' + icon('maximize', 16) + '</button>' +
+    '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>' +
+    '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Fullscreen">' + icon('maximize', 16) + '</button>' +
     '</div>' +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
@@ -114,7 +114,7 @@ export function updateCardBadge(symbol) {
   var signal = hasA ? cache.result.signal : null;
   var tag = 'span';
   var html = '';
-  if (isE) { tag = 'button'; html = 'Повтор'; }
+  if (isE) { tag = 'button'; html = 'Retry'; }
   else if (hasA) { tag = 'span'; html = signalLabel(signal); }
   else { tag = 'button'; html = '' + icon('zap', 16) + ''; }
 
@@ -330,11 +330,11 @@ export function showAccountModal() {
   el.className = 'account-overlay overlay';
   el.innerHTML =
     '<div class="account-panel">'
-    + '<div class="popup-header"><span class="popup-title">Настройки профиля</span><button class="btn-topbar" id="account-close">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title">Account settings</span><button class="btn-topbar" id="account-close">' + icon('x', 14) + '</button></div>'
     + '<div class="acc-tabs">'
-      + '<button class="nav-pill active" data-tab="profile">Профиль</button>'
-      + '<button class="nav-pill" data-tab="integrations">Интеграции</button>'
-      + '<button class="nav-pill" data-tab="security">Безопасность</button>'
+      + '<button class="nav-pill active" data-tab="profile">Profile</button>'
+      + '<button class="nav-pill" data-tab="integrations">Integrations</button>'
+      + '<button class="nav-pill" data-tab="security">Security</button>'
     + '</div>'
     + '<div class="account-body">'
 
@@ -346,14 +346,14 @@ export function showAccountModal() {
               + (_userAvatar ? _userAvatar : _LOGO_SVG)
             + '</span>'
             + '<div class="acc-avatar-info">'
-              + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
-              + '<button id="acc-avatar-change-btn" class="acc-row-edit">Изменить</button>'
+              + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Profile') + '</span>'
+              + '<button id="acc-avatar-change-btn" class="acc-row-edit">Change</button>'
             + '</div>'
           + '</div>'
         + '</div>'
 
         + '<div class="avatar-grid acc-avatar-collapsed" id="account-avatar-grid">'
-          + '<button class="avatar-preset avatar-logo-btn' + (!_userAvatar ? ' selected' : '') + '" data-preset="" title="По умолчанию">' + _LOGO_SVG + '</button>'
+          + '<button class="avatar-preset avatar-logo-btn' + (!_userAvatar ? ' selected' : '') + '" data-preset="" title="Default">' + _LOGO_SVG + '</button>'
           + _AVATAR_PRESETS.map(function (p) {
               return '<button class="avatar-preset' + (p === _userAvatar ? ' selected' : '') + '" data-preset="' + p + '">' + p + '</button>';
             }).join('')
@@ -361,21 +361,21 @@ export function showAccountModal() {
 
         + '<div class="acc-row" id="acc-tz-row">'
           + '<div class="acc-row-left">'
-            + '<div class="acc-row-label">Часовой пояс</div>'
+            + '<div class="acc-row-label">Timezone</div>'
             + '<div class="acc-row-val" id="acc-tz-current"></div>'
           + '</div>'
-          + '<button id="acc-tz-change-btn" class="acc-row-edit">Изменить</button>'
+          + '<button id="acc-tz-change-btn" class="acc-row-edit">Change</button>'
         + '</div>'
         + '<div id="acc-tz-editor" class="acc-editor">'
           + '<div class="ds-select" id="acc-tz-select"><button class="ds-select-btn" type="button"><span class="ds-select-val"></span><span class="ds-select-chevron">' + icon('chevron-down',14) + '</span></button><div class="ds-select-dd"></div></div>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
+            + '<button class="btn-cta" id="acc-tz-save">Save</button>'
           + '</div>'
         + '</div>'
 
 
-        + '<button class="btn-cta danger" id="acc-logout-btn">Выйти из аккаунта</button>'
+        + '<button class="btn-cta danger" id="acc-logout-btn">Sign out</button>'
 
       + '</div>'
 
@@ -391,18 +391,18 @@ export function showAccountModal() {
         + '<div id="acc-bin-form">'
           + '<div style="margin-bottom:var(--v-sm);">'
             + '<div class="acc-row-label">API Key</div>'
-            + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" class="ds-input">'
+            + '<input type="text" id="acc-bin-key" placeholder="Paste API key..." autocomplete="off" class="ds-input">'
             + '<div class="acc-field-err" id="acc-bin-err-key"></div>'
           + '</div>'
           + '<div>'
             + '<div class="acc-row-label">Secret Key</div>'
-            + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" class="ds-input">'
+            + '<input type="password" id="acc-bin-sec" placeholder="Paste Secret key..." autocomplete="off" class="ds-input">'
             + '<div class="acc-field-err" id="acc-bin-err-sec"></div>'
           + '</div>'
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-del" class="acc-delete-cancel">Удалить</button>'
+            + '<button class="btn-cta" id="acc-bin-save">Save</button>'
+            + '<button id="acc-bin-del" class="acc-delete-cancel">Delete</button>'
           + '</div>'
         + '</div>'
 
@@ -424,24 +424,24 @@ export function showAccountModal() {
             + '<div class="acc-row-label">Email</div>'
             + '<div class="acc-row-val" id="acc-email-display">' + escHtml(_userEmail || '') + '</div>'
           + '</div>'
-          + '<button id="acc-email-change-btn" class="acc-row-edit">Изменить</button>'
+          + '<button id="acc-email-change-btn" class="acc-row-edit">Change</button>'
         + '</div>'
         + '<div id="acc-email-step1" class="acc-editor"></div>'
         + '<div id="acc-email-step2" class="acc-editor">'
-          + '<input type="email" id="acc-email-new1" placeholder="Новый email" autocomplete="off" class="ds-input">'
+          + '<input type="email" id="acc-email-new1" placeholder="New email" autocomplete="off" class="ds-input">'
           + '<div class="acc-field-err" id="acc-email-err-1"></div>'
-          + '<input type="email" id="acc-email-new2" placeholder="Подтвердите новый email" autocomplete="off" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<input type="email" id="acc-email-new2" placeholder="Confirm new email" autocomplete="off" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-field-err" id="acc-email-err-2"></div>'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-email-s2-btn">Отправить код</button>'
+            + '<button class="btn-cta" id="acc-email-s2-btn">Send code</button>'
           + '</div>'
         + '</div>'
         + '<div id="acc-email-step3" class="acc-editor">'
           + '<div id="acc-email-s3-hint"></div>'
-          + '<input type="text" id="acc-email-code" inputmode="numeric" maxlength="6" placeholder="Код из письма" autocomplete="one-time-code" class="ds-input">'
+          + '<input type="text" id="acc-email-code" inputmode="numeric" maxlength="6" placeholder="Code from email" autocomplete="one-time-code" class="ds-input">'
           + '<div class="acc-field-err" id="acc-email-step3-err"></div>'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-email-s3-btn">Подтвердить</button>'
+            + '<button class="btn-cta" id="acc-email-s3-btn">Confirm</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg"></div>'
@@ -449,18 +449,18 @@ export function showAccountModal() {
         + '<div id="acc-pass-change-section"></div>'
 
         + '<div class="acc-security-actions">'
-          + '<button class="btn-cta" id="acc-revoke-btn">Выйти с других устройств</button>'
+          + '<button class="btn-cta" id="acc-revoke-btn">Sign out other devices</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
 
         + '<div id="acc-delete-wrap">'
-          + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
+          + '<button class="acc-delete-btn" id="acc-delete-btn">Delete account</button>'
           + '<div id="acc-delete-confirm">'
-            + '<div id="acc-delete-hint">Введите «удалить аккаунт» для подтверждения:</div>'
-            + '<input type="text" id="acc-delete-input" placeholder="удалить аккаунт" autocomplete="off" class="ds-input">'
+            + '<div id="acc-delete-hint">Type "delete account" to confirm:</div>'
+            + '<input type="text" id="acc-delete-input" placeholder="delete account" autocomplete="off" class="ds-input">'
             + '<div class="acc-bin-actions">'
-              + '<button class="btn-cta danger" id="acc-delete-yes" disabled>Удалить аккаунт</button>'
-              + '<button class="acc-delete-cancel" id="acc-delete-no">Отмена</button>'
+              + '<button class="btn-cta danger" id="acc-delete-yes" disabled>Delete account</button>'
+              + '<button class="acc-delete-cancel" id="acc-delete-no">Cancel</button>'
             + '</div>'
           + '</div>'
         + '</div>'
@@ -486,7 +486,7 @@ export function showAccountModal() {
   document.getElementById('acc-avatar-change-btn').addEventListener('click', function () {
     var grid = document.getElementById('account-avatar-grid');
     var collapsed = grid.classList.toggle('acc-avatar-collapsed');
-    this.textContent = collapsed ? 'Изменить' : 'Скрыть';
+    this.textContent = collapsed ? 'Change' : 'Hide';
   });
 
   function _renderAvatarCircle() {
@@ -503,8 +503,8 @@ export function showAccountModal() {
     var linkArea = document.getElementById('acc-tg-link-area');
     if (!badge || !btnWrap) return;
     if (connected) {
-      badge.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Подключён</span>';
-      btnWrap.innerHTML = '<button class="btn-cta danger" id="acc-tg-disconnect">Отключить</button>';
+      badge.innerHTML = '<span class="tg-connected">' + icon('check-circle', 14) + ' Connected</span>';
+      btnWrap.innerHTML = '<button class="btn-cta danger" id="acc-tg-disconnect">Disconnect</button>';
       if (linkArea) linkArea.style.display = 'none';
       document.getElementById('acc-tg-disconnect').addEventListener('click', function () {
         var btn = this;
@@ -514,12 +514,12 @@ export function showAccountModal() {
           body: JSON.stringify({ action: 'tg-disconnect' }),
         })
           .then(function () { renderTgStatus(false); })
-          .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Отключить'; });
+          .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Disconnect'; });
       });
       return;
     }
     badge.innerHTML = '';
-    btnWrap.innerHTML = '<button class="btn-cta" id="acc-tg-btn">Подключить</button>';
+    btnWrap.innerHTML = '<button class="btn-cta" id="acc-tg-btn">Connect</button>';
     document.getElementById('acc-tg-btn').addEventListener('click', function () {
       var btn = document.getElementById('acc-tg-btn');
       btn.disabled = true; btn.classList.add('btn-loading');
@@ -529,13 +529,13 @@ export function showAccountModal() {
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (!d.url) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подключить'; return; }
+          if (!d.url) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Connect'; return; }
           if (linkArea) {
             linkArea.style.display = 'block';
             linkArea.innerHTML =
-              '<p class="tg-hint">Откройте бота и нажмите Start:</p>'
-              + '<a class="btn-cta" href="' + d.url + '" target="_blank" rel="noopener">Открыть бота →</a>'
-              + '<p class="tg-hint tg-waiting">Ожидаю подключения…</p>';
+              '<p class="tg-hint">Open the bot and click Start:</p>'
+              + '<a class="btn-cta" href="' + d.url + '" target="_blank" rel="noopener">Open bot →</a>'
+              + '<p class="tg-hint tg-waiting">Waiting for connection…</p>';
           }
           btnWrap.innerHTML = '';
           var polls = 0;
@@ -547,7 +547,7 @@ export function showAccountModal() {
               .catch(function () {});
           }, 2000);
         })
-        .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подключить'; });
+        .catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Connect'; });
     });
   }
 
@@ -566,12 +566,12 @@ export function showAccountModal() {
       document.getElementById('acc-bin-key').classList.remove('error');
       document.getElementById('acc-bin-sec').classList.remove('error');
       if (!key) {
-        if(errKey) errKey.textContent = 'Введите API key';
+        if(errKey) errKey.textContent = 'Enter API key';
         document.getElementById('acc-bin-key').classList.add('error');
         return;
       }
       if (!sec) {
-        if(errSec) errSec.textContent = 'Введите Secret key';
+        if(errSec) errSec.textContent = 'Enter Secret key';
         document.getElementById('acc-bin-sec').classList.add('error');
         return;
       }
@@ -582,7 +582,7 @@ export function showAccountModal() {
       })
         .then(function (r) {
           return r.json().then(function (d) {
-            if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
+            if (!r.ok) throw new Error(d.error || 'Server error');
             return d;
           });
         })
@@ -591,7 +591,7 @@ export function showAccountModal() {
           if (onSuccess) onSuccess();
         })
         .catch(function (e) {
-          err.textContent = e.message || 'Ошибка сети';
+          err.textContent = e.message || 'Network error';
           btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = btnLabel;
         });
     };
@@ -612,7 +612,7 @@ export function showAccountModal() {
 
     if (connected) {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
-      btnWrap.innerHTML = '<button class="acc-row-edit" id="acc-bin-upd">Изменить</button>';
+      btnWrap.innerHTML = '<button class="acc-row-edit" id="acc-bin-upd">Change</button>';
       form.style.display = 'none';
       var delBtn = document.getElementById('acc-bin-del');
       if (delBtn) delBtn.style.display = 'none';
@@ -621,7 +621,7 @@ export function showAccountModal() {
         var upd = this;
         if (form.style.display === 'block') {
           form.style.display = 'none';
-          upd.textContent = 'Изменить';
+          upd.textContent = 'Change';
           if (delBtn) delBtn.style.display = 'none';
           document.getElementById('acc-bin-err').textContent = '';
         } else {
@@ -629,21 +629,21 @@ export function showAccountModal() {
           document.getElementById('acc-bin-sec').value = '';
           document.getElementById('acc-bin-err').textContent = '';
           form.style.display = 'block';
-          upd.textContent = 'Отменить';
+          upd.textContent = 'Cancel';
           if (delBtn) delBtn.style.display = 'inline-flex';
-          bindBinanceSaveBtn('Сохранить', _afterSave);
+          bindBinanceSaveBtn('Save', _afterSave);
         }
       });
 
       if (delBtn) {
         delBtn.onclick = function () {
-          if (!confirm('Отключить Binance API?')) return;
+          if (!confirm('Disconnect Binance API?')) return;
           delBtn.disabled = true; delBtn.classList.add('btn-loading');
           fetch(API_BASE + '/api/account', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
             body: JSON.stringify({ action: 'delete-binance' }),
           })
-            .then(function (r) { if (!r.ok) throw new Error('Ошибка сервера'); renderBinanceStatus(false); })
+            .then(function (r) { if (!r.ok) throw new Error('Server error'); renderBinanceStatus(false); })
             .catch(function () { delBtn.disabled = false; delBtn.classList.remove('btn-loading'); });
         };
       }
@@ -654,7 +654,7 @@ export function showAccountModal() {
       form.style.display = 'block';
       var cf3 = document.getElementById('acc-bin-del');
       if (cf3) cf3.style.display = 'none';
-      bindBinanceSaveBtn('Сохранить', _afterSave);
+      bindBinanceSaveBtn('Save', _afterSave);
     }
   }
 
@@ -690,22 +690,22 @@ export function showAccountModal() {
     _emailStep = n;
     if (!n) {
       document.getElementById('acc-email-msg').textContent = '';
-      document.getElementById('acc-email-change-btn').textContent = 'Изменить';
+      document.getElementById('acc-email-change-btn').textContent = 'Change';
     }
   }
 
   function _emailBuildStep1() {
     var s1 = document.getElementById('acc-email-step1');
     if (_emailHasPassword) {
-      s1.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+      s1.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Current password" autocomplete="current-password" class="ds-input">'
         + '<div class="acc-field-err" id="acc-email-step1-err"></div>'
-        + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>';
+        + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Continue</button></div>';
     } else if (_emailTgConnected) {
-      s1.innerHTML = '<button class="btn-cta" id="acc-email-send-tg-btn">Получить код в Telegram</button>'
+      s1.innerHTML = '<button class="btn-cta" id="acc-email-send-tg-btn">Get code via Telegram</button>'
         + '<div id="acc-email-tg-code-wrap">'
-          + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" inputmode="numeric" maxlength="6" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<input type="text" id="acc-email-tg-code" placeholder="Telegram code" inputmode="numeric" maxlength="6" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-field-err" id="acc-email-step1-err"></div>'
-          + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>'
+          + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Continue</button></div>'
         + '</div>';
       document.getElementById('acc-email-send-tg-btn').addEventListener('click', function () {
         var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
@@ -716,15 +716,15 @@ export function showAccountModal() {
           btn.disabled = false; btn.classList.remove('btn-loading');
           if (d.ok) {
             document.getElementById('acc-email-tg-code-wrap').style.display = 'block';
-            btn.textContent = 'Отправить ещё раз';
+            btn.textContent = 'Send again';
             _emailErr(null, '');
           } else {
-            _emailErr('acc-email-step1-err', d.error || 'Ошибка');
+            _emailErr('acc-email-step1-err', d.error || 'Error');
           }
-        }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Ошибка сети'); });
+        }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Network error'); });
       });
     } else {
-      s1.innerHTML = '<div style="font-size:var(--text-sm);color:var(--graphite)">Для смены email подключите Telegram в разделе «Интеграции»</div>';
+      s1.innerHTML = '<div style="font-size:var(--text-sm);color:var(--graphite)">To change email, connect Telegram in the Integrations tab</div>';
     }
     // Delegate s1-btn click after DOM is built
     s1.addEventListener('click', function (e) {
@@ -732,7 +732,7 @@ export function showAccountModal() {
       var btn = e.target;
       var password = (document.getElementById('acc-email-pass') || {}).value || '';
       var tgCode = ((document.getElementById('acc-email-tg-code') || {}).value || '').trim();
-      if (!password && !tgCode) { _emailErr('acc-email-step1-err', 'Введите пароль или код', password ? 'acc-email-pass' : 'acc-email-tg-code'); return; }
+      if (!password && !tgCode) { _emailErr('acc-email-step1-err', 'Enter password or code', password ? 'acc-email-pass' : 'acc-email-tg-code'); return; }
       btn.disabled = true; btn.classList.add('btn-loading');
       var body = { action: 'email-change-verify-identity' };
       if (password) body.password = password;
@@ -747,9 +747,9 @@ export function showAccountModal() {
           _emailShowStep(2);
           document.getElementById('acc-email-new1').focus();
         } else {
-          _emailErr('acc-email-step1-err', d.error || 'Ошибка');
+          _emailErr('acc-email-step1-err', d.error || 'Error');
         }
-      }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Ошибка сети'); });
+      }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Network error'); });
     });
   }
 
@@ -761,7 +761,7 @@ export function showAccountModal() {
       _emailShowStep(0);
     } else {
       document.getElementById('acc-email-msg').textContent = '';
-      this.textContent = 'Отменить';
+      this.textContent = 'Cancel';
       _emailBuildStep1();
       _emailShowStep(1);
     }
@@ -770,9 +770,9 @@ export function showAccountModal() {
   document.getElementById('acc-email-s2-btn').addEventListener('click', function () {
     var e1 = (document.getElementById('acc-email-new1').value || '').trim().toLowerCase();
     var e2 = (document.getElementById('acc-email-new2').value || '').trim().toLowerCase();
-    if (!e1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e1)) { _emailErr('acc-email-err-1', 'Введите корректный email', 'acc-email-new1'); return; }
-    if (e1 !== e2) { _emailErr('acc-email-err-2', 'Адреса не совпадают', 'acc-email-new2'); return; }
-    if (e1 === (_userEmail || '').toLowerCase()) { _emailErr('acc-email-err-1', 'Это уже ваш email', 'acc-email-new1'); return; }
+    if (!e1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e1)) { _emailErr('acc-email-err-1', 'Enter a valid email', 'acc-email-new1'); return; }
+    if (e1 !== e2) { _emailErr('acc-email-err-2', 'Emails do not match', 'acc-email-new2'); return; }
+    if (e1 === (_userEmail || '').toLowerCase()) { _emailErr('acc-email-err-1', 'This is already your email', 'acc-email-new1'); return; }
     var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/api/account', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -782,19 +782,19 @@ export function showAccountModal() {
       if (d.ok) {
         _emailNewPending = e1;
         document.getElementById('acc-email-s3-hint').textContent =
-          'Код отправлен на ' + e1 + '. На ' + (_userEmail || 'старый адрес') + ' — письмо с возможностью отменить.';
+          'Code sent to ' + e1 + '. A cancellation link was sent to ' + (_userEmail || 'your old address') + '.';
         _emailErr(null, '');
         _emailShowStep(3);
         document.getElementById('acc-email-code').focus();
       } else {
-        _emailErr('acc-email-err-2', d.error || 'Ошибка');
+        _emailErr('acc-email-err-2', d.error || 'Error');
       }
-    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-err-2', 'Ошибка сети'); });
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-err-2', 'Network error'); });
   });
 
   document.getElementById('acc-email-s3-btn').addEventListener('click', function () {
     var code = (document.getElementById('acc-email-code').value || '').trim();
-    if (!code || code.length < 6) { _emailErr('acc-email-step3-err', 'Введите 6-значный код', 'acc-email-code'); return; }
+    if (!code || code.length < 6) { _emailErr('acc-email-step3-err', 'Enter the 6-digit code', 'acc-email-code'); return; }
     var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/api/account', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -805,36 +805,36 @@ export function showAccountModal() {
         _userEmail = d.newEmail;
         document.getElementById('acc-email-display').textContent = d.newEmail;
         _emailShowStep(0);
-        _emailMsg('Email успешно изменён', true);
+        _emailMsg('Email changed successfully', true);
       } else {
-        _emailErr('acc-email-step3-err', d.error || 'Ошибка');
+        _emailErr('acc-email-step3-err', d.error || 'Error');
       }
-    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step3-err', 'Ошибка сети'); });
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step3-err', 'Network error'); });
   });
 
   // Timezone section
   var _TZ_LIST = [
-    ['Pacific/Honolulu',    'UTC−10  Гавайи'],
-    ['America/Anchorage',   'UTC−9   Аляска'],
-    ['America/Los_Angeles', 'UTC−8/−7  Los Angeles, Ванкувер'],
+    ['Pacific/Honolulu',    'UTC−10  Hawaii'],
+    ['America/Anchorage',   'UTC−9   Alaska'],
+    ['America/Los_Angeles', 'UTC−8/−7  Los Angeles, Vancouver'],
     ['America/Denver',      'UTC−7/−6  Denver'],
     ['America/Chicago',     'UTC−6/−5  Chicago, Mexico City'],
-    ['America/New_York',    'UTC−5/−4  Нью-Йорк, Торонто'],
-    ['America/Sao_Paulo',   'UTC−3     Сан-Паулу'],
-    ['Atlantic/Reykjavik',  'UTC+0     Рейкьявик'],
-    ['Europe/London',       'UTC+0/+1  Лондон'],
-    ['Europe/Paris',        'UTC+1/+2  Берлин, Париж, Варшава'],
-    ['Europe/Athens',       'UTC+2/+3  Афины, Хельсинки, Рига'],
-    ['Europe/Moscow',       'UTC+3     Москва, Минск'],
-    ['Asia/Dubai',          'UTC+4     Дубай, Тбилиси'],
-    ['Asia/Karachi',        'UTC+5     Карачи, Ташкент'],
-    ['Asia/Kolkata',        'UTC+5:30  Мумбай, Дели'],
-    ['Asia/Almaty',         'UTC+6     Алматы'],
-    ['Asia/Bangkok',        'UTC+7     Бангкок, Джакарта'],
-    ['Asia/Singapore',      'UTC+8     Сингапур, Гонконг, Пекин'],
-    ['Asia/Seoul',          'UTC+9     Сеул, Токио'],
-    ['Australia/Sydney',    'UTC+10/+11  Сидней'],
-    ['Pacific/Auckland',    'UTC+12/+13  Окленд'],
+    ['America/New_York',    'UTC−5/−4  New York, Toronto'],
+    ['America/Sao_Paulo',   'UTC−3     São Paulo'],
+    ['Atlantic/Reykjavik',  'UTC+0     Reykjavik'],
+    ['Europe/London',       'UTC+0/+1  London'],
+    ['Europe/Paris',        'UTC+1/+2  Berlin, Paris, Warsaw'],
+    ['Europe/Athens',       'UTC+2/+3  Athens, Helsinki, Riga'],
+    ['Europe/Moscow',       'UTC+3     Moscow, Minsk'],
+    ['Asia/Dubai',          'UTC+4     Dubai, Tbilisi'],
+    ['Asia/Karachi',        'UTC+5     Karachi, Tashkent'],
+    ['Asia/Kolkata',        'UTC+5:30  Mumbai, Delhi'],
+    ['Asia/Almaty',         'UTC+6     Almaty'],
+    ['Asia/Bangkok',        'UTC+7     Bangkok, Jakarta'],
+    ['Asia/Singapore',      'UTC+8     Singapore, Hong Kong, Beijing'],
+    ['Asia/Seoul',          'UTC+9     Seoul, Tokyo'],
+    ['Australia/Sydney',    'UTC+10/+11  Sydney'],
+    ['Pacific/Auckland',    'UTC+12/+13  Auckland'],
   ];
   var _autoTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   var _tzEl = document.getElementById('acc-tz-select');
@@ -879,7 +879,7 @@ export function showAccountModal() {
   function _tzSetDisplay(tz, source) {
     _tzCurrent.textContent = tz + ' · ' + source;
   }
-  _tzSetDisplay(_autoTz, 'автодетект');
+  _tzSetDisplay(_autoTz, 'auto-detect');
 
   // Populate select
   _TZ_LIST.forEach(function (item) {
@@ -899,10 +899,10 @@ export function showAccountModal() {
     if (_tzEditor.style.display === 'block') {
       _tzEditor.style.display = 'none';
       document.getElementById('acc-tz-msg').textContent = '';
-      this.textContent = 'Изменить';
+      this.textContent = 'Change';
     } else {
       _tzEditor.style.display = 'block';
-      this.textContent = 'Отменить';
+      this.textContent = 'Cancel';
     }
   });
 
@@ -917,16 +917,16 @@ export function showAccountModal() {
       body: JSON.stringify({ action: 'save-timezone', timezone: _tzSel.value }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
-        _tzSetDisplay(_tzSel.value, 'сохранено');
+        _tzSetDisplay(_tzSel.value, 'saved');
         _tzEditor.style.display = 'none';
-        document.getElementById('acc-tz-change-btn').textContent = 'Изменить';
+        document.getElementById('acc-tz-change-btn').textContent = 'Change';
       } else {
-        msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
+        msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Error';
       }
-      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Сохранить';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
     }).catch(function () {
-      msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Сохранить';
+      msg.style.color = 'var(--danger)'; msg.textContent = 'Network error';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
     });
   });
 
@@ -943,7 +943,7 @@ export function showAccountModal() {
       }
       if (d.timezone) {
         _tzSel.value = d.timezone;
-        _tzSetDisplay(d.timezone, 'сохранено');
+        _tzSetDisplay(d.timezone, 'saved');
       }
       _emailHasPassword = !!d.hasPassword;
       _emailTgConnected = !!d.tgConnected;
@@ -951,9 +951,9 @@ export function showAccountModal() {
       renderTgStatus(!!d.tgConnected);
       if (d.pendingEmailChange) {
         _emailNewPending = d.pendingEmailChange;
-        document.getElementById('acc-email-change-btn').textContent = 'Отменить';
+        document.getElementById('acc-email-change-btn').textContent = 'Cancel';
         document.getElementById('acc-email-s3-hint').textContent =
-          'Код отправлен на ' + d.pendingEmailChange + '. На ' + (_userEmail || 'старый адрес') + ' — письмо с возможностью отменить.';
+          'Code sent to ' + d.pendingEmailChange + '. A cancellation link was sent to ' + (_userEmail || 'your old address') + '.';
         _emailShowStep(3);
       }
       renderBinanceStatus(!!d.binanceConnected, d.binanceKey || '');
@@ -991,7 +991,7 @@ export function showAccountModal() {
     document.getElementById('acc-delete-input').focus();
   });
   document.getElementById('acc-delete-input').addEventListener('input', function () {
-    document.getElementById('acc-delete-yes').disabled = this.value.toLowerCase() !== 'удалить аккаунт';
+    document.getElementById('acc-delete-yes').disabled = this.value.toLowerCase() !== 'delete account';
   });
   document.getElementById('acc-delete-no').addEventListener('click', function () {
     document.getElementById('acc-delete-confirm').style.display = 'none';
@@ -1025,8 +1025,8 @@ export function showAccountModal() {
       .then(function (r) {
         if (r.ok) {
           msg.style.color = 'var(--bullish)';
-          msg.textContent = 'Готово — все другие устройства отключены';
-          btn.classList.remove('btn-loading'); btn.textContent = 'Выйти со всех других устройств';
+          msg.textContent = 'Done — all other devices signed out';
+          btn.classList.remove('btn-loading'); btn.textContent = 'Sign out other devices';
           btn.disabled = false;
         } else {
           throw new Error('fail');
@@ -1034,8 +1034,8 @@ export function showAccountModal() {
       })
       .catch(function () {
         msg.style.color = '';
-        msg.textContent = 'Ошибка, попробуйте ещё раз';
-        btn.classList.remove('btn-loading'); btn.textContent = 'Выйти со всех других устройств';
+        msg.textContent = 'Error, please try again';
+        btn.classList.remove('btn-loading'); btn.textContent = 'Sign out other devices';
         btn.disabled = false;
       });
   });
@@ -1047,20 +1047,20 @@ export function showAccountModal() {
       section.innerHTML =
         '<div class="acc-row" id="acc-pass-row">'
           + '<div class="acc-row-left">'
-            + '<div class="acc-row-label">Пароль</div>'
+            + '<div class="acc-row-label">Password</div>'
             + '<div class="acc-row-val">••••••••</div>'
           + '</div>'
-          + '<button class="acc-row-edit" id="acc-pass-change-btn">Изменить</button>'
+          + '<button class="acc-row-edit" id="acc-pass-change-btn">Change</button>'
         + '</div>'
         + '<div id="acc-pass-editor">'
-          + '<input type="password" id="acc-pass-current" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+          + '<input type="password" id="acc-pass-current" placeholder="Current password" autocomplete="current-password" class="ds-input">'
           + '<div class="acc-field-err" id="acc-pass-err-cur"></div>'
-          + '<input type="password" id="acc-pass-new" placeholder="Новый пароль (мин. 8 символов)" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<input type="password" id="acc-pass-new" placeholder="New password (min. 8 characters)" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-field-err" id="acc-pass-err-new"></div>'
-          + '<input type="password" id="acc-pass-confirm" placeholder="Подтвердите новый пароль" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<input type="password" id="acc-pass-confirm" placeholder="Confirm new password" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-field-err" id="acc-pass-err-cfm"></div>'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-pass-submit">Сохранить</button>'
+            + '<button class="btn-cta" id="acc-pass-submit">Save</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-pass-msg"></div>';
@@ -1085,11 +1085,11 @@ export function showAccountModal() {
           editor.style.display = 'none';
           _passErr(null, '');
           msg.textContent = '';
-          this.textContent = 'Изменить';
+          this.textContent = 'Change';
         } else {
           editor.style.display = 'block';
           msg.textContent = '';
-          this.textContent = 'Отменить';
+          this.textContent = 'Cancel';
           document.getElementById('acc-pass-current').focus();
         }
       });
@@ -1100,9 +1100,9 @@ export function showAccountModal() {
         var cfm = document.getElementById('acc-pass-confirm').value;
         var msg = document.getElementById('acc-pass-msg');
         _passErr(null, '');
-        if (!cur) { _passErr('cur', 'Введите текущий пароль'); return; }
-        if (nw.length < 8) { _passErr('new', 'Новый пароль — минимум 8 символов'); return; }
-        if (nw !== cfm) { _passErr('cfm', 'Пароли не совпадают'); return; }
+        if (!cur) { _passErr('cur', 'Enter current password'); return; }
+        if (nw.length < 8) { _passErr('new', 'New password must be at least 8 characters'); return; }
+        if (nw !== cfm) { _passErr('cfm', 'Passwords do not match'); return; }
         var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
         fetch(API_BASE + '/auth/change-password', {
           method: 'POST',
@@ -1114,22 +1114,22 @@ export function showAccountModal() {
             btn.disabled = false; btn.classList.remove('btn-loading');
             if (res.ok) {
               document.getElementById('acc-pass-editor').style.display = 'none';
-              document.getElementById('acc-pass-change-btn').textContent = 'Изменить';
+              document.getElementById('acc-pass-change-btn').textContent = 'Change';
               msg.style.color = 'var(--bullish)';
-              msg.textContent = 'Пароль изменён';
+              msg.textContent = 'Password changed';
             } else {
-              _passErr('cur', (res.d && res.d.message) || 'Ошибка');
+              _passErr('cur', (res.d && res.d.message) || 'Error');
             }
           })
           .catch(function () {
             btn.disabled = false; btn.classList.remove('btn-loading');
-            _passErr('cur', 'Ошибка сети');
+            _passErr('cur', 'Network error');
           });
       });
 
     } else {
       section.innerHTML =
-        '<button class="btn-cta" id="acc-reset-pass-btn">Отправить ссылку на смену пароля</button>'
+        '<button class="btn-cta" id="acc-reset-pass-btn">Send password reset link</button>'
         + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>';
 
       document.getElementById('acc-reset-pass-btn').addEventListener('click', function () {
@@ -1145,27 +1145,27 @@ export function showAccountModal() {
           btn.classList.remove('btn-loading');
           if (r.ok) {
             msg.style.color = 'var(--bullish)';
-            msg.textContent = 'Если этот адрес зарегистрирован, мы отправили ссылку на ' + _userEmail;
+            msg.textContent = 'If this address is registered, we sent a link to ' + _userEmail;
           } else {
-            msg.style.color = ''; msg.textContent = 'Ошибка, попробуйте ещё раз';
+            msg.style.color = ''; msg.textContent = 'Error, please try again';
             btn.disabled = false; return;
           }
           // 60-second cooldown
           var secs = 60;
-          btn.textContent = 'Повторная отправка через ' + secs + ' с';
+          btn.textContent = 'Resend in ' + secs + 's';
           var t = setInterval(function () {
             secs--;
             if (secs <= 0) {
               clearInterval(t);
               btn.disabled = false;
-              btn.textContent = 'Отправить ссылку на смену пароля';
+              btn.textContent = 'Send password reset link';
             } else {
-              btn.textContent = 'Повторная отправка через ' + secs + ' с';
+              btn.textContent = 'Resend in ' + secs + 's';
             }
           }, 1000);
         }).catch(function () {
           btn.classList.remove('btn-loading');
-          msg.style.color = ''; msg.textContent = 'Ошибка сети';
+          msg.style.color = ''; msg.textContent = 'Network error';
           btn.disabled = false;
         });
       });
@@ -1521,8 +1521,8 @@ export function calcPriceFormat(price) {
 // Форматирует Unix timestamp (секунды) в локальное время устройства
 function _localTimeFmt(ts) {
   var d = new Date(ts * 1000);
-  var days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  var months = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var hh = d.getHours().toString().padStart(2, '0');
   var mm = d.getMinutes().toString().padStart(2, '0');
   return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ', ' + hh + ':' + mm;
@@ -2087,7 +2087,7 @@ function getOverlay() {
     el.id = 'analysis-overlay';
     el.className = 'analysis-overlay popup';
     el.innerHTML =
-      '<div class="popup-header"><span class="popup-title">Анализ</span>' +
+      '<div class="popup-header"><span class="popup-title">Analysis</span>' +
         '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
@@ -2117,7 +2117,7 @@ export function openAnalysisPopup(sym, btn) {
     popup.id = 'analysis-overlay';
     popup.className = 'analysis-overlay popup';
     popup.innerHTML =
-      '<div class="popup-header"><span class="popup-title">Анализ</span>' +
+      '<div class="popup-header"><span class="popup-title">Analysis</span>' +
         '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
       '</div>' +
       '<div class="popup-body">' +
@@ -2206,25 +2206,25 @@ export function updateAnalysisPopup(sym) {
   content.style.display = 'block';
   if (cache.status === 'ok' && cache.result) {
     var r = cache.result;
-    var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     var extIcon = icon('external-link', 11, 'vertical-align:middle;margin-left:3px;margin-bottom:1px');
     var newsBlock = '';
     if (r.news_summary) {
-      var hasRealNews = r.news_url && !r.news_summary.toLowerCase().includes('не найдено');
+      var hasRealNews = r.news_url && !r.news_summary.toLowerCase().includes('not found');
       if (hasRealNews) {
-        newsBlock = '<div class="ao-row"><a href="' + escHtml(r.news_url) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:var(--font-bold);text-decoration:none;">Новости' + extIcon + '</a><br>' + escHtml(r.news_summary) + '</div>';
+        newsBlock = '<div class="ao-row"><a href="' + escHtml(r.news_url) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:var(--font-bold);text-decoration:none;">News' + extIcon + '</a><br>' + escHtml(r.news_summary) + '</div>';
       } else {
         newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
       }
     }
     content.innerHTML = '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink-deep);letter-spacing:0.4px;margin-bottom:var(--space-5);">' + escHtml(sym.toUpperCase()) + '</div>' +
-      '<div class="ao-row"><strong>Катализатор:</strong> ' + escHtml(r.catalyst) + '</div>' +
+      '<div class="ao-row"><strong>Catalyst:</strong> ' + escHtml(r.catalyst) + '</div>' +
       newsBlock +
-      (ts ? '<div style="margin-top:var(--space-6);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-semi);">Анализ: ' + ts + '</div>' : '') +
-      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+      (ts ? '<div style="margin-top:var(--space-6);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-semi);">Analysis: ' + ts + '</div>' : '') +
+      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Re-analyze</button>';
   } else {
-    content.innerHTML = '<div class="ao-err">' + (cache.error || 'Ошибка') + '</div>' +
-      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Повторный анализ</button>';
+    content.innerHTML = '<div class="ao-err">' + (cache.error || 'Error') + '</div>' +
+      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Re-analyze</button>';
   }
 }
 
@@ -2234,13 +2234,13 @@ function getMSKPhase() {
   var utcMs = Date.now() + new Date().getTimezoneOffset() * 60000;
   var msk = new Date(utcMs + 3 * 3600 * 1000);
   var h = msk.getHours() + msk.getMinutes() / 60;
-  var timeStr = msk.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  if (h >= 0 && h < 2) return { label: 'Ночь', time: timeStr };
-  if (h >= 2 && h < 9) return { label: 'Азия', time: timeStr };
-  if (h >= 9 && h < 11) return { label: 'Открытие Европы', time: timeStr };
-  if (h >= 11 && h < 15.5) return { label: 'Обед Европы', time: timeStr };
-  if (h >= 15.5 && h < 19.5) return { label: 'Оверлап США+Европа', time: timeStr };
-  return { label: 'Вечер Америки', time: timeStr };
+  var timeStr = msk.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  if (h >= 0 && h < 2) return { label: 'Night', time: timeStr };
+  if (h >= 2 && h < 9) return { label: 'Asia', time: timeStr };
+  if (h >= 9 && h < 11) return { label: 'Europe Open', time: timeStr };
+  if (h >= 11 && h < 15.5) return { label: 'Europe Midday', time: timeStr };
+  if (h >= 15.5 && h < 19.5) return { label: 'US+Europe Overlap', time: timeStr };
+  return { label: 'US Evening', time: timeStr };
 }
 
 function msBar(val) {
@@ -2251,21 +2251,21 @@ function msBar(val) {
 function msCardInner() {
   var ms = state.marketStrength;
   if (!ms) {
-    return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Оценить →</div>';
+    return '<div class="label">Market Strength</div>' +
+      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Check →</div>';
   }
   if (ms.status === 'loading') {
-    return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Анализирую...</div>';
+    return '<div class="label">Market Strength</div>' +
+      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Analyzing...</div>';
   }
   if (ms.status === 'error') {
-    return '<div class="label">Сила рынка</div>' +
-      '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--danger);margin-top:var(--space-4);">Ошибка</div>' +
-      '<div class="ms-card-sub">Нажмите для повтора</div>';
+    return '<div class="label">Market Strength</div>' +
+      '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--danger);margin-top:var(--space-4);">Error</div>' +
+      '<div class="ms-card-sub">Click to retry</div>';
   }
-  var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
+  var vLabel = ms.verdict === 'strong' ? '💪 Strong' : ms.verdict === 'medium' ? '😐 Average' : '😵 Weak';
   var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--level-deep)' : 'var(--danger)';
-  return '<div class="label">Сила рынка</div>' +
+  return '<div class="label">Market Strength</div>' +
     '<div style="font-size:var(--text-xl);font-weight:var(--font-bold);color:' + vColor + ';margin-top:var(--space-3);">' + vLabel + '</div>';
 }
 
@@ -2274,21 +2274,21 @@ function msPopupInner() {
   var phase = getMSKPhase();
   var closeBtn = '<button class="btn-topbar" data-action="close-ms">' + icon('x', 16) + '</button>';
   if (!ms || ms.status === 'loading') {
-    return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Анализирую рынок...</div></div>';
+    return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
+      '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Analyzing market...</div></div>';
   }
   if (ms.status === 'error') {
-    return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div style="color:var(--danger);font-size:var(--text-xs);font-weight:var(--font-semi);margin-bottom:var(--space-6);">Ошибка загрузки данных</div></div>' +
-      '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Повторить</button></div>';
+    return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
+      '<div class="popup-body"><div style="color:var(--danger);font-size:var(--text-xs);font-weight:var(--font-semi);margin-bottom:var(--space-6);">Failed to load data</div></div>' +
+      '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Retry</button></div>';
   }
   var m = ms.metrics;
-  var vLabel = ms.verdict === 'strong' ? '💪 Сильный' : ms.verdict === 'medium' ? '😐 Средний' : '😵 Слабый';
+  var vLabel = ms.verdict === 'strong' ? '💪 Strong' : ms.verdict === 'medium' ? '😐 Average' : '😵 Weak';
   var vClass = 'ms-verdict-' + ms.verdict;
-  var oiHtml = '<span class="ms-oi-badge ' + (m.oiDir === 'up' ? 'up' : m.oiDir === 'down' ? 'down' : 'neutral') + '">' + (m.oiDir === 'up' ? '▲ Подтверждён' : m.oiDir === 'down' ? '▼ Ликвидации' : '— Нейтрально') + '</span>';
-  var ts = new Date(ms.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  var oiHtml = '<span class="ms-oi-badge ' + (m.oiDir === 'up' ? 'up' : m.oiDir === 'down' ? 'down' : 'neutral') + '">' + (m.oiDir === 'up' ? '▲ Confirmed' : m.oiDir === 'down' ? '▼ Liquidations' : '— Neutral') + '</span>';
+  var ts = new Date(ms.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   var inPlayHtml = ms.inPlay.length ?
-    '<div class="ms-inplay"><div class="ms-inplay-label">⚡ In-play (объём ×3+)</div><div class="ms-inplay-coins">' +
+    '<div class="ms-inplay"><div class="ms-inplay-label">⚡ In-play (volume ×3+)</div><div class="ms-inplay-coins">' +
     ms.inPlay.map(function (s) { return '<span class="ms-inplay-pill">' + s + '</span>'; }).join('') +
     '</div></div>' : '';
 
@@ -2300,22 +2300,22 @@ function msPopupInner() {
   }
 
   var tips = {
-    vol: 'Сравниваем объём последних 5 свечей (1м) с предыдущими 25. Высокий — рынок разогрет, деньги заходят. Низкий — всё вяло, даже хорошая точка входа может не отработать.',
-    move: 'Насколько тело свечи заполняет её диапазон на 1ч. Высокая — движение устойчивое, свечи закрываются уверенно. Низкая — много хвостов и неопределённости, рынок болтает без чёткого вектора.',
-    vol2: 'ATR — средний размах свечи за последние 5 часов против базового. Высокая — диапазоны расширяются, есть куда двигаться. Низкая — рынок зажат, пробои часто оказываются ложными.',
-    oi: '▲ Подтверждён — цена растёт и открытых позиций больше: реальные покупатели заходят, движение надёжное. ▼ Ликвидации — цена растёт, но OI падает: выносят шортистов. Рост резкий, но может не удержаться. — Нейтрально — картина неоднозначная, сигнала нет.',
+    vol: 'Comparing volume of the last 5 candles (1m) vs previous 25. High — market is heated, money flowing in. Low — sluggish conditions, even a good entry may not play out.',
+    move: 'How much the candle body fills its range on 1h. High — steady movement, candles closing with conviction. Low — lots of wicks and uncertainty, no clear direction.',
+    vol2: 'ATR — average candle range over the last 5 hours vs baseline. High — ranges expanding, room to move. Low — market compressed, breakouts often fail.',
+    oi: '▲ Confirmed — price rising and OI increasing: real buyers entering, move is solid. ▼ Liquidations — price rising but OI falling: shorts being squeezed. Move is sharp but may not hold. — Neutral — mixed picture, no signal.',
   };
 
-  return '<div class="popup-header"><span class="popup-title">Сила рынка</span>' + closeBtn + '</div>' +
-    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:var(--space-5);">' + phase.label + ' · ' + phase.time + ' МСК</div><div class="ms-metrics-grid">' +
-    '<div class="ms-metric"><div class="ms-metric-label">Объём' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Направленность' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Волатильность' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
+  return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
+    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:var(--space-5);">' + phase.label + ' · ' + phase.time + ' MSK</div><div class="ms-metrics-grid">' +
+    '<div class="ms-metric"><div class="ms-metric-label">Volume' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Direction' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
+    '<div class="ms-metric"><div class="ms-metric-label">Volatility' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
     '<div class="ms-metric"><div class="ms-metric-label">Open Interest' + tip(tips.oi) + '</div>' + oiHtml + '</div>' +
     '</div>' +
     inPlayHtml +
-    '<div class="ms-footer">Оценка: ' + ms.score + ' · топ-20 по объёму · ' + ts + '</div></div>' +
-    '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Обновить</button></div>';
+    '<div class="ms-footer">Score: ' + ms.score + ' · top-20 by volume · ' + ts + '</div></div>' +
+    '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Refresh</button></div>';
 }
 
 export function openMSPopup() {
@@ -2371,7 +2371,7 @@ export { openTVMode, closeTVMode } from './tv.js';
 function updateMetricCards() {
   var coins = filteredCoins();
   var sortCount = document.querySelector('.sort-coin-count');
-  if (sortCount) sortCount.textContent = coins.length + ' монет';
+  if (sortCount) sortCount.textContent = coins.length + ' coins';
   var c1 = document.querySelector('.metric-card:nth-child(1) .value');
   if (c1) c1.textContent = coins.length;
   if (!coins.length) return;
@@ -2390,7 +2390,7 @@ export function updateMSPanel() {
   var popup = document.getElementById('ms-popup');
   if (popup && popup.style.display !== 'none') popup.innerHTML = msPopupInner();
   var ms = state.marketStrength;
-  var msLabel = !ms ? 'Рынок' : ms.status === 'loading' ? 'Рынок...' : ms.status === 'error' ? 'Рынок: ?' : (ms.verdict === 'strong' ? '<span>💪</span><span>Сильный</span>' : ms.verdict === 'medium' ? '<span>😐</span><span>Средний</span>' : '<span>😵</span><span>Слабый</span>');
+  var msLabel = !ms ? 'Market' : ms.status === 'loading' ? 'Market...' : ms.status === 'error' ? 'Market: ?' : (ms.verdict === 'strong' ? '<span>💪</span><span>Strong</span>' : ms.verdict === 'medium' ? '<span>😐</span><span>Average</span>' : '<span>😵</span><span>Weak</span>');
   var chip = document.querySelector('.mob-ms-chip');
   if (chip) chip.innerHTML = msLabel;
 }
@@ -2402,7 +2402,7 @@ var _LOGO_SVG = '<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xml
 function _topbarHTML() {
   var _av = _userAvatar || localStorage.getItem('pa_avatar') || '';
   return '<div class="topbar"><div class="filters">'
-    + '<button class="topbar-logo' + (_av ? ' mob-has-avatar' : '') + '" id="topbar-logo-btn" data-action="refresh" title="Обновить">'
+    + '<button class="topbar-logo' + (_av ? ' mob-has-avatar' : '') + '" id="topbar-logo-btn" data-action="refresh" title="Refresh">'
     + '<span class="logo-svg">' + _LOGO_SVG + '</span>'
     + '<span class="logo-mob-av">' + _av + '</span>'
     + '</button>'
@@ -2410,25 +2410,25 @@ function _topbarHTML() {
     + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Screener</button>'
     + '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>'
     + '<div class="topbar-actions">'
-    + '<button class="btn-topbar" data-action="open-search" title="Поиск">' + icon('search', 16) + '</button>'
-    + '<button class="btn-topbar" data-action="open-briefing" title="Брифинг">' + icon('bookmark', 16) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV режим">' + icon('monitor', 16) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Сменить тему">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
+    + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
+    + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="avatar-wrap">'
-    + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Профиль"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
+    + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
-    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
-    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
+    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
+    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Sign out</button>'
     + '</div>'
     + '</div>'
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd dropdown" id="burger-dd">'
     + '<a class="burger-dd-item" href="/inplay-phase">' + icon('activity', 14) + 'Phase <span class="nav-beta-tag">beta</span></a>'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV режим</button>'
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Сменить тему</button>'
-    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Личный кабинет</button>'
-    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Выйти</button>'
+    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
+    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
+    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
+    + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Sign out</button>'
     + '</div>'
     + '</div>'
     + '</div>'
@@ -2439,7 +2439,7 @@ function _topbarHTML() {
 
 function _sortBarHTML(coins) {
   var ws = wsConnected;
-  var wsTitle = ws ? 'WebSocket: подключен' : 'WebSocket: отключен';
+  var wsTitle = ws ? 'WebSocket: connected' : 'WebSocket: disconnected';
   return '<div class="sort-bar">'
     + (_screenerMode ? '' :
         '<div class="tier-num-group">'
@@ -2448,10 +2448,10 @@ function _sortBarHTML(coins) {
         + '<button class="pill' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low"  title="12M – 50M USDT">&gt;12</button>'
         + '</div>')
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
-    + '<span class="sort-coin-count">' + coins.length + ' монет</span>'
+    + '<span class="sort-coin-count">' + coins.length + ' coins</span>'
     + '<div class="sort-bar-btns">'
-    + '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="По росту">' + icon('percent', 16) + '</button>'
-    + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="По объёму">' + icon('bar-chart-2', 16) + '</button>'
+    + '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="Sort by change">' + icon('percent', 16) + '</button>'
+    + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="Sort by volume">' + icon('bar-chart-2', 16) + '</button>'
     + '</div>'
     + '</div>';
 }
@@ -2462,7 +2462,7 @@ export function render() {
   var app = document.getElementById('app');
   if (state.loading) {
     destroyCharts();
-    app.innerHTML = '<div class="loading-overlay"><div class="big-spinner"></div><p>Загружаю данные с Binance Futures...</p></div>';
+    app.innerHTML = '<div class="loading-overlay"><div class="big-spinner"></div><p>Loading data from Binance Futures...</p></div>';
     return;
   }
   var coins = _screenerMode ? screenerCoins() : filteredCoins();
@@ -2472,9 +2472,9 @@ export function render() {
   if (state.error) {
     emptyHtml = '<div class="error-banner">' + state.error + '</div>';
   } else if (state.coins.length === 0) {
-    emptyHtml = '<div class="error-banner">Ожидание данных от сервера...</div>';
+    emptyHtml = '<div class="error-banner">Waiting for server data...</div>';
   } else {
-    emptyHtml = '<div class="empty-state">Нет монет, соответствующих фильтру.</div>';
+    emptyHtml = '<div class="empty-state">No coins match the current filter.</div>';
   }
   var coinsHtml = coins.length
     ? '<div class="cards-area' + (_screenerMode ? ' cards-area--scr' : '') + '">'
@@ -2561,7 +2561,7 @@ on('ws:status', function () {
   var els = document.querySelectorAll('.ws-indicator');
   for (var i = 0; i < els.length; i++) {
     els[i].className = 'ws-indicator ' + (wsConnected ? 'connected' : 'disconnected');
-    els[i].title = wsConnected ? 'WebSocket подключен' : 'WebSocket отключен';
+    els[i].title = wsConnected ? 'WebSocket connected' : 'WebSocket disconnected';
   }
 });
 
@@ -2781,7 +2781,7 @@ export function toggleBriefing(sym) {
   if (idx >= 0) {
     var entry = state.briefing[idx];
     if (entry.note && entry.note.trim()) {
-      if (!confirm('Удалить ' + sym + ' из брифинга?')) return;
+      if (!confirm('Remove ' + sym + ' from watchlist?')) return;
     }
     state.briefing.splice(idx, 1);
   } else {
@@ -2802,10 +2802,10 @@ function briefingStatusLabel(status) {
 }
 
 function briefingStatusText(status) {
-  if (status === 'traded')   return 'Отработка';
-  if (status === 'skip')     return 'Отмена';
-  if (status === 'missed')   return 'Упущено';
-  return 'Наблюдение';
+  if (status === 'traded')   return 'Traded';
+  if (status === 'skip')     return 'Skipped';
+  if (status === 'missed')   return 'Missed';
+  return 'Watching';
 }
 
 function briefingStatusClass(status) {
@@ -2842,7 +2842,7 @@ function updateStarButton(sym) {
   var active = isInBriefing(sym);
   document.querySelectorAll('.btn-icon.star[data-sym="' + sym + '"]').forEach(function (btn) {
     btn.classList.toggle('active', active);
-    btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+    btn.title = active ? 'Remove from watchlist' : 'Add to watchlist';
   });
 }
 
@@ -2851,7 +2851,7 @@ function updateAllStarButtons() {
     var sym = btn.dataset.sym;
     var active = isInBriefing(sym);
     btn.classList.toggle('active', active);
-    btn.title = active ? 'Убрать из брифинга' : 'В брифинг';
+    btn.title = active ? 'Remove from watchlist' : 'Add to watchlist';
   });
 }
 
@@ -2867,7 +2867,7 @@ function _tradePillHTML(sym, date) {
   var title = t.count + ' сд.';
   if (t.entries && t.entries.length) {
     var first = t.entries[0], last = t.entries[t.entries.length - 1];
-    title += ' · вход $' + parseFloat(first.price).toFixed(2) + ' → $' + parseFloat(last.price).toFixed(2);
+    title += ' · entry $' + parseFloat(first.price).toFixed(2) + ' → $' + parseFloat(last.price).toFixed(2);
   }
   return '<span class="bp-trade-pill ' + cls + '" title="' + escHtml(title) + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
 }
@@ -2885,19 +2885,19 @@ function _tradeInlineHTML(sym, date) {
 
 function _weekStatsHTML() {
   var ws = state.weekSummary;
-  var loadBtn = '<button class="btn-topbar bp-week-load-btn" data-action="bp-load-week" title="Обновить">' + icon('refresh-cw', 16) + '</button>';
+  var loadBtn = '<button class="btn-topbar bp-week-load-btn" data-action="bp-load-week" title="Refresh">' + icon('refresh-cw', 16) + '</button>';
   var statsHTML = ws
     ? (function () {
         var pnlSign = ws.pnl >= 0 ? '+' : '';
         var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
         return '<div class="bp-week-stats">'
           + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Сделок</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Trades</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
           + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Побед</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
           + '</div>';
       })()
-    : '<div class="fvbd-empty">Нажми обновить для загрузки</div>';
+    : '<div class="fvbd-empty">Click refresh to load</div>';
   return '<div class="bp-week">'
     + '<div class="bp-week-header">' + loadBtn + '</div>'
     + statsHTML
@@ -2920,15 +2920,15 @@ function _weekAIHTML() {
   if (aiText && state.aiSummaryDate) {
     var d = new Date(state.aiSummaryDate);
     dateStr = '<span class="bp-ai-date">'
-      + d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' })
-      + ' ' + d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' })
+      + d.toLocaleDateString('en-US', { month:'2-digit', day:'2-digit' })
+      + ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
       + '</span>';
   }
   return '<div class="bp-week">'
     + '<div class="bp-ai-block">'
     + '<div class="bp-ai-header">'
     + dateStr
-    + '<button class="acc-row-edit" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Сгенерировать</button>'
+    + '<button class="acc-row-edit" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Generate</button>'
     + '</div>'
     + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
     + '</div>'
@@ -3060,24 +3060,24 @@ export function renderBriefingPanel() {
       '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
         '<div class="bp-expand-bar">' +
           (tradeLocked
-            ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Отработка</span></span>'
+            ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>'
             : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
-          '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>' +
+          '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' +
         '</div>' +
         '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
-          '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
+          '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
         '</div>' +
       '</div>';
-  }).join('') : '<div class="bp-empty">На сегодня монет нет — отметь звёздочкой на дашборде</div>';
+  }).join('') : '<div class="bp-empty">No coins for today — star them on the dashboard</div>';
 
   popup.innerHTML =
     '<div class="popup-header">' +
-      '<span class="popup-title">Брифинг</span>' +
+      '<span class="popup-title">Watchlist</span>' +
       '<button class="btn-topbar" data-action="close-briefing">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="popup-body bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
-      (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Режим брифинг</button>' : '') +
+      (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Watchlist mode</button>' : '') +
     '</div>';
 
   _refreshBriefingPct();
@@ -3111,15 +3111,15 @@ function _fvBottomBarHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
   else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
-    + '<button class="btn-topbar" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
+    + '<button class="btn-topbar" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd dropdown">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
@@ -3127,7 +3127,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div>'
     + '<div class="fv-bb-right">'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>';
@@ -3144,7 +3144,7 @@ function _fvCoinInfoHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Повтор</button>';
+  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
   else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
   else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
 
@@ -3153,16 +3153,16 @@ function _fvCoinInfoHTML(sym, tf) {
 
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
-    + '<button class="btn-topbar" data-action="close-fv" title="Назад">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Копировать тикер">' + sym.toUpperCase() + '</span>'
+    + '<button class="btn-topbar" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd dropdown">'
     + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
     + '</div>'
     + '</div>'
-    + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Убрать из брифинга' : 'В брифинг') + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Удалить">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>'
+    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '<div class="fv-info-stats">'
@@ -3612,15 +3612,15 @@ export function openCoinFullView(sym) {
     var html;
     if (delMode === 'level') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Удалить уровень · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete level · ' + p + '</span></button>';
     } else if (delMode === 'alert') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Удалить алерт · ' + p + '</span></button>';
+        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete alert · ' + p + '</span></button>';
     } else {
       html = '<button class="fv-touch-menu-item" data-tm="level">' +
-          '<span class="fv-tmi-icon">' + icon('minus', 16) + '</span><span>Горизонтальный уровень · ' + p + '</span></button>' +
+          '<span class="fv-tmi-icon">' + icon('minus', 16) + '</span><span>Price level · ' + p + '</span></button>' +
         '<button class="fv-touch-menu-item" data-tm="alert">' +
-          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Добавить алерт · ' + p + '</span></button>';
+          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Add alert · ' + p + '</span></button>';
     }
     m.innerHTML = html;
     var menuH = delMode ? 54 : 108;
@@ -3875,7 +3875,7 @@ export function briefingClearNote(sym, date, noteRow) {
     .forEach(function (btn) { btn.classList.remove('has-note'); });
 }
 
-// Handle "Добавить заметку" / "Удалить заметку" button in popup expand bar
+// Handle "Add note" / "Delete note" button in popup expand bar
 export function briefingNoteAction(sym, date, noteRow, actionBtn) {
   var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
   if (!entry || !noteRow) return;
@@ -3889,13 +3889,13 @@ export function briefingNoteAction(sym, date, noteRow, actionBtn) {
     syncBriefingNow();
     if (ta) ta.value = '';
     if (noteWrap) noteWrap.style.display = 'none';
-    if (actionBtn) actionBtn.textContent = 'Добавить заметку';
+    if (actionBtn) actionBtn.textContent = 'Add note';
     var compactRow = noteRow.previousElementSibling;
     if (compactRow) { var nb = compactRow.querySelector('.bp-note-btn'); if (nb) nb.classList.remove('has-note'); }
   } else {
     if (noteWrap) noteWrap.style.display = '';
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
-    if (actionBtn) actionBtn.textContent = 'Удалить заметку';
+    if (actionBtn) actionBtn.textContent = 'Delete note';
   }
 }
 
@@ -3954,7 +3954,7 @@ export function briefingRemove(sym, date) {
   if (idx >= 0) {
     var entry = state.briefing[idx];
     if (entry.note && entry.note.trim()) {
-      if (!confirm('Удалить ' + sym + ' из брифинга?')) return;
+      if (!confirm('Remove ' + sym + ' from watchlist?')) return;
     }
     state.briefing.splice(idx, 1);
     saveBriefingLocal();
@@ -3972,7 +3972,7 @@ export function renderFVBriefingDrawer() {
   var today = todayDate();
   var allEntries = state.briefing || [];
   if (!allEntries.length) {
-    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div><div class="fvbd-empty">Брифинг пуст</div>';
+    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div><div class="fvbd-empty">Watchlist is empty</div>';
     return;
   }
   // Group by date descending
@@ -3981,11 +3981,11 @@ export function renderFVBriefingDrawer() {
   var dates = Object.keys(dateMap).sort().reverse();
   var tab = state.briefingTab || 'coins';
   var tabs = '<div class="fvbd-tabs">'
-    + '<button class="fvbd-tab pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Монеты</button>'
-    + '<button class="fvbd-tab pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Итоги</button>'
-    + '<button class="fvbd-tab pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI анализ</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Coins</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Summary</button>'
+    + '<button class="fvbd-tab pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI analysis</button>'
     + '</div>';
-  var html = '<div class="fvbd-header"><span class="fvbd-title">Брифинг</span></div>' + tabs;
+  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + tabs;
   if (tab === 'week') { drawer.innerHTML = html + _weekStatsHTML(); _refreshBriefingPct(); return; }
   if (tab === 'ai')   { drawer.innerHTML = html + _weekAIHTML();   _refreshBriefingPct(); return; }
   dates.forEach(function (date, idx) {
@@ -4012,15 +4012,15 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
         + (tradeLocked
-          ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Отработка</span></span>'
+          ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>'
           : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
-        + '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Удалить заметку' : 'Добавить заметку') + '</button>'
+        + '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>'
         + '</div>'
         + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
-        + '<textarea placeholder="Заметка..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
+        + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
         + '</div>'
         + (isToday ? (function () {
-          var _fullDays = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+          var _fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           var _hist = (state.briefing || []).filter(function (e2) { return e2.sym === e.sym && e2.date !== today && e2.note; });
           if (!_hist.length) return '';
           return '<div class="fvbd-history">' + _hist.map(function (e2) {
@@ -4122,7 +4122,7 @@ function _renderSearchList(popup, query) {
       return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
     });
     if (!filtered.length) {
-      listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
+      listEl.innerHTML = '<div class="search-popup-empty">Nothing found</div>';
       return;
     }
     listEl.innerHTML = filtered.map(rowHTML).join('');
@@ -4135,7 +4135,7 @@ function _renderSearchList(popup, query) {
         return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
       });
     if (!pinned.length && !rest.length) {
-      listEl.innerHTML = '<div class="search-popup-empty">Ничего не найдено</div>';
+      listEl.innerHTML = '<div class="search-popup-empty">Nothing found</div>';
       return;
     }
     var html = pinned.map(rowHTML).join('');
@@ -4156,7 +4156,7 @@ export function openSearchPopup() {
 
   popup.innerHTML =
     '<div class="popup-header">' +
-      '<span class="popup-title">Поиск монеты</span>' +
+      '<span class="popup-title">Search coin</span>' +
       '<button class="btn-topbar" data-action="close-search">' + icon('x', 16) + '</button>' +
     '</div>' +
     '<div class="popup-body search-popup-input-wrap">' +
@@ -4227,8 +4227,8 @@ export function openClearPopup(sym, btn) {
   popup.dataset.sym = sym;
 
   var html = '';
-  if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Горизонтальные уровни<span class="clear-count clear-count--level">' + lCount + '</span></button>';
-  if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Сигнальные уровни<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
+  if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Price levels<span class="clear-count clear-count--level">' + lCount + '</span></button>';
+  if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Alerts<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
   popup.innerHTML = html;
   document.body.appendChild(popup);
 
