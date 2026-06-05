@@ -339,11 +339,17 @@
         <input class="ds-input" type="email" placeholder="Email">
         <input class="ds-input" type="password" placeholder="Пароль">
         <input class="ds-input error" type="text" placeholder="Поле с ошибкой">
-        <select class="ds-input">
-          <option>Выпадающий список</option>
-          <option>Опция 2</option>
-          <option>Опция 3</option>
-        </select>
+        <div class="ds-select" id="ds-demo-select">
+          <button class="ds-select-btn" type="button">
+            <span class="ds-select-val">Выпадающий список</span>
+            <span class="ds-select-chevron" id="ds-demo-chevron"></span>
+          </button>
+          <div class="ds-select-dd">
+            <div class="ds-select-item selected">Выпадающий список</div>
+            <div class="ds-select-item">Опция 2</div>
+            <div class="ds-select-item">Опция 3</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -616,6 +622,25 @@
       document.querySelectorAll('[data-signal]').forEach(function(el) {
         el.innerHTML = signalIcon(el.dataset.signal);
       });
+    });
+
+    /* ── ds-select demo ─────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function() {
+      var sel = document.getElementById('ds-demo-select');
+      document.getElementById('ds-demo-chevron').innerHTML = icon('chevron-down', 14);
+      sel.querySelector('.ds-select-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        sel.classList.toggle('open');
+      });
+      sel.querySelectorAll('.ds-select-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          sel.querySelector('.ds-select-val').textContent = item.textContent;
+          sel.querySelectorAll('.ds-select-item').forEach(function(i) { i.classList.remove('selected'); });
+          item.classList.add('selected');
+          sel.classList.remove('open');
+        });
+      });
+      document.addEventListener('click', function() { sel.classList.remove('open'); });
     });
 
     /* ── Theme toggle ────────────────────────────────────────── */
