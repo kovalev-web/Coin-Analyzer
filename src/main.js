@@ -209,7 +209,7 @@ document.body.addEventListener('click', function (e) {
           var _tr = target.getBoundingClientRect();
           var _tip = document.createElement('div');
           _tip.className = '_ctip';
-          _tip.textContent = 'Тикер скопирован';
+          _tip.textContent = 'Ticker copied';
           _tip.style.cssText = 'position:absolute;left:' + Math.round(_tr.left - _ar.left) + 'px;top:' + Math.round(_tr.bottom - _ar.top + 4) + 'px;background:var(--ink-deep);color:var(--canvas);font-size:var(--text-xs);font-family:var(--font-family);font-weight:var(--font-medium);padding:var(--space-2) var(--space-5);border-radius:var(--radius-md);pointer-events:none;z-index:50;white-space:nowrap;';
           _anchor.appendChild(_tip);
           setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
