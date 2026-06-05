@@ -345,7 +345,7 @@ export function showAccountModal() {
         + '<div class="acc-avatar-card">'
           + '<div class="acc-avatar-inner">'
             + '<span id="acc-avatar-display">'
-              + (_userAvatar ? _userAvatar : '<span style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;">' + _LOGO_SVG + '</span>')
+              + (_userAvatar ? _userAvatar : _LOGO_SVG)
             + '</span>'
             + '<div class="acc-avatar-info">'
               + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
@@ -364,7 +364,7 @@ export function showAccountModal() {
         + '<div class="acc-row" id="acc-email-row">'
           + '<div class="acc-row-left">'
             + '<div class="acc-row-label">Email</div>'
-            + '<div class="acc-row-val acc-email-addr">' + escHtml(_userEmail || '') + '</div>'
+            + '<div class="acc-row-val">' + escHtml(_userEmail || '') + '</div>'
           + '</div>'
           + '<button id="acc-email-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
@@ -385,7 +385,7 @@ export function showAccountModal() {
           + '<button id="acc-tz-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
         + '<div id="acc-tz-editor" class="acc-editor">'
-          + '<div class="ds-select" id="acc-tz-select" style="margin-bottom:var(--v-sm);"><button class="ds-select-btn" type="button"><span class="ds-select-val"></span><span class="ds-select-chevron">' + icon('chevron-down',14) + '</span></button><div class="ds-select-dd"></div></div>'
+          + '<div class="ds-select" id="acc-tz-select"><button class="ds-select-btn" type="button"><span class="ds-select-val"></span><span class="ds-select-chevron">' + icon('chevron-down',14) + '</span></button><div class="ds-select-dd"></div></div>'
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
@@ -483,7 +483,7 @@ export function showAccountModal() {
     if (!d) return;
     d.innerHTML = _userAvatar
       ? _userAvatar
-      : '<span style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;">' + _LOGO_SVG + '</span>';
+      : _LOGO_SVG;
   }
 
   function renderTgStatus(connected) {
