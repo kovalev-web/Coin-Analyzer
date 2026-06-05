@@ -478,8 +478,8 @@
       <div class="ds-section-title">Banners</div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="error-banner">⚠ Something went wrong. Please try again.</div>
-        <div style="background:var(--bullish-bg);border:1px solid color-mix(in srgb,var(--bullish) 30%,transparent);color:var(--bullish);padding:10px 14px;border-radius:var(--radius-md);font-size:var(--text-xs)">
-          ✓ Email sent. Check your inbox.
+        <div style="background:var(--fog);border:1px solid color-mix(in srgb,var(--bullish) 30%,transparent);color:var(--bullish);padding:var(--space-6) var(--space-7);border-radius:var(--radius-md);font-size:var(--text-xs);line-height:var(--leading-relaxed);">
+          ✓ Письмо отправлено — проверьте почту.
         </div>
       </div>
     </div>
@@ -543,20 +543,19 @@
         <!-- Context menu -->
         <div>
           <div class="ds-swatch-group-label" style="margin-bottom:8px;">.context-menu</div>
-          <div class="context-menu" style="min-width:180px;">
-            <button class="clear-popup-row">Переместить алерт</button>
-            <button class="clear-popup-row">Удалить алерт</button>
-            <button class="clear-popup-row">Отмена</button>
+          <div class="context-menu" style="min-width:200px;">
+            <button class="clear-popup-row">Горизонтальные уровни<span class="clear-count clear-count--level">2</span></button>
+            <button class="clear-popup-row">Сигнальные уровни<span class="clear-count clear-count--alert">3</span></button>
           </div>
         </div>
 
         <!-- Dropdown -->
         <div>
-          <div class="ds-swatch-group-label" style="margin-bottom:8px;">.dropdown.open</div>
-          <div class="dropdown open" style="position:relative;min-width:160px;">
-            <a class="burger-dd-item">Markets</a>
-            <a class="burger-dd-item">Briefing</a>
-            <a class="burger-dd-item">TV Mode</a>
+          <div class="ds-swatch-group-label" style="margin-bottom:8px;">.dropdown.open (.burger-dd)</div>
+          <div class="dropdown open burger-dd" style="position:relative;">
+            <button class="burger-dd-item"><span data-icon="monitor,14"></span>TV режим</button>
+            <button class="burger-dd-item"><span data-icon="user-round,14"></span>Личный кабинет</button>
+            <button class="burger-dd-item"><span data-icon="log-out,14"></span>Выйти</button>
           </div>
         </div>
 
