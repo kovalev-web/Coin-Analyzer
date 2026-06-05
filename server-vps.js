@@ -1148,7 +1148,7 @@ var httpServer = http.createServer(async function (req, res) {
             res.end(JSON.stringify({ error: 'Нет активного запроса на смену email или код истёк' })); return;
           }
           var chgData = JSON.parse(pendingChg.result);
-          if (chgData.attempts >= 5) {
+          if (chgData.attempts >= 4) {
             await redis(['DEL', 'email_chg_code:' + userId]);
             await redis(['DEL', 'email_chg_cancel:' + (chgData.cancelToken || '')]);
             res.writeHead(400, { 'Content-Type': 'application/json' });
