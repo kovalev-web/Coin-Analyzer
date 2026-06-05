@@ -45,7 +45,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .logo-wiggle{animation:logo-wiggle 0.45s ease-in-out;}
 
 /* ── Pills ──────────────────────────────────────────────────── */
-.nav-pill{background:transparent;color:var(--graphite);border:none;padding:0 var(--space-5);height:var(--h-btn-md);font-size:var(--text-xs);font-weight:var(--font-semi);border-radius:var(--radius-full);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.nav-pill{background:transparent;color:var(--graphite);border:none;padding:0 var(--space-5);height:var(--h-btn-md);font-size:var(--text-xs);font-weight:var(--font-semi);line-height:1;border-radius:var(--radius-full);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
 .nav-pill:hover{color:var(--ink-deep);}
 .nav-pill.active{background:var(--fog);color:var(--ink-deep);}
 .nav-pill.desktop-nav-btn{display:none;}
