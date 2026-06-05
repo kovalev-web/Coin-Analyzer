@@ -48,6 +48,7 @@ function renderCard(coin) {
     '<div class="card-head">' +
     '<div class="card-sym-row">' +
     '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" title="Copy ticker">' + coin.symbol.toUpperCase() + '</span>' +
+    statsHtml +
     '</div>' +
     '<div class="card-head-right">' +
     badge +
@@ -55,7 +56,6 @@ function renderCard(coin) {
     '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>' +
     '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Fullscreen">' + icon('maximize', 16) + '</button>' +
     '</div>' +
-    statsHtml +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
     '</div>';

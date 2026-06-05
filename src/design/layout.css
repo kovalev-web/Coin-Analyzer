@@ -42,7 +42,7 @@
 .stat-val.warn{color:var(--level-deep);}
 .stat-val.dim{color:var(--steel);}
 .chart-container{aspect-ratio:3/2;flex-shrink:0;background:var(--canvas);position:relative;overflow:hidden;border-radius:0 0 var(--radius-xl) var(--radius-xl);}
-.card-chart-stats{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;gap:var(--space-4);pointer-events:none;}
+.card-chart-stats{display:flex;align-items:center;gap:var(--space-4);pointer-events:none;}
 .card-chart-stats .stat-val:nth-child(1){display:inline-block;min-width:58px;text-align:left;}
 .card-head-right{display:flex;align-items:center;gap:var(--space-4);flex-shrink:0;position:relative;}
 .card-sym-row{display:flex;align-items:center;gap:var(--space-4);flex:1;min-width:0;}
