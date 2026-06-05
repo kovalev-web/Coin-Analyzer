@@ -70,7 +70,7 @@
   /* ── Color: Surface ────────────────────────────────────────── */
   --canvas:  #ffffff;   /* page background, chart bg         */
   --paper:   #ffffff;   /* card / popup surface              */
-  --cloud:   #eff0f1;   /* page bg, hover fills              */
+  --cloud:   #f4f5f5;   /* page bg, hover fills              */
   --fog:     #e8e8e8;   /* muted fills, secondary controls   */
 
   /* ── Color: Border ─────────────────────────────────────────── */
