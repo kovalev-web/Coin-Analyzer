@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Topbar ─────────────────────────────────────────────────── */
-.topbar{background:var(--paper);border-radius:var(--radius-xl);box-shadow:0 2px 12px rgba(26,26,26,0.06);margin:var(--space-10) var(--space-16) 0;overflow:visible;}
+.topbar{background:var(--paper);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);margin:var(--space-10) var(--space-16) 0;overflow:visible;}
 .filters{padding:var(--space-7) var(--space-7);display:flex;align-items:center;gap:var(--space-6);flex-wrap:nowrap;}
 .filters-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-5);}
 .filter-group{display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-medium);}

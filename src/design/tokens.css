@@ -65,7 +65,7 @@
   --h-input:   40px;   /* form inputs                        */
 
   /* ── Shadow ────────────────────────────────────────────────── */
-  --shadow-md: 0 8px 24px rgba(26, 26, 26, 0.12);
+  --shadow-md: 0 2px 12px rgba(26, 26, 26, 0.06);
 
   /* ── Color: Surface ────────────────────────────────────────── */
   --canvas:  #ffffff;   /* page background, chart bg         */
