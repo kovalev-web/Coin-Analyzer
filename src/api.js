@@ -215,6 +215,11 @@ function processTickerPush(arr) {
     coin.current_price = parseFloat(t.c);
     coin.total_volume = Math.round(parseFloat(t.q));
     if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
+    var _now = Date.now();
+    if (t.o != null && (!coin._openSyncAt || _now - coin._openSyncAt > 60000)) {
+      coin.open_24h = parseFloat(t.o);
+      coin._openSyncAt = _now;
+    }
   });
 
   applyLivePriceUpdates();
