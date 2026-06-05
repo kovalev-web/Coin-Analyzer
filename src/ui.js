@@ -2878,7 +2878,7 @@ function _weekAIHTML() {
     + '<div class="bp-ai-block">'
     + '<div class="bp-ai-header">'
     + dateStr
-    + '<button class="btn-cta" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Сгенерировать</button>'
+    + '<button class="acc-row-edit" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Сгенерировать</button>'
     + '</div>'
     + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
     + '</div>'
