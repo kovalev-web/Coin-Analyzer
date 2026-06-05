@@ -4024,7 +4024,7 @@ export function openClearPopup(sym, btn) {
   popup.className = 'clear-popup context-menu';
   popup.dataset.sym = sym;
 
-  var html = '<div class="clear-popup-title">Удалить</div>';
+  var html = '';
   if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Горизонтальные уровни<span class="clear-count clear-count--level">' + lCount + '</span></button>';
   if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Сигнальные уровни<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
   popup.innerHTML = html;

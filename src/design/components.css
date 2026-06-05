@@ -68,9 +68,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .context-menu{background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);overflow:hidden;animation:popup-in 0.1s ease-out;}
 
 /* ── Chart action buttons ───────────────────────────────────── */
-.clear-popup{position:fixed;z-index:99999;min-width:200px;}
-.clear-popup-title{padding:var(--space-5) var(--space-7) var(--space-3);font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--graphite);text-transform:uppercase;letter-spacing:0.5px;}
-.clear-popup-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:var(--space-5) var(--space-7);height:auto;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink-deep);background:transparent;border:none;cursor:pointer;gap:var(--space-6);text-align:left;}
+.clear-popup{position:fixed;z-index:99999;min-width:200px;}.clear-popup-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:var(--space-5) var(--space-7);height:auto;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--ink-deep);background:transparent;border:none;cursor:pointer;gap:var(--space-6);text-align:left;}
 .clear-popup-row:hover{background:var(--cloud);}
 .clear-count{border-radius:var(--radius-full);padding:var(--space-1) var(--space-4);font-size:var(--text-2xs);font-weight:var(--font-bold);}
 .clear-count--level{background:var(--fog);color:var(--level-deep);}
