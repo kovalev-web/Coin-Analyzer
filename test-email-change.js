@@ -65,7 +65,7 @@ function cookieHeader() {
 async function post(url, body) {
   var r = await fetch(BASE + url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader() },
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader(), Origin: 'https://questtick.com' },
     body: JSON.stringify(body),
   });
   storeCookies(r.headers);
