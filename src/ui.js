@@ -329,7 +329,7 @@ export function showAccountModal() {
 
   var el = document.createElement('div');
   el.id = 'account-overlay';
-  el.className = 'account-overlay';
+  el.className = 'account-overlay overlay';
   el.innerHTML =
     '<div class="account-panel">'
     + '<div class="popup-header"><span class="popup-title">Настройки профиля</span><button class="btn-topbar" id="account-close">' + icon('x', 14) + '</button></div>'
@@ -3092,7 +3092,7 @@ export function openCoinFullView(sym) {
   _fvSym = sym;
 
   var overlay = document.getElementById('fv-overlay');
-  if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; document.body.appendChild(overlay); }
+  if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; overlay.className = 'overlay'; document.body.appendChild(overlay); }
 
   var tf = state.chartTF[sym] || '5m';
   var switchingCoins = overlay.style.display === 'flex';

@@ -59,7 +59,7 @@ export function openTVMode() {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'tv-overlay';
-    overlay.className = 'tv-overlay';
+    overlay.className = 'tv-overlay overlay';
     document.body.appendChild(overlay);
   }
 
