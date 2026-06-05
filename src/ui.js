@@ -376,7 +376,7 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
 
-        + '<div class="acc-footer-divider"></div>'
+
         + '<button class="btn-cta danger" id="acc-logout-btn">Выйти из аккаунта</button>'
 
       + '</div>'
@@ -448,7 +448,7 @@ export function showAccountModal() {
           + '<button class="btn-cta danger" id="acc-revoke-btn">Выйти со всех других устройств</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
-        + '<div class="acc-footer-divider"></div>'
+
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
