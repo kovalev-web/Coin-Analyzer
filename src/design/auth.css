@@ -21,17 +21,17 @@ body {
 .auth-card {
   width: 100%;
   max-width: 360px;
-  padding: var(--space-16) var(--space-12);
   background: var(--paper);
   border: 1px solid var(--steel);
   border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .auth-title {
   font-size: var(--text-2xl);
   font-weight: var(--font-semi);
   letter-spacing: -0.3px;
-  margin-bottom: var(--space-8);
   color: var(--ink-deep);
 }
 
@@ -201,7 +201,6 @@ body {
 .auth-back {
   display: block;
   text-align: center;
-  margin-top: var(--v-md);
   font-size: var(--text-xs);
   color: var(--graphite);
   text-decoration: none;
