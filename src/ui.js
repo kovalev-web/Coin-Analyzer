@@ -445,9 +445,8 @@ export function showAccountModal() {
       + '</div>'
 
       + '<div class="acc-pane" id="acc-pane-security" style="display:none;">'
+        + '<div id="acc-pass-change-section"></div>'
         + '<div class="acc-security-actions">'
-          + '<button class="btn-cta" id="acc-reset-pass-btn">Изменить пароль по email</button>'
-          + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>'
           + '<button class="btn-cta danger" id="acc-revoke-btn">Выйти со всех других устройств</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
@@ -915,6 +914,7 @@ export function showAccountModal() {
       }
       _emailHasPassword = !!d.hasPassword;
       _emailTgConnected = !!d.tgConnected;
+      _buildPassSection();
       renderTgStatus(!!d.tgConnected);
       if (d.pendingEmailChange) {
         _emailNewPending = d.pendingEmailChange;
@@ -1001,31 +1001,120 @@ export function showAccountModal() {
       });
   });
 
-  document.getElementById('acc-reset-pass-btn').addEventListener('click', function () {
-    var btn = document.getElementById('acc-reset-pass-btn');
-    var msg = document.getElementById('acc-reset-pass-msg');
-    btn.disabled = true; btn.classList.add('btn-loading');
-    fetch(API_BASE + '/auth/request-password-reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email: _userEmail, redirectTo: 'https://questtick.com/reset-password' }),
-    })
-      .then(function (r) {
-        if (r.ok) {
-          msg.style.color = 'var(--bullish)';
-          msg.textContent = 'Письмо отправлено на ' + _userEmail;
+  function _buildPassSection() {
+    var section = document.getElementById('acc-pass-change-section');
+    if (!section) return;
+    if (_emailHasPassword) {
+      section.innerHTML =
+        '<div class="acc-row" id="acc-pass-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">Пароль</div>'
+            + '<div class="acc-row-val">••••••••</div>'
+          + '</div>'
+          + '<button class="acc-row-edit" id="acc-pass-change-btn">Изменить</button>'
+        + '</div>'
+        + '<div id="acc-pass-editor" style="display:none;padding:0 0 var(--v-xs)">'
+          + '<input type="password" id="acc-pass-current" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+          + '<input type="password" id="acc-pass-new" placeholder="Новый пароль (мин. 8 символов)" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<input type="password" id="acc-pass-confirm" placeholder="Подтвердите новый пароль" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-bin-actions">'
+            + '<button class="btn-cta" id="acc-pass-submit">Сохранить</button>'
+          + '</div>'
+        + '</div>'
+        + '<div class="acc-field-err" id="acc-pass-msg"></div>';
+
+      document.getElementById('acc-pass-change-btn').addEventListener('click', function () {
+        var editor = document.getElementById('acc-pass-editor');
+        var msg = document.getElementById('acc-pass-msg');
+        if (editor.style.display === 'block') {
+          editor.style.display = 'none';
+          msg.textContent = '';
+          this.textContent = 'Изменить';
         } else {
-          throw new Error('fail');
+          editor.style.display = 'block';
+          msg.textContent = '';
+          this.textContent = 'Отменить';
+          document.getElementById('acc-pass-current').focus();
         }
-        btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Изменить пароль по email';
-      })
-      .catch(function () {
-        msg.style.color = '';
-        msg.textContent = 'Ошибка, попробуйте ещё раз';
-        btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Изменить пароль по email';
       });
-  });
+
+      document.getElementById('acc-pass-submit').addEventListener('click', function () {
+        var cur = document.getElementById('acc-pass-current').value;
+        var nw  = document.getElementById('acc-pass-new').value;
+        var cfm = document.getElementById('acc-pass-confirm').value;
+        var msg = document.getElementById('acc-pass-msg');
+        msg.textContent = ''; msg.style.color = 'var(--danger)';
+        if (!cur) { msg.textContent = 'Введите текущий пароль'; return; }
+        if (nw.length < 8) { msg.textContent = 'Новый пароль — минимум 8 символов'; return; }
+        if (nw !== cfm) { msg.textContent = 'Пароли не совпадают'; return; }
+        var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
+        fetch(API_BASE + '/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ currentPassword: cur, newPassword: nw, revokeOtherSessions: false }),
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            btn.disabled = false; btn.classList.remove('btn-loading');
+            if (res.ok) {
+              document.getElementById('acc-pass-editor').style.display = 'none';
+              document.getElementById('acc-pass-change-btn').textContent = 'Изменить';
+              msg.style.color = 'var(--bullish)';
+              msg.textContent = 'Пароль изменён';
+            } else {
+              msg.textContent = (res.d && res.d.message) || 'Ошибка';
+            }
+          })
+          .catch(function () {
+            btn.disabled = false; btn.classList.remove('btn-loading');
+            msg.textContent = 'Ошибка сети';
+          });
+      });
+
+    } else {
+      section.innerHTML =
+        '<button class="btn-cta" id="acc-reset-pass-btn">Отправить ссылку на смену пароля</button>'
+        + '<div class="acc-field-err" id="acc-reset-pass-msg"></div>';
+
+      document.getElementById('acc-reset-pass-btn').addEventListener('click', function () {
+        var btn = this;
+        var msg = document.getElementById('acc-reset-pass-msg');
+        btn.disabled = true; btn.classList.add('btn-loading');
+        fetch(API_BASE + '/auth/request-password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email: _userEmail, redirectTo: 'https://questtick.com/reset-password' }),
+        }).then(function (r) {
+          btn.classList.remove('btn-loading');
+          if (r.ok) {
+            msg.style.color = 'var(--bullish)';
+            msg.textContent = 'Если этот адрес зарегистрирован, мы отправили ссылку на ' + _userEmail;
+          } else {
+            msg.style.color = ''; msg.textContent = 'Ошибка, попробуйте ещё раз';
+            btn.disabled = false; return;
+          }
+          // 60-second cooldown
+          var secs = 60;
+          btn.textContent = 'Повторная отправка через ' + secs + ' с';
+          var t = setInterval(function () {
+            secs--;
+            if (secs <= 0) {
+              clearInterval(t);
+              btn.disabled = false;
+              btn.textContent = 'Отправить ссылку на смену пароля';
+            } else {
+              btn.textContent = 'Повторная отправка через ' + secs + ' с';
+            }
+          }, 1000);
+        }).catch(function () {
+          btn.classList.remove('btn-loading');
+          msg.style.color = ''; msg.textContent = 'Ошибка сети';
+          btn.disabled = false;
+        });
+      });
+    }
+  }
 
 }
 
