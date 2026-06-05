@@ -392,10 +392,12 @@ export function showAccountModal() {
           + '<div style="margin-bottom:var(--v-sm);">'
             + '<div class="acc-row-label">API Key</div>'
             + '<input type="text" id="acc-bin-key" placeholder="Вставьте API key..." autocomplete="off" class="ds-input">'
+            + '<div class="acc-field-err" id="acc-bin-err-key"></div>'
           + '</div>'
-          + '<div style="margin-bottom:var(--v-sm);">'
+          + '<div>'
             + '<div class="acc-row-label">Secret Key</div>'
             + '<input type="password" id="acc-bin-sec" placeholder="Вставьте Secret key..." autocomplete="off" class="ds-input">'
+            + '<div class="acc-field-err" id="acc-bin-err-sec"></div>'
           + '</div>'
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div class="acc-bin-actions">'
@@ -427,7 +429,9 @@ export function showAccountModal() {
         + '<div id="acc-email-step1" class="acc-editor"></div>'
         + '<div id="acc-email-step2" class="acc-editor">'
           + '<input type="email" id="acc-email-new1" placeholder="Новый email" autocomplete="off" class="ds-input">'
+          + '<div class="acc-field-err" id="acc-email-err-1"></div>'
           + '<input type="email" id="acc-email-new2" placeholder="Подтвердите новый email" autocomplete="off" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-field-err" id="acc-email-err-2"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-s2-btn">Отправить код</button>'
           + '</div>'
@@ -435,6 +439,7 @@ export function showAccountModal() {
         + '<div id="acc-email-step3" class="acc-editor">'
           + '<div id="acc-email-s3-hint"></div>'
           + '<input type="text" id="acc-email-code" inputmode="numeric" maxlength="6" placeholder="Код из письма" autocomplete="one-time-code" class="ds-input">'
+          + '<div class="acc-field-err" id="acc-email-step3-err"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-s3-btn">Подтвердить</button>'
           + '</div>'
@@ -553,8 +558,23 @@ export function showAccountModal() {
       var key = (document.getElementById('acc-bin-key').value || '').trim();
       var sec = (document.getElementById('acc-bin-sec').value || '').trim();
       var err = document.getElementById('acc-bin-err');
+      var errKey = document.getElementById('acc-bin-err-key');
+      var errSec = document.getElementById('acc-bin-err-sec');
       err.textContent = '';
-      if (!key || !sec) { err.textContent = 'Введите оба поля'; return; }
+      if(errKey) errKey.textContent = '';
+      if(errSec) errSec.textContent = '';
+      document.getElementById('acc-bin-key').classList.remove('error');
+      document.getElementById('acc-bin-sec').classList.remove('error');
+      if (!key) {
+        if(errKey) errKey.textContent = 'Введите API key';
+        document.getElementById('acc-bin-key').classList.add('error');
+        return;
+      }
+      if (!sec) {
+        if(errSec) errSec.textContent = 'Введите Secret key';
+        document.getElementById('acc-bin-sec').classList.add('error');
+        return;
+      }
       btn.disabled = true; btn.classList.add('btn-loading');
       fetch(API_BASE + '/api/account', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -650,11 +670,23 @@ export function showAccountModal() {
     el.style.color = isSuccess ? 'var(--bullish)' : 'var(--danger)';
   }
 
+  function _emailErr(targetId, msg, inputId) {
+    ['acc-email-step1-err','acc-email-err-1','acc-email-err-2','acc-email-step3-err'].forEach(function(id){
+      var e=document.getElementById(id); if(e) e.textContent='';
+    });
+    ['acc-email-pass','acc-email-tg-code','acc-email-new1','acc-email-new2','acc-email-code'].forEach(function(id){
+      var e=document.getElementById(id); if(e) e.classList.remove('error');
+    });
+    if(targetId){var e=document.getElementById(targetId); if(e) e.textContent=msg||'';}
+    if(inputId){var e=document.getElementById(inputId); if(e) e.classList.add('error');}
+  }
+
   function _emailShowStep(n) {
     [1, 2, 3].forEach(function (i) {
       var el = document.getElementById('acc-email-step' + i);
       if (el) el.style.display = (i === n) ? 'block' : 'none';
     });
+    _emailErr(null, '');
     _emailStep = n;
     if (!n) {
       document.getElementById('acc-email-msg').textContent = '';
@@ -666,11 +698,13 @@ export function showAccountModal() {
     var s1 = document.getElementById('acc-email-step1');
     if (_emailHasPassword) {
       s1.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+        + '<div class="acc-field-err" id="acc-email-step1-err"></div>'
         + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>';
     } else if (_emailTgConnected) {
       s1.innerHTML = '<button class="btn-cta" id="acc-email-send-tg-btn">Получить код в Telegram</button>'
         + '<div id="acc-email-tg-code-wrap">'
           + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" inputmode="numeric" maxlength="6" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-field-err" id="acc-email-step1-err"></div>'
           + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>'
         + '</div>';
       document.getElementById('acc-email-send-tg-btn').addEventListener('click', function () {
@@ -683,11 +717,11 @@ export function showAccountModal() {
           if (d.ok) {
             document.getElementById('acc-email-tg-code-wrap').style.display = 'block';
             btn.textContent = 'Отправить ещё раз';
-            _emailMsg('', false);
+            _emailErr(null, '');
           } else {
-            _emailMsg(d.error || 'Ошибка', false);
+            _emailErr('acc-email-step1-err', d.error || 'Ошибка');
           }
-        }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+        }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Ошибка сети'); });
       });
     } else {
       s1.innerHTML = '<div style="font-size:var(--text-sm);color:var(--graphite)">Для смены email подключите Telegram в разделе «Интеграции»</div>';
@@ -698,7 +732,7 @@ export function showAccountModal() {
       var btn = e.target;
       var password = (document.getElementById('acc-email-pass') || {}).value || '';
       var tgCode = ((document.getElementById('acc-email-tg-code') || {}).value || '').trim();
-      if (!password && !tgCode) { _emailMsg('Введите пароль или код', false); return; }
+      if (!password && !tgCode) { _emailErr('acc-email-step1-err', 'Введите пароль или код', password ? 'acc-email-pass' : 'acc-email-tg-code'); return; }
       btn.disabled = true; btn.classList.add('btn-loading');
       var body = { action: 'email-change-verify-identity' };
       if (password) body.password = password;
@@ -709,13 +743,13 @@ export function showAccountModal() {
       }).then(function (r) { return r.json(); }).then(function (d) {
         btn.disabled = false; btn.classList.remove('btn-loading');
         if (d.ok) {
-          _emailMsg('', false);
+          _emailErr(null, '');
           _emailShowStep(2);
           document.getElementById('acc-email-new1').focus();
         } else {
-          _emailMsg(d.error || 'Ошибка', false);
+          _emailErr('acc-email-step1-err', d.error || 'Ошибка');
         }
-      }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+      }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step1-err', 'Ошибка сети'); });
     });
   }
 
@@ -736,9 +770,9 @@ export function showAccountModal() {
   document.getElementById('acc-email-s2-btn').addEventListener('click', function () {
     var e1 = (document.getElementById('acc-email-new1').value || '').trim().toLowerCase();
     var e2 = (document.getElementById('acc-email-new2').value || '').trim().toLowerCase();
-    if (!e1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e1)) { _emailMsg('Введите корректный email', false); return; }
-    if (e1 !== e2) { _emailMsg('Адреса не совпадают', false); return; }
-    if (e1 === (_userEmail || '').toLowerCase()) { _emailMsg('Это уже ваш email', false); return; }
+    if (!e1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e1)) { _emailErr('acc-email-err-1', 'Введите корректный email', 'acc-email-new1'); return; }
+    if (e1 !== e2) { _emailErr('acc-email-err-2', 'Адреса не совпадают', 'acc-email-new2'); return; }
+    if (e1 === (_userEmail || '').toLowerCase()) { _emailErr('acc-email-err-1', 'Это уже ваш email', 'acc-email-new1'); return; }
     var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/api/account', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -749,17 +783,18 @@ export function showAccountModal() {
         _emailNewPending = e1;
         document.getElementById('acc-email-s3-hint').textContent =
           'Код отправлен на ' + e1 + '. На ' + (_userEmail || 'старый адрес') + ' — письмо с возможностью отменить.';
+        _emailErr(null, '');
         _emailShowStep(3);
         document.getElementById('acc-email-code').focus();
       } else {
-        _emailMsg(d.error || 'Ошибка', false);
+        _emailErr('acc-email-err-2', d.error || 'Ошибка');
       }
-    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-err-2', 'Ошибка сети'); });
   });
 
   document.getElementById('acc-email-s3-btn').addEventListener('click', function () {
     var code = (document.getElementById('acc-email-code').value || '').trim();
-    if (!code || code.length < 6) { _emailMsg('Введите 6-значный код', false); return; }
+    if (!code || code.length < 6) { _emailErr('acc-email-step3-err', 'Введите 6-значный код', 'acc-email-code'); return; }
     var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/api/account', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -772,9 +807,9 @@ export function showAccountModal() {
         _emailShowStep(0);
         _emailMsg('Email успешно изменён', true);
       } else {
-        _emailMsg(d.error || 'Ошибка', false);
+        _emailErr('acc-email-step3-err', d.error || 'Ошибка');
       }
-    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailErr('acc-email-step3-err', 'Ошибка сети'); });
   });
 
   // Timezone section
@@ -1019,19 +1054,36 @@ export function showAccountModal() {
         + '</div>'
         + '<div id="acc-pass-editor">'
           + '<input type="password" id="acc-pass-current" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+          + '<div class="acc-field-err" id="acc-pass-err-cur"></div>'
           + '<input type="password" id="acc-pass-new" placeholder="Новый пароль (мин. 8 символов)" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-field-err" id="acc-pass-err-new"></div>'
           + '<input type="password" id="acc-pass-confirm" placeholder="Подтвердите новый пароль" autocomplete="new-password" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-field-err" id="acc-pass-err-cfm"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-pass-submit">Сохранить</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-pass-msg"></div>';
 
+      function _passErr(field, msg) {
+        ['cur','new','cfm'].forEach(function(f){
+          var el=document.getElementById('acc-pass-err-'+f); if(el) el.textContent='';
+          var inputId={cur:'acc-pass-current',new:'acc-pass-new',cfm:'acc-pass-confirm'}[f];
+          var inp=document.getElementById(inputId); if(inp) inp.classList.remove('error');
+        });
+        if(field){
+          var el=document.getElementById('acc-pass-err-'+field); if(el) el.textContent=msg||'';
+          var inputId={cur:'acc-pass-current',new:'acc-pass-new',cfm:'acc-pass-confirm'}[field];
+          var inp=document.getElementById(inputId); if(inp) inp.classList.add('error');
+        }
+      }
+
       document.getElementById('acc-pass-change-btn').addEventListener('click', function () {
         var editor = document.getElementById('acc-pass-editor');
         var msg = document.getElementById('acc-pass-msg');
         if (editor.style.display === 'block') {
           editor.style.display = 'none';
+          _passErr(null, '');
           msg.textContent = '';
           this.textContent = 'Изменить';
         } else {
@@ -1047,10 +1099,10 @@ export function showAccountModal() {
         var nw  = document.getElementById('acc-pass-new').value;
         var cfm = document.getElementById('acc-pass-confirm').value;
         var msg = document.getElementById('acc-pass-msg');
-        msg.textContent = ''; msg.style.color = 'var(--danger)';
-        if (!cur) { msg.textContent = 'Введите текущий пароль'; return; }
-        if (nw.length < 8) { msg.textContent = 'Новый пароль — минимум 8 символов'; return; }
-        if (nw !== cfm) { msg.textContent = 'Пароли не совпадают'; return; }
+        _passErr(null, '');
+        if (!cur) { _passErr('cur', 'Введите текущий пароль'); return; }
+        if (nw.length < 8) { _passErr('new', 'Новый пароль — минимум 8 символов'); return; }
+        if (nw !== cfm) { _passErr('cfm', 'Пароли не совпадают'); return; }
         var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
         fetch(API_BASE + '/auth/change-password', {
           method: 'POST',
@@ -1066,12 +1118,12 @@ export function showAccountModal() {
               msg.style.color = 'var(--bullish)';
               msg.textContent = 'Пароль изменён';
             } else {
-              msg.textContent = (res.d && res.d.message) || 'Ошибка';
+              _passErr('cur', (res.d && res.d.message) || 'Ошибка');
             }
           })
           .catch(function () {
             btn.disabled = false; btn.classList.remove('btn-loading');
-            msg.textContent = 'Ошибка сети';
+            _passErr('cur', 'Ошибка сети');
           });
       });
 
