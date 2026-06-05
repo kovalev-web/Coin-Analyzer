@@ -371,7 +371,6 @@ export function showAccountModal() {
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
-            + '<button id="acc-email-cancel" class="acc-delete-cancel">Отмена</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg"></div>'
@@ -388,7 +387,6 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-tz-save">Сохранить</button>'
-            + '<button id="acc-tz-cancel" class="acc-delete-cancel">Отмена</button>'
           + '</div>'
         + '</div>'
 
@@ -646,7 +644,7 @@ export function showAccountModal() {
     }
     var html = '';
     if (_emailHasPassword) {
-      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:var(--space-3);">';
+      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:var(--v-sm);">';
     }
     if (_emailHasPassword && _emailTgConnected) {
       html += '<div style="text-align:center;color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
@@ -685,16 +683,18 @@ export function showAccountModal() {
   }
 
   document.getElementById('acc-email-change-btn').addEventListener('click', function () {
-    document.getElementById('acc-email-row').style.display = 'none';
-    document.getElementById('acc-email-editor').style.display = 'block';
-    document.getElementById('acc-email-msg').textContent = '';
-    _setupEmailVerify();
-  });
-
-  document.getElementById('acc-email-cancel').addEventListener('click', function () {
-    document.getElementById('acc-email-editor').style.display = 'none';
-    document.getElementById('acc-email-row').style.display = '';
-    document.getElementById('acc-email-msg').textContent = '';
+    var editor = document.getElementById('acc-email-editor');
+    var msg = document.getElementById('acc-email-msg');
+    if (editor.style.display === 'block') {
+      editor.style.display = 'none';
+      msg.textContent = '';
+      this.innerHTML = icon('pencil', 12) + ' Изменить';
+    } else {
+      editor.style.display = 'block';
+      msg.textContent = '';
+      this.innerHTML = icon('x', 12) + ' Отменить';
+      _setupEmailVerify();
+    }
   });
 
   document.getElementById('acc-email-submit').addEventListener('click', function () {
@@ -717,7 +717,7 @@ export function showAccountModal() {
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
-        document.getElementById('acc-email-row').style.display = '';
+        document.getElementById('acc-email-change-btn').innerHTML = icon('pencil', 12) + ' Изменить';
         msg.style.color = 'var(--bullish)';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
@@ -814,14 +814,14 @@ export function showAccountModal() {
   _tzSel.value = _autoTz || _TZ_LIST[0][0];
 
   document.getElementById('acc-tz-change-btn').addEventListener('click', function () {
-    _tzRow.style.display = 'none';
-    _tzEditor.style.display = 'block';
-  });
-
-  document.getElementById('acc-tz-cancel').addEventListener('click', function () {
-    _tzEditor.style.display = 'none';
-    _tzRow.style.display = '';
-    document.getElementById('acc-tz-msg').textContent = '';
+    if (_tzEditor.style.display === 'block') {
+      _tzEditor.style.display = 'none';
+      document.getElementById('acc-tz-msg').textContent = '';
+      this.innerHTML = icon('pencil', 12) + ' Изменить';
+    } else {
+      _tzEditor.style.display = 'block';
+      this.innerHTML = icon('x', 12) + ' Отменить';
+    }
   });
 
   document.getElementById('acc-tz-save').addEventListener('click', function () {
@@ -837,7 +837,7 @@ export function showAccountModal() {
       if (d.ok) {
         _tzSetDisplay(_tzSel.value, 'сохранено');
         _tzEditor.style.display = 'none';
-        _tzRow.style.display = '';
+        document.getElementById('acc-tz-change-btn').innerHTML = icon('pencil', 12) + ' Изменить';
       } else {
         msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
       }
