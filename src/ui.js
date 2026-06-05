@@ -404,15 +404,6 @@ export function showAccountModal() {
 
       + '<div class="acc-pane" id="acc-pane-integrations" style="display:none;">'
 
-        + '<div class="acc-row" id="acc-tg-row">'
-          + '<div class="acc-row-left">'
-            + '<div class="acc-row-label">TELEGRAM</div>'
-            + '<div id="acc-tg-badge"></div>'
-          + '</div>'
-          + '<div id="acc-tg-btn-wrap"></div>'
-        + '</div>'
-        + '<div id="acc-tg-link-area" style="display:none;"></div>'
-
         + '<div class="acc-row" id="acc-bin-row-hd">'
           + '<div class="acc-row-left">'
             + '<div class="acc-row-label">BINANCE API</div>'
@@ -435,6 +426,15 @@ export function showAccountModal() {
             + '<button id="acc-bin-del" class="acc-delete-cancel" style="display:none">Удалить</button>'
           + '</div>'
         + '</div>'
+
+        + '<div class="acc-row" id="acc-tg-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">TELEGRAM</div>'
+            + '<div id="acc-tg-badge"></div>'
+          + '</div>'
+          + '<div id="acc-tg-btn-wrap"></div>'
+        + '</div>'
+        + '<div id="acc-tg-link-area" style="display:none;"></div>'
 
       + '</div>'
 
