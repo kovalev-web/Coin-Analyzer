@@ -453,7 +453,7 @@ export function showAccountModal() {
         + '<div id="acc-delete-wrap">'
           + '<button class="acc-delete-btn" id="acc-delete-btn">Удалить аккаунт</button>'
           + '<div id="acc-delete-confirm">'
-            + '<div style="font-size:var(--text-xs);color:var(--graphite);margin-bottom:var(--v-sm);">Введите «удалить аккаунт» для подтверждения:</div>'
+            + '<div id="acc-delete-hint">Введите «удалить аккаунт» для подтверждения:</div>'
             + '<input type="text" id="acc-delete-input" placeholder="удалить аккаунт" autocomplete="off" class="ds-input">'
             + '<div class="acc-bin-actions">'
               + '<button class="btn-cta danger" id="acc-delete-yes" disabled>Удалить аккаунт</button>'
