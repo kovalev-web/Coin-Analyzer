@@ -349,7 +349,7 @@ export function showAccountModal() {
             + '</span>'
             + '<div class="acc-avatar-info">'
               + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
-              + '<button id="acc-avatar-change-btn" class="acc-row-edit" title="Сменить аватар">Изменить</button>'
+              + '<button id="acc-avatar-change-btn" class="btn-cta">Изменить</button>'
             + '</div>'
           + '</div>'
         + '</div>'
