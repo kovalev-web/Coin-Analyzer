@@ -3412,7 +3412,7 @@ export function openCoinFullView(sym) {
     var p = price.toFixed(calcPriceFormat(price).precision);
     var m = document.createElement('div');
     m.id = 'fv-touch-menu';
-    m.className = 'fv-touch-menu';
+    m.className = 'fv-touch-menu context-menu';
     var html;
     if (delMode === 'level') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
@@ -4037,7 +4037,7 @@ export function openClearPopup(sym, btn) {
 
   var popup = document.createElement('div');
   popup.id = 'clear-popup';
-  popup.className = 'clear-popup';
+  popup.className = 'clear-popup context-menu';
   popup.dataset.sym = sym;
 
   var html = '<div class="clear-popup-title">Удалить</div>';
