@@ -402,7 +402,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-bin-err"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-bin-save">Сохранить</button>'
-            + '<button id="acc-bin-del" class="acc-delete-cancel" style="display:none">Удалить</button>'
+            + '<button id="acc-bin-del" class="acc-delete-cancel">Удалить</button>'
           + '</div>'
         + '</div>'
 
@@ -413,7 +413,7 @@ export function showAccountModal() {
           + '</div>'
           + '<div id="acc-tg-btn-wrap"></div>'
         + '</div>'
-        + '<div id="acc-tg-link-area" style="display:none;"></div>'
+        + '<div id="acc-tg-link-area"></div>'
 
       + '</div>'
 
@@ -435,7 +435,7 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
         + '<div id="acc-email-step3" class="acc-editor">'
-          + '<div id="acc-email-s3-hint" style="font-size:var(--text-sm);color:var(--graphite);margin-bottom:var(--v-sm)"></div>'
+          + '<div id="acc-email-s3-hint"></div>'
           + '<input type="text" id="acc-email-code" inputmode="numeric" maxlength="6" placeholder="Код из письма" autocomplete="one-time-code" class="ds-input">'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-s3-btn">Подтвердить</button>'
