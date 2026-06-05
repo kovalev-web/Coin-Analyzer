@@ -55,9 +55,9 @@ function renderCard(coin) {
     '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>' +
     '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Fullscreen">' + icon('maximize', 16) + '</button>' +
     '</div>' +
+    statsHtml +
     '</div>' +
     '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
-    statsHtml +
     '</div>';
 }
 
