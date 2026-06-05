@@ -213,7 +213,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .avatar-wrap{position:relative;display:none;}
 @media(min-width:1025px){.avatar-wrap{display:block;}}
 .btn-avatar{font-size:var(--text-base);line-height:1;}
-.btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:var(--text-2xl);width:auto;height:auto;}
+.btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:var(--text-2xl);line-height:1;overflow:hidden;}
 
 /* ── Account overlay ────────────────────────────────────────── */
 .account-overlay{z-index:600;background:var(--canvas);overflow-y:auto;overscroll-behavior:contain;}
