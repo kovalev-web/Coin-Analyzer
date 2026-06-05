@@ -446,7 +446,7 @@ export function showAccountModal() {
         + '<div id="acc-pass-change-section"></div>'
 
         + '<div class="acc-security-actions">'
-          + '<button class="btn-cta danger" id="acc-revoke-btn">Выйти со всех других устройств</button>'
+          + '<button class="btn-cta" id="acc-revoke-btn">Выйти с других устройств</button>'
           + '<div class="acc-field-err" id="acc-revoke-msg"></div>'
         + '</div>'
 
