@@ -925,8 +925,13 @@ var httpServer = http.createServer(async function (req, res) {
       var timezone = tzIanaRes && tzIanaRes.result ? tzIanaRes.result : null;
       var credRow = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(userId, 'credential');
       var hasPassword = !!(credRow && credRow.password);
+      var pendingChgRes = await redis(['GET', 'email_chg_code:' + userId]);
+      var pendingEmailChange = null;
+      if (pendingChgRes && pendingChgRes.result) {
+        try { pendingEmailChange = JSON.parse(pendingChgRes.result).newEmail; } catch (e) {}
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone, hasPassword: hasPassword }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone, hasPassword: hasPassword, pendingEmailChange: pendingEmailChange }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
@@ -934,23 +939,34 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
-  if (req.method === 'GET' && req.url && req.url.startsWith('/api/confirm-email-change')) {
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/cancel-email-change')) {
     try {
-      var confirmToken = new URL(req.url, 'https://questtick.com').searchParams.get('token') || '';
-      if (!confirmToken) { res.writeHead(400); res.end('Missing token'); return; }
-      var pendingRes = await redis(['GET', 'email_chg:' + confirmToken]);
-      if (!pendingRes || !pendingRes.result) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Ссылка недействительна или истекла' })); return; }
-      var pending = JSON.parse(pendingRes.result);
-      getDb().sqlite.prepare('UPDATE user SET email = ?, email_verified = 1, updated_at = ? WHERE id = ?')
-        .run(pending.newEmail, Math.floor(Date.now() / 1000), pending.userId);
-      await redis(['DEL', 'email_chg:' + confirmToken]);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true }));
+      var cancelTok = new URL(req.url, 'https://questtick.com').searchParams.get('token') || '';
+      if (!cancelTok) { res.writeHead(400); res.end('Missing token'); return; }
+      var cancelEntry = await redis(['GET', 'email_chg_cancel:' + cancelTok]);
+      var cancelHtml = function (msg) {
+        return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Questtick</title>'
+          + '<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}'
+          + 'div{background:#fff;border-radius:12px;padding:40px;max-width:420px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.08)}'
+          + 'h2{margin:0 0 12px}p{color:#666;margin:0 0 24px}a{display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600}</style>'
+          + '</head><body><div>' + msg + '<a href="https://questtick.com">Вернуться на сайт</a></div></body></html>';
+      };
+      if (!cancelEntry || !cancelEntry.result) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(cancelHtml('<h2>Ссылка недействительна</h2><p>Ссылка уже использована или истёк срок действия.</p>'));
+        return;
+      }
+      var cancelUserId = cancelEntry.result;
+      await Promise.all([
+        redis(['DEL', 'email_chg_cancel:' + cancelTok]),
+        redis(['DEL', 'email_chg_code:' + cancelUserId]),
+        redis(['DEL', 'email_chg_auth:' + cancelUserId]),
+      ]);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(cancelHtml('<h2>Смена email отменена</h2><p>Ваш адрес электронной почты не был изменён.</p>'));
     } catch (e) {
-      var status = (e.message || '').includes('UNIQUE') ? 400 : 500;
-      var msg = (e.message || '').includes('UNIQUE') ? 'Этот email уже используется другим аккаунтом' : e.message;
-      res.writeHead(status, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: msg }));
+      res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<html><body>Внутренняя ошибка</body></html>');
     }
     return;
   }
@@ -1025,67 +1041,154 @@ var httpServer = http.createServer(async function (req, res) {
           await redis(['DEL', 'binance_keys:' + userId]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
-        } else if (parsed.action === 'send-email-change-code') {
+        } else if (parsed.action === 'email-change-send-tg-code') {
+          // Step 1 for Google users: send TG code for identity verification
           var chatRes2 = await redis(['GET', 'tg_chat:' + userId]);
           if (!chatRes2 || !chatRes2.result) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Telegram не подключён' })); return;
           }
-          var code = String(Math.floor(100000 + Math.random() * 900000));
-          await redis(['SET', 'email_chg_code:' + userId, code, 'EX', '60']);
-          await sendTG(chatRes2.result, '🔐 Код подтверждения смены email: ' + code + '\n\nКод действителен 1 минуту.');
+          var tgAuthCode = String(Math.floor(100000 + Math.random() * 900000));
+          await redis(['SET', 'email_chg_auth_code:' + userId, tgAuthCode, 'EX', '120']);
+          await sendTG(chatRes2.result, '🔐 Код подтверждения для смены email: ' + tgAuthCode + '\n\nДействителен 2 минуты.');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
-        } else if (parsed.action === 'change-email-request') {
-          var newEmailReq = (parsed.newEmail || '').trim().toLowerCase();
-          if (!newEmailReq || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailReq)) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Некорректный email' })); return;
-          }
-          var existingUser = getDb().sqlite.prepare('SELECT id FROM user WHERE email = ?').get(newEmailReq);
-          if (existingUser) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Этот email уже используется другим аккаунтом' })); return;
-          }
-          var verified = false;
+
+        } else if (parsed.action === 'email-change-verify-identity') {
+          // Step 1: verify identity (password or TG code) → set short-lived auth flag
+          var identVerified = false;
           if (parsed.password) {
             var credRow2 = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(userId, 'credential');
             if (!credRow2 || !credRow2.password) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'У вашего аккаунта нет пароля' })); return;
             }
-            verified = await verifyBaPassword(credRow2.password, parsed.password);
-            if (!verified) {
+            identVerified = await verifyBaPassword(credRow2.password, parsed.password);
+            if (!identVerified) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Неверный пароль' })); return;
             }
           } else if (parsed.tgCode) {
-            var storedCode = await redis(['GET', 'email_chg_code:' + userId]);
-            if (!storedCode || !storedCode.result || storedCode.result !== String(parsed.tgCode).trim()) {
+            var storedAuthCode = await redis(['GET', 'email_chg_auth_code:' + userId]);
+            if (!storedAuthCode || !storedAuthCode.result || storedAuthCode.result !== String(parsed.tgCode).trim()) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Неверный или устаревший код' })); return;
             }
-            await redis(['DEL', 'email_chg_code:' + userId]);
-            verified = true;
+            await redis(['DEL', 'email_chg_auth_code:' + userId]);
+            identVerified = true;
           }
-          if (!verified) {
+          if (!identVerified) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Требуется подтверждение: пароль или код из Telegram' })); return;
+            res.end(JSON.stringify({ error: 'Требуется пароль или код из Telegram' })); return;
           }
-          var chgToken = crypto.randomBytes(32).toString('hex');
-          await redis(['SET', 'email_chg:' + chgToken, JSON.stringify({ userId: userId, newEmail: newEmailReq }), 'EX', '3600']);
-          var confirmUrl = 'https://questtick.com/confirm-email-change?token=' + chgToken;
-          var resendInst = new Resend(process.env.RESEND_API_KEY);
-          await resendInst.emails.send({
-            from: 'Questtick <noreply@questtick.com>',
-            to: newEmailReq,
-            subject: 'Подтвердите новый email — Questtick',
-            html: '<p>Для завершения смены email нажмите кнопку ниже.</p>'
-              + '<p><a href="' + confirmUrl + '" style="display:inline-block;padding:12px 24px;background:#024ad8;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Подтвердить новый email</a></p>'
-              + '<p style="color:#888;font-size:12px;">Ссылка действительна 1 час. Если вы не запрашивали смену — проигнорируйте письмо.</p>',
-          });
+          await redis(['SET', 'email_chg_auth:' + userId, '1', 'EX', '600']);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
+
+        } else if (parsed.action === 'email-change-request') {
+          // Step 2: submit new email — requires auth flag; sends code to new + notice to old
+          var authFlag = await redis(['GET', 'email_chg_auth:' + userId]);
+          if (!authFlag || !authFlag.result) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Сначала подтвердите личность' })); return;
+          }
+          var newEmailReq = (parsed.newEmail || '').trim().toLowerCase();
+          if (!newEmailReq || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailReq)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Некорректный email' })); return;
+          }
+          if (newEmailReq === (session.user.email || '').toLowerCase()) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Это уже ваш email' })); return;
+          }
+          var existingUser2 = getDb().sqlite.prepare('SELECT id FROM user WHERE email = ?').get(newEmailReq);
+          if (existingUser2) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Этот email уже используется другим аккаунтом' })); return;
+          }
+          var confirmCode = String(Math.floor(100000 + Math.random() * 900000));
+          var cancelToken2 = crypto.randomBytes(32).toString('hex');
+          await redis(['DEL', 'email_chg_auth:' + userId]);
+          await redis(['SET', 'email_chg_code:' + userId,
+            JSON.stringify({ code: confirmCode, newEmail: newEmailReq, attempts: 0, cancelToken: cancelToken2 }),
+            'EX', '600']);
+          await redis(['SET', 'email_chg_cancel:' + cancelToken2, userId, 'EX', '86400']);
+          var oldEmail = session.user.email;
+          var cancelUrl2 = 'https://api.questtick.com/api/cancel-email-change?token=' + cancelToken2;
+          var resendInst2 = new Resend(process.env.RESEND_API_KEY);
+          await Promise.all([
+            resendInst2.emails.send({
+              from: 'Questtick <noreply@questtick.com>',
+              to: oldEmail,
+              subject: 'Запрос на смену email — Questtick',
+              html: '<p>Кто-то (скорее всего, вы) запросил смену email для вашего аккаунта Questtick.</p>'
+                + '<p>Если это были вы — ничего делать не нужно.</p>'
+                + '<p>Если вы <b>не делали</b> этого запроса — немедленно отмените изменение:</p>'
+                + '<p><a href="' + cancelUrl2 + '" style="display:inline-block;padding:12px 24px;background:#c0392b;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Отменить смену email</a></p>'
+                + '<p style="color:#888;font-size:12px;">Ссылка для отмены действительна 24 часа.</p>',
+            }),
+            resendInst2.emails.send({
+              from: 'Questtick <noreply@questtick.com>',
+              to: newEmailReq,
+              subject: 'Код подтверждения нового email — Questtick',
+              html: '<p>Вы указали этот адрес как новый email для аккаунта Questtick.</p>'
+                + '<p>Ваш код подтверждения:</p>'
+                + '<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:16px 0">' + confirmCode + '</p>'
+                + '<p style="color:#888;font-size:12px;">Введите этот код на сайте. Код действителен 10 минут.<br>Если вы не запрашивали смену — просто проигнорируйте письмо.</p>',
+            }),
+          ]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+
+        } else if (parsed.action === 'email-change-confirm') {
+          // Step 3: verify 6-digit code from new email, update DB, revoke other sessions
+          var pendingChg = await redis(['GET', 'email_chg_code:' + userId]);
+          if (!pendingChg || !pendingChg.result) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Нет активного запроса на смену email или код истёк' })); return;
+          }
+          var chgData = JSON.parse(pendingChg.result);
+          if (chgData.attempts >= 5) {
+            await redis(['DEL', 'email_chg_code:' + userId]);
+            await redis(['DEL', 'email_chg_cancel:' + (chgData.cancelToken || '')]);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Слишком много попыток. Начните процедуру заново.' })); return;
+          }
+          var enteredCode = String(parsed.code || '').trim();
+          if (enteredCode !== chgData.code) {
+            chgData.attempts = (chgData.attempts || 0) + 1;
+            var remainTtl = await redis(['TTL', 'email_chg_code:' + userId]);
+            var ttlVal = (remainTtl && remainTtl.result > 0) ? remainTtl.result : 60;
+            await redis(['SET', 'email_chg_code:' + userId, JSON.stringify(chgData), 'EX', String(ttlVal)]);
+            var attemptsLeft = 5 - chgData.attempts;
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Неверный код. Осталось попыток: ' + attemptsLeft })); return;
+          }
+          // Code correct — update email, clean up, revoke other sessions
+          var newEmailConfirmed = chgData.newEmail;
+          var dupCheck = getDb().sqlite.prepare('SELECT id FROM user WHERE email = ? AND id != ?').get(newEmailConfirmed, userId);
+          if (dupCheck) {
+            await redis(['DEL', 'email_chg_code:' + userId]);
+            await redis(['DEL', 'email_chg_cancel:' + (chgData.cancelToken || '')]);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Этот email уже занят другим аккаунтом' })); return;
+          }
+          getDb().sqlite.prepare('UPDATE user SET email = ?, email_verified = 1, updated_at = ? WHERE id = ?')
+            .run(newEmailConfirmed, Math.floor(Date.now() / 1000), userId);
+          await Promise.all([
+            redis(['DEL', 'email_chg_code:' + userId]),
+            redis(['DEL', 'email_chg_cancel:' + (chgData.cancelToken || '')]),
+            redis(['DEL', 'email_chg_auth:' + userId]),
+          ]);
+          // Revoke all other sessions
+          var currentSessionId = session.session ? session.session.id : null;
+          if (currentSessionId) {
+            getDb().sqlite.prepare('DELETE FROM session WHERE user_id = ? AND id != ?').run(userId, currentSessionId);
+          } else {
+            getDb().sqlite.prepare('DELETE FROM session WHERE user_id = ?').run(userId);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, newEmail: newEmailConfirmed }));
         } else if (parsed.action === 'save-timezone') {
           var tz = (parsed.timezone || '').trim();
           try { new Intl.DateTimeFormat('en', { timeZone: tz }).format(); } catch (e) {

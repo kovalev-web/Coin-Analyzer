@@ -364,15 +364,23 @@ export function showAccountModal() {
         + '<div class="acc-row" id="acc-email-row">'
           + '<div class="acc-row-left">'
             + '<div class="acc-row-label">Email</div>'
-            + '<div class="acc-row-val">' + escHtml(_userEmail || '') + '</div>'
+            + '<div class="acc-row-val" id="acc-email-display">' + escHtml(_userEmail || '') + '</div>'
           + '</div>'
           + '<button id="acc-email-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
-        + '<div id="acc-email-editor" class="acc-editor">'
-          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input">'
-          + '<div id="acc-email-verify-wrap"></div>'
+        + '<div id="acc-email-step1" class="acc-editor"></div>'
+        + '<div id="acc-email-step2" class="acc-editor">'
+          + '<input type="email" id="acc-email-new1" placeholder="Новый email" autocomplete="off" class="ds-input">'
+          + '<input type="email" id="acc-email-new2" placeholder="Подтвердите новый email" autocomplete="off" class="ds-input" style="margin-top:var(--v-sm)">'
           + '<div class="acc-bin-actions">'
-            + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
+            + '<button class="btn-cta" id="acc-email-s2-btn">Отправить код</button>'
+          + '</div>'
+        + '</div>'
+        + '<div id="acc-email-step3" class="acc-editor">'
+          + '<div id="acc-email-s3-hint" style="font-size:var(--text-sm);color:var(--graphite);margin-bottom:var(--v-sm)"></div>'
+          + '<input type="text" id="acc-email-code" inputmode="numeric" maxlength="6" placeholder="Код из письма" autocomplete="one-time-code" class="ds-input">'
+          + '<div class="acc-bin-actions">'
+            + '<button class="btn-cta" id="acc-email-s3-btn">Подтвердить</button>'
           + '</div>'
         + '</div>'
         + '<div class="acc-field-err" id="acc-email-msg"></div>'
@@ -636,62 +644,140 @@ export function showAccountModal() {
   // Email change section
   var _emailHasPassword = false;
   var _emailTgConnected = false;
+  var _emailStep = 0; // 0=closed, 1=verify-identity, 2=new-email, 3=confirm-code
+  var _emailNewPending = null;
 
-  function _setupEmailVerify() {
-    var wrap = document.getElementById('acc-email-verify-wrap');
-    if (!_emailHasPassword) {
-      wrap.innerHTML = '';
-      return;
-    }
-    wrap.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-top:var(--v-sm);">';
+  function _emailMsg(text, isSuccess) {
+    var el = document.getElementById('acc-email-msg');
+    el.textContent = text;
+    el.style.color = isSuccess ? 'var(--bullish)' : 'var(--danger)';
   }
 
-  document.getElementById('acc-email-change-btn').addEventListener('click', function () {
-    var editor = document.getElementById('acc-email-editor');
-    var msg = document.getElementById('acc-email-msg');
-    if (editor.style.display === 'block') {
-      editor.style.display = 'none';
-      msg.textContent = '';
-      this.textContent = 'Изменить';
+  function _emailShowStep(n) {
+    [1, 2, 3].forEach(function (i) {
+      var el = document.getElementById('acc-email-step' + i);
+      if (el) el.style.display = (i === n) ? 'block' : 'none';
+    });
+    _emailStep = n;
+    if (!n) {
+      document.getElementById('acc-email-msg').textContent = '';
+      document.getElementById('acc-email-change-btn').textContent = 'Изменить';
+    }
+  }
+
+  function _emailBuildStep1() {
+    var s1 = document.getElementById('acc-email-step1');
+    if (_emailHasPassword) {
+      s1.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input">'
+        + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>';
+    } else if (_emailTgConnected) {
+      s1.innerHTML = '<button class="btn-cta" id="acc-email-send-tg-btn">Получить код в Telegram</button>'
+        + '<div id="acc-email-tg-code-wrap" style="display:none">'
+          + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" inputmode="numeric" maxlength="6" class="ds-input" style="margin-top:var(--v-sm)">'
+          + '<div class="acc-bin-actions"><button class="btn-cta" id="acc-email-s1-btn">Продолжить</button></div>'
+        + '</div>';
+      document.getElementById('acc-email-send-tg-btn').addEventListener('click', function () {
+        var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
+        fetch(API_BASE + '/api/account', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ action: 'email-change-send-tg-code' }),
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          btn.disabled = false; btn.classList.remove('btn-loading');
+          if (d.ok) {
+            document.getElementById('acc-email-tg-code-wrap').style.display = 'block';
+            btn.textContent = 'Отправить ещё раз';
+            _emailMsg('', false);
+          } else {
+            _emailMsg(d.error || 'Ошибка', false);
+          }
+        }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+      });
     } else {
-      editor.style.display = 'block';
-      msg.textContent = '';
+      s1.innerHTML = '<div style="font-size:var(--text-sm);color:var(--graphite)">Для смены email подключите Telegram в разделе «Интеграции»</div>';
+    }
+    // Delegate s1-btn click after DOM is built
+    s1.addEventListener('click', function (e) {
+      if (e.target.id !== 'acc-email-s1-btn') return;
+      var btn = e.target;
+      var password = (document.getElementById('acc-email-pass') || {}).value || '';
+      var tgCode = ((document.getElementById('acc-email-tg-code') || {}).value || '').trim();
+      if (!password && !tgCode) { _emailMsg('Введите пароль или код', false); return; }
+      btn.disabled = true; btn.classList.add('btn-loading');
+      var body = { action: 'email-change-verify-identity' };
+      if (password) body.password = password;
+      if (tgCode) body.tgCode = tgCode;
+      fetch(API_BASE + '/api/account', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify(body),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        btn.disabled = false; btn.classList.remove('btn-loading');
+        if (d.ok) {
+          _emailMsg('', false);
+          _emailShowStep(2);
+          document.getElementById('acc-email-new1').focus();
+        } else {
+          _emailMsg(d.error || 'Ошибка', false);
+        }
+      }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+    });
+  }
+
+  // Block paste on confirm-email field
+  document.getElementById('acc-email-new2').addEventListener('paste', function (e) { e.preventDefault(); });
+
+  document.getElementById('acc-email-change-btn').addEventListener('click', function () {
+    if (_emailStep > 0) {
+      _emailShowStep(0);
+    } else {
+      document.getElementById('acc-email-msg').textContent = '';
       this.textContent = 'Отменить';
-      _setupEmailVerify();
+      _emailBuildStep1();
+      _emailShowStep(1);
     }
   });
 
-  document.getElementById('acc-email-submit').addEventListener('click', function () {
-    var newEmail = (document.getElementById('acc-email-new').value || '').trim().toLowerCase();
-    var msg = document.getElementById('acc-email-msg');
-    msg.textContent = ''; msg.style.color = 'var(--danger)';
-    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { msg.textContent = 'Введите корректный email'; return; }
-    if (newEmail === (_userEmail || '').toLowerCase()) { msg.textContent = 'Это уже ваш email'; return; }
-    var password = (document.getElementById('acc-email-pass') || {}).value || '';
-    var tgCode = ((document.getElementById('acc-email-tg-code') || {}).value || '').trim();
-    if (!password && !tgCode) { msg.textContent = 'Введите пароль или код из Telegram'; return; }
-    var btn = document.getElementById('acc-email-submit');
-    btn.disabled = true; btn.classList.add('btn-loading');
-    var body = { action: 'change-email-request', newEmail: newEmail };
-    if (password) body.password = password;
-    if (tgCode) body.tgCode = tgCode;
+  document.getElementById('acc-email-s2-btn').addEventListener('click', function () {
+    var e1 = (document.getElementById('acc-email-new1').value || '').trim().toLowerCase();
+    var e2 = (document.getElementById('acc-email-new2').value || '').trim().toLowerCase();
+    if (!e1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e1)) { _emailMsg('Введите корректный email', false); return; }
+    if (e1 !== e2) { _emailMsg('Адреса не совпадают', false); return; }
+    if (e1 === (_userEmail || '').toLowerCase()) { _emailMsg('Это уже ваш email', false); return; }
+    var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
     fetch(API_BASE + '/api/account', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ action: 'email-change-request', newEmail: e1 }),
     }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false; btn.classList.remove('btn-loading');
       if (d.ok) {
-        document.getElementById('acc-email-editor').style.display = 'none';
-        document.getElementById('acc-email-change-btn').textContent = 'Изменить';
-        msg.style.color = 'var(--bullish)';
-        msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
+        _emailNewPending = e1;
+        document.getElementById('acc-email-s3-hint').textContent =
+          'Код отправлен на ' + e1 + '. На ' + (_userEmail || 'старый адрес') + ' — письмо с возможностью отменить.';
+        _emailShowStep(3);
+        document.getElementById('acc-email-code').focus();
       } else {
-        msg.textContent = d.error || 'Ошибка';
+        _emailMsg(d.error || 'Ошибка', false);
       }
-      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подтвердить';
-    }).catch(function () {
-      msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Подтвердить';
-    });
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
+  });
+
+  document.getElementById('acc-email-s3-btn').addEventListener('click', function () {
+    var code = (document.getElementById('acc-email-code').value || '').trim();
+    if (!code || code.length < 6) { _emailMsg('Введите 6-значный код', false); return; }
+    var btn = this; btn.disabled = true; btn.classList.add('btn-loading');
+    fetch(API_BASE + '/api/account', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ action: 'email-change-confirm', code: code }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false; btn.classList.remove('btn-loading');
+      if (d.ok) {
+        _userEmail = d.newEmail;
+        document.getElementById('acc-email-display').textContent = d.newEmail;
+        _emailShowStep(0);
+        _emailMsg('Email успешно изменён', true);
+      } else {
+        _emailMsg(d.error || 'Ошибка', false);
+      }
+    }).catch(function () { btn.disabled = false; btn.classList.remove('btn-loading'); _emailMsg('Ошибка сети', false); });
   });
 
   // Timezone section
@@ -830,6 +916,13 @@ export function showAccountModal() {
       _emailHasPassword = !!d.hasPassword;
       _emailTgConnected = !!d.tgConnected;
       renderTgStatus(!!d.tgConnected);
+      if (d.pendingEmailChange) {
+        _emailNewPending = d.pendingEmailChange;
+        document.getElementById('acc-email-change-btn').textContent = 'Отменить';
+        document.getElementById('acc-email-s3-hint').textContent =
+          'Код отправлен на ' + d.pendingEmailChange + '. На ' + (_userEmail || 'старый адрес') + ' — письмо с возможностью отменить.';
+        _emailShowStep(3);
+      }
       renderBinanceStatus(!!d.binanceConnected, d.binanceKey || '');
     })
     .catch(function () { renderTgStatus(false); renderBinanceStatus(false); });
