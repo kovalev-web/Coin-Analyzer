@@ -369,7 +369,7 @@ export function showAccountModal() {
           + '<button id="acc-email-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
         + '<div id="acc-email-editor" class="acc-editor">'
-          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input" style="margin-bottom:var(--v-sm);">'
+          + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input">'
           + '<div id="acc-email-verify-wrap"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-email-submit">Подтвердить</button>'
@@ -639,49 +639,11 @@ export function showAccountModal() {
 
   function _setupEmailVerify() {
     var wrap = document.getElementById('acc-email-verify-wrap');
-    if (!_emailHasPassword && !_emailTgConnected) {
-      wrap.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">Для смены email подключите Telegram или войдите через почту с паролем.</p>';
-      document.getElementById('acc-email-submit').disabled = true;
+    if (!_emailHasPassword) {
+      wrap.innerHTML = '';
       return;
     }
-    var html = '';
-    if (_emailHasPassword) {
-      html += '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-bottom:var(--v-sm);">';
-    }
-    if (_emailHasPassword && _emailTgConnected) {
-      html += '<div style="text-align:center;color:var(--graphite);font-size:var(--text-xs);margin:var(--v-xs) 0;">или</div>';
-    }
-    if (_emailTgConnected) {
-      html += '<div style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--v-xs);">'
-        + '<button id="acc-email-tg-btn" class="btn-cta">Получить код в Telegram</button>'
-        + '</div>'
-        + '<input type="text" id="acc-email-tg-code" placeholder="Код из Telegram" autocomplete="off" class="ds-input" style="display:none;margin-bottom:0;">';
-    }
-    wrap.innerHTML = html;
-
-    if (_emailTgConnected) {
-      document.getElementById('acc-email-tg-btn').addEventListener('click', function () {
-        var btn = document.getElementById('acc-email-tg-btn');
-        var msg = document.getElementById('acc-email-msg');
-        btn.disabled = true; btn.classList.add('btn-loading'); msg.textContent = '';
-        fetch(API_BASE + '/api/account', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ action: 'send-email-change-code' }),
-        }).then(function (r) { return r.json(); }).then(function (d) {
-          if (d.ok) {
-            btn.classList.remove('btn-loading'); btn.textContent = 'Отправлено ✓';
-            var codeEl = document.getElementById('acc-email-tg-code');
-            if (codeEl) codeEl.style.display = 'block';
-          } else {
-            msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
-            btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Получить код в Telegram';
-          }
-        }).catch(function () {
-          msg.style.color = 'var(--danger)'; msg.textContent = 'Ошибка сети';
-          btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Получить код в Telegram';
-        });
-      });
-    }
+    wrap.innerHTML = '<input type="password" id="acc-email-pass" placeholder="Текущий пароль" autocomplete="current-password" class="ds-input" style="margin-top:var(--v-sm);">';
   }
 
   document.getElementById('acc-email-change-btn').addEventListener('click', function () {

@@ -232,7 +232,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-avatar-info .acc-row-edit{padding:0;height:auto;}
 #acc-avatar-display{font-size:40px;line-height:1;display:flex;align-items:center;justify-content:center;width:42px;height:42px;flex-shrink:0;overflow:hidden;}
 .acc-username{font-size:var(--text-base);font-weight:var(--font-medium);color:var(--ink-deep);}
-.acc-editor{display:none;padding:var(--v-sm) 0 var(--v-xs);}
+.acc-editor{display:none;padding:var(--v-md) 0 var(--v-xs);}
 #acc-tg-link-area{padding:var(--v-sm) 0;}
 #acc-bin-form{padding:var(--v-md) 0 var(--v-xs);}
 #acc-bin-form .acc-row-label{margin-bottom:var(--v-xs);}
