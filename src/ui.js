@@ -201,7 +201,6 @@ window.__charts = _charts;
 var _levels = {}; // symbol → [{price, line}]
 var _userId = null; // set by setUserId() after session check
 var _userEmail = null;
-var _userEmailVerified = false;
 var _userAvatar = null;
 var _syncTimer = null;
 
@@ -211,7 +210,6 @@ export function setUserId(id) {
 }
 
 export function setUserEmail(email) { _userEmail = email; }
-export function setUserEmailVerified(v) { _userEmailVerified = !!v; }
 
 export function setUserAvatar(av) {
   if (!av) {

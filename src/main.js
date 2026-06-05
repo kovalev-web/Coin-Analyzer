@@ -12,7 +12,7 @@ import {
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
-  setUserId, setUserEmail, setUserEmailVerified, setUserAvatar, showAccountModal,
+  setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
 } from './ui.js';
 import { on } from './events.js';
@@ -576,7 +576,7 @@ async function _applySession() {
     if (!s || !s.user || !s.user.id) { window.location.replace('/login'); return false; }
     setUserId(s.user.id);
     if (s.user.email) setUserEmail(s.user.email);
-    setUserEmailVerified(!!s.user.emailVerified);
+
     return true;
   } catch (e) {
     return null; // network error — caller decides
