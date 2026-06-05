@@ -46,7 +46,7 @@ export function icon(name, size, style) {
 }
 
 export function signalLabel(s) {
-  if (s === 'bullish') return icon('arrow-up', 14);
-  if (s === 'caution') return icon('triangle-alert', 14);
-  return icon('eye-off', 14);
+  if (s === 'bullish') return icon('arrow-up', 16);
+  if (s === 'caution') return icon('triangle-alert', 16);
+  return icon('eye-off', 16);
 }
