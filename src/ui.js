@@ -347,9 +347,11 @@ export function showAccountModal() {
             + '<span id="acc-avatar-display">'
               + (_userAvatar ? _userAvatar : '<span style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;">' + _LOGO_SVG + '</span>')
             + '</span>'
-            + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
+            + '<div class="acc-avatar-info">'
+              + '<span class="acc-username">' + escHtml((_userEmail || '').split('@')[0] || 'Профиль') + '</span>'
+              + '<button id="acc-avatar-toggle" class="acc-row-edit" title="Сменить аватар">Изменить</button>'
+            + '</div>'
           + '</div>'
-          + '<button id="acc-avatar-toggle" class="acc-row-edit" title="Сменить аватар">' + icon('pencil', 12) + ' Сменить аватар</button>'
         + '</div>'
 
         + '<div class="avatar-grid acc-avatar-collapsed" id="account-avatar-grid">'
@@ -473,7 +475,7 @@ export function showAccountModal() {
   document.getElementById('acc-avatar-toggle').addEventListener('click', function () {
     var grid = document.getElementById('account-avatar-grid');
     var collapsed = grid.classList.toggle('acc-avatar-collapsed');
-    this.innerHTML = collapsed ? icon('pencil', 12) + ' Сменить аватар' : icon('chevron-up', 12) + ' Скрыть';
+    this.textContent = collapsed ? 'Изменить' : 'Скрыть';
   });
 
   function _renderAvatarCircle() {

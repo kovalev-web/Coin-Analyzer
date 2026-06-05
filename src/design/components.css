@@ -226,8 +226,10 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .acc-bin-ro{user-select:none;-webkit-user-select:none;opacity:0.6;cursor:default;pointer-events:none;margin-bottom:6px;}
 .acc-bin-sec-mask{height:var(--h-input);border-radius:var(--radius-md);border:1px solid var(--steel);background:var(--cloud);padding:0 var(--space-6);display:flex;align-items:center;font-size:var(--text-lg);letter-spacing:2px;color:var(--ink-deep);}
 .acc-bin-actions{display:flex;gap:var(--v-sm);margin-top:var(--v-row);}
-.acc-avatar-card{display:flex;justify-content:space-between;align-items:center;padding:var(--space-5) var(--space-10);background:var(--fog);border-radius:var(--radius-xl);}
-.acc-avatar-inner{display:flex;align-items:center;gap:var(--space-7);}
+.acc-avatar-card{display:flex;align-items:center;padding:var(--v-row) var(--v-md);background:var(--fog);border-radius:var(--radius-xl);}
+.acc-avatar-inner{display:flex;align-items:center;gap:var(--v-md);}
+.acc-avatar-info{display:flex;flex-direction:column;gap:var(--v-xs);}
+.acc-avatar-info .acc-row-edit{padding:0;height:auto;}
 #acc-avatar-display{font-size:42px;line-height:1;display:flex;align-items:center;}
 .acc-username{font-size:var(--text-base);font-weight:var(--font-medium);color:var(--ink-deep);}
 .acc-editor{display:none;padding:var(--v-sm) 0 var(--v-xs);}
