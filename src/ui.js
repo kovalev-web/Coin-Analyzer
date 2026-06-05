@@ -366,7 +366,7 @@ export function showAccountModal() {
             + '<div class="acc-row-label">Email</div>'
             + '<div class="acc-row-val acc-email-addr">' + escHtml(_userEmail || '') + '</div>'
           + '</div>'
-          + '<button id="acc-email-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
+          + '<button id="acc-email-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
         + '<div id="acc-email-editor" class="acc-editor">'
           + '<input type="email" id="acc-email-new" placeholder="Новый email" autocomplete="email" class="ds-input" style="margin-bottom:var(--v-sm);">'
@@ -382,7 +382,7 @@ export function showAccountModal() {
             + '<div class="acc-row-label">Часовой пояс</div>'
             + '<div class="acc-row-val" id="acc-tz-current"></div>'
           + '</div>'
-          + '<button id="acc-tz-change-btn" class="acc-row-edit">' + icon('pencil', 12) + ' Изменить</button>'
+          + '<button id="acc-tz-change-btn" class="acc-row-edit">Изменить</button>'
         + '</div>'
         + '<div id="acc-tz-editor" class="acc-editor">'
           + '<div class="ds-select" id="acc-tz-select" style="margin-bottom:var(--v-sm);"><button class="ds-select-btn" type="button"><span class="ds-select-val"></span><span class="ds-select-chevron">' + icon('chevron-down',14) + '</span></button><div class="ds-select-dd"></div></div>'
@@ -587,7 +587,7 @@ export function showAccountModal() {
     if (connected) {
       val.textContent = '••••••' + (apiKey ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4) : '');
       btnWrap.innerHTML =
-        '<button class="acc-row-edit" id="acc-bin-upd">' + icon('pencil', 12) + ' Изменить</button>'
+        '<button class="acc-row-edit" id="acc-bin-upd">Изменить</button>'
         + '<button class="btn-icon" id="acc-bin-del" style="color:var(--danger)">' + icon('x', 14) + '</button>';
       form.style.display = 'none';
       var cf = document.getElementById('acc-bin-cancel-form');
@@ -690,11 +690,11 @@ export function showAccountModal() {
     if (editor.style.display === 'block') {
       editor.style.display = 'none';
       msg.textContent = '';
-      this.innerHTML = icon('pencil', 12) + ' Изменить';
+      this.textContent = 'Изменить';
     } else {
       editor.style.display = 'block';
       msg.textContent = '';
-      this.innerHTML = icon('x', 12) + ' Отменить';
+      this.textContent = 'Отменить';
       _setupEmailVerify();
     }
   });
@@ -719,7 +719,7 @@ export function showAccountModal() {
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
         document.getElementById('acc-email-editor').style.display = 'none';
-        document.getElementById('acc-email-change-btn').innerHTML = icon('pencil', 12) + ' Изменить';
+        document.getElementById('acc-email-change-btn').textContent = 'Изменить';
         msg.style.color = 'var(--bullish)';
         msg.textContent = 'Письмо отправлено на ' + newEmail + ' — перейдите по ссылке для подтверждения';
       } else {
@@ -819,10 +819,10 @@ export function showAccountModal() {
     if (_tzEditor.style.display === 'block') {
       _tzEditor.style.display = 'none';
       document.getElementById('acc-tz-msg').textContent = '';
-      this.innerHTML = icon('pencil', 12) + ' Изменить';
+      this.textContent = 'Изменить';
     } else {
       _tzEditor.style.display = 'block';
-      this.innerHTML = icon('x', 12) + ' Отменить';
+      this.textContent = 'Отменить';
     }
   });
 
@@ -839,7 +839,7 @@ export function showAccountModal() {
       if (d.ok) {
         _tzSetDisplay(_tzSel.value, 'сохранено');
         _tzEditor.style.display = 'none';
-        document.getElementById('acc-tz-change-btn').innerHTML = icon('pencil', 12) + ' Изменить';
+        document.getElementById('acc-tz-change-btn').textContent = 'Изменить';
       } else {
         msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Ошибка';
       }
