@@ -1408,7 +1408,11 @@ var httpServer = http.createServer(async function (req, res) {
         req.on('end', async function () {
           try {
             var parsed = JSON.parse(bodyN);
-            if (parsed.action === 'mark-read') {
+            if (parsed.action === 'clear') {
+              await redis(['DEL', 'notifications:' + userId]);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            } else if (parsed.action === 'mark-read') {
               var raw2 = await redis(['LRANGE', 'notifications:' + userId, '0', '49']);
               var items2 = (raw2.result || []).map(function (s) {
                 try { var n = JSON.parse(s); n.read = true; return JSON.stringify(n); } catch (e) { return null; }

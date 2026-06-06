@@ -4306,7 +4306,11 @@ function _renderNotifDropdown() {
   var dd = document.getElementById('notif-dd');
   if (!dd) return;
   var items = state.notifications;
-  dd.innerHTML = items.length
+  var header = '<div class="notif-header">'
+    + '<span class="notif-header-title">Notifications</span>'
+    + (items.length ? '<button class="btn-icon" data-action="notif-clear" title="Clear all">' + icon('trash-2', 14) + '</button>' : '')
+    + '</div>';
+  dd.innerHTML = header + (items.length
     ? items.map(function (n) {
         var ago = _timeAgo(n.createdAt);
         var ic = n.type === 'level' ? icon('trending-up', 14) : n.type === 'alert' ? icon('bell', 14) : icon('file-text', 14);
@@ -4316,10 +4320,22 @@ function _renderNotifDropdown() {
           + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
           + '<span class="notif-time">' + ago + '</span>'
           + '</div>'
-          + (n.sym ? '<button class="notif-open btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
+          + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
           + '</div>';
       }).join('')
-    : '<div class="notif-empty">No notifications yet</div>';
+    : '<div class="notif-empty">No notifications yet</div>');
+}
+
+export function clearNotifications() {
+  state.notifications = [];
+  state.notifUnread = 0;
+  updateNotifBadge();
+  _renderNotifDropdown();
+  fetch(API_BASE + '/api/notifications', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'clear' }),
+  }).catch(function () {});
 }
 
 export function toggleNotifDropdown() {

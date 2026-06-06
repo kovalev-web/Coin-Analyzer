@@ -15,7 +15,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
-  toggleNotifDropdown, updateNotifBadge, showNotifToast,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -97,7 +97,7 @@ document.body.addEventListener('click', function (e) {
     var _add = document.getElementById('avatar-dd');
     if (_add) _add.classList.remove('open');
   }
-  if (action !== 'toggle-notif' && action !== 'notif-open') {
+  if (action !== 'toggle-notif' && action !== 'notif-open' && action !== 'notif-clear') {
     var _ndd = document.getElementById('notif-dd');
     if (_ndd) _ndd.classList.remove('open');
   }
@@ -124,6 +124,11 @@ document.body.addEventListener('click', function (e) {
       var _ndd2 = document.getElementById('notif-dd');
       if (_ndd2) _ndd2.classList.remove('open');
       openFV(sym);
+      break;
+    }
+    case 'notif-clear': {
+      e.stopPropagation();
+      clearNotifications();
       break;
     }
     case 'analyze': {
