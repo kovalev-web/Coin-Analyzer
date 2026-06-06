@@ -2374,6 +2374,29 @@ on('ws:status', function () {
 
 var _fvRuler = null;
 var _fvTradeMarkersData = [];
+var _fvTimerInterval = null;
+
+var _TF_SECS = { '1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'4h':14400,'1d':86400 };
+
+function _startFVTimer(tf) {
+  if (_fvTimerInterval) { clearInterval(_fvTimerInterval); _fvTimerInterval = null; }
+  var secs = _TF_SECS[tf];
+  if (!secs) return;
+  function _tick() {
+    var el = document.getElementById('fv-timer');
+    if (!el) return;
+    var rem = secs - (Math.floor(Date.now() / 1000) % secs);
+    if (tf === '1m') {
+      el.textContent = rem + 's';
+    } else {
+      var m = Math.floor(rem / 60);
+      var s = rem % 60;
+      el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+  }
+  _tick();
+  _fvTimerInterval = setInterval(_tick, 1000);
+}
 
 // ── Briefing ───────────────────────────────────────────────────────────────
 
@@ -3156,6 +3179,13 @@ export function openCoinFullView(sym) {
   volLbl.className = 'fv-vol-label';
   wrap.appendChild(volLbl);
 
+  // Countdown timer overlay
+  var timerEl = document.createElement('div');
+  timerEl.id = 'fv-timer';
+  timerEl.className = 'fv-timer';
+  wrap.appendChild(timerEl);
+  _startFVTimer(tf);
+
   // Volume label tracks crosshair
   _fvChart.subscribeCrosshairMove(function (param) {
     var lbl = document.getElementById('fv-vol-label');
@@ -3616,6 +3646,7 @@ export function closeCoinFullView() {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
+  if (_fvTimerInterval) { clearInterval(_fvTimerInterval); _fvTimerInterval = null; }
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null; _fvTradeMarkersData = [];
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   if (_fvSym) {
@@ -3636,6 +3667,7 @@ export function setFVChartTF(tf) {
   if (!_fvSym || !_fvSeries) return;
   state.chartTF[_fvSym] = tf;
   window.__fvTF = tf;
+  _startFVTimer(tf);
   document.querySelectorAll('#fv-overlay .pill').forEach(function (pill) { pill.textContent = tf; });
   document.querySelectorAll('#fv-overlay .fv-tf-dd').forEach(function (dd) {
     dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
