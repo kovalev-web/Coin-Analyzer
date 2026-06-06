@@ -4121,7 +4121,17 @@ function _playNotifSound() {
   } catch (e) {}
 }
 
+export function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
 export function showNotifToast(entry) {
+  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+    new Notification('QuestTick', { body: entry.message, silent: false });
+    return;
+  }
   _playNotifSound();
   var t = document.createElement('div');
   t.className = 'notif-toast';

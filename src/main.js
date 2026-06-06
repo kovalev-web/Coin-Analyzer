@@ -15,7 +15,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
-  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, requestNotifPermission,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -640,5 +640,6 @@ async function _revalidateSession() {
   loadBriefing();
   loadLevels();
   fetchNotifications();
+  requestNotifPermission();
   initRouter('/');
 })();
