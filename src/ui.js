@@ -4197,12 +4197,11 @@ function _gridTop9() {
   var coins = state.coins.filter(function (c) {
     var sym = c.symbol.toLowerCase();
     if (STABLE_SYMBOLS.has(sym) || SCREENER_EXCLUDE.has(sym)) return false;
-    var nd = state.natrData[c.symbol];
-    return nd && nd !== 'loading' && nd !== 'error';
+    return (c.total_volume || 0) >= 10e6;
   });
   var entries = coins.map(function (c) {
     var nd = state.natrData[c.symbol];
-    var natr = nd ? nd.value : 0;
+    var natr = (nd && nd !== 'loading' && nd !== 'error') ? nd.value : 0;
     var pct = c.open_24h > 0 && c.current_price > 0
       ? (c.current_price - c.open_24h) / c.open_24h * 100
       : (c.price_change_percentage_24h || 0);
