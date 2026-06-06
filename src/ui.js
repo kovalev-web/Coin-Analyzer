@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchKlines5m } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -4236,7 +4236,9 @@ async function _loadGridCell(cell, entry) {
   window.__gridSeries[sym] = series;
   window.__gridVolSeries[sym] = volSeries;
 
-  var candles = await fetchKlines5m(sym);
+  await fetchChartData(sym, '5m');
+  var _cd = state.chartData[sym + '_5m'];
+  var candles = (_cd && _cd.status === 'ok') ? _cd.candles : [];
   if (!candles.length) return;
   var vc2 = volClrs();
   series.setData(candles);
