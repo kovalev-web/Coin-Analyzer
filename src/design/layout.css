@@ -96,7 +96,7 @@
   .fv-info-top{display:none;}
   .fv-coin-info{display:none;}
   .fv-info-stats{display:none;}
-  .fv-bottom-bar{display:flex;background:var(--paper);border-top:none;border-radius:var(--radius-xl);box-shadow:var(--shadow-md);margin:var(--space-3) var(--space-6);padding:var(--space-3) var(--space-4);flex-shrink:0;}
+  .fv-bottom-bar{display:flex;background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);margin:var(--space-3) var(--space-6);padding:var(--space-3) var(--space-4);flex-shrink:0;}
   #bp-popup{border-radius:var(--radius-xl);}
   .bp-note-row textarea{font-size:var(--text-sm) !important;}
 }
