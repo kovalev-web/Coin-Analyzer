@@ -393,7 +393,6 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .grid-meta{font-size:var(--text-xs);color:var(--graphite);}
 .grid-body{flex:1;overflow-y:auto;padding:var(--space-4);min-height:0;}
 #grid-overlay .cards-grid{max-width:1200px;margin:0 auto;}
-#grid-overlay .chart-container{aspect-ratio:unset;height:120px;}
 .grid-cell{background:var(--paper);border-radius:var(--radius-md);display:flex;flex-direction:column;overflow:hidden;cursor:pointer;min-height:0;}
 .grid-cell:hover .grid-cell-sym{color:var(--primary);}
 .grid-cell-head{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-3) var(--space-6);flex-shrink:0;border-bottom:1px solid var(--fog);}
