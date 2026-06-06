@@ -3127,7 +3127,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div>'
     + '<div class="fv-bb-right">'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>';
@@ -3162,7 +3162,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>'
     + '</div>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>'
-    + '<button class="btn-icon" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
+    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
     + '</div>'
