@@ -4192,13 +4192,14 @@ async function _loadGridCell(cell, entry) {
     : (coin.price_change_percentage_24h || 0)) : 0;
   var pctCls = pct >= 0 ? 'up' : 'dn';
   var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
-  var scoreStr = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
+  var natrStr = entry.natr != null ? entry.natr.toFixed(2) : '—';
+  var rvolStr = entry.rvol > 0 ? entry.rvol.toFixed(1) + '×' : '—';
   var sym = short; // use short key for chart instances and series maps
 
   cell.innerHTML = '<div class="grid-cell-head">'
     + '<span class="grid-cell-sym">' + label + '</span>'
     + '<span class="grid-cell-pct ' + pctCls + '">' + pctStr + '</span>'
-    + '<span class="grid-cell-score">' + scoreStr + '</span>'
+    + '<span class="grid-cell-score">' + natrStr + ' · ' + rvolStr + '</span>'
     + '</div>'
     + '<div class="grid-cell-chart" id="gc-' + sym + '"></div>';
 
@@ -4249,7 +4250,7 @@ export function openGridView() {
   var overlay = _getOrCreateGridOverlay();
   overlay.innerHTML = '<div class="grid-header">'
     + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="grid-title">Grid · Inplay Top-9</span>'
+    + '<span class="grid-title">Grid · Scanner</span>'
     + '<span class="grid-meta" id="grid-meta"></span>'
     + '</div>'
     + '<div class="grid-body" id="grid-body"></div>';
@@ -4260,64 +4261,72 @@ export function openGridView() {
   _renderGridBody();
 }
 
+function _calcRvol(sym) {
+  var cd = state.chartData[sym + '_5m'];
+  if (!cd || cd.status !== 'ok' || !cd.candles || cd.candles.length < 5) return 0;
+  var arr = cd.candles;
+  var last = arr[arr.length - 1].volume;
+  var lookback = arr.slice(-21, -1);
+  if (!lookback.length) return 0;
+  var avg = lookback.reduce(function (s, k) { return s + k.volume; }, 0) / lookback.length;
+  return avg > 0 ? last / avg : 0;
+}
+
+function _gridTop9() {
+  // Composite: norm_natr + norm_abs_pct + norm_rvol — монета попадает если горит хотя бы одно
+  var coins = state.coins.filter(function (c) {
+    var sym = c.symbol.toLowerCase();
+    if (STABLE_SYMBOLS.has(sym) || SCREENER_EXCLUDE.has(sym)) return false;
+    var nd = state.natrData[c.symbol];
+    return nd && nd !== 'loading' && nd !== 'error';
+  });
+
+  var entries = coins.map(function (c) {
+    var nd = state.natrData[c.symbol];
+    var natr = nd ? nd.value : 0;
+    var pct = c.open_24h > 0 && c.current_price > 0
+      ? (c.current_price - c.open_24h) / c.open_24h * 100
+      : (c.price_change_percentage_24h || 0);
+    var rvol = _calcRvol(c.symbol);
+    return { symbol: c.symbol, natr: natr, pct: pct, rvol: rvol };
+  });
+
+  var maxNatr = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
+  var maxAbsPct = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct); })) || 1;
+  var maxRvol = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
+
+  entries.forEach(function (e) {
+    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) + (e.rvol / maxRvol);
+  });
+  entries.sort(function (a, b) { return b.score - a.score; });
+  return entries.slice(0, 9);
+}
+
 function _renderGridBody() {
   var body = document.getElementById('grid-body');
   if (!body) return;
-  var top = state.inplayTop.slice(0, 9);
+  var top = _gridTop9();
   if (!top.length) {
-    body.innerHTML = '<div class="grid-empty">Waiting for inplay scores…</div>';
+    body.innerHTML = '<div class="grid-empty">Loading NATR data…</div>';
     return;
   }
   body.innerHTML = '';
   var meta = document.getElementById('grid-meta');
-  if (meta) meta.textContent = 'updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  if (meta) meta.textContent = 'NATR + % + RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   top.forEach(function (entry) {
     var cell = document.createElement('div');
     cell.className = 'grid-cell';
-    cell.dataset.sym = entry.symbol.replace(/USDT$/i, '').toLowerCase();
+    cell.dataset.sym = entry.symbol;
     body.appendChild(cell);
     _loadGridCell(cell, entry);
   });
 }
 
-export function updateGridScores(top9) {
-  if (!document.getElementById('grid-overlay')) return;
-  if (!document.getElementById('grid-overlay').classList.contains('open')) return;
-
-  var meta = document.getElementById('grid-meta');
-  if (meta) meta.textContent = 'updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-  var body = document.getElementById('grid-body');
-  if (!body) return;
-
-  top9.forEach(function (entry, i) {
-    var cells = body.querySelectorAll('.grid-cell');
-    var cell = cells[i];
-    if (!cell) return;
-    var prevSym = cell.dataset.sym; // short key e.g. 'aster'
-    var entryShort = entry.symbol.replace(/USDT$/i, '').toLowerCase();
-    if (prevSym === entryShort) {
-      // Same coin — just update header values
-      var scoreEl = cell.querySelector('.grid-cell-score');
-      if (scoreEl) scoreEl.textContent = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
-      var coin = state.coins.find(function (c) { return c.symbol === entry.symbol; });
-      if (coin) {
-        var pct = (coin.open_24h > 0 && coin.current_price > 0)
-          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-          : (coin.price_change_percentage_24h || 0);
-        var pctEl = cell.querySelector('.grid-cell-pct');
-        if (pctEl) { pctEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%'; pctEl.className = 'grid-cell-pct ' + (pct >= 0 ? 'up' : 'dn'); }
-      }
-    } else {
-      // New coin entered top-9 — reload cell
-      cell.dataset.sym = entryShort;
-      if (_gridChartInstances[prevSym]) { try { _gridChartInstances[prevSym].remove(); } catch (e) {} delete _gridChartInstances[prevSym]; }
-      if (window.__gridSeries) delete window.__gridSeries[prevSym];
-      if (window.__gridVolSeries) delete window.__gridVolSeries[prevSym];
-      _loadGridCell(cell, entry);
-    }
-  });
+export function updateGridScores() {
+  var overlay = document.getElementById('grid-overlay');
+  if (!overlay || !overlay.classList.contains('open')) return;
+  _renderGridBody();
 }
 
 export function closeGridView() {
