@@ -2495,6 +2495,7 @@ export function render() {
     + (_screenerMode ? '' : _sortBarHTML(coins))
     + coinsHtml;
   initCharts();
+  updateNotifBadge();
 }
 
 // ── Tooltip positioning ────────────────────────────────────────────────────
