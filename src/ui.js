@@ -4311,20 +4311,23 @@ function _renderNotifDropdown() {
     + '<span class="notif-header-title">Notifications</span>'
     + (items.length ? '<button class="btn-icon" data-action="notif-clear" title="Clear all">' + icon('trash-2', 14) + '</button>' : '')
     + '</div>';
-  dd.innerHTML = header + (items.length
-    ? items.map(function (n) {
-        var ago = _timeAgo(n.createdAt);
-        var ic = n.type === 'level' ? icon('trending-up', 14) : n.type === 'alert' ? icon('bell', 14) : icon('file-text', 14);
-        return '<div class="notif-row">'
-          + '<span class="notif-icon">' + ic + '</span>'
-          + '<div class="notif-body">'
-          + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
-          + '<span class="notif-time">' + ago + '</span>'
-          + '</div>'
-          + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
-          + '</div>';
-      }).join('')
-    : '<div class="notif-empty">No notifications yet</div>');
+  var body = items.length
+    ? '<div class="notif-scroll">'
+      + items.map(function (n) {
+          var ago = _timeAgo(n.createdAt);
+          var ic = n.type === 'level' ? icon('trending-up', 14) : n.type === 'alert' ? icon('bell', 14) : icon('file-text', 14);
+          return '<div class="notif-row">'
+            + '<span class="notif-icon">' + ic + '</span>'
+            + '<div class="notif-body">'
+            + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
+            + '<span class="notif-time">' + ago + '</span>'
+            + '</div>'
+            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
+            + '</div>';
+        }).join('')
+      + '</div>'
+    : '<div class="notif-empty">No notifications yet</div>';
+  dd.innerHTML = header + body;
 }
 
 export function clearNotifications() {
