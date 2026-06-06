@@ -35,6 +35,8 @@ export const state = {
   aiSummaryDate: null,      // ISO timestamp последней генерации
   aiSummaryTradeCount: null, // tradeCount из weekSummary на момент генерации
   briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
+  notifications: [],
+  notifUnread: 0,
 };
 
 export function filteredCoins() {

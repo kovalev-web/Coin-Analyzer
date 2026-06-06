@@ -3,6 +3,7 @@ import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
   fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
+  fetchNotifications,
 } from './api.js';
 import {
   render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -14,6 +15,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -44,6 +46,11 @@ document.body.addEventListener('click', function (e) {
   var avatarDd = document.getElementById('avatar-dd');
   if (avatarDd && avatarDd.classList.contains('open') && !e.target.closest('.avatar-wrap')) {
     avatarDd.classList.remove('open');
+  }
+  // Close notifications dropdown on any click outside #notif-wrap
+  var notifDd = document.getElementById('notif-dd');
+  if (notifDd && notifDd.classList.contains('open') && !e.target.closest('#notif-wrap')) {
+    notifDd.classList.remove('open');
   }
 
   // Close popups on any outside click — runs before data-action check so clicking
@@ -90,6 +97,10 @@ document.body.addEventListener('click', function (e) {
     var _add = document.getElementById('avatar-dd');
     if (_add) _add.classList.remove('open');
   }
+  if (action !== 'toggle-notif' && action !== 'notif-open') {
+    var _ndd = document.getElementById('notif-dd');
+    if (_ndd) _ndd.classList.remove('open');
+  }
 
   switch (action) {
     case 'toggle-burger': {
@@ -102,6 +113,17 @@ document.body.addEventListener('click', function (e) {
       e.stopPropagation();
       var aDd = document.getElementById('avatar-dd');
       if (aDd) aDd.classList.toggle('open');
+      break;
+    }
+    case 'toggle-notif': {
+      e.stopPropagation();
+      toggleNotifDropdown();
+      break;
+    }
+    case 'notif-open': {
+      var _ndd2 = document.getElementById('notif-dd');
+      if (_ndd2) _ndd2.classList.remove('open');
+      openFV(sym);
       break;
     }
     case 'analyze': {
@@ -397,6 +419,15 @@ on('alert:triggered', function (msg) {
   handleAlertTriggered(msg.sym, msg.price);
 });
 
+on('notify:received', function (entry) {
+  updateNotifBadge();
+  showNotifToast(entry);
+});
+
+on('notify:ready', function () {
+  updateNotifBadge();
+});
+
 // Soft refresh — skips coins that already have NATR (initial load, new coins)
 on('natr:refresh', function () {
   fetchAllNATR(screenerCoins());
@@ -595,6 +626,7 @@ async function _revalidateSession() {
     loadAlerts();
     loadBriefing();
     fetchServerLevels();
+    fetchNotifications();
   }
 }
 
@@ -616,5 +648,6 @@ async function _revalidateSession() {
   loadAlerts();
   loadBriefing();
   loadLevels();
+  fetchNotifications();
   initRouter('/');
 })();

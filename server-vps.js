@@ -308,12 +308,40 @@ function checkAlertsForSym(fullSym, cur) {
       sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>', alertMarkup);
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
       clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === code) c.send(payload); });
+      var alertDirection = (prev < a.price && cur >= a.price) ? 'up' : 'down';
+      pushNotification(code, {
+        type: 'alert',
+        sym: sym,
+        message: sym.toUpperCase() + ' hit alert at ' + fmtPrice,
+        price: fmtPrice,
+        direction: alertDirection,
+      }).catch(function () {});
     });
     if (dirty) saveAlertsToRedis(code);
   });
 }
 
 var clients = new Set();
+
+function broadcastToUser(userId, payload) {
+  var msg = JSON.stringify(payload);
+  clients.forEach(function (c) {
+    if (c.readyState === WebSocket.OPEN && c._userId === userId) c.send(msg);
+  });
+}
+
+async function pushNotification(userId, payload) {
+  var entry = JSON.stringify(Object.assign({}, payload, {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2),
+    createdAt: Date.now(),
+    read: false,
+  }));
+  await redis(['LPUSH', 'notifications:' + userId, entry]);
+  await redis(['LTRIM', 'notifications:' + userId, '0', '49']);
+  await redis(['EXPIRE', 'notifications:' + userId, String(30 * 24 * 3600)]);
+  broadcastToUser(userId, { type: 'notify', entry: JSON.parse(entry) });
+}
+
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
 var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена текущего UTC-дня (1d kline)
 var inplaySymbols     = []; // symbols passing pre-filter, populated after bootstrapTicker
@@ -1360,6 +1388,58 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
+  if (req.url === '/api/notifications') {
+    try {
+      var session = await getSession(req);
+      if (!session) return unauthorized(res);
+      var userId = session.user.id;
+
+      if (req.method === 'GET') {
+        var raw = await redis(['LRANGE', 'notifications:' + userId, '0', '49']);
+        var items = (raw.result || []).map(function (s) { try { return JSON.parse(s); } catch (e) { return null; } }).filter(Boolean);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ notifications: items }));
+        return;
+      }
+
+      if (req.method === 'POST') {
+        var bodyN = '';
+        req.on('data', function (chunk) { bodyN += chunk; });
+        req.on('end', async function () {
+          try {
+            var parsed = JSON.parse(bodyN);
+            if (parsed.action === 'mark-read') {
+              var raw2 = await redis(['LRANGE', 'notifications:' + userId, '0', '49']);
+              var items2 = (raw2.result || []).map(function (s) {
+                try { var n = JSON.parse(s); n.read = true; return JSON.stringify(n); } catch (e) { return null; }
+              }).filter(Boolean);
+              if (items2.length) {
+                await redis(['DEL', 'notifications:' + userId]);
+                for (var i = items2.length - 1; i >= 0; i--) {
+                  await redis(['LPUSH', 'notifications:' + userId, items2[i]]);
+                }
+                await redis(['EXPIRE', 'notifications:' + userId, String(30 * 24 * 3600)]);
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            } else {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Unknown action' }));
+            }
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+    } catch (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   res.writeHead(404); res.end();
 });
 
@@ -1796,6 +1876,9 @@ async function sendWeeklyBriefingReport(chatId) {
   if (!summary) { await sendTG(chatId, '❌ Gemini вернул пустой ответ.'); return; }
   await sendTG(chatId, '📋 <b>Итоги недели</b>\n\n' + summary);
   console.log('[Weekly report] Sent to userId=' + userId + ' chatId=' + chatId);
+  if (userId) {
+    pushNotification(userId, { type: 'weekly_report', message: 'Weekly summary is ready' }).catch(function () {});
+  }
 }
 
 // Per-user sent tracker: userId → true when already sent this Sunday

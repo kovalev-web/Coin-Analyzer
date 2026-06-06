@@ -100,6 +100,12 @@ function connectWS() {
       case 'briefing_updated':
         emit('briefing:updated');
         break;
+      case 'notify':
+        state.notifications.unshift(msg.entry);
+        if (state.notifications.length > 50) state.notifications.length = 50;
+        state.notifUnread++;
+        emit('notify:received', msg.entry);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -765,6 +771,17 @@ export async function analyzeAll() {
 }
 
 // ── Market Strength ──────────────────────────────────────────────────────
+
+export function fetchNotifications() {
+  return fetch(API_BASE + '/api/notifications', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      state.notifications = d.notifications || [];
+      state.notifUnread = state.notifications.filter(function (n) { return !n.read; }).length;
+      emit('notify:ready');
+    })
+    .catch(function () {});
+}
 
 export async function fetchMarketStrength(force) {
   var sessionId = getCurrentSessionId();

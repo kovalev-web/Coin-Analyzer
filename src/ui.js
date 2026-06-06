@@ -2417,6 +2417,10 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
+    + '<div class="notif-wrap" id="notif-wrap">'
+    + '<button class="btn-topbar" data-action="toggle-notif" id="notif-btn" title="Notifications">' + icon('bell', 16) + '<span class="notif-badge" id="notif-badge" style="display:none"></span></button>'
+    + '<div class="notif-dd dropdown" id="notif-dd"></div>'
+    + '</div>'
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
@@ -4248,5 +4252,76 @@ export function openClearPopup(sym, btn) {
 export function renderScreener() {
   _screenerMode = true;
   render();
+}
+
+// ── Notifications ────────────────────────────────────────────────────────────
+
+function _timeAgo(ts) {
+  var diff = Date.now() - ts;
+  var m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+export function showNotifToast(entry) {
+  var t = document.createElement('div');
+  t.className = 'notif-toast';
+  t.textContent = entry.message;
+  document.body.appendChild(t);
+  setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
+  setTimeout(function () {
+    t.classList.remove('notif-toast--visible');
+    setTimeout(function () { t.remove(); }, 300);
+  }, 4000);
+}
+
+export function updateNotifBadge() {
+  var badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  var count = state.notifUnread;
+  badge.textContent = count > 9 ? '9+' : String(count);
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
+function _renderNotifDropdown() {
+  var dd = document.getElementById('notif-dd');
+  if (!dd) return;
+  var items = state.notifications;
+  dd.innerHTML = items.length
+    ? items.map(function (n) {
+        var ago = _timeAgo(n.createdAt);
+        var ic = n.type === 'level' ? '📊' : n.type === 'alert' ? '🔔' : '📋';
+        return '<div class="notif-row">'
+          + '<span class="notif-icon">' + ic + '</span>'
+          + '<div class="notif-body">'
+          + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
+          + '<span class="notif-time">' + ago + '</span>'
+          + '</div>'
+          + (n.sym ? '<button class="notif-open btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
+          + '</div>';
+      }).join('')
+    : '<div class="notif-empty">No notifications yet</div>';
+}
+
+export function toggleNotifDropdown() {
+  var dd = document.getElementById('notif-dd');
+  if (!dd) return;
+  var isOpen = dd.classList.contains('open');
+  if (isOpen) {
+    dd.classList.remove('open');
+  } else {
+    _renderNotifDropdown();
+    dd.classList.add('open');
+    state.notifUnread = 0;
+    updateNotifBadge();
+    fetch(API_BASE + '/api/notifications', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark-read' }),
+    }).catch(function () {});
+  }
 }
 
