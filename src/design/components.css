@@ -405,6 +405,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .notif-wrap{position:relative;}
 .notif-badge{position:absolute;top:var(--space-1);right:var(--space-1);width:8px;height:8px;background:var(--danger);border-radius:var(--radius-full);pointer-events:none;}
 .notif-dd{width:320px;max-height:440px;top:calc(100% + var(--space-4));border-radius:var(--radius-xl);z-index:500;}
+.notif-dd .popup-header{padding-bottom:var(--space-6);}
 .notif-dd.open{display:flex;flex-direction:column;}
 .notif-scroll{flex:1;overflow-y:auto;min-height:0;}
 .notif-footer{flex-shrink:0;padding:var(--space-4) var(--space-6);border-top:1px solid var(--fog);}
