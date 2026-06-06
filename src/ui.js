@@ -4170,7 +4170,7 @@ function _renderNotifDropdown() {
 
 // ── Grid Screener ──────────────────────────────────────────────────────────
 
-var _gridChartInstances = {}; // sym → LW chart instance (for cleanup)
+var _gridMovedCards = []; // {card, parent} — for restoring on close
 
 function _getOrCreateGridOverlay() {
   var el = document.getElementById('grid-overlay');
@@ -4180,87 +4180,6 @@ function _getOrCreateGridOverlay() {
     document.body.appendChild(el);
   }
   return el;
-}
-
-async function _loadGridCell(cell, entry) {
-  var fullSym = entry.symbol; // e.g. 'ASTERUSDT'
-  var short = fullSym.replace(/USDT$/i, '').toLowerCase(); // e.g. 'aster'
-  var label = fullSym.replace(/USDT$/i, ''); // e.g. 'ASTER'
-  var coin = state.coins.find(function (c) { return c.symbol === short; });
-  var pct = coin ? ((coin.open_24h > 0 && coin.current_price > 0)
-    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-    : (coin.price_change_percentage_24h || 0)) : 0;
-  var pctCls = pct >= 0 ? 'up' : 'dn';
-  var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
-  var natrStr = entry.natr != null ? entry.natr.toFixed(2) : '—';
-  var rvolStr = entry.rvol > 0 ? entry.rvol.toFixed(1) + '×' : '—';
-  var sym = short; // use short key for chart instances and series maps
-
-  cell.innerHTML = '<div class="grid-cell-head">'
-    + '<span class="grid-cell-sym">' + label + '</span>'
-    + '<span class="grid-cell-pct ' + pctCls + '">' + pctStr + '</span>'
-    + '<span class="grid-cell-score">' + natrStr + ' · ' + rvolStr + '</span>'
-    + '</div>'
-    + '<div class="grid-cell-chart" id="gc-' + sym + '"></div>';
-
-  cell.onclick = function () { closeGridView(); openCoinFullView(short); };
-
-  var chartEl = document.getElementById('gc-' + sym);
-  if (!chartEl || !window.LightweightCharts) return;
-
-  var c = getChartColors();
-  var chart = window.LightweightCharts.createChart(chartEl, {
-    autoSize: true,
-    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 10, fontFamily: 'Manrope, Arial, sans-serif' },
-    grid: { vertLines: { visible: false }, horzLines: { color: c.grid } },
-    crosshair: { mode: 0 },
-    rightPriceScale: { visible: false },
-    leftPriceScale: { visible: false },
-    timeScale: { visible: false },
-    handleScroll: false, handleScale: false,
-  });
-
-  var series = chart.addCandlestickSeries(getSeriesColors());
-  var vc = volClrs();
-  var volSeries = chart.addHistogramSeries({
-    color: vc.up, priceFormat: { type: 'volume' }, priceScaleId: 'vol',
-    lastValueVisible: false, priceLineVisible: false,
-  });
-  chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-
-  if (_gridChartInstances[sym]) { try { _gridChartInstances[sym].remove(); } catch (e) {} }
-  _gridChartInstances[sym] = chart;
-
-  window.__gridSeries = window.__gridSeries || {};
-  window.__gridVolSeries = window.__gridVolSeries || {};
-  window.__gridSeries[sym] = series;
-  window.__gridVolSeries[sym] = volSeries;
-
-  await fetchChartData(sym, '5m');
-  var _cd = state.chartData[sym + '_5m'];
-  var candles = (_cd && _cd.status === 'ok') ? _cd.candles : [];
-  if (!candles.length) return;
-  var vc2 = volClrs();
-  series.setData(candles);
-  volSeries.setData(candles.map(function (k) {
-    return { time: k.time, value: k.volume, color: k.close >= k.open ? vc2.up : vc2.dn };
-  }));
-  chart.timeScale().fitContent();
-}
-
-export function openGridView() {
-  var overlay = _getOrCreateGridOverlay();
-  overlay.innerHTML = '<div class="grid-header">'
-    + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="grid-title">Grid · Scanner</span>'
-    + '<span class="grid-meta" id="grid-meta"></span>'
-    + '</div>'
-    + '<div class="grid-body" id="grid-body"></div>';
-
-  document.getElementById('grid-back').onclick = closeGridView;
-  overlay.classList.add('open');
-  lockScroll();
-  _renderGridBody();
 }
 
 function _calcRvol(sym) {
@@ -4275,14 +4194,12 @@ function _calcRvol(sym) {
 }
 
 function _gridTop9() {
-  // Composite: norm_natr + norm_abs_pct + norm_rvol — монета попадает если горит хотя бы одно
   var coins = state.coins.filter(function (c) {
     var sym = c.symbol.toLowerCase();
     if (STABLE_SYMBOLS.has(sym) || SCREENER_EXCLUDE.has(sym)) return false;
     var nd = state.natrData[c.symbol];
     return nd && nd !== 'loading' && nd !== 'error';
   });
-
   var entries = coins.map(function (c) {
     var nd = state.natrData[c.symbol];
     var natr = nd ? nd.value : 0;
@@ -4292,54 +4209,72 @@ function _gridTop9() {
     var rvol = _calcRvol(c.symbol);
     return { symbol: c.symbol, natr: natr, pct: pct, rvol: rvol };
   });
-
   var maxNatr = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
   var maxAbsPct = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct); })) || 1;
   var maxRvol = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
-
   entries.forEach(function (e) {
-    e.score = (e.natr / maxNatr) * 1 + (Math.abs(e.pct) / maxAbsPct) * 3 + (e.rvol / maxRvol) * 2;
+    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) * 3 + (e.rvol / maxRvol) * 2;
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
 }
 
-function _renderGridBody() {
-  var body = document.getElementById('grid-body');
-  if (!body) return;
-  var top = _gridTop9();
-  if (!top.length) {
-    body.innerHTML = '<div class="grid-empty">Loading NATR data…</div>';
-    return;
-  }
-  body.innerHTML = '';
-  var meta = document.getElementById('grid-meta');
-  if (meta) meta.textContent = 'NATR + % + RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+export function openGridView() {
+  var overlay = _getOrCreateGridOverlay();
+  overlay.innerHTML = '<div class="grid-header">'
+    + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="grid-title">Grid · Scanner</span>'
+    + '<span class="grid-meta" id="grid-meta">NATR + % + RVol · '
+    + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    + '</span>'
+    + '</div>'
+    + '<div class="grid-body" id="grid-body"><div class="cards-grid" id="grid-cards"></div></div>';
 
-  top.forEach(function (entry) {
-    var cell = document.createElement('div');
-    cell.className = 'grid-cell';
-    cell.dataset.sym = entry.symbol;
-    body.appendChild(cell);
-    _loadGridCell(cell, entry);
+  document.getElementById('grid-back').onclick = closeGridView;
+
+  var top9 = _gridTop9();
+  var mainGrid = document.getElementById('cards-grid');
+  var gridCards = document.getElementById('grid-cards');
+  _gridMovedCards = [];
+
+  top9.forEach(function (entry) {
+    var existing = mainGrid && mainGrid.querySelector('.coin-card[data-sym="' + entry.symbol + '"]');
+    if (existing) {
+      _gridMovedCards.push({ card: existing, parent: mainGrid });
+      gridCards.appendChild(existing);
+    } else {
+      var coin = state.coins.find(function (c) { return c.symbol === entry.symbol; });
+      if (!coin) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = renderCard(coin);
+      var el = tmp.firstElementChild;
+      gridCards.appendChild(el);
+      _gridMovedCards.push({ card: el, parent: null });
+    }
   });
+
+  overlay.classList.add('open');
+  lockScroll();
+  initCharts(); // IntersectionObserver picks up moved cards
 }
 
-export function updateGridScores() {
-  var overlay = document.getElementById('grid-overlay');
-  if (!overlay || !overlay.classList.contains('open')) return;
-  _renderGridBody();
-}
+export function updateGridScores() {} // no-op: grid uses live main-screener cards
 
 export function closeGridView() {
+  // Move cards back first, then hide overlay (avoids observer firing destroy on moved cards)
+  var mainGrid = document.getElementById('cards-grid');
+  _gridMovedCards.forEach(function (item) {
+    if (item.parent && mainGrid) {
+      mainGrid.appendChild(item.card);
+    } else {
+      item.card.remove();
+    }
+  });
+  _gridMovedCards = [];
+
   var overlay = document.getElementById('grid-overlay');
   if (overlay) overlay.classList.remove('open');
-  Object.keys(_gridChartInstances).forEach(function (sym) {
-    try { _gridChartInstances[sym].remove(); } catch (e) {}
-  });
-  _gridChartInstances = {};
-  window.__gridSeries = {};
-  window.__gridVolSeries = {};
+  renderCards();
   forceUnlockScroll();
 }
 
