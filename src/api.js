@@ -709,19 +709,22 @@ export async function fetchChartData(symbol, tf) {
 // Returns [{time,open,high,low,close,volume}] for the grid screener.
 // Uses state.chartData cache (same key as FV) to avoid duplicate fetches.
 export async function fetchKlines5m(symbol) {
-  var key = symbol + '_5m';
+  // Normalize: server expects short symbol without USDT (e.g. 'aster'), appends USDT itself.
+  // state.inplayTop has full symbols like 'ASTERUSDT'; state.coins has 'aster'.
+  var short = symbol.replace(/USDT$/i, '').toLowerCase();
+  var key = short + '_5m';
   if (state.chartData[key] && state.chartData[key].status === 'ok') {
     return state.chartData[key].candles;
   }
   try {
-    var msg = await wsRequest({ type: 'fetch_klines', symbol: symbol, tf: '5m', limit: 200 });
+    var msg = await wsRequest({ type: 'fetch_klines', symbol: short, tf: '5m', limit: 200 });
     var data = msg.data;
     if (!Array.isArray(data) || !data.length) return [];
     var candles = data.map(function (k) {
       return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
     });
     state.chartData[key] = { status: 'ok', candles: candles };
-    wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: '5m' });
+    wsSend({ type: 'subscribe_klines', symbols: [short], tf: '5m' });
     return candles;
   } catch (e) {
     return [];

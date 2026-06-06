@@ -4183,23 +4183,26 @@ function _getOrCreateGridOverlay() {
 }
 
 async function _loadGridCell(cell, entry) {
-  var sym = entry.symbol;
-  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  var fullSym = entry.symbol; // e.g. 'ASTERUSDT'
+  var short = fullSym.replace(/USDT$/i, '').toLowerCase(); // e.g. 'aster'
+  var label = fullSym.replace(/USDT$/i, ''); // e.g. 'ASTER'
+  var coin = state.coins.find(function (c) { return c.symbol === short; });
   var pct = coin ? ((coin.open_24h > 0 && coin.current_price > 0)
     ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
     : (coin.price_change_percentage_24h || 0)) : 0;
   var pctCls = pct >= 0 ? 'up' : 'dn';
   var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
   var scoreStr = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
+  var sym = short; // use short key for chart instances and series maps
 
   cell.innerHTML = '<div class="grid-cell-head">'
-    + '<span class="grid-cell-sym">' + sym.replace('USDT', '') + '</span>'
+    + '<span class="grid-cell-sym">' + label + '</span>'
     + '<span class="grid-cell-pct ' + pctCls + '">' + pctStr + '</span>'
     + '<span class="grid-cell-score">' + scoreStr + '</span>'
     + '</div>'
     + '<div class="grid-cell-chart" id="gc-' + sym + '"></div>';
 
-  cell.onclick = function () { closeGridView(); openCoinFullView(sym); };
+  cell.onclick = function () { closeGridView(); openCoinFullView(short); };
 
   var chartEl = document.getElementById('gc-' + sym);
   if (!chartEl || !window.LightweightCharts) return;
@@ -4272,7 +4275,7 @@ function _renderGridBody() {
   top.forEach(function (entry) {
     var cell = document.createElement('div');
     cell.className = 'grid-cell';
-    cell.dataset.sym = entry.symbol;
+    cell.dataset.sym = entry.symbol.replace(/USDT$/i, '').toLowerCase();
     body.appendChild(cell);
     _loadGridCell(cell, entry);
   });
@@ -4292,8 +4295,9 @@ export function updateGridScores(top9) {
     var cells = body.querySelectorAll('.grid-cell');
     var cell = cells[i];
     if (!cell) return;
-    var prevSym = cell.dataset.sym;
-    if (prevSym === entry.symbol) {
+    var prevSym = cell.dataset.sym; // short key e.g. 'aster'
+    var entryShort = entry.symbol.replace(/USDT$/i, '').toLowerCase();
+    if (prevSym === entryShort) {
       // Same coin — just update header values
       var scoreEl = cell.querySelector('.grid-cell-score');
       if (scoreEl) scoreEl.textContent = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
@@ -4307,7 +4311,7 @@ export function updateGridScores(top9) {
       }
     } else {
       // New coin entered top-9 — reload cell
-      cell.dataset.sym = entry.symbol;
+      cell.dataset.sym = entryShort;
       if (_gridChartInstances[prevSym]) { try { _gridChartInstances[prevSym].remove(); } catch (e) {} delete _gridChartInstances[prevSym]; }
       if (window.__gridSeries) delete window.__gridSeries[prevSym];
       if (window.__gridVolSeries) delete window.__gridVolSeries[prevSym];
