@@ -103,6 +103,7 @@
 @media(max-width:768px) and (orientation:portrait){
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-body{flex:9 1 0%;}
   #fv-overlay:has(#fv-briefing-drawer.open) #fv-briefing-drawer.open{height:auto;flex:11 1 0%;}
+  #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-bottom:var(--v-xs);}
 }
 
 @media(max-width:1024px){
