@@ -15,7 +15,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
-  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, requestNotifPermission,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, requestNotifPermission, primeAudioCtx,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -636,6 +636,7 @@ async function _revalidateSession() {
   // result === null: server unreachable — load app anyway; WS will surface the error
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+  document.addEventListener('click', primeAudioCtx, { once: true });
   loadCache();
   loadAlerts();
   loadBriefing();
