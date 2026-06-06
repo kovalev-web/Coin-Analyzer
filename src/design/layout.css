@@ -94,8 +94,9 @@
   #fv-briefing-drawer.open{height:33vh;width:auto !important;flex-shrink:0;overflow-y:auto;border-top:1px solid var(--steel);}
   .fv-sym-label{font-size:var(--text-sm);}
   .fv-info-top{display:none;}
-  .fv-bottom-bar{display:flex;background:var(--canvas);border-top-color:transparent;padding:var(--space-5) var(--space-20) var(--space-12);}
-  #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{padding:var(--space-5) var(--space-6);}
+  .fv-coin-info{display:none;}
+  .fv-info-stats{display:none;}
+  .fv-bottom-bar{display:flex;background:var(--paper);border-top:none;border-radius:var(--radius-xl);box-shadow:var(--shadow-md);margin:var(--space-3) var(--space-6);padding:var(--space-3) var(--space-4);flex-shrink:0;}
   #bp-popup{border-radius:var(--radius-xl);}
   .bp-note-row textarea{font-size:var(--text-sm) !important;}
 }
