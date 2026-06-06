@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { fetchMarketStrength, analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -2109,9 +2109,6 @@ export function openAnalysisPopup(sym, btn) {
     existingPopup._popupCard = null;
   }
   if (existingPopup) existingPopup.style.display = 'none';
-  var existingMs = document.getElementById('ms-popup');
-  if (existingMs && existingMs.style.display !== 'none') closeMSPopup();
-
   var card = btn.closest('.coin-card');
 
   var popup = document.getElementById('analysis-overlay');
@@ -2231,141 +2228,6 @@ export function updateAnalysisPopup(sym) {
   }
 }
 
-// ── Market Strength ─────────────────────────────────────────────────────────
-
-function getMSKPhase() {
-  var utcMs = Date.now() + new Date().getTimezoneOffset() * 60000;
-  var msk = new Date(utcMs + 3 * 3600 * 1000);
-  var h = msk.getHours() + msk.getMinutes() / 60;
-  var timeStr = msk.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  if (h >= 0 && h < 2) return { label: 'Night', time: timeStr };
-  if (h >= 2 && h < 9) return { label: 'Asia', time: timeStr };
-  if (h >= 9 && h < 11) return { label: 'Europe Open', time: timeStr };
-  if (h >= 11 && h < 15.5) return { label: 'Europe Midday', time: timeStr };
-  if (h >= 15.5 && h < 19.5) return { label: 'US+Europe Overlap', time: timeStr };
-  return { label: 'US Evening', time: timeStr };
-}
-
-function msBar(val) {
-  var cls = val >= 65 ? 'strong' : val >= 40 ? 'medium' : 'weak';
-  return '<div class="ms-bar-row"><div class="ms-bar"><div class="ms-bar-fill ' + cls + '" style="width:' + val + '%"></div></div><span class="ms-bar-pct">' + val + '</span></div>';
-}
-
-function msCardInner() {
-  var ms = state.marketStrength;
-  if (!ms) {
-    return '<div class="label">Market Strength</div>' +
-      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Check →</div>';
-  }
-  if (ms.status === 'loading') {
-    return '<div class="label">Market Strength</div>' +
-      '<div style="font-size:var(--text-lg);font-weight:var(--font-bold);color:var(--primary);margin-top:var(--space-4);">Analyzing...</div>';
-  }
-  if (ms.status === 'error') {
-    return '<div class="label">Market Strength</div>' +
-      '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--danger);margin-top:var(--space-4);">Error</div>' +
-      '<div class="ms-card-sub">Click to retry</div>';
-  }
-  var vLabel = ms.verdict === 'strong' ? '💪 Strong' : ms.verdict === 'medium' ? '😐 Average' : '😵 Weak';
-  var vColor = ms.verdict === 'strong' ? 'var(--bullish)' : ms.verdict === 'medium' ? 'var(--level-deep)' : 'var(--danger)';
-  return '<div class="label">Market Strength</div>' +
-    '<div style="font-size:var(--text-xl);font-weight:var(--font-bold);color:' + vColor + ';margin-top:var(--space-3);">' + vLabel + '</div>';
-}
-
-function msPopupInner() {
-  var ms = state.marketStrength;
-  var phase = getMSKPhase();
-  var closeBtn = '<button class="btn-topbar" data-action="close-ms">' + icon('x', 16) + '</button>';
-  if (!ms || ms.status === 'loading') {
-    return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div class="ms-loading"><span class="spinner"></span>Analyzing market...</div></div>';
-  }
-  if (ms.status === 'error') {
-    return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
-      '<div class="popup-body"><div style="color:var(--danger);font-size:var(--text-xs);font-weight:var(--font-semi);margin-bottom:var(--space-6);">Failed to load data</div></div>' +
-      '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Retry</button></div>';
-  }
-  var m = ms.metrics;
-  var vLabel = ms.verdict === 'strong' ? '💪 Strong' : ms.verdict === 'medium' ? '😐 Average' : '😵 Weak';
-  var vClass = 'ms-verdict-' + ms.verdict;
-  var oiHtml = '<span class="ms-oi-badge ' + (m.oiDir === 'up' ? 'up' : m.oiDir === 'down' ? 'down' : 'neutral') + '">' + (m.oiDir === 'up' ? '▲ Confirmed' : m.oiDir === 'down' ? '▼ Liquidations' : '— Neutral') + '</span>';
-  var ts = new Date(ms.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  var inPlayHtml = ms.inPlay.length ?
-    '<div class="ms-inplay"><div class="ms-inplay-label">⚡ In-play (volume ×3+)</div><div class="ms-inplay-coins">' +
-    ms.inPlay.map(function (s) { return '<span class="ms-inplay-pill">' + s + '</span>'; }).join('') +
-    '</div></div>' : '';
-
-  function tip(text) {
-    return '<span class="ms-tip-wrap" tabindex="0">' +
-      '<span class="ms-tip-icon">i</span>' +
-      '<span class="ms-tip-text">' + text + '</span>' +
-      '</span>';
-  }
-
-  var tips = {
-    vol: 'Comparing volume of the last 5 candles (1m) vs previous 25. High — market is heated, money flowing in. Low — sluggish conditions, even a good entry may not play out.',
-    move: 'How much the candle body fills its range on 1h. High — steady movement, candles closing with conviction. Low — lots of wicks and uncertainty, no clear direction.',
-    vol2: 'ATR — average candle range over the last 5 hours vs baseline. High — ranges expanding, room to move. Low — market compressed, breakouts often fail.',
-    oi: '▲ Confirmed — price rising and OI increasing: real buyers entering, move is solid. ▼ Liquidations — price rising but OI falling: shorts being squeezed. Move is sharp but may not hold. — Neutral — mixed picture, no signal.',
-  };
-
-  return '<div class="popup-header"><span class="popup-title">Market Strength</span>' + closeBtn + '</div>' +
-    '<div class="popup-body"><div class="ms-phase" style="margin-bottom:var(--space-5);">' + phase.label + ' · ' + phase.time + ' MSK</div><div class="ms-metrics-grid">' +
-    '<div class="ms-metric"><div class="ms-metric-label">Volume' + tip(tips.vol) + '</div>' + msBar(m.volumePulse) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Direction' + tip(tips.move) + '</div>' + msBar(m.movement) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Volatility' + tip(tips.vol2) + '</div>' + msBar(m.volatility) + '</div>' +
-    '<div class="ms-metric"><div class="ms-metric-label">Open Interest' + tip(tips.oi) + '</div>' + oiHtml + '</div>' +
-    '</div>' +
-    inPlayHtml +
-    '<div class="ms-footer">Score: ' + ms.score + ' · top-20 by volume · ' + ts + '</div></div>' +
-    '<div class="popup-footer"><button class="btn-cta" style="width:100%" data-action="refresh-ms">Refresh</button></div>';
-}
-
-export function openMSPopup() {
-  var existingAp = document.getElementById('analysis-overlay');
-  if (existingAp && existingAp._popupCard) { existingAp._popupCard.style.overflow = ''; existingAp._popupCard = null; }
-  if (existingAp) existingAp.style.display = 'none';
-
-  if (!state.marketStrength) fetchMarketStrength();
-
-  var popup = document.getElementById('ms-popup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'ms-popup';
-    popup.className = 'ms-popup popup';
-  }
-  if (popup.parentNode) popup.parentNode.removeChild(popup);
-  document.body.appendChild(popup);
-
-  popup.innerHTML = msPopupInner();
-  popup.style.display = 'block';
-
-  if (_isTouchDevice) {
-    popup.style.position = 'fixed';
-    popup.style.top = '72px';
-    popup.style.left = '8px';
-    popup.style.right = '8px';
-    popup.style.bottom = 'auto';
-    popup.style.width = 'auto';
-    popup.style.maxWidth = 'none';
-  } else {
-    popup.style.position = 'absolute';
-    var btn = document.querySelector('.mob-ms-chip');
-    if (btn) {
-      var btnRect = btn.getBoundingClientRect();
-      popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
-      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
-      popup.style.left = 'auto';
-      popup.style.width = '400px';
-      popup.style.maxWidth = 'none';
-    }
-  }
-}
-
-export function closeMSPopup() {
-  var el = document.getElementById('ms-popup');
-  if (el) el.style.display = 'none';
-}
 
 export { openTVMode, closeTVMode } from './tv.js';
 
@@ -2389,14 +2251,6 @@ function updateMetricCards() {
   if (c4) c4.textContent = bc;
 }
 
-export function updateMSPanel() {
-  var popup = document.getElementById('ms-popup');
-  if (popup && popup.style.display !== 'none') popup.innerHTML = msPopupInner();
-  var ms = state.marketStrength;
-  var msLabel = !ms ? 'Market' : ms.status === 'loading' ? 'Market...' : ms.status === 'error' ? 'Market: ?' : (ms.verdict === 'strong' ? '<span>💪</span><span>Strong</span>' : ms.verdict === 'medium' ? '<span>😐</span><span>Average</span>' : '<span>😵</span><span>Weak</span>');
-  var chip = document.querySelector('.mob-ms-chip');
-  if (chip) chip.innerHTML = msLabel;
-}
 
 // ── Topbar HTML (shared between main render and full view) ─────────────────
 
@@ -2498,63 +2352,6 @@ export function render() {
   updateNotifBadge();
 }
 
-// ── Tooltip positioning ────────────────────────────────────────────────────
-
-var _activeTip = null;
-var _activeWrap = null;
-
-function showTip(wrap) {
-  var tip = wrap.querySelector('.ms-tip-text');
-  if (!tip) return;
-  if (_activeTip && _activeTip !== tip) { _activeTip.style.display = 'none'; }
-  _activeTip = tip;
-  _activeWrap = wrap;
-  // Render off-screen first to measure height
-  tip.style.top = '-9999px'; tip.style.left = '-9999px';
-  tip.style.display = 'block';
-  var TIP_W = 210, MARGIN = 8;
-  var rect = wrap.getBoundingClientRect();
-  var tipH = tip.offsetHeight || 100;
-  var top = rect.bottom + 4;
-  var left = rect.left;
-  // Flip above if goes below viewport
-  if (top + tipH > window.innerHeight - MARGIN) top = rect.top - tipH - 4;
-  if (top < MARGIN) top = MARGIN;
-  // Clamp horizontally
-  if (left + TIP_W > window.innerWidth - MARGIN) left = window.innerWidth - TIP_W - MARGIN;
-  if (left < MARGIN) left = MARGIN;
-  tip.style.top = top + 'px';
-  tip.style.left = left + 'px';
-}
-
-function hideTip(wrap) {
-  var tip = wrap.querySelector('.ms-tip-text');
-  if (tip) { tip.style.display = 'none'; _activeTip = null; _activeWrap = null; }
-}
-
-// Reposition tooltip on page scroll so it follows the icon
-window.addEventListener('scroll', function () {
-  if (_activeWrap) showTip(_activeWrap);
-}, { passive: true });
-
-document.body.addEventListener('mouseover', function (e) {
-  var wrap = e.target.closest('.ms-tip-wrap');
-  if (wrap) showTip(wrap);
-});
-document.body.addEventListener('mouseout', function (e) {
-  var wrap = e.target.closest('.ms-tip-wrap');
-  if (!wrap) return;
-  if (e.relatedTarget && wrap.contains(e.relatedTarget)) return;
-  hideTip(wrap);
-});
-document.body.addEventListener('focus', function (e) {
-  var wrap = e.target.closest('.ms-tip-wrap');
-  if (wrap) showTip(wrap);
-}, true);
-document.body.addEventListener('blur', function (e) {
-  var wrap = e.target.closest('.ms-tip-wrap');
-  if (wrap) hideTip(wrap);
-}, true);
 
 // ── Event listeners ────────────────────────────────────────────────────────
 
@@ -2563,7 +2360,6 @@ loadLevels();
 on('render', render);
 on('cards:sync', renderCards);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
-on('ms:update', updateMSPanel);
 on('metrics:update', updateMetricCards);
 on('ws:status', function () {
   var els = document.querySelectorAll('.ws-indicator');

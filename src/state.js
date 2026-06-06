@@ -25,7 +25,6 @@ export const state = {
   analyzingAll: false,
   analyzeAllAbort: false,
   dailyOpen: {},       // symbol → D1 open price (UTC midnight) — для корректного суточного %
-  marketStrength: null,
   briefing: [],        // [{sym, date, addedAt, status, note}]
   briefingViewDate: null, // currently viewed date in panel (null = today)
   trades: {},          // 'sym:date' → {status:'ok'|'loading'|'error', pnl, count, entries[]}

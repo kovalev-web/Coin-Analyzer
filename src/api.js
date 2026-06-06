@@ -8,8 +8,6 @@ export var API_BASE = _wsEnv
   ? _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '')
   : '';
 
-// Coins excluded from Market Strength (too correlated with BTC, not altcoin pumps)
-var MS_EXCLUDE = new Set(['btc', 'eth', 'sol']);
 
 // TV update throttle: max once per 2s (TV hardware is slow)
 var _tvKlineThrottle = {};
@@ -400,7 +398,7 @@ export async function fetchCoins() {
   state.loading = false; emit('render');
 }
 
-export async function refreshCoins() { state.cacheExpires = 0; await fetchCoins(); fetchMarketStrength(true); }
+export async function refreshCoins() { state.cacheExpires = 0; await fetchCoins(); }
 
 // ── Cache (AI analysis, unchanged) ───────────────────────────────────────
 
@@ -783,100 +781,6 @@ export function fetchNotifications() {
     .catch(function () {});
 }
 
-export async function fetchMarketStrength(force) {
-  var sessionId = getCurrentSessionId();
-  if (!force && state.marketStrength && state.marketStrength.status === 'ok' && state.marketStrength.session === sessionId) return;
-
-  var top = state.coins
-    .filter(function (c) { return !STABLE_SYMBOLS.has(c.symbol.toLowerCase()) && !MS_EXCLUDE.has(c.symbol.toLowerCase()); })
-    .sort(function (a, b) { return b.total_volume - a.total_volume; })
-    .slice(0, 20);
-  if (!top.length) return;
-  state.marketStrength = { status: 'loading' };
-  emit('ms:update');
-
-  try {
-    var symbols = top.map(function (c) { return c.symbol; });
-    var response = await wsRequest({ type: 'fetch_market_strength', symbols: symbols });
-    var results = response.data;
-
-    var valid = results.filter(function (r) { return r && Array.isArray(r.k1m) && Array.isArray(r.k1h); });
-    if (!valid.length) { state.marketStrength = { status: 'error' }; emit('ms:update'); return; }
-
-    var volumePulses = [], atrRatios = [], qualities = [], oiDirs = [], volAnomalies = [], inPlay = [];
-
-    valid.forEach(function (r) {
-      if (r.k1m.length >= 10) {
-        var vols = r.k1m.map(function (k) { return parseFloat(k[5]); });
-        var recent = vols.slice(-5).reduce(function (s, v) { return s + v; }, 0) / 5;
-        var base = vols.slice(0, -5).reduce(function (s, v) { return s + v; }, 0) / Math.max(vols.slice(0, -5).length, 1);
-        if (base > 0) volumePulses.push(Math.min(100, Math.round(recent / base * 50)));
-      }
-      if (r.k1h.length >= 7) {
-        var trs = [];
-        for (var i = 1; i < r.k1h.length; i++) {
-          var h2 = parseFloat(r.k1h[i][2]), l2 = parseFloat(r.k1h[i][3]), pc = parseFloat(r.k1h[i - 1][4]);
-          trs.push(Math.max(h2 - l2, Math.abs(h2 - pc), Math.abs(l2 - pc)));
-        }
-        var atrR = trs.slice(-5).reduce(function (s, v) { return s + v; }, 0) / 5;
-        var atrB = trs.slice(0, -5).reduce(function (s, v) { return s + v; }, 0) / Math.max(trs.slice(0, -5).length, 1);
-        if (atrB > 0) atrRatios.push(Math.min(100, Math.round(atrR / atrB * 50)));
-      }
-      if (r.k1h.length >= 5) {
-        var qs = r.k1h.slice(-10).map(function (k) {
-          var o = parseFloat(k[1]), c = parseFloat(k[4]), h3 = parseFloat(k[2]), l3 = parseFloat(k[3]);
-          var range = h3 - l3; return range > 0 ? Math.abs(c - o) / range : 0;
-        });
-        qualities.push(Math.round(qs.reduce(function (s, v) { return s + v; }, 0) / qs.length * 100));
-      }
-      if (Array.isArray(r.oiHist) && r.oiHist.length >= 2) {
-        var oiNew = parseFloat(r.oiHist[r.oiHist.length - 1].sumOpenInterest);
-        var oiOld = parseFloat(r.oiHist[0].sumOpenInterest);
-        var priceUp = (r.coin ? r.coin.price_change_percentage_24h || 0 : 0) > 0;
-        var oiUp = oiNew > oiOld * 1.001;
-        oiDirs.push(priceUp ? (oiUp ? 1 : -1) : 0);
-      }
-      if (Array.isArray(r.k1d) && r.k1d.length >= 5) {
-        var prev = r.k1d.slice(0, -1);
-        var avgVol = prev.reduce(function (s, k) { return s + parseFloat(k[7]); }, 0) / prev.length;
-        if (avgVol > 0) {
-          var coin = state.coins.find(function (c) { return c.symbol === r.symbol; });
-          if (coin) {
-            var ratio = coin.total_volume / avgVol;
-            volAnomalies.push(Math.min(100, Math.round(ratio * 20)));
-            if (ratio >= 3) inPlay.push(r.symbol.toUpperCase());
-          }
-        }
-      }
-    });
-
-    function avg(arr) { return arr.length ? Math.round(arr.reduce(function (s, v) { return s + v; }, 0) / arr.length) : 50; }
-    var vPulse = avg(volumePulses);
-    var atrQ = avg(atrRatios);
-    var moveQ = avg(qualities);
-    var volAnom = avg(volAnomalies);
-    var oiAvg = oiDirs.length ? oiDirs.reduce(function (s, v) { return s + v; }, 0) / oiDirs.length : 0;
-    var oiDir = oiAvg > 0.2 ? 'up' : oiAvg < -0.2 ? 'down' : 'neutral';
-    var oiScore = oiDir === 'up' ? 80 : oiDir === 'down' ? 20 : 50;
-
-    var score = Math.round(vPulse * 0.25 + atrQ * 0.20 + moveQ * 0.25 + volAnom * 0.15 + oiScore * 0.15);
-    var verdict = score >= 65 ? 'strong' : score >= 40 ? 'medium' : 'weak';
-
-    state.marketStrength = {
-      status: 'ok', verdict: verdict, score: score,
-      metrics: { volumePulse: vPulse, volatility: atrQ, movement: moveQ, oiDir: oiDir },
-      inPlay: inPlay, timestamp: Date.now(),
-      session: sessionId,
-    };
-  } catch (e) {
-    state.marketStrength = { status: 'error' };
-  }
-  emit('ms:update');
-}
-
-export function startMSPolling() {
-  setInterval(function () { fetchMarketStrength(false); }, 5 * 60 * 1000);
-}
 
 // ── Trades (Binance Futures via proxy) ────────────────────────────────────
 

@@ -1,12 +1,12 @@
 import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
-  fetchMarketStrength, loadCache, startChartPolling, startMSPolling, fetchAllNATR, fetchNATR,
+  loadCache, startChartPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
   fetchNotifications,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openMSPopup, closeMSPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
+  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -59,10 +59,6 @@ document.body.addEventListener('click', function (e) {
   if (_aoPopup && _aoPopup.style.display === 'block' && !_aoPopup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
     if (_aoPopup._popupCard) { _aoPopup._popupCard.style.overflow = ''; _aoPopup._popupCard = null; }
     _aoPopup.style.display = 'none';
-  }
-  var _msPopup = document.getElementById('ms-popup');
-  if (_msPopup && _msPopup.style.display !== 'none' && !_msPopup.contains(e.target) && !e.target.closest('[data-action="open-ms"]')) {
-    _msPopup.style.display = 'none';
   }
   var _bpPopup = document.getElementById('bp-popup');
   if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
@@ -261,15 +257,6 @@ document.body.addEventListener('click', function (e) {
       setFVChartTF(target.dataset.tf);
       break;
     }
-    case 'open-ms':
-      openMSPopup();
-      break;
-    case 'close-ms':
-      closeMSPopup();
-      break;
-    case 'refresh-ms':
-      fetchMarketStrength(true);
-      break;
     case 'toggle-theme':
       toggleTheme();
       break;
@@ -507,7 +494,6 @@ setInterval(function () {
 // ── Orientation change: close transient UI, re-anchor full-screen overlays ─
 
 window.addEventListener('orientationchange', function () {
-  closeMSPopup();
   closeClearPopup();
   // Close only dropdown-mode popups (positions stale after resize).
   // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
@@ -552,7 +538,7 @@ registerRoute('/', function () {
   if (_autoSym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
   if (state.coins.length === 0) {
     fetchCoins().then(function () {
-      render(); startChartPolling(); fetchMarketStrength(false); startMSPolling();
+      render(); startChartPolling();
       if (_autoSym) openFV(_autoSym);
     });
   } else if (_autoSym) {
