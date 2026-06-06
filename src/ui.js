@@ -4129,7 +4129,11 @@ export function requestNotifPermission() {
 
 export function showNotifToast(entry) {
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification('QuestTick', { body: entry.message, silent: false });
+    navigator.serviceWorker.ready.then(function (reg) {
+      reg.showNotification('QuestTick', { body: entry.message });
+    }).catch(function () {
+      new Notification('QuestTick', { body: entry.message });
+    });
     return;
   }
   _playNotifSound();

@@ -635,6 +635,7 @@ async function _revalidateSession() {
   }
   // result === null: server unreachable — load app anyway; WS will surface the error
 
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
   loadCache();
   loadAlerts();
   loadBriefing();
