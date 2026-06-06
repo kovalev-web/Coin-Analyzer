@@ -4348,11 +4348,19 @@ export function toggleNotifDropdown() {
   var isOpen = dd.classList.contains('open');
   if (isOpen) {
     dd.classList.remove('open');
-    if (_useFullscreenPopup()) unlockScroll();
+    if (dd._isFullscreenMode) {
+      dd.style.cssText = '';
+      unlockScroll();
+      dd._isFullscreenMode = false;
+    }
   } else {
     _renderNotifDropdown();
     dd.classList.add('open');
-    if (_useFullscreenPopup()) lockScroll();
+    dd._isFullscreenMode = _useFullscreenPopup();
+    if (dd._isFullscreenMode) {
+      _popupFullscreen(dd);
+      lockScroll();
+    }
     state.notifUnread = 0;
     updateNotifBadge();
     fetch(API_BASE + '/api/notifications', {
