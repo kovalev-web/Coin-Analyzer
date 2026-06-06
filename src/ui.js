@@ -2380,12 +2380,20 @@ var _TF_SECS = { '1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'4h':1
 
 function _startFVTimer(tf) {
   if (_fvTimerInterval) { clearInterval(_fvTimerInterval); _fvTimerInterval = null; }
+  window.__fvTimerAnchorMs = null;
   var secs = _TF_SECS[tf];
   if (!secs) return;
   function _tick() {
     var el = document.getElementById('fv-timer');
     if (!el) return;
-    var rem = secs - (Math.floor(Date.now() / 1000) % secs);
+    var rem;
+    var anchorMs = window.__fvTimerAnchorMs;
+    if (anchorMs != null) {
+      rem = secs - Math.floor((Date.now() - anchorMs) / 1000);
+      if (rem <= 0) { window.__fvTimerAnchorMs = null; rem = secs - (Math.floor(Date.now() / 1000) % secs); }
+    } else {
+      rem = secs - (Math.floor(Date.now() / 1000) % secs);
+    }
     if (tf === '1m') {
       el.textContent = rem + 's';
     } else {

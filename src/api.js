@@ -300,6 +300,10 @@ function processKlineUpdate(msg) {
   } else if (!last || k.time > last.time) {
     arr.push(k);
     if (arr.length > 300) arr.shift();
+    // Sync FV timer: anchor to browser time when new candle arrives
+    if (window.__fvSymbol === sym && window.__fvTF === tf) {
+      window.__fvTimerAnchorMs = Date.now();
+    }
   } else {
     return; // старая свеча — игнорируем
   }
