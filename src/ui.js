@@ -390,7 +390,7 @@ export function showAccountModal() {
         + '</div>'
         + '<div id="acc-bin-form">'
           + '<div style="margin-bottom:var(--v-sm);padding:var(--space-5) var(--space-6);background:var(--fog);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--graphite);line-height:1.5;">'
-            + '<strong style="color:var(--ink-deep);">Read-only keys only.</strong> We only accept keys with no trading or withdrawal permissions. Your funds are safe — we can only read your trade history.'
+            + '<strong style="color:var(--ink-deep);">Read-only keys only.</strong> We only accept keys with no trading or withdrawal permissions. Your funds stay safe — the key is used solely to display your PnL on the watchlist.'
           + '</div>'
           + '<div style="margin-bottom:var(--v-sm);">'
             + '<div class="acc-row-label">API Key</div>'
