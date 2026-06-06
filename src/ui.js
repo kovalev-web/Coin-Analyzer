@@ -3118,7 +3118,7 @@ function _fvBottomBarHTML(sym, tf) {
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
     + '<div class="fv-bb-left">'
-    + '<button class="btn-topbar" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
+    + '<button class="btn-icon" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
     + '<div class="tf-dd fv-tf-dd dropdown">'
@@ -3153,7 +3153,7 @@ function _fvCoinInfoHTML(sym, tf) {
 
   return '<div class="fv-coin-info">'
     + '<div class="fv-info-top">'
-    + '<button class="btn-topbar" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
+    + '<button class="btn-icon" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
     + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
     + '<div class="tf-picker">'
     + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
