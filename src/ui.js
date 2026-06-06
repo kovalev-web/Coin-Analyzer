@@ -4281,9 +4281,7 @@ export function showNotifToast(entry) {
 export function updateNotifBadge() {
   var badge = document.getElementById('notif-badge');
   if (!badge) return;
-  var count = state.notifUnread;
-  badge.textContent = count > 9 ? '9+' : String(count);
-  badge.style.display = count > 0 ? 'flex' : 'none';
+  badge.style.display = state.notifUnread > 0 ? 'block' : 'none';
 }
 
 function _renderNotifDropdown() {

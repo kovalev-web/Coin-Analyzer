@@ -403,7 +403,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 
 /* ── Notifications ──────────────────────────────────────────── */
 .notif-wrap{position:relative;}
-.notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;background:var(--danger);color:var(--canvas);border-radius:var(--radius-full);font-size:var(--text-2xs);font-weight:var(--font-bold);display:flex;align-items:center;justify-content:center;padding:0 var(--space-1);pointer-events:none;}
+.notif-badge{position:absolute;top:3px;right:3px;width:7px;height:7px;background:var(--danger);border-radius:50%;pointer-events:none;}
 .notif-dd{width:320px;max-height:400px;overflow-y:auto;border-radius:var(--radius-xl);z-index:500;top:calc(100% + var(--space-3));}
 .notif-row{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--fog);}
 .notif-row:last-child{border-bottom:none;}
