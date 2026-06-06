@@ -407,6 +407,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .notif-dd{width:320px;max-height:440px;top:calc(100% + var(--space-4));border-radius:var(--radius-xl);z-index:500;}
 .notif-dd .popup-header{padding-bottom:var(--space-6);}
 .notif-dd.open{display:flex;flex-direction:column;}
+@media(max-width:767px){.notif-dd.open{position:fixed;inset:0;width:100%;max-height:100%;border-radius:0;top:0;z-index:9999;}}
 .notif-scroll{flex:1;overflow-y:auto;min-height:0;}
 .notif-footer{flex-shrink:0;padding:var(--space-4) var(--space-6);border-top:1px solid var(--fog);}
 .notif-footer-btn{display:flex;align-items:center;justify-content:center;width:100%;height:var(--h-btn-md);font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--graphite);background:transparent;border:none;cursor:pointer;border-radius:var(--radius-md);letter-spacing:0;}

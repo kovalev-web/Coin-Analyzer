@@ -4348,9 +4348,11 @@ export function toggleNotifDropdown() {
   var isOpen = dd.classList.contains('open');
   if (isOpen) {
     dd.classList.remove('open');
+    if (_useFullscreenPopup()) unlockScroll();
   } else {
     _renderNotifDropdown();
     dd.classList.add('open');
+    if (_useFullscreenPopup()) lockScroll();
     state.notifUnread = 0;
     updateNotifBadge();
     fetch(API_BASE + '/api/notifications', {
