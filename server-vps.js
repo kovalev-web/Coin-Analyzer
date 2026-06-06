@@ -1041,7 +1041,7 @@ var httpServer = http.createServer(async function (req, res) {
           var bSec = (parsed.apiSecret || '').trim();
           if (!bKey || !bSec) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Заполните оба поля' }));
+            res.end(JSON.stringify({ error: 'Please fill in both fields' }));
             return;
           }
           // Validate keys and check permissions via Binance API
@@ -1055,30 +1055,35 @@ var httpServer = http.createServer(async function (req, res) {
               // -2015 = wrong key or IP restriction
               var binMsg = rData.msg || '';
               var errText = (rData.code === -2015 || binMsg.toLowerCase().includes('ip'))
-                ? 'Неверный ключ или IP-ограничение. Проверьте правильность и снимите ограничение по IP при создании ключа.'
-                : 'Неверные ключи: ' + (binMsg || 'Binance error');
+                ? 'Invalid key or IP restriction. Check your key and disable IP restriction when creating it.'
+                : 'Invalid keys: ' + (binMsg || 'Binance error');
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: errText }));
               return;
             }
+            if (!rData.enableReading) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Key does not have read permission. Please create a Read-only key.' }));
+              return;
+            }
             if (rData.enableWithdrawals) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Ключ разрешает вывод средств — опасно. Создайте Read-only ключ.' }));
+              res.end(JSON.stringify({ error: 'Key allows withdrawals — not safe. Please create a Read-only key.' }));
               return;
             }
             if (rData.enableInternalTransfer || rData.permitsUniversalTransfer) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Ключ разрешает переводы. Создайте Read-only ключ.' }));
+              res.end(JSON.stringify({ error: 'Key allows transfers. Please create a Read-only key.' }));
               return;
             }
-            if (!rData.enableReading) {
+            if (rData.enableSpotAndMarginTrading || rData.enableFutures || rData.enableVanillaOptions || rData.enablePortfolioMarginTrading) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Ключ не имеет разрешения на чтение.' }));
+              res.end(JSON.stringify({ error: 'Key has trading permissions. Please create a Read-only key.' }));
               return;
             }
           } catch (e) {
             res.writeHead(502, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Не удалось проверить ключи: ' + e.message }));
+            res.end(JSON.stringify({ error: 'Could not verify keys: ' + e.message }));
             return;
           }
           var enc = JSON.stringify({ key: encryptStr(bKey), secret: encryptStr(bSec) });
