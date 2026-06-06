@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -4255,6 +4255,14 @@ export function openGridView() {
   overlay.classList.add('open');
   lockScroll();
   initCharts(); // IntersectionObserver picks up moved cards
+
+  // Doggruzhaem NATR для топ-9 у кого нет — в фоне, без блокировки UI
+  top9.forEach(function (entry) {
+    var nd = state.natrData[entry.symbol];
+    if (!nd || nd === 'error') {
+      fetchNATR(entry.symbol).catch(function () {});
+    }
+  });
 }
 
 export function updateGridScores() {} // no-op: grid uses live main-screener cards
