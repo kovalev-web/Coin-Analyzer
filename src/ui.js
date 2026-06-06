@@ -4296,7 +4296,7 @@ function _gridTop9() {
   var maxRvol = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
 
   entries.forEach(function (e) {
-    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) + (e.rvol / maxRvol);
+    e.score = (e.natr / maxNatr) * 1 + (Math.abs(e.pct) / maxAbsPct) * 3 + (e.rvol / maxRvol) * 2;
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
