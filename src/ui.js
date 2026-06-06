@@ -3314,14 +3314,7 @@ export function openCoinFullView(sym) {
       _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
       var _bb = overlay.querySelector('.fv-bottom-bar');
       if (_bb) _bb.outerHTML = _fvBottomBarHTML(sym, tf);
-      // If briefing popup or drawer is open — hide the new star and re-highlight current coin
-      var _bpPopup = document.getElementById('bp-popup');
       var _fvdEl = document.getElementById('fv-briefing-drawer');
-      var briefingOpen = (_bpPopup && _bpPopup.style.display !== 'none') || (_fvdEl && _fvdEl.classList.contains('open'));
-      if (briefingOpen) {
-        var _newStar = _chartWrap.querySelector('.btn-fv-star');
-        if (_newStar) _newStar.style.display = 'none';
-      }
       if (_fvdEl && _fvdEl.classList.contains('open')) renderFVBriefingDrawer();
     }
   }
