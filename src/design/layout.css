@@ -91,7 +91,7 @@
   #fv-overlay{flex-direction:column;}
   .fv-chart-wrap{flex:2;}
   #fv-briefing-drawer{width:auto !important;height:0;transition:height 0.2s ease;}
-  #fv-briefing-drawer.open{height:33vh;width:auto !important;flex-shrink:0;overflow-y:auto;border-top:1px solid var(--steel);padding:var(--v-xs) 0;}
+  #fv-briefing-drawer.open{height:33vh;width:auto !important;flex-shrink:0;overflow-y:auto;border-top:1px solid var(--steel);}
   .fv-sym-label{font-size:var(--text-sm);}
   .fv-info-top{display:none;}
   .fv-coin-info{display:none;}
