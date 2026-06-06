@@ -4213,7 +4213,7 @@ function _gridTop9() {
   var maxAbsPct = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct); })) || 1;
   var maxRvol = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
   entries.forEach(function (e) {
-    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) * 3 + (e.rvol / maxRvol) * 2;
+    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) + (e.rvol / maxRvol);
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
