@@ -4127,13 +4127,25 @@ export function requestNotifPermission() {
   }
 }
 
+function _sendBgNotif(msg) {
+  navigator.serviceWorker.ready.then(function (reg) {
+    reg.showNotification('QuestTick', { body: msg });
+  }).catch(function () {
+    try { new Notification('QuestTick', { body: msg }); } catch (e) {}
+  });
+}
+
+// Debug helper — run in browser console: window._testNotif()
+window._testNotif = function () {
+  console.log('Notification.permission:', Notification.permission);
+  console.log('SW controller:', navigator.serviceWorker && navigator.serviceWorker.controller);
+  console.log('document.hidden:', document.hidden);
+  _sendBgNotif('Test notification');
+};
+
 export function showNotifToast(entry) {
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    navigator.serviceWorker.ready.then(function (reg) {
-      reg.showNotification('QuestTick', { body: entry.message });
-    }).catch(function () {
-      new Notification('QuestTick', { body: entry.message });
-    });
+    _sendBgNotif(entry.message);
     return;
   }
   _playNotifSound();
