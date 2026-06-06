@@ -4065,8 +4065,6 @@ export function openFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   drawer.classList.add('open');
-  var star = document.querySelector('.btn-fv-star');
-  if (star) star.style.display = 'none';
   renderFVBriefingDrawer();
   refreshBriefingFromServer();
 }
@@ -4075,8 +4073,6 @@ export function closeFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer) { drawer.classList.remove('open'); drawer.classList.remove('fvbd-has-expanded'); }
   _expandedFvKey = null;
-  var star = document.querySelector('.btn-fv-star');
-  if (star) star.style.display = '';
   _applyFVTradeMarkers(null);
 }
 
