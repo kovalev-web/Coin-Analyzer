@@ -4104,57 +4104,25 @@ function _timeAgo(ts) {
   return Math.floor(h / 24) + 'd ago';
 }
 
-// Persistent AudioContext — created once on first user interaction.
-// Chrome allows ctx.resume() from background tabs if the page had prior user activation.
-var _audioCtx = null;
-
-export function primeAudioCtx() {
-  if (_audioCtx) { if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(function(){}); return; }
-  try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
-}
-
 function _playNotifSound() {
-  var ctx = _audioCtx;
-  if (!ctx) return;
-  var doPlay = function () {
-    try {
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1047, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {}
-  };
-  if (ctx.state === 'running') { doPlay(); } else { ctx.resume().then(doPlay).catch(function(){}); }
-}
-
-export function requestNotifPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-}
-
-function _sendBgNotif(msg) {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.ready.then(function (reg) {
-    reg.showNotification('QuestTick', { body: msg });
-  }).catch(function () {});
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1047, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
 }
 
 export function showNotifToast(entry) {
-  // Always try audio — persistent AudioContext with prior user activation works in background tabs
   _playNotifSound();
-  if (document.hidden) {
-    // Visual: SW notification when tab is hidden
-    if ('Notification' in window && Notification.permission === 'granted') _sendBgNotif(entry.message);
-    return;
-  }
   var t = document.createElement('div');
   t.className = 'notif-toast';
   t.textContent = entry.message;
@@ -4163,7 +4131,7 @@ export function showNotifToast(entry) {
   setTimeout(function () {
     t.classList.remove('notif-toast--visible');
     setTimeout(function () { t.remove(); }, 300);
-  }, 4000);
+  }, 30000);
 }
 
 export function updateNotifBadge() {
