@@ -16,6 +16,7 @@ import {
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
+  openGridView, closeGridView, updateGridScores,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -260,6 +261,9 @@ document.body.addEventListener('click', function (e) {
     case 'toggle-theme':
       toggleTheme();
       break;
+    case 'open-grid':
+      openGridView();
+      break;
     case 'tv':
       openTVMode();
       break;
@@ -418,6 +422,10 @@ on('notify:received', function (entry) {
 
 on('notify:ready', function () {
   updateNotifBadge();
+});
+
+on('inplay:top', function (top) {
+  updateGridScores(top.slice(0, 9));
 });
 
 // Soft refresh — skips coins that already have NATR (initial load, new coins)

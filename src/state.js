@@ -36,6 +36,7 @@ export const state = {
   briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
   notifications: [],
   notifUnread: 0,
+  inplayTop: [],   // [{symbol, inplay, A, M, P, dp5m, rvol5m}] — from server inplay_top WS push
 };
 
 export function filteredCoins() {

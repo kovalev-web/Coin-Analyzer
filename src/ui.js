@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchKlines5m } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -2270,6 +2270,7 @@ function _topbarHTML() {
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
+    + '<button class="btn-topbar desktop-nav-btn" data-action="open-grid" title="Grid screener">' + icon('layout-grid', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="notif-wrap" id="notif-wrap">'
@@ -4165,6 +4166,166 @@ function _renderNotifDropdown() {
     + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
     + '</div>';
   dd.innerHTML = header + body + footer;
+}
+
+// ── Grid Screener ──────────────────────────────────────────────────────────
+
+var _gridChartInstances = {}; // sym → LW chart instance (for cleanup)
+
+function _getOrCreateGridOverlay() {
+  var el = document.getElementById('grid-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'grid-overlay';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+async function _loadGridCell(cell, entry) {
+  var sym = entry.symbol;
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  var pct = coin ? ((coin.open_24h > 0 && coin.current_price > 0)
+    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+    : (coin.price_change_percentage_24h || 0)) : 0;
+  var pctCls = pct >= 0 ? 'up' : 'dn';
+  var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+  var scoreStr = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
+
+  cell.innerHTML = '<div class="grid-cell-head">'
+    + '<span class="grid-cell-sym">' + sym.replace('USDT', '') + '</span>'
+    + '<span class="grid-cell-pct ' + pctCls + '">' + pctStr + '</span>'
+    + '<span class="grid-cell-score">' + scoreStr + '</span>'
+    + '</div>'
+    + '<div class="grid-cell-chart" id="gc-' + sym + '"></div>';
+
+  cell.onclick = function () { closeGridView(); openCoinFullView(sym); };
+
+  var chartEl = document.getElementById('gc-' + sym);
+  if (!chartEl || !window.LightweightCharts) return;
+
+  var c = getChartColors();
+  var chart = window.LightweightCharts.createChart(chartEl, {
+    autoSize: true,
+    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 10, fontFamily: 'Manrope, Arial, sans-serif' },
+    grid: { vertLines: { visible: false }, horzLines: { color: c.grid } },
+    crosshair: { mode: 0 },
+    rightPriceScale: { visible: false },
+    leftPriceScale: { visible: false },
+    timeScale: { visible: false },
+    handleScroll: false, handleScale: false,
+  });
+
+  var series = chart.addCandlestickSeries(getSeriesColors());
+  var vc = volClrs();
+  var volSeries = chart.addHistogramSeries({
+    color: vc.up, priceFormat: { type: 'volume' }, priceScaleId: 'vol',
+    lastValueVisible: false, priceLineVisible: false,
+  });
+  chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+
+  if (_gridChartInstances[sym]) { try { _gridChartInstances[sym].remove(); } catch (e) {} }
+  _gridChartInstances[sym] = chart;
+
+  window.__gridSeries = window.__gridSeries || {};
+  window.__gridVolSeries = window.__gridVolSeries || {};
+  window.__gridSeries[sym] = series;
+  window.__gridVolSeries[sym] = volSeries;
+
+  var candles = await fetchKlines5m(sym);
+  if (!candles.length) return;
+  var vc2 = volClrs();
+  series.setData(candles);
+  volSeries.setData(candles.map(function (k) {
+    return { time: k.time, value: k.volume, color: k.close >= k.open ? vc2.up : vc2.dn };
+  }));
+  chart.timeScale().fitContent();
+}
+
+export function openGridView() {
+  var overlay = _getOrCreateGridOverlay();
+  overlay.innerHTML = '<div class="grid-header">'
+    + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="grid-title">Grid · Inplay Top-9</span>'
+    + '<span class="grid-meta" id="grid-meta"></span>'
+    + '</div>'
+    + '<div class="grid-body" id="grid-body"></div>';
+
+  document.getElementById('grid-back').onclick = closeGridView;
+  overlay.classList.add('open');
+  lockScroll();
+  _renderGridBody();
+}
+
+function _renderGridBody() {
+  var body = document.getElementById('grid-body');
+  if (!body) return;
+  var top = state.inplayTop.slice(0, 9);
+  if (!top.length) {
+    body.innerHTML = '<div class="grid-empty">Waiting for inplay scores…</div>';
+    return;
+  }
+  body.innerHTML = '';
+  var meta = document.getElementById('grid-meta');
+  if (meta) meta.textContent = 'updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  top.forEach(function (entry) {
+    var cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.dataset.sym = entry.symbol;
+    body.appendChild(cell);
+    _loadGridCell(cell, entry);
+  });
+}
+
+export function updateGridScores(top9) {
+  if (!document.getElementById('grid-overlay')) return;
+  if (!document.getElementById('grid-overlay').classList.contains('open')) return;
+
+  var meta = document.getElementById('grid-meta');
+  if (meta) meta.textContent = 'updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  var body = document.getElementById('grid-body');
+  if (!body) return;
+
+  top9.forEach(function (entry, i) {
+    var cells = body.querySelectorAll('.grid-cell');
+    var cell = cells[i];
+    if (!cell) return;
+    var prevSym = cell.dataset.sym;
+    if (prevSym === entry.symbol) {
+      // Same coin — just update header values
+      var scoreEl = cell.querySelector('.grid-cell-score');
+      if (scoreEl) scoreEl.textContent = (entry.inplay >= 0 ? '+' : '') + entry.inplay.toFixed(2);
+      var coin = state.coins.find(function (c) { return c.symbol === entry.symbol; });
+      if (coin) {
+        var pct = (coin.open_24h > 0 && coin.current_price > 0)
+          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+          : (coin.price_change_percentage_24h || 0);
+        var pctEl = cell.querySelector('.grid-cell-pct');
+        if (pctEl) { pctEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%'; pctEl.className = 'grid-cell-pct ' + (pct >= 0 ? 'up' : 'dn'); }
+      }
+    } else {
+      // New coin entered top-9 — reload cell
+      cell.dataset.sym = entry.symbol;
+      if (_gridChartInstances[prevSym]) { try { _gridChartInstances[prevSym].remove(); } catch (e) {} delete _gridChartInstances[prevSym]; }
+      if (window.__gridSeries) delete window.__gridSeries[prevSym];
+      if (window.__gridVolSeries) delete window.__gridVolSeries[prevSym];
+      _loadGridCell(cell, entry);
+    }
+  });
+}
+
+export function closeGridView() {
+  var overlay = document.getElementById('grid-overlay');
+  if (overlay) overlay.classList.remove('open');
+  Object.keys(_gridChartInstances).forEach(function (sym) {
+    try { _gridChartInstances[sym].remove(); } catch (e) {}
+  });
+  _gridChartInstances = {};
+  window.__gridSeries = {};
+  window.__gridVolSeries = {};
+  forceUnlockScroll();
 }
 
 export function clearNotifications() {

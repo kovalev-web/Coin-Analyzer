@@ -104,6 +104,12 @@ function connectWS() {
         state.notifUnread++;
         emit('notify:received', msg.entry);
         break;
+      case 'inplay_top':
+        state.inplayTop = msg.data || [];
+        emit('inplay:top', state.inplayTop);
+        break;
+      case 'inplay_phases':
+        break; // handled elsewhere (phase detector UI)
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -344,6 +350,14 @@ function processKlineUpdate(msg) {
       var _vl = document.getElementById('fv-vol-label');
       if (_vl && !_vl.dataset.hovered) _vl.textContent = 'vol. ' + fmt(k.volume || 0).replace('$', '');
     }
+  }
+
+  // Grid view: update 5m series if chart is open for this coin
+  if (tf === '5m') {
+    var gs = (window.__gridSeries || {})[sym];
+    if (gs) { try { gs.update(k); } catch (e) {} }
+    var gvs = (window.__gridVolSeries || {})[sym];
+    if (gvs) { try { gvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
   }
 
 }
@@ -688,6 +702,29 @@ export async function fetchChartData(symbol, tf) {
     wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: tf });
   } catch (e) {
     state.chartData[key] = { status: 'error' };
+  }
+}
+
+// ── Grid kline fetch ─────────────────────────────────────────────────────
+// Returns [{time,open,high,low,close,volume}] for the grid screener.
+// Uses state.chartData cache (same key as FV) to avoid duplicate fetches.
+export async function fetchKlines5m(symbol) {
+  var key = symbol + '_5m';
+  if (state.chartData[key] && state.chartData[key].status === 'ok') {
+    return state.chartData[key].candles;
+  }
+  try {
+    var msg = await wsRequest({ type: 'fetch_klines', symbol: symbol, tf: '5m', limit: 200 });
+    var data = msg.data;
+    if (!Array.isArray(data) || !data.length) return [];
+    var candles = data.map(function (k) {
+      return { time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]) };
+    });
+    state.chartData[key] = { status: 'ok', candles: candles };
+    wsSend({ type: 'subscribe_klines', symbols: [symbol], tf: '5m' });
+    return candles;
+  } catch (e) {
+    return [];
   }
 }
 
