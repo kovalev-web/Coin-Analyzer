@@ -4291,7 +4291,7 @@ function _renderNotifDropdown() {
   dd.innerHTML = items.length
     ? items.map(function (n) {
         var ago = _timeAgo(n.createdAt);
-        var ic = n.type === 'level' ? '📊' : n.type === 'alert' ? '🔔' : '📋';
+        var ic = n.type === 'level' ? icon('trending-up', 14) : n.type === 'alert' ? icon('bell', 14) : icon('file-text', 14);
         return '<div class="notif-row">'
           + '<span class="notif-icon">' + ic + '</span>'
           + '<div class="notif-body">'
