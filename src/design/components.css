@@ -191,7 +191,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-tmi-danger{color:var(--danger);}
 .fv-tmi-danger .fv-tmi-icon{color:var(--danger);}
 .fv-drag-handle{position:absolute;right:74px;width:16px;height:16px;border-radius:var(--radius-md);background:var(--canvas);border:1px solid var(--ink-deep);z-index:20;display:none;pointer-events:none;}
-.fv-coin-info{position:absolute;top:var(--space-7);left:50%;transform:translateX(-50%);z-index:10;background:var(--paper);border-radius:var(--radius-xl);padding:var(--space-3) var(--space-6);box-shadow:var(--shadow-md);white-space:nowrap;}
+.fv-coin-info{position:absolute;top:var(--space-7);left:50%;transform:translateX(-50%);z-index:10;background:var(--paper);border-radius:var(--radius-xl);padding:var(--space-3);box-shadow:var(--shadow-md);white-space:nowrap;}
 .fv-info-top{display:flex;align-items:center;gap:var(--space-7);}
 .fv-info-stats{position:absolute;top:var(--space-7);left:var(--space-7);z-index:10;display:flex;align-items:center;gap:var(--space-5);}
 .fv-info-stats .stat-val{font-weight:var(--font-medium);padding:0;}
