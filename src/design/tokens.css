@@ -94,6 +94,9 @@
   --vol-up:      rgba(26, 26, 26, 0.35);
   --vol-dn:      rgba(153, 153, 153, 0.35);
 
+  /* ── Color: Level price line ───────────────────────────────── */
+  --level-label-bg: #C3DEF3;  /* axis label bg, light theme     */
+
 }
 
 
@@ -115,6 +118,8 @@
     --candle-dn: #3b4b54;
     --vol-up:    rgba(227, 234, 237, 0.2);
     --vol-dn:    rgba(99, 120, 128, 0.3);
+
+    --level-label-bg: #0B293D;
   }
 }
 
@@ -136,4 +141,6 @@
   --candle-dn: #3b4b54;
   --vol-up:    rgba(227, 234, 237, 0.2);
   --vol-dn:    rgba(99, 120, 128, 0.3);
+
+  --level-label-bg: #0B293D;
 }

@@ -1191,11 +1191,11 @@ function attachLevel(sym, lvl) {
   var s = _fullSeries[sym];
   if (s) {
     if (lvl.line) { try { s.removePriceLine(lvl.line); } catch (e) {} }
-    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.line = s.createPriceLine({ price: lvl.price, color: getCSSVar('--level-label-bg'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
   if (_fvSeries && _fvSym === sym) {
     if (lvl.fvLine) { try { _fvSeries.removePriceLine(lvl.fvLine); } catch (e) {} }
-    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    lvl.fvLine = _fvSeries.createPriceLine({ price: lvl.price, color: getCSSVar('--level-label-bg'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   }
 }
 
@@ -1481,6 +1481,7 @@ export function toggleTheme() {
   document.documentElement.dataset.theme = next;
   localStorage.setItem('theme', next);
   render();
+  reattachAllLevels();
   if (_fvChart) {
     var fc = getChartColors();
     _fvChart.applyOptions({ layout: { background: { color: fc.bg }, textColor: fc.text }, grid: { vertLines: { color: fc.grid }, horzLines: { color: fc.grid } }, rightPriceScale: { borderColor: fc.border }, timeScale: { borderColor: fc.border } });
@@ -3059,7 +3060,7 @@ function _setFVData(sym, cd) {
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - _fvVisibleCandles), to: cd.candles.length + 4 });
   // Attach existing levels and alerts to fv series
   (_levels[sym] || []).forEach(function (l) {
-    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+    if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--level-label-bg'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
   });
   // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
   (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
