@@ -116,8 +116,8 @@
 
     --candle-up: #c2ccd0;
     --candle-dn: #3b4b54;
-    --vol-up:    rgba(194, 204, 208, 0.15);
-    --vol-dn:    rgba(59, 75, 84, 0.25);
+    --vol-up:    rgba(194, 204, 208, 0.10);
+    --vol-dn:    rgba(59, 75, 84, 0.20);
 
     --level-label-bg: #0B293D;
   }
