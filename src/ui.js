@@ -2792,6 +2792,8 @@ export function toggleBriefing(sym) {
   syncBriefingNow();
   updateStarButton(sym);
   renderBriefingPanel();
+  var _fvd = document.getElementById('fv-briefing-drawer');
+  if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
 }
 
 function briefingStatusLabel(status) {
