@@ -1044,7 +1044,9 @@ var httpServer = http.createServer(async function (req, res) {
             res.end(JSON.stringify({ error: 'Please fill in both fields' }));
             return;
           }
-          // Validate keys and check permissions via Binance API
+          // Validate keys via Binance API — fail-closed allow-list approach:
+          // only enableReading=true is permitted; any other boolean true (including
+          // future unknown fields) rejects the key.
           try {
             var rParams = new URLSearchParams({ timestamp: String(Date.now()) });
             var rSig = crypto.createHmac('sha256', bSec).update(rParams.toString()).digest('hex');
@@ -1066,19 +1068,15 @@ var httpServer = http.createServer(async function (req, res) {
               res.end(JSON.stringify({ error: 'Key does not have read permission. Please create a Read-only key.' }));
               return;
             }
-            if (rData.enableWithdrawals) {
+            // Allow-list: reject if ANY boolean field other than enableReading is true.
+            // Non-boolean and metadata fields are ignored.
+            var _metaFields = { enableReading: true, ipRestrict: true, createTime: true, tradingAuthorityExpirationTime: true };
+            var _extraTrue = Object.keys(rData).filter(function (k) {
+              return !_metaFields[k] && rData[k] === true;
+            });
+            if (_extraTrue.length > 0) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Key allows withdrawals — not safe. Please create a Read-only key.' }));
-              return;
-            }
-            if (rData.enableInternalTransfer || rData.permitsUniversalTransfer) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Key allows transfers. Please create a Read-only key.' }));
-              return;
-            }
-            if (rData.enableSpotAndMarginTrading || rData.enableFutures || rData.enableVanillaOptions || rData.enablePortfolioMarginTrading) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Key has trading permissions. Please create a Read-only key.' }));
+              res.end(JSON.stringify({ error: 'Key has extra permissions (' + _extraTrue.join(', ') + '). Please create a Read-only key.' }));
               return;
             }
           } catch (e) {
