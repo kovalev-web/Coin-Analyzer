@@ -4307,7 +4307,7 @@ function _renderNotifDropdown() {
   var dd = document.getElementById('notif-dd');
   if (!dd) return;
   var items = state.notifications;
-  var header = '<div class="popup-header"><span class="popup-title">Notifications</span></div>';
+  var header = '<div class="popup-header"><span class="popup-title">Notifications</span><button class="btn-topbar" data-action="toggle-notif">' + icon('x', 16) + '</button></div>';
   var body = items.length
     ? '<div class="notif-scroll">'
       + items.map(function (n) {
