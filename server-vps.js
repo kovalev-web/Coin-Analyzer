@@ -168,9 +168,11 @@ async function sendTG(chatId, text, replyMarkup) {
       if (r.status === 429) {
         var retryAfter = JSON.parse(errText).parameters && JSON.parse(errText).parameters.retry_after;
         if (retryAfter) await new Promise(function (r) { setTimeout(r, retryAfter * 1000); });
+        continue; // retry after rate-limit wait
       }
+      // Any other HTTP error (incl. 5xx): Telegram likely received the request — don't retry to avoid duplicates
       console.error('[TG] sendMessage failed:', r.status, errText);
-      if (r.status >= 400 && r.status < 500 && r.status !== 429) return; // non-retriable
+      return;
     } catch (e) {
       console.error('[TG] sendMessage error (attempt ' + (i + 1) + '):', e.message);
     }
@@ -224,6 +226,7 @@ setInterval(pollTelegram, 3000);
 
 var alertsMemory = {}; // code → {chatId, data: {sym: [{price, triggered}]}}
 var prevPrices = {};   // sym (lowercase, no USDT) → last price
+var _alertSentAt = {}; // 'userId:sym:price' → ms — dedup against duplicate entries or race conditions
 
 // Merge incoming alert data with existing, preserving triggered=true.
 // Once an alert is triggered on the server it can never be un-triggered by a client save.
@@ -300,6 +303,9 @@ function checkAlertsForSym(fullSym, cur) {
       if (a.createdAt && (now - a.createdAt) < 5000) return;
       var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
       if (!crossed) return;
+      var coolKey = code + ':' + sym + ':' + a.price;
+      if (_alertSentAt[coolKey] && now - _alertSentAt[coolKey] < 60000) return; // dedup: same alert within 60s
+      _alertSentAt[coolKey] = now;
       a.triggered = true;
       dirty = true;
       var fmtPrice = parseFloat(parseFloat(a.price).toPrecision(6));
