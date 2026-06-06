@@ -14,8 +14,8 @@
   --text-xs:   12px;   /* notes, secondary meta             */
   --text-sm:   14px;   /* buttons, inputs, body text        */
   --text-base: 16px;   /* card tickers, popup titles        */
-  --text-lg:   18px;   /* vol label, large numbers          */
-  --text-xl:   20px;   /* metric card values, MS verdict    */
+  --text-lg:   18px;   /* large numbers                     */
+  --text-xl:   20px;   /* metric card values                */
   --text-2xl:  22px;   /* large headings                    */
   --text-3xl:  26px;   /* hero numbers                      */
 
