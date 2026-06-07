@@ -242,7 +242,7 @@ async function init() {
   await checkAuth();
   setMeta('Building snapshot…');
   await refresh();
-  setInterval(refresh, 15000); // немного длиннее snapshotTtlMs (12s) — гарантируем свежие данные
+  setInterval(refresh, 10000); // TTL на сервере 8s → к моменту следующего запроса данные всегда свежие
 }
 
 init();

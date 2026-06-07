@@ -26,7 +26,7 @@ const CFG = {
   universeQuote:   'USDT',
   universeStatus:  'TRADING',
   universeLimit:   100,        // топ-N по 24h quoteVolume; 0 = без лимита
-  snapshotTtlMs:   12000,      // 12 секунд
+  snapshotTtlMs:   8000,       // 8 секунд — чуть меньше client poll (10s) → всегда свежие данные
   universeTtlMs:   10 * 60 * 1000, // 10 минут
   concurrency:     15,         // параллельных klines-запросов к Binance
 };
@@ -184,8 +184,7 @@ async function getUniverse() {
 
 // ── §4.2 Snapshot ─────────────────────────────────────────────────────────────
 
-let _snapshot       = null; // { asOf, sorted: [{symbol,delta,natr,rvol,sortKey,klines}] }
-let _building       = false;
+let _snapshot = null; // { asOf, sorted: [{symbol,delta,natr,rvol,sortKey,klines}] }
 
 /**
  * batchFetch — klines для всех символов, не более CFG.concurrency параллельных запросов
@@ -231,27 +230,29 @@ async function buildSnapshot(universe, sortMode, interval) {
 }
 
 /**
- * getSnapshot — SWR-стиль: возвращает текущий (возможно stale) снапшот немедленно,
- * запускает фоновую пересборку если TTL истёк. При холодном старте — ждёт первой сборки.
+ * getSnapshot — синхронный rebuild при stale, с дедупликацией промиса.
+ *
+ * Все параллельные запросы (например, двойной клик «обновить») ждут ОДИН и тот же промис.
+ * При ошибке rebuild — возвращаем предыдущий снапшот, не падаем с 502.
  */
+let _buildPromise = null;
+
 async function getSnapshot(sortMode, interval) {
   const stale = !_snapshot || (Date.now() - _snapshot.asOf) >= CFG.snapshotTtlMs;
 
-  if (!_snapshot) {
-    // Холодный старт — ждём первого снапшота
-    const universe = await getUniverse();
-    _snapshot = await buildSnapshot(universe, sortMode, interval);
-    return _snapshot;
-  }
-
-  if (stale && !_building) {
-    // Фоновый refresh (SWR)
-    _building = true;
-    getUniverse()
-      .then(u => buildSnapshot(u, sortMode, interval))
-      .then(snap => { _snapshot = snap; })
-      .catch(err => console.error('[kdata] snapshot refresh failed:', err.message))
-      .finally(() => { _building = false; });
+  if (stale) {
+    if (!_buildPromise) {
+      _buildPromise = getUniverse()
+        .then(u => buildSnapshot(u, sortMode, interval))
+        .then(snap => { _snapshot = snap; return snap; })
+        .catch(err => {
+          console.error('[kdata] snapshot build failed:', err.message);
+          if (_snapshot) return _snapshot; // вернуть stale если есть
+          throw err;                        // пробросить только при cold-start
+        })
+        .finally(() => { _buildPromise = null; });
+    }
+    return _buildPromise; // все параллельные запросы ждут один и тот же промис
   }
 
   return _snapshot;
