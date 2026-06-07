@@ -4182,12 +4182,58 @@ function _getOrCreateGridOverlay() {
   return el;
 }
 
+// Delta: тело текущей (live) 5m свечи — (close-open)/open*100
+// Fallback на 24h% если нет кэша свечей
+function _calcDelta5m(sym) {
+  var cd = state.chartData[sym + '_5m'];
+  if (cd && cd.status === 'ok' && cd.candles && cd.candles.length) {
+    var last = cd.candles[cd.candles.length - 1];
+    return last.open > 0 ? (last.close - last.open) / last.open * 100 : 0;
+  }
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  if (!coin) return 0;
+  return coin.open_24h > 0 && coin.current_price > 0
+    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
+    : (coin.price_change_percentage_24h || 0);
+}
+
+// NATR: Wilder ATR(14) из 5m свечей / close * 100
+// Fallback на state.natrData если нет кэша
+function _calcNatr5m(sym) {
+  var cd = state.chartData[sym + '_5m'];
+  if (cd && cd.status === 'ok' && cd.candles && cd.candles.length >= 16) {
+    var arr = cd.candles;
+    var period = 14;
+    // True Range для каждой свечи начиная со второй
+    var trs = [];
+    for (var i = 1; i < arr.length; i++) {
+      var h = arr[i].high, l = arr[i].low, pc = arr[i - 1].close;
+      trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+    }
+    if (trs.length < period) return 0;
+    // Seed: простое среднее первых period значений
+    var atr = 0;
+    for (var j = 0; j < period; j++) atr += trs[j];
+    atr /= period;
+    // Wilder smoothing
+    for (var k = period; k < trs.length; k++) {
+      atr = (atr * (period - 1) + trs[k]) / period;
+    }
+    var lastClose = arr[arr.length - 1].close;
+    return lastClose > 0 ? atr / lastClose * 100 : 0;
+  }
+  // Fallback: server-side NATR
+  var nd = state.natrData[sym];
+  return (nd && nd !== 'loading' && nd !== 'error') ? nd.value : 0;
+}
+
+// RVOL: объём последней свечи / среднее объёма за 20 закрытых свечей
 function _calcRvol(sym) {
   var cd = state.chartData[sym + '_5m'];
   if (!cd || cd.status !== 'ok' || !cd.candles || cd.candles.length < 5) return 0;
   var arr = cd.candles;
   var last = arr[arr.length - 1].volume;
-  var lookback = arr.slice(-21, -1);
+  var lookback = arr.slice(-21, -1); // 20 закрытых свечей перед последней
   if (!lookback.length) return 0;
   var avg = lookback.reduce(function (s, k) { return s + k.volume; }, 0) / lookback.length;
   return avg > 0 ? last / avg : 0;
@@ -4200,19 +4246,18 @@ function _gridTop9() {
     return (c.total_volume || 0) >= 10e6;
   });
   var entries = coins.map(function (c) {
-    var nd = state.natrData[c.symbol];
-    var natr = (nd && nd !== 'loading' && nd !== 'error') ? nd.value : 0;
-    var pct = c.open_24h > 0 && c.current_price > 0
-      ? (c.current_price - c.open_24h) / c.open_24h * 100
-      : (c.price_change_percentage_24h || 0);
-    var rvol = _calcRvol(c.symbol);
-    return { symbol: c.symbol, natr: natr, pct: pct, rvol: rvol };
+    return {
+      symbol: c.symbol,
+      delta: _calcDelta5m(c.symbol),
+      natr:  _calcNatr5m(c.symbol),
+      rvol:  _calcRvol(c.symbol),
+    };
   });
-  var maxNatr = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
-  var maxAbsPct = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct); })) || 1;
-  var maxRvol = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
+  var maxAbsDelta = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.delta); })) || 1;
+  var maxNatr     = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
+  var maxRvol     = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
   entries.forEach(function (e) {
-    e.score = (e.natr / maxNatr) + (Math.abs(e.pct) / maxAbsPct) + (e.rvol / maxRvol);
+    e.score = (Math.abs(e.delta) / maxAbsDelta) + (e.natr / maxNatr) + (e.rvol / maxRvol);
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
@@ -4223,7 +4268,7 @@ export function openGridView() {
   overlay.innerHTML = '<div class="grid-header">'
     + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
     + '<span class="grid-title">Grid · Scanner</span>'
-    + '<span class="grid-meta" id="grid-meta">NATR + % + RVol · '
+    + '<span class="grid-meta" id="grid-meta">Δ5m + NATR + RVol · '
     + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     + '</span>'
     + '</div>'
