@@ -4234,18 +4234,14 @@ function _getOrCreateGridOverlay() {
 }
 
 // Delta: тело текущей (live) 5m свечи — (close-open)/open*100
-// Fallback на 24h% если нет кэша свечей
+// Если нет кэша — 0 (не смешиваем с 24h% чтобы не ломать нормализацию)
 function _calcDelta5m(sym) {
   var cd = state.chartData[sym + '_5m'];
   if (cd && cd.status === 'ok' && cd.candles && cd.candles.length) {
     var last = cd.candles[cd.candles.length - 1];
     return last.open > 0 ? (last.close - last.open) / last.open * 100 : 0;
   }
-  var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  if (!coin) return 0;
-  return coin.open_24h > 0 && coin.current_price > 0
-    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-    : (coin.price_change_percentage_24h || 0);
+  return 0;
 }
 
 // NATR: Wilder ATR(14) из 5m свечей / close * 100
@@ -4296,18 +4292,27 @@ function _gridTop9() {
     return !STABLE_SYMBOLS.has(sym) && !SCREENER_EXCLUDE.has(sym);
   });
   var entries = coins.map(function (c) {
+    var pct24h = c.open_24h > 0 && c.current_price > 0
+      ? (c.current_price - c.open_24h) / c.open_24h * 100
+      : (c.price_change_percentage_24h || 0);
     return {
       symbol: c.symbol,
-      delta: _calcDelta5m(c.symbol),
-      natr:  _calcNatr5m(c.symbol),
-      rvol:  _calcRvol(c.symbol),
+      pct24h: pct24h,
+      delta:  _calcDelta5m(c.symbol),
+      natr:   _calcNatr5m(c.symbol),
+      rvol:   _calcRvol(c.symbol),
     };
   });
+  var maxAbsPct   = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct24h); })) || 1;
   var maxAbsDelta = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.delta); })) || 1;
   var maxNatr     = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
   var maxRvol     = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
   entries.forEach(function (e) {
-    e.score = (Math.abs(e.delta) / maxAbsDelta) + (e.natr / maxNatr) + (e.rvol / maxRvol);
+    // 24h% — основа (всегда есть), 5m delta — бонус когда есть кэш свечей
+    e.score = (Math.abs(e.pct24h) / maxAbsPct)
+            + (Math.abs(e.delta)  / maxAbsDelta)
+            + (e.natr / maxNatr)
+            + (e.rvol / maxRvol);
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
