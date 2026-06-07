@@ -1704,7 +1704,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
     }
     if (t1 != null && t2 != null) {
       var d = Math.abs(t2 - t1);
-      durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
+      durStr = d < 60 ? Math.round(d) + 's' : d < 3600 ? Math.round(d / 60) + 'm' : d < 86400 ? Math.floor(d / 3600) + 'h ' + Math.round((d % 3600) / 60) + 'm' : Math.floor(d / 86400) + 'd ' + Math.floor((d % 86400) / 3600) + 'h';
     }
   }
   var color = isDark() ? getCSSVar('--ink-deep') : getCSSVar('--graphite');
@@ -3389,7 +3389,7 @@ export function openCoinFullView(sym) {
       }
       if (t1 != null && t2 != null) {
         var d = Math.abs(t2 - t1);
-        durStr = d < 60 ? Math.round(d) + 'с' : d < 3600 ? Math.round(d / 60) + 'м' : d < 86400 ? Math.floor(d / 3600) + 'ч ' + Math.round((d % 3600) / 60) + 'м' : Math.floor(d / 86400) + 'д ' + Math.floor((d % 86400) / 3600) + 'ч';
+        durStr = d < 60 ? Math.round(d) + 's' : d < 3600 ? Math.round(d / 60) + 'm' : d < 86400 ? Math.floor(d / 3600) + 'h ' + Math.round((d % 3600) / 60) + 'm' : Math.floor(d / 86400) + 'd ' + Math.floor((d % 86400) / 3600) + 'h';
       }
     }
     ctx.fillStyle = 'rgba(150,150,150,0.07)';
