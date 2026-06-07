@@ -4171,6 +4171,57 @@ function _renderNotifDropdown() {
 // ── Grid Screener ──────────────────────────────────────────────────────────
 
 var _gridMovedCards = []; // {card, parent} — for restoring on close
+var _gridRefreshInterval = null;
+
+function _refreshGrid() {
+  var gridCards = document.getElementById('grid-cards');
+  var mainGrid  = document.getElementById('cards-grid');
+  if (!gridCards || !mainGrid) return;
+
+  var newTop9   = _gridTop9();
+  var newSyms   = newTop9.map(function (e) { return e.symbol; });
+  var curSyms   = Array.from(gridCards.querySelectorAll('.coin-card')).map(function (c) { return c.dataset.sym; });
+
+  var toRemove  = curSyms.filter(function (s) { return newSyms.indexOf(s) === -1; });
+  var toAdd     = newSyms.filter(function (s) { return curSyms.indexOf(s) === -1; });
+  if (!toRemove.length && !toAdd.length) return;
+
+  // Вернуть выбывшие карточки в основной скринер
+  toRemove.forEach(function (sym) {
+    var card = gridCards.querySelector('.coin-card[data-sym="' + sym + '"]');
+    if (!card) return;
+    mainGrid.appendChild(card);
+    _gridMovedCards = _gridMovedCards.filter(function (item) { return item.card !== card; });
+  });
+
+  // Переместить новые карточки в грид
+  toAdd.forEach(function (sym) {
+    var card = mainGrid.querySelector('.coin-card[data-sym="' + sym + '"]');
+    if (card) {
+      gridCards.appendChild(card);
+      _gridMovedCards.push({ card: card, parent: mainGrid });
+    } else {
+      var coin = state.coins.find(function (c) { return c.symbol === sym; });
+      if (!coin) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = renderCard(coin);
+      var el = tmp.firstElementChild;
+      gridCards.appendChild(el);
+      _gridMovedCards.push({ card: el, parent: null });
+    }
+  });
+
+  // Упорядочить по новому рейтингу
+  newTop9.forEach(function (entry) {
+    var card = gridCards.querySelector('.coin-card[data-sym="' + entry.symbol + '"]');
+    if (card) gridCards.appendChild(card);
+  });
+
+  initCharts();
+
+  var meta = document.getElementById('grid-meta');
+  if (meta) meta.textContent = 'Δ5m + NATR + RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 function _getOrCreateGridOverlay() {
   var el = document.getElementById('grid-overlay');
@@ -4299,7 +4350,8 @@ export function openGridView() {
 
   overlay.classList.add('open');
   lockScroll();
-  initCharts(); // IntersectionObserver picks up moved cards
+  initCharts();
+  _gridRefreshInterval = setInterval(_refreshGrid, 10000);
 
   // Doggruzhaem NATR для топ-9 у кого нет — в фоне, без блокировки UI
   top9.forEach(function (entry) {
@@ -4313,7 +4365,7 @@ export function openGridView() {
 export function updateGridScores() {} // no-op: grid uses live main-screener cards
 
 export function closeGridView() {
-  // Move cards back first, then hide overlay (avoids observer firing destroy on moved cards)
+  if (_gridRefreshInterval) { clearInterval(_gridRefreshInterval); _gridRefreshInterval = null; }
   var mainGrid = document.getElementById('cards-grid');
   _gridMovedCards.forEach(function (item) {
     if (item.parent && mainGrid) {
