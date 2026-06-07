@@ -4286,56 +4286,71 @@ function _calcRvol(sym) {
   return avg > 0 ? last / avg : 0;
 }
 
-function _gridTop9() {
-  var coins = state.coins.filter(function (c) {
+function _gridAllCoins() {
+  return state.coins.filter(function (c) {
     var sym = c.symbol.toLowerCase();
     return !STABLE_SYMBOLS.has(sym) && !SCREENER_EXCLUDE.has(sym);
   });
-  var entries = coins.map(function (c) {
-    var pct24h = c.open_24h > 0 && c.current_price > 0
-      ? (c.current_price - c.open_24h) / c.open_24h * 100
-      : (c.price_change_percentage_24h || 0);
+}
+
+function _gridTop9() {
+  var entries = _gridAllCoins().map(function (c) {
     return {
       symbol: c.symbol,
-      pct24h: pct24h,
       delta:  _calcDelta5m(c.symbol),
       natr:   _calcNatr5m(c.symbol),
       rvol:   _calcRvol(c.symbol),
     };
   });
-  var maxAbsPct   = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.pct24h); })) || 1;
   var maxAbsDelta = Math.max.apply(null, entries.map(function (e) { return Math.abs(e.delta); })) || 1;
   var maxNatr     = Math.max.apply(null, entries.map(function (e) { return e.natr; })) || 1;
   var maxRvol     = Math.max.apply(null, entries.map(function (e) { return e.rvol; })) || 1;
   entries.forEach(function (e) {
-    // 24h% — основа (всегда есть), 5m delta — бонус когда есть кэш свечей
-    e.score = (Math.abs(e.pct24h) / maxAbsPct)
-            + (Math.abs(e.delta)  / maxAbsDelta)
-            + (e.natr / maxNatr)
-            + (e.rvol / maxRvol);
+    e.score = (Math.abs(e.delta) / maxAbsDelta) + (e.natr / maxNatr) + (e.rvol / maxRvol);
   });
   entries.sort(function (a, b) { return b.score - a.score; });
   return entries.slice(0, 9);
 }
 
-export function openGridView() {
-  var overlay = _getOrCreateGridOverlay();
-  overlay.innerHTML = '<div class="grid-header">'
-    + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="grid-title">Grid · Scanner</span>'
-    + '<span class="grid-meta" id="grid-meta">Δ5m + NATR + RVol · '
-    + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    + '</span>'
-    + '</div>'
-    + '<div class="grid-body" id="grid-body"><div class="cards-grid" id="grid-cards"></div></div>';
+// Предзагрузка 5m свечей для топ-N кандидатов (по |24h%|), батчами по 10
+async function _prefetchTop50() {
+  var coins = _gridAllCoins().slice().sort(function (a, b) {
+    var pa = Math.abs(a.open_24h > 0 && a.current_price > 0
+      ? (a.current_price - a.open_24h) / a.open_24h * 100
+      : (a.price_change_percentage_24h || 0));
+    var pb = Math.abs(b.open_24h > 0 && b.current_price > 0
+      ? (b.current_price - b.open_24h) / b.open_24h * 100
+      : (b.price_change_percentage_24h || 0));
+    return pb - pa;
+  });
+  var toFetch = coins.slice(0, 50).filter(function (c) {
+    var cd = state.chartData[c.symbol + '_5m'];
+    return !cd || cd.status !== 'ok';
+  });
+  var total = toFetch.length;
+  if (!total) return;
+  var done = 0;
+  var batchSize = 10;
+  for (var i = 0; i < toFetch.length; i += batchSize) {
+    if (!document.getElementById('grid-overlay').classList.contains('open')) return;
+    var batch = toFetch.slice(i, i + batchSize);
+    await Promise.all(batch.map(function (c) {
+      return fetchChartData(c.symbol, '5m').catch(function () {});
+    }));
+    done += batch.length;
+    var meta = document.getElementById('grid-meta');
+    if (meta) meta.textContent = 'Загружаем ' + Math.min(done, total) + '/' + total + '…';
+  }
+}
 
-  document.getElementById('grid-back').onclick = closeGridView;
-
+function _populateGrid() {
+  var bodyEl = document.getElementById('grid-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = '<div class="cards-grid" id="grid-cards"></div>';
   var top9 = _gridTop9();
   var mainGrid = document.getElementById('cards-grid');
   var gridCards = document.getElementById('grid-cards');
   _gridMovedCards = [];
-
   top9.forEach(function (entry) {
     var existing = mainGrid && mainGrid.querySelector('.coin-card[data-sym="' + entry.symbol + '"]');
     if (existing) {
@@ -4351,22 +4366,31 @@ export function openGridView() {
       _gridMovedCards.push({ card: el, parent: null });
     }
   });
-
-  overlay.classList.add('open');
-  lockScroll();
   initCharts();
-  _gridRefreshInterval = setInterval(_refreshGrid, 10000);
-
-  // Doggruzhaem NATR для топ-9 у кого нет — в фоне, без блокировки UI
-  top9.forEach(function (entry) {
-    var nd = state.natrData[entry.symbol];
-    if (!nd || nd === 'error') {
-      fetchNATR(entry.symbol).catch(function () {});
-    }
-  });
+  var meta = document.getElementById('grid-meta');
+  if (meta) meta.textContent = 'Δ5m + NATR + RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function updateGridScores() {} // no-op: grid uses live main-screener cards
+export async function openGridView() {
+  var overlay = _getOrCreateGridOverlay();
+  overlay.innerHTML = '<div class="grid-header">'
+    + '<button class="btn-icon" id="grid-back">' + icon('arrow-left', 16) + '</button>'
+    + '<span class="grid-title">Grid · Scanner</span>'
+    + '<span class="grid-meta" id="grid-meta">Загружаем данные…</span>'
+    + '</div>'
+    + '<div class="grid-body" id="grid-body"><div class="grid-empty">Загружаем 5m свечи…</div></div>';
+  document.getElementById('grid-back').onclick = closeGridView;
+  overlay.classList.add('open');
+  lockScroll();
+
+  await _prefetchTop50();
+
+  if (!overlay.classList.contains('open')) return; // закрыли пока грузилось
+  _populateGrid();
+  _gridRefreshInterval = setInterval(_refreshGrid, 10000);
+}
+
+export function updateGridScores() {}
 
 export function closeGridView() {
   if (_gridRefreshInterval) { clearInterval(_gridRefreshInterval); _gridRefreshInterval = null; }
