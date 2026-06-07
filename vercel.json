@@ -7,6 +7,7 @@
   },
   "rewrites": [
     { "source": "/inplay-phase",  "destination": "/inplay-phase.html" },
+    { "source": "/grid",          "destination": "/grid.html" },
     { "source": "/login",         "destination": "/login.html" },
     { "source": "/verify-email",   "destination": "/verify-email.html" },
     { "source": "/reset-password", "destination": "/reset-password.html" },

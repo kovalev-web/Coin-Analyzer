@@ -13,6 +13,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main:         'index.html',
+        grid:         'grid.html',
         phase:        'inplay-phase.html',
         login:        'login.html',
         verifyEmail:         'verify-email.html',
