@@ -3,7 +3,8 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "functions": {
-    "api/proxy.js": { "regions": ["sin1"] }
+    "api/proxy.js": { "regions": ["sin1"] },
+    "api/fapi.js":  { "regions": ["sin1"] }
   },
   "rewrites": [
     { "source": "/inplay-phase",  "destination": "/inplay-phase.html" },

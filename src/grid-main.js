@@ -30,8 +30,17 @@ async function checkAuth() {
 
 async function binance(path, params) {
   const q = new URLSearchParams({ path, ...(params || {}) }).toString();
-  const r = await fetch('/api/fapi?' + q);
-  if (!r.ok) throw new Error('fapi ' + path + ' ' + r.status);
+  let r;
+  try {
+    r = await fetch('/api/fapi?' + q);
+  } catch (e) {
+    throw new Error('network: ' + e.message);
+  }
+  if (!r.ok) {
+    let detail = '';
+    try { const j = await r.json(); detail = j.error || j.msg || ''; } catch {}
+    throw new Error('fapi ' + r.status + (detail ? ' — ' + detail : ''));
+  }
   return r.json();
 }
 
