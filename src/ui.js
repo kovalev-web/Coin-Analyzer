@@ -4293,8 +4293,7 @@ function _calcRvol(sym) {
 function _gridTop9() {
   var coins = state.coins.filter(function (c) {
     var sym = c.symbol.toLowerCase();
-    if (STABLE_SYMBOLS.has(sym) || SCREENER_EXCLUDE.has(sym)) return false;
-    return (c.total_volume || 0) >= 10e6;
+    return !STABLE_SYMBOLS.has(sym) && !SCREENER_EXCLUDE.has(sym);
   });
   var entries = coins.map(function (c) {
     return {
