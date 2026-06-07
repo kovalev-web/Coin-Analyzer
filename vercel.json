@@ -4,7 +4,8 @@
   "outputDirectory": "dist",
   "functions": {
     "api/proxy.js": { "regions": ["sin1"] },
-    "api/fapi.js":  { "regions": ["sin1"] }
+    "api/fapi.js":  { "regions": ["sin1"] },
+    "api/kdata.js": { "regions": ["sin1"] }
   },
   "rewrites": [
     { "source": "/inplay-phase",  "destination": "/inplay-phase.html" },

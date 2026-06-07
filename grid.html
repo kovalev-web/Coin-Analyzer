@@ -3,96 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Grid Scanner · QuestTick</title>
+  <title>Grid Scanner</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --canvas:  #121517;
-      --paper:   #1a1e21;
-      --fog:     #252b2f;
-      --ink:     #c8d0d5;
-      --ink-deep:#e2e8ec;
-      --graphite:#637880;
-      --primary: #277CC2;
-      --green:   #4abe9b;
-      --red:     #e05c5c;
-      --font:    'Manrope', system-ui, sans-serif;
-      --r:       6px;
-    }
-
     html, body {
       height: 100%;
-    }
-
-    body {
-      background: var(--canvas);
-      color: var(--ink);
-      font-family: var(--font);
-      display: flex;
-      flex-direction: column;
+      background: #0f1114;
+      color: #c0c8cc;
+      font-family: 'Menlo', 'Consolas', monospace;
+      font-size: 12px;
       overflow: hidden;
     }
 
-    /* ── Header ── */
-    #g-header {
+    /* ── Topbar ── */
+    #topbar {
+      height: 36px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 0 16px;
-      height: 44px;
-      background: var(--paper);
-      border-bottom: 1px solid var(--fog);
+      gap: 16px;
+      padding: 0 12px;
+      background: #141920;
+      border-bottom: 1px solid #1e262c;
       flex-shrink: 0;
     }
-    #g-back {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      color: var(--graphite);
+    #topbar a {
+      color: #5a6872;
       text-decoration: none;
-      font-size: 12px;
-      font-weight: 500;
-      transition: color 0.15s;
-    }
-    #g-back:hover { color: var(--ink-deep); }
-    #g-back svg { display: block; }
-    #g-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--ink-deep);
-    }
-    #g-meta {
       font-size: 11px;
-      color: var(--graphite);
-      margin-left: auto;
     }
+    #topbar a:hover { color: #c0c8cc; }
+    #g-title { font-weight: bold; color: #c0c8cc; font-size: 12px; }
+    #g-meta  { color: #3d4f5a; margin-left: auto; font-size: 11px; }
 
-    /* ── Body fills remaining height ── */
+    /* ── Layout ── */
+    body { display: flex; flex-direction: column; }
+
     #g-body {
       flex: 1;
       min-height: 0;
-      padding: 8px;
+      padding: 6px;
     }
 
-    /* ── Grid: 3×3, fills full body height ── */
     #g-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
-      gap: 8px;
+      gap: 6px;
       height: 100%;
     }
 
     /* ── Card ── */
     .g-card {
-      background: var(--paper);
-      border: 1px solid var(--fog);
-      border-radius: var(--r);
+      background: #141920;
+      border: 1px solid #1e262c;
+      border-radius: 4px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -103,71 +70,48 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 7px 12px;
-      border-bottom: 1px solid var(--fog);
+      padding: 5px 10px;
+      border-bottom: 1px solid #1e262c;
       flex-shrink: 0;
-    }
-    .g-sym {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ink-deep);
-      letter-spacing: 0.2px;
-      margin-right: 2px;
-    }
-    .g-delta {
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .g-delta.pos { color: var(--green); }
-    .g-delta.neg { color: var(--red); }
-
-    .g-badge {
-      font-size: 10px;
-      font-weight: 500;
-      color: var(--graphite);
-      background: var(--fog);
-      border-radius: 3px;
-      padding: 2px 5px;
       white-space: nowrap;
     }
 
-    /* Chart fills the rest of the card */
-    .g-chart-wrap {
+    .g-sym   { font-weight: bold; color: #e0e8ec; font-size: 12px; }
+    .g-delta { font-weight: bold; font-size: 12px; }
+    .g-delta.up { color: #4dab90; }
+    .g-delta.dn { color: #d9534f; }
+
+    .g-label { color: #3d4f5a; font-size: 10px; }
+    .g-natr  { color: #7a9aaa; font-size: 11px; }
+    .g-rvol  { color: #7a9aaa; font-size: 11px; }
+
+    .g-chart {
       flex: 1;
       min-height: 0;
       position: relative;
     }
 
     /* ── Mobile ── */
-    @media (max-width: 860px) {
+    @media (max-width: 800px) {
       #g-grid {
         grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: repeat(5, 1fr);
-        overflow-y: auto;
+        grid-template-rows: none;
         height: auto;
-        min-height: 100%;
+        overflow-y: auto;
       }
       #g-body { overflow-y: auto; }
-      .g-chart-wrap { min-height: 140px; }
+      .g-chart { min-height: 150px; }
     }
-    @media (max-width: 540px) {
-      #g-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: none;
-      }
+    @media (max-width: 500px) {
+      #g-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div id="g-header">
-    <a id="g-back" href="/">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      Back
-    </a>
+  <div id="topbar">
+    <a href="/">← back</a>
     <span id="g-title">Grid · Scanner</span>
-    <span id="g-meta">Loading…</span>
+    <span id="g-meta">loading…</span>
   </div>
   <div id="g-body">
     <div id="g-grid"></div>
