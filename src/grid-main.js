@@ -264,8 +264,9 @@ function renderGrid(top9) {
       const dEl = card.querySelector('.g-delta');
       dEl.textContent = pct(e.delta);
       dEl.className = 'g-delta ' + signCls(e.delta);
-      card.querySelector('.g-natr').textContent = 'NATR ' + e.natr.toFixed(2) + '%';
-      card.querySelector('.g-rvol').textContent = 'RVol ' + e.rvol.toFixed(2) + 'x';
+      const badges = card.querySelectorAll('.g-badge');
+      if (badges[0]) badges[0].textContent = 'NATR ' + e.natr.toFixed(2) + '%';
+      if (badges[1]) badges[1].textContent = 'RVol ' + e.rvol.toFixed(2) + 'x';
       updateChartData(e.sym);
     });
     return;
@@ -281,8 +282,8 @@ function renderGrid(top9) {
       <div class="g-head">
         <span class="g-sym">${base}</span>
         <span class="g-delta ${signCls(e.delta)}">${pct(e.delta)}</span>
-        <span class="g-natr">NATR ${e.natr.toFixed(2)}%</span>
-        <span class="g-rvol">RVol ${e.rvol.toFixed(2)}x</span>
+        <span class="g-badge">NATR ${e.natr.toFixed(2)}%</span>
+        <span class="g-badge">RVol ${e.rvol.toFixed(2)}x</span>
       </div>
       <div class="g-chart-wrap" id="gc-${e.sym}"></div>
     </div>`;
