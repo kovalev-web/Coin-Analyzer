@@ -4186,6 +4186,8 @@ function _refreshGrid() {
   var toAdd     = newSyms.filter(function (s) { return curSyms.indexOf(s) === -1; });
   if (!toRemove.length && !toAdd.length) return;
 
+  if (_cardObserver) { _cardObserver.disconnect(); _cardObserver = null; }
+
   // Вернуть выбывшие карточки в основной скринер
   toRemove.forEach(function (sym) {
     var card = gridCards.querySelector('.coin-card[data-sym="' + sym + '"]');
@@ -4346,6 +4348,10 @@ async function _prefetchTop50() {
 function _populateGrid() {
   var bodyEl = document.getElementById('grid-body');
   if (!bodyEl) return;
+
+  // Отключаем observer перед перемещением — иначе он вызовет _destroyChartForSym
+  if (_cardObserver) { _cardObserver.disconnect(); _cardObserver = null; }
+
   bodyEl.innerHTML = '<div class="cards-grid" id="grid-cards"></div>';
   var top9 = _gridTop9();
   var mainGrid = document.getElementById('cards-grid');
@@ -4366,7 +4372,7 @@ function _populateGrid() {
       _gridMovedCards.push({ card: el, parent: null });
     }
   });
-  initCharts();
+  initCharts(); // переподключает observer для всех карточек в новых позициях
   var meta = document.getElementById('grid-meta');
   if (meta) meta.textContent = 'Δ5m + NATR + RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -4394,6 +4400,7 @@ export function updateGridScores() {}
 
 export function closeGridView() {
   if (_gridRefreshInterval) { clearInterval(_gridRefreshInterval); _gridRefreshInterval = null; }
+  if (_cardObserver) { _cardObserver.disconnect(); _cardObserver = null; }
   var mainGrid = document.getElementById('cards-grid');
   _gridMovedCards.forEach(function (item) {
     if (item.parent && mainGrid) {
