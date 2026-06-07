@@ -5,16 +5,27 @@ const API_BASE = (import.meta.env.VITE_WS_URL || '')
   .replace(/^wss?:\/\//, 'https://')
   .replace(/\/ws$/, '');
 
-// Symbols excluded from the altcoin universe (base part, lowercase, no USDT suffix)
 const EXCLUDE_BASE = new Set([
   'btc', 'eth', 'bnb',
   'usdt', 'usdc', 'busd', 'dai', 'tusd', 'usdp', 'gusd', 'frax', 'lusd', 'usdd', 'pyusd', 'fdusd',
 ]);
 
+// Dark theme colors (matching main app dark mode)
+const COLORS = {
+  bg:       '#121517',
+  grid:     'rgba(255,255,255,0.04)',
+  border:   '#2d3940',
+  text:     '#637880',
+  up:       '#c2ccd0',
+  dn:       '#3b4b54',
+  volUp:    'rgba(194,204,208,0.25)',
+  volDn:    'rgba(59,75,84,0.35)',
+};
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 async function checkAuth() {
-  if (!API_BASE) return; // local dev without VPS — skip
+  if (!API_BASE) return;
   try {
     const r = await fetch(API_BASE + '/auth/get-session', { credentials: 'include' });
     if (!r.ok) throw 0;
@@ -22,7 +33,7 @@ async function checkAuth() {
     if (!s || !s.user || !s.user.id) throw 0;
   } catch {
     window.location.replace('/login');
-    await new Promise(() => {}); // hang while redirecting
+    await new Promise(() => {});
   }
 }
 
@@ -46,7 +57,6 @@ async function binance(path, params) {
 
 // ── Indicators ─────────────────────────────────────────────────────────────
 
-// delta5m: (close - open) / open * 100 of the last (live) 5m candle
 function delta5m(klines) {
   if (!klines || !klines.length) return 0;
   const k = klines[klines.length - 1];
@@ -54,7 +64,6 @@ function delta5m(klines) {
   return o > 0 ? (c - o) / o * 100 : 0;
 }
 
-// natr14: Wilder ATR(14) / last_close * 100
 function natr14(klines) {
   if (!klines || klines.length < 16) return 0;
   const p = 14;
@@ -72,7 +81,6 @@ function natr14(klines) {
   return lc > 0 ? atr / lc * 100 : 0;
 }
 
-// rvol20: last candle volume / mean of 20 previous closed candle volumes
 function rvol20(klines) {
   if (!klines || klines.length < 5) return 0;
   const last = +klines[klines.length - 1][5];
@@ -82,20 +90,19 @@ function rvol20(klines) {
   return avg > 0 ? last / avg : 0;
 }
 
-// score all entries in klineCache and sort by composite score desc
 function scoreAll(cache) {
   const entries = Object.keys(cache)
     .map(sym => ({
       sym,
       delta: delta5m(cache[sym]),
-      natr: natr14(cache[sym]),
-      rvol: rvol20(cache[sym]),
+      natr:  natr14(cache[sym]),
+      rvol:  rvol20(cache[sym]),
     }))
     .filter(e => cache[e.sym] && cache[e.sym].length >= 16);
 
   const mxD = Math.max(...entries.map(e => Math.abs(e.delta))) || 1;
-  const mxN = Math.max(...entries.map(e => e.natr)) || 1;
-  const mxR = Math.max(...entries.map(e => e.rvol)) || 1;
+  const mxN = Math.max(...entries.map(e => e.natr))            || 1;
+  const mxR = Math.max(...entries.map(e => e.rvol))            || 1;
 
   return entries
     .map(e => ({ ...e, score: Math.abs(e.delta) / mxD + e.natr / mxN + e.rvol / mxR }))
@@ -104,9 +111,9 @@ function scoreAll(cache) {
 
 // ── State ──────────────────────────────────────────────────────────────────
 
-const klineCache = {}; // sym → raw Binance klines array
-let candidates = []; // top-50 symbols by |24h%|, the scoring universe
-const chartInstances = {}; // sym → { chart, series }
+const klineCache = {};
+let candidates = [];
+const chartInstances = {}; // sym → { chart, candles, vol }
 
 // ── Fetch helpers ──────────────────────────────────────────────────────────
 
@@ -114,80 +121,128 @@ async function fetchKlines(sym, limit) {
   try {
     const data = await binance('/fapi/v1/klines', { symbol: sym, interval: '5m', limit: limit || 55 });
     if (Array.isArray(data)) klineCache[sym] = data;
-  } catch { /* silently skip */ }
+  } catch { /* skip */ }
 }
 
 async function batchFetch(syms, limit, onProgress) {
   const size = 10;
   for (let i = 0; i < syms.length; i += size) {
-    const batch = syms.slice(i, i + size);
-    await Promise.all(batch.map(s => fetchKlines(s, limit)));
+    await Promise.all(syms.slice(i, i + size).map(s => fetchKlines(s, limit)));
     if (onProgress) onProgress(Math.min(i + size, syms.length), syms.length);
   }
 }
 
 // ── Chart helpers ──────────────────────────────────────────────────────────
 
-function toChartData(klines) {
+function toCandles(klines) {
   return (klines || []).map(k => ({
     time: Math.floor(+k[0] / 1000),
     open: +k[1], high: +k[2], low: +k[3], close: +k[4],
   }));
 }
 
-function initChart(sym) {
-  const wrap = document.getElementById('gc-' + sym);
-  if (!wrap || chartInstances[sym]) return;
-
-  const chart = window.LightweightCharts.createChart(wrap, {
-    width: wrap.clientWidth,
-    height: wrap.clientHeight,
-    layout: { background: { color: 'transparent' }, textColor: '#555', fontSize: 10 },
-    grid: { vertLines: { color: '#1c1c1c' }, horzLines: { color: '#1c1c1c' } },
-    rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.12 } },
-    timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
-    crosshair: { mode: 0 },
-    handleScroll: false,
-    handleScale: false,
-  });
-
-  const series = chart.addCandlestickSeries({
-    upColor: '#26a69a', downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-  });
-
-  chartInstances[sym] = { chart, series };
-
-  const data = toChartData(klineCache[sym]);
-  if (data.length) {
-    series.setData(data);
-    chart.timeScale().fitContent();
-  }
-
-  const ro = new ResizeObserver(() => {
-    if (chartInstances[sym]) {
-      chartInstances[sym].chart.resize(wrap.clientWidth, wrap.clientHeight);
-    }
-  });
-  ro.observe(wrap);
+function toVolume(klines) {
+  return (klines || []).map(k => ({
+    time: Math.floor(+k[0] / 1000),
+    value: +k[5],
+    color: +k[4] >= +k[1] ? COLORS.volUp : COLORS.volDn,
+  }));
 }
 
-function updateChart(sym) {
-  const c = chartInstances[sym];
-  if (!c) return;
-  const data = toChartData(klineCache[sym]);
-  if (data.length) {
-    c.series.setData(data);
-    c.chart.timeScale().fitContent();
-  }
+function tickFmt(ts, type) {
+  const d = new Date(ts * 1000);
+  const h = d.getHours().toString().padStart(2, '0');
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  if (type <= 1) return mon + ' ' + d.getFullYear();
+  if (type === 2) return day + ' ' + mon;
+  return h + ':' + m;
 }
 
 function destroyChart(sym) {
   if (chartInstances[sym]) {
-    chartInstances[sym].chart.remove();
+    try { chartInstances[sym].chart.remove(); } catch {}
     delete chartInstances[sym];
   }
+}
+
+function destroyAll() {
+  Object.keys(chartInstances).forEach(destroyChart);
+}
+
+function initChart(sym) {
+  const wrap = document.getElementById('gc-' + sym);
+  if (!wrap) return;
+
+  // Safety: destroy stale instance if container was replaced
+  if (chartInstances[sym]) destroyChart(sym);
+
+  const chart = window.LightweightCharts.createChart(wrap, {
+    autoSize: true,
+    layout: {
+      background: { color: COLORS.bg },
+      textColor: COLORS.text,
+      fontSize: 11,
+      fontFamily: 'Manrope, Arial, sans-serif',
+    },
+    grid: {
+      vertLines: { color: COLORS.grid },
+      horzLines: { color: COLORS.grid },
+    },
+    crosshair: { mode: 0 },
+    rightPriceScale: {
+      visible: true,
+      borderColor: COLORS.border,
+      scaleMargins: { top: 0.05, bottom: 0.25 },
+    },
+    timeScale: {
+      borderColor: COLORS.border,
+      timeVisible: true,
+      secondsVisible: false,
+      tickMarkFormatter: tickFmt,
+      rightOffset: 3,
+    },
+    handleScroll: false,
+    handleScale: false,
+  });
+
+  const candles = chart.addCandlestickSeries({
+    upColor:        COLORS.up,
+    downColor:      COLORS.dn,
+    borderUpColor:  COLORS.up,
+    borderDownColor:COLORS.dn,
+    wickUpColor:    COLORS.up,
+    wickDownColor:  COLORS.dn,
+  });
+
+  const vol = chart.addHistogramSeries({
+    color: COLORS.volUp,
+    priceFormat: { type: 'volume' },
+    priceScaleId: 'volume',
+    lastValueVisible: false,
+    priceLineVisible: false,
+  });
+  chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+
+  chartInstances[sym] = { chart, candles, vol };
+
+  const klines = klineCache[sym];
+  if (klines && klines.length) {
+    candles.setData(toCandles(klines));
+    vol.setData(toVolume(klines));
+    chart.timeScale().fitContent();
+  }
+}
+
+function updateChartData(sym) {
+  const c = chartInstances[sym];
+  if (!c) return;
+  const klines = klineCache[sym];
+  if (!klines || !klines.length) return;
+  c.candles.setData(toCandles(klines));
+  c.vol.setData(toVolume(klines));
+  c.chart.timeScale().fitContent();
 }
 
 // ── Grid render ────────────────────────────────────────────────────────────
@@ -195,35 +250,37 @@ function destroyChart(sym) {
 let currentSyms = [];
 
 function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
-function sign(v) { return v >= 0 ? 'pos' : 'neg'; }
+function signCls(v) { return v >= 0 ? 'pos' : 'neg'; }
 
 function renderGrid(top9) {
   const newSyms = top9.map(e => e.sym);
   const grid = document.getElementById('g-grid');
 
   if (newSyms.join(',') === currentSyms.join(',')) {
-    // Same set — just update numbers and charts in-place
+    // Same set + same order — update numbers and chart data only, no DOM changes
     top9.forEach(e => {
       const card = grid.querySelector(`.g-card[data-sym="${e.sym}"]`);
       if (!card) return;
-      card.querySelector('.g-delta').textContent = pct(e.delta);
-      card.querySelector('.g-delta').className = 'g-delta ' + sign(e.delta);
+      const dEl = card.querySelector('.g-delta');
+      dEl.textContent = pct(e.delta);
+      dEl.className = 'g-delta ' + signCls(e.delta);
       card.querySelector('.g-natr').textContent = 'NATR ' + e.natr.toFixed(2) + '%';
       card.querySelector('.g-rvol').textContent = 'RVol ' + e.rvol.toFixed(2) + 'x';
-      updateChart(e.sym);
+      updateChartData(e.sym);
     });
     return;
   }
 
-  // Symbols changed — destroy removed charts and re-render
-  currentSyms.filter(s => !newSyms.includes(s)).forEach(destroyChart);
+  // Symbols or order changed — destroy ALL old chart instances first (their DOM containers
+  // are about to be replaced by innerHTML, so we must remove them cleanly before that)
+  destroyAll();
 
   grid.innerHTML = top9.map(e => {
     const base = e.sym.replace(/USDT$/, '');
     return `<div class="g-card" data-sym="${e.sym}">
       <div class="g-head">
         <span class="g-sym">${base}</span>
-        <span class="g-delta ${sign(e.delta)}">${pct(e.delta)}</span>
+        <span class="g-delta ${signCls(e.delta)}">${pct(e.delta)}</span>
         <span class="g-natr">NATR ${e.natr.toFixed(2)}%</span>
         <span class="g-rvol">RVol ${e.rvol.toFixed(2)}x</span>
       </div>
@@ -231,7 +288,11 @@ function renderGrid(top9) {
     </div>`;
   }).join('');
 
-  top9.forEach(e => initChart(e.sym));
+  // Init charts after DOM is painted so autoSize can read container dimensions
+  requestAnimationFrame(() => {
+    top9.forEach(e => initChart(e.sym));
+  });
+
   currentSyms = newSyms;
 }
 
@@ -242,22 +303,25 @@ function setMeta(text) {
   if (el) el.textContent = text;
 }
 
+function tsNow() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 // ── Refresh cycles ─────────────────────────────────────────────────────────
 
-// Every 10s: refresh klines for current top-9, re-score universe
 async function quickRefresh() {
+  if (!currentSyms.length) return;
   await Promise.all(currentSyms.map(s => fetchKlines(s, 55)));
   const scored = scoreAll(klineCache);
   renderGrid(scored.slice(0, 9));
-  setMeta('Δ5m · NATR · RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  setMeta('Δ5m · NATR · RVol · ' + tsNow());
 }
 
-// Every 60s: re-fetch all candidates to catch new entrants
 async function fullRefresh() {
   await batchFetch(candidates, 55);
   const scored = scoreAll(klineCache);
   renderGrid(scored.slice(0, 9));
-  setMeta('Δ5m · NATR · RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  setMeta('Δ5m · NATR · RVol · ' + tsNow());
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -274,26 +338,22 @@ async function init() {
     return;
   }
 
-  // Filter to USDT perps, exclude stables and major coins
   candidates = tickers
     .filter(t => {
-      const s = t.symbol;
-      if (!s.endsWith('USDT')) return false;
-      const base = s.slice(0, -4).toLowerCase();
-      return !EXCLUDE_BASE.has(base);
+      if (!t.symbol.endsWith('USDT')) return false;
+      return !EXCLUDE_BASE.has(t.symbol.slice(0, -4).toLowerCase());
     })
     .sort((a, b) => Math.abs(+b.priceChangePercent) - Math.abs(+a.priceChangePercent))
     .slice(0, 50)
     .map(t => t.symbol);
 
-  // Prefetch 5m klines for all candidates
   await batchFetch(candidates, 55, (done, total) => {
     setMeta('Loading ' + done + '/' + total + '…');
   });
 
   const scored = scoreAll(klineCache);
   renderGrid(scored.slice(0, 9));
-  setMeta('Δ5m · NATR · RVol · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  setMeta('Δ5m · NATR · RVol · ' + tsNow());
 
   setInterval(quickRefresh, 10000);
   setInterval(fullRefresh, 60000);
