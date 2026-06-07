@@ -2265,7 +2265,7 @@ function _topbarHTML() {
     + '<span class="logo-mob-av">' + _av + '</span>'
     + '</button>'
     + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
-    + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Screener</button>'
+    + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Grainers</button>'
     + '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>'
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
