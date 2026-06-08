@@ -2288,6 +2288,7 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd dropdown" id="burger-dd">'
     + '<a class="burger-dd-item" href="/inplay-phase">' + icon('activity', 14) + 'Phase <span class="nav-beta-tag">beta</span></a>'
+    + '<a class="burger-dd-item" href="/grid">' + icon('layout-grid', 14) + 'Grid scanner</a>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
