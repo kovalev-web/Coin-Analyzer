@@ -2280,6 +2280,10 @@ function _topbarHTML() {
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
+    + '<a class="burger-dd-item" href="/inplay-phase">' + icon('activity', 14) + 'Phase <span class="nav-beta-tag">beta</span></a>'
+    + '<a class="burger-dd-item" href="/grid">' + icon('layout-grid', 14) + 'Grid scanner</a>'
+    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
+    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Sign out</button>'
     + '</div>'
