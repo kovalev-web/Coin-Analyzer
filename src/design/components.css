@@ -50,6 +50,15 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .nav-pill.desktop-nav-btn{display:none;}
 .nav-beta-tag{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--danger);letter-spacing:0.03em;text-transform:uppercase;}
 
+/* ── Session timer (Asia/Europe/America) ───────────────────── */
+.session-timer{display:flex;align-items:center;gap:var(--space-8);margin:0 auto;padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;}
+.session-dot{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:var(--font-medium);}
+.session-dot::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--steel);}
+.session-dot.active{color:var(--ink-deep);font-weight:var(--font-semi);}
+.session-dot.active::before{background:var(--bullish);}
+.session-timer-next{color:var(--graphite);font-weight:var(--font-medium);padding-left:var(--space-6);border-left:1px solid var(--steel);}
+@media(max-width:900px){.session-timer{display:none;}}
+
 /* ── TF picker ──────────────────────────────────────────────── */
 .tf-picker{position:relative;display:inline-block;}
 .pill{background:var(--fog);color:var(--graphite);border:none;border-radius:var(--radius-full);padding:0 var(--space-4);height:22px;font-size:var(--text-xs);font-weight:var(--font-medium);cursor:pointer;letter-spacing:0;display:inline-flex;align-items:center;}

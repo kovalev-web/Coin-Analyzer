@@ -18,6 +18,7 @@ import {
   loadLevels, fetchServerLevels,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
+  updateSessionTimer,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -528,6 +529,9 @@ function _briefingRefreshSafe() {
 
 // WS push: another device saved briefing → refresh immediately
 on('briefing:updated', function () { _briefingRefreshSafe(); });
+
+// Session timer (Asia/Europe/America) — refresh every 30s
+setInterval(updateSessionTimer, 30000);
 
 // Fallback poll every 15s when briefing is open (covers WS gaps/reconnects)
 setInterval(function () {
