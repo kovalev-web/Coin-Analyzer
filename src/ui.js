@@ -2455,25 +2455,18 @@ function _localHourStr(utcHour) {
   return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
 }
 
-function _sessionTooltip(activeKeys) {
-  return TRADING_SESSIONS.filter(function (s) {
-    return activeKeys.indexOf(s.key) !== -1;
-  }).map(function (s) {
-    return s.label + ' ' + _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
-  }).join(' · ');
-}
-
 function _sessionDotsHTML(activeKeys) {
   return TRADING_SESSIONS.filter(function (s) {
     return activeKeys.indexOf(s.key) !== -1;
   }).map(function (s) {
-    return '<span class="session-dot active">' + s.label + '</span>';
+    var local = _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
+    return '<span class="session-dot active" title="' + s.label + ' ' + local + '">' + s.label + '</span>';
   }).join('');
 }
 
 function _sessionTimerHTML() {
   var info = _sessionInfo();
-  return '<div class="session-timer" id="session-timer" title="' + _sessionTooltip(info.activeKeys) + '">'
+  return '<div class="session-timer" id="session-timer">'
     + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
     + '<span class="session-timer-next">' + info.nextText + '</span>'
     + '</div>';
@@ -2481,7 +2474,7 @@ function _sessionTimerHTML() {
 
 function _sessionTimerMobileHTML() {
   var info = _sessionInfo();
-  return '<div class="burger-dd-footer session-timer-mobile" title="' + _sessionTooltip(info.activeKeys) + '">'
+  return '<div class="burger-dd-footer session-timer-mobile">'
     + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
     + '<span class="session-timer-next">' + info.nextText + '</span>'
     + '</div>';
@@ -2491,7 +2484,6 @@ export function updateSessionTimer() {
   var info = _sessionInfo();
   var els = document.querySelectorAll('#session-timer, .session-timer-mobile');
   els.forEach(function (el) {
-    el.title = _sessionTooltip(info.activeKeys);
     var dots = el.querySelector('.session-dots');
     if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
     var next = el.querySelector('.session-timer-next');
