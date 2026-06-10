@@ -1,6 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
+import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
@@ -2650,7 +2651,10 @@ export function render() {
 
 initTheme();
 loadLevels();
-on('render', render);
+on('render', function () {
+  var route = getCurrentRoute();
+  if (route === '/' || route === '/screener') render();
+});
 on('cards:sync', renderCards);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('metrics:update', updateMetricCards);

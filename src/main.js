@@ -318,6 +318,7 @@ document.body.addEventListener('click', function (e) {
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
       }).then(function () {
         hideMorningModal();
+        _refreshJournalHistory();
       }).catch(function () {
         mBtn.disabled = false;
         showToast('Network error — please try again');
@@ -342,6 +343,7 @@ document.body.addEventListener('click', function (e) {
       }).then(function () {
         hideEveningModal();
         showToast('Review saved');
+        _refreshJournalHistory();
       }).catch(function () {
         eBtn.disabled = false;
         showToast('Network error — please try again');
@@ -641,6 +643,14 @@ registerRoute('/settings', function () {
     '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
+
+function _refreshJournalHistory() {
+  var section = document.getElementById('profile-journal-section');
+  if (!section) return;
+  fetchJournalRecent().then(function (entries) {
+    renderProfileJournal(section, entries);
+  });
+}
 
 registerRoute('/journal', function () {
   var app = document.getElementById('app');
