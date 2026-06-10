@@ -1207,7 +1207,7 @@ export function showMorningModal() {
   el.className = 'journal-modal-overlay';
   el.innerHTML =
     '<div class="journal-modal journal-modal--morning">'
-    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span></div>'
+    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
     + '<div class="journal-field"><label>Volume</label><input class="ds-input" type="text" name="volume"></div>'
     + '<div class="journal-field"><label>Where\'s the stop</label><input class="ds-input" type="text" name="stopLevel"></div>'
