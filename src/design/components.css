@@ -408,8 +408,10 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .journal-field textarea.ds-input{height:auto;padding:var(--space-5) var(--space-6);resize:vertical;}
 .journal-static{font-size:var(--text-sm);color:var(--graphite);padding:0 var(--space-2);}
 .journal-modal .btn-cta{width:100%;margin-top:var(--space-4);}
-.journal-radio-group{display:flex;flex-wrap:wrap;gap:var(--space-8);}
-.journal-radio{display:flex;align-items:center;gap:var(--space-3);font-size:var(--text-sm);color:var(--ink-deep);cursor:pointer;}
+.journal-radio-group{display:flex;flex-wrap:wrap;gap:var(--space-4);}
+.journal-radio{position:relative;background:var(--fog);color:var(--graphite);border-radius:var(--radius-full);padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);font-weight:var(--font-medium);cursor:pointer;display:inline-flex;align-items:center;}
+.journal-radio:has(input:checked){background:var(--ink-deep);color:var(--canvas);}
+.journal-radio input{position:absolute;opacity:0;width:0;height:0;}
 .journal-hint{font-size:var(--text-2xs);color:var(--graphite);margin-top:var(--space-3);}
 .journal-pnl.up{color:var(--bullish);}
 .journal-pnl.dn{color:var(--danger);}
