@@ -56,7 +56,9 @@ exports.journalEntries = sqliteTable('journal_entries', {
   // Morning
   morningState: text('morning_state'),
   volume:       text('volume'),
+  stopLevel:    text('stop_level'),
   dayPlan:      text('day_plan'),
+  triggerWatch: text('trigger_watch'),
   morningAt:    integer('morning_at', { mode: 'timestamp' }),
 
   // Evening
@@ -66,6 +68,7 @@ exports.journalEntries = sqliteTable('journal_entries', {
   stopCraneKept:    text('stop_crane_kept'),
   volumeOk:         text('volume_ok'),
   triggerFired:     text('trigger_fired'),
+  triggerOther:     text('trigger_other'),
   eveningState:     text('evening_state'),
   feltWorthless:    text('felt_worthless'),
   freeConclusion:   text('free_conclusion'),

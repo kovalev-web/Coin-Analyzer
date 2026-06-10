@@ -773,7 +773,9 @@ function journalRowToEntry(row) {
     date: row.date,
     morningState: row.morning_state,
     volume: row.volume,
+    stopLevel: row.stop_level,
     dayPlan: row.day_plan,
+    triggerWatch: row.trigger_watch,
     morningAt: row.morning_at,
     followedProcess: row.followed_process,
     tradedPlanned: row.traded_planned,
@@ -781,6 +783,7 @@ function journalRowToEntry(row) {
     stopCraneKept: row.stop_crane_kept,
     volumeOk: row.volume_ok,
     triggerFired: row.trigger_fired,
+    triggerOther: row.trigger_other,
     eveningState: row.evening_state,
     feltWorthless: row.felt_worthless,
     freeConclusion: row.free_conclusion,
@@ -1002,9 +1005,9 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyM);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, morning_state, volume, day_plan, morning_at) VALUES (?, ?, ?, ?, ?, ?) ' +
-              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, day_plan = excluded.day_plan, morning_at = excluded.morning_at'
-            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.dayPlan || null, Date.now());
+              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, trigger_watch, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, trigger_watch = excluded.trigger_watch, morning_at = excluded.morning_at'
+            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.triggerWatch || null, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {
@@ -1022,13 +1025,13 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyE);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, followed_process, traded_planned, trade_count, stop_crane_kept, volume_ok, trigger_fired, evening_state, felt_worthless, free_conclusion, evening_at) ' +
-              'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'INSERT INTO journal_entries (user_id, date, followed_process, traded_planned, trade_count, stop_crane_kept, volume_ok, trigger_fired, trigger_other, evening_state, felt_worthless, free_conclusion, evening_at) ' +
+              'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
               'ON CONFLICT(user_id, date) DO UPDATE SET followed_process = excluded.followed_process, traded_planned = excluded.traded_planned, trade_count = excluded.trade_count, ' +
-              'stop_crane_kept = excluded.stop_crane_kept, volume_ok = excluded.volume_ok, trigger_fired = excluded.trigger_fired, evening_state = excluded.evening_state, ' +
+              'stop_crane_kept = excluded.stop_crane_kept, volume_ok = excluded.volume_ok, trigger_fired = excluded.trigger_fired, trigger_other = excluded.trigger_other, evening_state = excluded.evening_state, ' +
               'felt_worthless = excluded.felt_worthless, free_conclusion = excluded.free_conclusion, evening_at = excluded.evening_at'
             ).run(jUserId, jToday, jParsed.followedProcess || null, jParsed.tradedPlanned || null, jParsed.tradeCount || 0,
-              jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerFired || null, jParsed.eveningState || null,
+              jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerFired || null, jParsed.triggerOther || null, jParsed.eveningState || null,
               jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));

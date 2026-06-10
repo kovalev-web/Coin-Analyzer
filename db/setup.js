@@ -54,7 +54,9 @@ function ensureAuthTables() {
       date             TEXT NOT NULL,
       morning_state    TEXT,
       volume           TEXT,
+      stop_level       TEXT,
       day_plan         TEXT,
+      trigger_watch    TEXT,
       morning_at       INTEGER,
       followed_process TEXT,
       traded_planned   TEXT,
@@ -62,6 +64,7 @@ function ensureAuthTables() {
       stop_crane_kept  TEXT,
       volume_ok        TEXT,
       trigger_fired    TEXT,
+      trigger_other    TEXT,
       evening_state    TEXT,
       felt_worthless   TEXT,
       free_conclusion  TEXT,
@@ -69,6 +72,15 @@ function ensureAuthTables() {
       UNIQUE(user_id, date)
     );
   `);
+
+  // Idempotent migration: add columns introduced after the initial table creation
+  // for installs whose journal_entries table predates them.
+  var journalCols = sqlite.prepare('PRAGMA table_info(journal_entries)').all().map(function (c) { return c.name; });
+  ['stop_level', 'trigger_watch', 'trigger_other'].forEach(function (col) {
+    if (journalCols.indexOf(col) === -1) {
+      sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
+    }
+  });
 }
 
 module.exports = { ensureAuthTables };

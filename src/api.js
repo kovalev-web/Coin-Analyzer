@@ -1013,6 +1013,59 @@ export async function fetchWeekTrades(force) {
   return state.weekSummary;
 }
 
+// PnL/win-rate for today's briefing entries (used by the evening journal modal).
+export async function fetchTodayTrades() {
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-'
+    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+    + String(today.getDate()).padStart(2, '0');
+
+  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date === todayStr; });
+  if (!entries.length) return null;
+
+  entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
+  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+
+  var streams = {};
+  entries.forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (!t || t.status !== 'ok' || !t.entries) return;
+    t.entries.forEach(function (fill) {
+      var key = e.sym + ':' + (fill.positionSide || 'BOTH');
+      if (!streams[key]) streams[key] = {};
+      streams[key][fill.id] = fill;
+    });
+  });
+
+  var tradeCount = 0, winCount = 0;
+  Object.values(streams).forEach(function (fillMap) {
+    var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
+    var position = 0, roundPnl = 0;
+    fills.forEach(function (fill) {
+      position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
+      roundPnl += parseFloat(fill.realizedPnl || 0) - parseFloat(fill.commission || 0);
+      if (Math.abs(position) < 0.00001) {
+        tradeCount++;
+        if (roundPnl > 0) winCount++;
+        roundPnl = 0;
+      }
+    });
+  });
+
+  var totalPnl = 0;
+  entries.forEach(function (e) {
+    var t = state.trades[e.sym + ':' + e.date];
+    if (t && t.status === 'ok') totalPnl += t.pnl;
+  });
+
+  return {
+    pnl: totalPnl,
+    tradeCount: tradeCount,
+    winCount: winCount,
+    winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+  };
+}
+
 // Call Gemini via proxy to generate a weekly trading summary.
 export async function generateWeeklySummary() {
   var today = new Date();

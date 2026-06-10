@@ -300,20 +300,16 @@ document.body.addEventListener('click', function (e) {
     case 'close-evening-journal':
       hideEveningModal();
       break;
-    case 'open-morning-journal':
-      showMorningModal();
-      break;
-    case 'close-morning-journal':
-      hideMorningModal();
-      break;
     case 'save-morning-journal': {
       var mBtn = target;
       mBtn.disabled = true;
       var mModal = document.getElementById('morning-journal-modal');
       saveJournalMorning({
-        morningState: mModal.querySelector('[name="morningState"]').value.trim(),
+        morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
         volume:       mModal.querySelector('[name="volume"]').value.trim(),
+        stopLevel:    mModal.querySelector('[name="stopLevel"]').value.trim(),
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
+        triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
       }).then(function () {
         hideMorningModal();
       }).catch(function () {
@@ -327,14 +323,15 @@ document.body.addEventListener('click', function (e) {
       eBtn.disabled = true;
       var eModal = document.getElementById('evening-journal-modal');
       saveJournalEvening({
-        followedProcess:  eModal.querySelector('[name="followedProcess"]').value,
-        tradedPlanned:    eModal.querySelector('[name="tradedPlanned"]').value,
+        followedProcess:  (eModal.querySelector('[name="followedProcess"]:checked') || {}).value || '',
+        tradedPlanned:    (eModal.querySelector('[name="tradedPlanned"]:checked') || {}).value || '',
         tradeCount:       parseInt(eModal.querySelector('[name="tradeCount"]').value) || 0,
-        stopCraneKept:    eModal.querySelector('[name="stopCraneKept"]').value,
-        volumeOk:         eModal.querySelector('[name="volumeOk"]').value,
-        triggerFired:     eModal.querySelector('[name="triggerFired"]').value,
-        eveningState:     eModal.querySelector('[name="eveningState"]').value.trim(),
-        feltWorthless:    eModal.querySelector('[name="feltWorthless"]').value,
+        stopCraneKept:    (eModal.querySelector('[name="stopCraneKept"]:checked') || {}).value || '',
+        volumeOk:         (eModal.querySelector('[name="volumeOk"]:checked') || {}).value || '',
+        triggerFired:     (eModal.querySelector('[name="triggerFired"]:checked') || {}).value || '',
+        triggerOther:     eModal.querySelector('[name="triggerOther"]').value.trim(),
+        eveningState:     (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
+        feltWorthless:    (eModal.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
         freeConclusion:   eModal.querySelector('[name="freeConclusion"]').value.trim(),
       }).then(function () {
         hideEveningModal();
@@ -637,8 +634,7 @@ registerRoute('/journal', function () {
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
     '<div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
     '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' + icon('book-open', 18) + 'Journal</h2>' +
-    '<button data-action="open-morning-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Morning journal (debug)</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening review</button>' +
+    '<button data-action="open-evening-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Evening review</button>' +
     '</div>' +
     '<div id="profile-journal-section"></div>' +
     '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +

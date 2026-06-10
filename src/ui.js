@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -1179,13 +1179,24 @@ export function showAccountModal() {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
-function _journalSelect(name, options, selected) {
-  return '<select class="ds-input" name="' + name + '">'
-    + options.map(function (o) {
-        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' + o.label + '</option>';
-      }).join('')
-    + '</select>';
+function _journalRadioGroup(name, options, selected) {
+  return '<div class="journal-radio-group">' + options.map(function (o) {
+    return '<label class="journal-radio"><input type="radio" name="' + name + '" value="' + o.value + '"' + (o.value === selected ? ' checked' : '') + '> ' + o.label + '</label>';
+  }).join('') + '</div>';
 }
+
+var JOURNAL_SCALE_1_5 = [
+  { value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5' },
+];
+var JOURNAL_YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
+var JOURNAL_YES_NO_NA = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' }];
+var JOURNAL_TRIGGER_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'revenge', label: 'Revenge after a stop' },
+  { value: 'size_up', label: 'Sized up after a streak' },
+  { value: 'fomo', label: 'FOMO' },
+  { value: 'other', label: 'Other' },
+];
 
 export function showMorningModal() {
   if (document.getElementById('morning-journal-modal')) return;
@@ -1196,11 +1207,13 @@ export function showMorningModal() {
   el.className = 'journal-modal-overlay';
   el.innerHTML =
     '<div class="journal-modal journal-modal--morning">'
-    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><label>Current state</label><textarea class="ds-input" name="morningState" rows="3"></textarea></div>'
+    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span></div>'
+    + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
     + '<div class="journal-field"><label>Volume</label><input class="ds-input" type="text" name="volume"></div>'
+    + '<div class="journal-field"><label>Where\'s the stop</label><input class="ds-input" type="text" name="stopLevel"></div>'
     + '<div class="journal-field"><label>Plan for the day</label><textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
-    + '<div class="journal-field"><label>Entry &amp; stop strategy</label><div class="journal-static">3% per day, stop 0.5%, max 8 trades</div></div>'
+    + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
+    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
     + '</div>';
 
@@ -1208,13 +1221,17 @@ export function showMorningModal() {
   lockScroll();
 
   var btn = el.querySelector('[data-action="save-morning-journal"]');
+  var hint = el.querySelector('[data-hint="morningState"]');
   function _checkFilled() {
-    var morningState = el.querySelector('[name="morningState"]').value.trim();
+    var morningState = (el.querySelector('[name="morningState"]:checked') || {}).value || '';
     var volume = el.querySelector('[name="volume"]').value.trim();
+    var stopLevel = el.querySelector('[name="stopLevel"]').value.trim();
     var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
-    btn.disabled = !(morningState && volume && dayPlan);
+    hint.hidden = !(morningState && Number(morningState) <= 2);
+    btn.disabled = !(morningState && volume && stopLevel && dayPlan);
   }
-  ['morningState', 'volume', 'dayPlan'].forEach(function (name) {
+  el.querySelectorAll('[name="morningState"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
+  ['volume', 'stopLevel', 'dayPlan'].forEach(function (name) {
     el.querySelector('[name="' + name + '"]').addEventListener('input', _checkFilled);
   });
 }
@@ -1240,32 +1257,37 @@ export function showEveningModal() {
   el.innerHTML =
     '<div class="journal-modal journal-modal--evening">'
     + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><label>Followed process</label>' + _journalSelect('followedProcess', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'partial', label: 'Partially' },
-      ], entry.followedProcess) + '</div>'
-    + '<div class="journal-field"><label>Traded planned setups</label>' + _journalSelect('tradedPlanned', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'partial', label: 'Partially' },
-      ], entry.tradedPlanned) + '</div>'
+    + '<div class="journal-field"><label>Followed process (1 = no, 5 = fully)</label>' + _journalRadioGroup('followedProcess', JOURNAL_SCALE_1_5, entry.followedProcess) + '</div>'
+    + '<div class="journal-field"><label>Traded only planned setups</label>' + _journalRadioGroup('tradedPlanned', JOURNAL_YES_NO, entry.tradedPlanned) + '</div>'
     + '<div class="journal-field"><label>Trade count</label><input class="ds-input" type="number" name="tradeCount" value="' + tradeCount + '"></div>'
-    + '<div class="journal-field"><label>Stop-crane after 2 stops</label>' + _journalSelect('stopCraneKept', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' },
-      ], entry.stopCraneKept) + '</div>'
-    + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalSelect('volumeOk', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' },
-      ], entry.volumeOk) + '</div>'
-    + '<div class="journal-field"><label>Trigger fired</label>' + _journalSelect('triggerFired', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' },
-      ], entry.triggerFired) + '</div>'
-    + '<div class="journal-field"><label>End-of-day state</label><input class="ds-input" type="text" name="eveningState" value="' + escHtml(entry.eveningState || '') + '"></div>'
-    + '<div class="journal-field"><label>Felt worthless</label>' + _journalSelect('feltWorthless', [
-        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'sometimes', label: 'Sometimes' },
-      ], entry.feltWorthless) + '</div>'
+    + '<div class="journal-field"><label>PnL today</label><div class="journal-static" id="evening-pnl-stats">Loading…</div></div>'
+    + '<div class="journal-field"><label>Stop-crane kept after 2 stops</label>' + _journalRadioGroup('stopCraneKept', JOURNAL_YES_NO_NA, entry.stopCraneKept) + '</div>'
+    + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
+    + '<div class="journal-field"><label>Trigger fired today</label>' + _journalRadioGroup('triggerFired', JOURNAL_TRIGGER_OPTIONS, entry.triggerFired || 'none')
+        + '<input class="ds-input" type="text" name="triggerOther" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerFired === 'other' ? '' : ' hidden') + '></div>'
+    + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
+    + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
     + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
     + '<button class="btn-cta" data-action="save-evening-journal">Save review</button>'
     + '</div>';
 
   document.body.appendChild(el);
   lockScroll();
+
+  var triggerOtherInput = el.querySelector('[name="triggerOther"]');
+  el.querySelectorAll('[name="triggerFired"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      triggerOtherInput.hidden = (r.value !== 'other');
+    });
+  });
+
+  fetchTodayTrades().then(function (stats) {
+    var statsEl = el.querySelector('#evening-pnl-stats');
+    if (!statsEl) return;
+    if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
+    var sign = stats.pnl >= 0 ? '+' : '';
+    statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
+  });
 
   el.addEventListener('click', function (e) {
     if (e.target === el) hideEveningModal();
