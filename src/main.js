@@ -4,6 +4,7 @@ import {
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
   fetchNotifications,
+  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent,
 } from './api.js';
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -16,6 +17,7 @@ import {
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
+  showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
 } from './ui.js';
 import { on } from './events.js';
 
@@ -290,6 +292,51 @@ document.body.addEventListener('click', function (e) {
     case 'open-account':
       showAccountModal();
       break;
+    case 'open-evening-journal':
+      showEveningModal();
+      break;
+    case 'close-evening-journal':
+      hideEveningModal();
+      break;
+    case 'save-morning-journal': {
+      var mBtn = target;
+      mBtn.disabled = true;
+      var mModal = document.getElementById('morning-journal-modal');
+      saveJournalMorning({
+        morningState: mModal.querySelector('[name="morningState"]').value.trim(),
+        volume:       mModal.querySelector('[name="volume"]').value.trim(),
+        dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
+      }).then(function () {
+        hideMorningModal();
+      }).catch(function () {
+        mBtn.disabled = false;
+        showToast('Network error — please try again');
+      });
+      break;
+    }
+    case 'save-evening-journal': {
+      var eBtn = target;
+      eBtn.disabled = true;
+      var eModal = document.getElementById('evening-journal-modal');
+      saveJournalEvening({
+        followedProcess:  eModal.querySelector('[name="followedProcess"]').value,
+        tradedPlanned:    eModal.querySelector('[name="tradedPlanned"]').value,
+        tradeCount:       parseInt(eModal.querySelector('[name="tradeCount"]').value) || 0,
+        stopCraneKept:    eModal.querySelector('[name="stopCraneKept"]').value,
+        volumeOk:         eModal.querySelector('[name="volumeOk"]').value,
+        triggerFired:     eModal.querySelector('[name="triggerFired"]').value,
+        eveningState:     eModal.querySelector('[name="eveningState"]').value.trim(),
+        feltWorthless:    eModal.querySelector('[name="feltWorthless"]').value,
+        freeConclusion:   eModal.querySelector('[name="freeConclusion"]').value.trim(),
+      }).then(function () {
+        hideEveningModal();
+        showToast('Review saved');
+      }).catch(function () {
+        eBtn.disabled = false;
+        showToast('Network error — please try again');
+      });
+      break;
+    }
     case 'logout': {
       var _wsEnv2 = import.meta.env.VITE_WS_URL || '';
       var _apiBase2 = _wsEnv2.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
@@ -570,11 +617,16 @@ registerRoute('/settings', function () {
 registerRoute('/profile', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">👤 Profile</h2>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);">Profile page — coming soon.</p>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Planned: analysis history, favourite coins, account settings.</p>' +
+    '<div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
+    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);">👤 Profile</h2>' +
+    '<button data-action="open-evening-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">📝 Evening review</button>' +
+    '</div>' +
+    '<div id="profile-journal-section"></div>' +
     '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
+  fetchJournalRecent().then(function (entries) {
+    renderProfileJournal(document.getElementById('profile-journal-section'), entries);
+  });
 });
 
 registerRoute('/404', function () {
@@ -622,6 +674,19 @@ async function _revalidateSession() {
   }
 }
 
+// Show the morning journal modal once per day, between 09:30 and 00:00 MSK.
+function _checkMorningGate() {
+  // Москва = UTC+3. Утренний гейт: 09:30 МСК = 06:30 UTC
+  var now = new Date();
+  var minutesUTC = now.getUTCHours() * 60 + now.getUTCMinutes();
+  var gateUTC = 6 * 60 + 30; // 06:30 UTC = 09:30 МСК
+  var endUTC  = 21 * 60;     // 21:00 UTC = 00:00 МСК — ночью не показываем
+  if (minutesUTC < gateUTC || minutesUTC >= endUTC) return;
+  if (!state.journalToday || !state.journalToday.morningAt) {
+    showMorningModal();
+  }
+}
+
 // Check session first — redirect to /login if not authenticated.
 // On network error (server down) we still load the app so WS reconnect can recover.
 (async function () {
@@ -633,6 +698,9 @@ async function _revalidateSession() {
       .then(function (ar) { return ar.json(); })
       .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
       .catch(function () {});
+    fetchJournalToday().then(function () {
+      _checkMorningGate();
+    });
   }
   // result === null: server unreachable — load app anyway; WS will surface the error
 

@@ -48,6 +48,26 @@ function ensureAuthTables() {
       created_at INTEGER,
       updated_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS "journal_entries" (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id          TEXT NOT NULL REFERENCES "user"(id),
+      date             TEXT NOT NULL,
+      morning_state    TEXT,
+      volume           TEXT,
+      day_plan         TEXT,
+      morning_at       INTEGER,
+      followed_process TEXT,
+      traded_planned   TEXT,
+      trade_count      INTEGER,
+      stop_crane_kept  TEXT,
+      volume_ok        TEXT,
+      trigger_fired    TEXT,
+      evening_state    TEXT,
+      felt_worthless   TEXT,
+      free_conclusion  TEXT,
+      evening_at       INTEGER,
+      UNIQUE(user_id, date)
+    );
   `);
 }
 

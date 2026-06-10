@@ -827,6 +827,46 @@ export function fetchNotifications() {
     .catch(function () {});
 }
 
+// ── Journal ────────────────────────────────────────────────────────────────
+
+export function fetchJournalToday() {
+  return fetch(API_BASE + '/api/journal/today', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { state.journalToday = d.entry || null; })
+    .catch(function () {});
+}
+
+export function saveJournalMorning(data) {
+  return fetch(API_BASE + '/api/journal/morning', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  }).then(function (r) {
+    if (!r.ok) throw new Error('Save failed');
+    return fetchJournalToday();
+  });
+}
+
+export function saveJournalEvening(data) {
+  return fetch(API_BASE + '/api/journal/evening', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  }).then(function (r) {
+    if (!r.ok) throw new Error('Save failed');
+    return fetchJournalToday();
+  });
+}
+
+export function fetchJournalRecent() {
+  return fetch(API_BASE + '/api/journal/recent', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { return d.entries || []; })
+    .catch(function () { return []; });
+}
+
 
 // ── Trades (Binance Futures via proxy) ────────────────────────────────────
 

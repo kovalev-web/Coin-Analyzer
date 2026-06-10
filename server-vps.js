@@ -768,6 +768,26 @@ function unauthorized(res) {
   res.end(JSON.stringify({ error: 'Unauthorized' }));
 }
 
+function journalRowToEntry(row) {
+  return {
+    date: row.date,
+    morningState: row.morning_state,
+    volume: row.volume,
+    dayPlan: row.day_plan,
+    morningAt: row.morning_at,
+    followedProcess: row.followed_process,
+    tradedPlanned: row.traded_planned,
+    tradeCount: row.trade_count,
+    stopCraneKept: row.stop_crane_kept,
+    volumeOk: row.volume_ok,
+    triggerFired: row.trigger_fired,
+    eveningState: row.evening_state,
+    feltWorthless: row.felt_worthless,
+    freeConclusion: row.free_conclusion,
+    eveningAt: row.evening_at,
+  };
+}
+
 var httpServer = http.createServer(async function (req, res) {
   var origin = req.headers.origin;
   res.setHeader('Access-Control-Allow-Origin', CORS_ORIGINS.includes(origin) ? origin : 'https://questtick.com');
@@ -950,6 +970,82 @@ var httpServer = http.createServer(async function (req, res) {
         res.end(JSON.stringify({ error: e.message }));
       }
     });
+    return;
+  }
+
+  if (req.url.startsWith('/api/journal/')) {
+    try {
+      var jSession = await getSession(req);
+      if (!jSession) return unauthorized(res);
+      var jUserId = jSession.user.id;
+      var jToday = new Date().toISOString().slice(0, 10);
+      var jDb = getDb().sqlite;
+
+      if (req.method === 'GET' && req.url === '/api/journal/today') {
+        var jRow = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date = ?').get(jUserId, jToday);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ entry: jRow ? journalRowToEntry(jRow) : null }));
+        return;
+      }
+
+      if (req.method === 'GET' && req.url === '/api/journal/recent') {
+        var jRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY date DESC LIMIT 30').all(jUserId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ entries: jRows.map(journalRowToEntry) }));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/journal/morning') {
+        var jBodyM = '';
+        req.on('data', function (chunk) { jBodyM += chunk; });
+        req.on('end', function () {
+          try {
+            var jParsed = JSON.parse(jBodyM);
+            jDb.prepare(
+              'INSERT INTO journal_entries (user_id, date, morning_state, volume, day_plan, morning_at) VALUES (?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, day_plan = excluded.day_plan, morning_at = excluded.morning_at'
+            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.dayPlan || null, Date.now());
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/journal/evening') {
+        var jBodyE = '';
+        req.on('data', function (chunk) { jBodyE += chunk; });
+        req.on('end', function () {
+          try {
+            var jParsed = JSON.parse(jBodyE);
+            jDb.prepare(
+              'INSERT INTO journal_entries (user_id, date, followed_process, traded_planned, trade_count, stop_crane_kept, volume_ok, trigger_fired, evening_state, felt_worthless, free_conclusion, evening_at) ' +
+              'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET followed_process = excluded.followed_process, traded_planned = excluded.traded_planned, trade_count = excluded.trade_count, ' +
+              'stop_crane_kept = excluded.stop_crane_kept, volume_ok = excluded.volume_ok, trigger_fired = excluded.trigger_fired, evening_state = excluded.evening_state, ' +
+              'felt_worthless = excluded.felt_worthless, free_conclusion = excluded.free_conclusion, evening_at = excluded.evening_at'
+            ).run(jUserId, jToday, jParsed.followedProcess || null, jParsed.tradedPlanned || null, jParsed.tradeCount || 0,
+              jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerFired || null, jParsed.eveningState || null,
+              jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not found' }));
+    } catch (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 

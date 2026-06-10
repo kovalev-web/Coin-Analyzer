@@ -48,6 +48,30 @@ exports.verification = sqliteTable('verification', {
   updatedAt:  integer('updated_at', { mode: 'timestamp' }),
 });
 
+exports.journalEntries = sqliteTable('journal_entries', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  userId:    text('user_id').notNull().references(() => exports.user.id),
+  date:      text('date').notNull(), // 'YYYY-MM-DD', unique per user
+
+  // Morning
+  morningState: text('morning_state'),
+  volume:       text('volume'),
+  dayPlan:      text('day_plan'),
+  morningAt:    integer('morning_at', { mode: 'timestamp' }),
+
+  // Evening
+  followedProcess:  text('followed_process'),
+  tradedPlanned:    text('traded_planned'),
+  tradeCount:       integer('trade_count'),
+  stopCraneKept:    text('stop_crane_kept'),
+  volumeOk:         text('volume_ok'),
+  triggerFired:     text('trigger_fired'),
+  eveningState:     text('evening_state'),
+  feltWorthless:    text('felt_worthless'),
+  freeConclusion:   text('free_conclusion'),
+  eveningAt:        integer('evening_at', { mode: 'timestamp' }),
+});
+
 // ── Legacy tables (unused — kept for reference) ────────────────────────────
 
 

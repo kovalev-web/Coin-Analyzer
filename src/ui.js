@@ -1177,6 +1177,139 @@ export function showAccountModal() {
 
 }
 
+// ── Journal ────────────────────────────────────────────────────────────────
+
+function _journalSelect(name, options, selected) {
+  return '<select class="ds-input" name="' + name + '">'
+    + options.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' + o.label + '</option>';
+      }).join('')
+    + '</select>';
+}
+
+export function showMorningModal() {
+  if (document.getElementById('morning-journal-modal')) return;
+
+  var today = new Date().toISOString().slice(0, 10);
+  var el = document.createElement('div');
+  el.id = 'morning-journal-modal';
+  el.className = 'journal-modal-overlay';
+  el.innerHTML =
+    '<div class="journal-modal journal-modal--morning">'
+    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span></div>'
+    + '<div class="journal-field"><label>Current state</label><textarea class="ds-input" name="morningState" rows="3"></textarea></div>'
+    + '<div class="journal-field"><label>Volume</label><input class="ds-input" type="text" name="volume"></div>'
+    + '<div class="journal-field"><label>Plan for the day</label><textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
+    + '<div class="journal-field"><label>Entry &amp; stop strategy</label><div class="journal-static">3% per day, stop 0.5%, max 8 trades</div></div>'
+    + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
+    + '</div>';
+
+  document.body.appendChild(el);
+  lockScroll();
+
+  var btn = el.querySelector('[data-action="save-morning-journal"]');
+  function _checkFilled() {
+    var morningState = el.querySelector('[name="morningState"]').value.trim();
+    var volume = el.querySelector('[name="volume"]').value.trim();
+    var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
+    btn.disabled = !(morningState && volume && dayPlan);
+  }
+  ['morningState', 'volume', 'dayPlan'].forEach(function (name) {
+    el.querySelector('[name="' + name + '"]').addEventListener('input', _checkFilled);
+  });
+}
+
+export function hideMorningModal() {
+  var el = document.getElementById('morning-journal-modal');
+  if (!el) return;
+  unlockScroll();
+  el.remove();
+}
+
+export function showEveningModal() {
+  if (document.getElementById('evening-journal-modal')) return;
+
+  var today = new Date().toISOString().slice(0, 10);
+  var entry = state.journalToday || {};
+  var tradeCount = entry.tradeCount != null ? entry.tradeCount
+    : state.briefing.filter(function (e) { return e.date === today && e.status === 'traded'; }).length;
+
+  var el = document.createElement('div');
+  el.id = 'evening-journal-modal';
+  el.className = 'journal-modal-overlay';
+  el.innerHTML =
+    '<div class="journal-modal journal-modal--evening">'
+    + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
+    + '<div class="journal-field"><label>Followed process</label>' + _journalSelect('followedProcess', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'partial', label: 'Partially' },
+      ], entry.followedProcess) + '</div>'
+    + '<div class="journal-field"><label>Traded planned setups</label>' + _journalSelect('tradedPlanned', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'partial', label: 'Partially' },
+      ], entry.tradedPlanned) + '</div>'
+    + '<div class="journal-field"><label>Trade count</label><input class="ds-input" type="number" name="tradeCount" value="' + tradeCount + '"></div>'
+    + '<div class="journal-field"><label>Stop-crane after 2 stops</label>' + _journalSelect('stopCraneKept', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' },
+      ], entry.stopCraneKept) + '</div>'
+    + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalSelect('volumeOk', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' },
+      ], entry.volumeOk) + '</div>'
+    + '<div class="journal-field"><label>Trigger fired</label>' + _journalSelect('triggerFired', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' },
+      ], entry.triggerFired) + '</div>'
+    + '<div class="journal-field"><label>End-of-day state</label><input class="ds-input" type="text" name="eveningState" value="' + escHtml(entry.eveningState || '') + '"></div>'
+    + '<div class="journal-field"><label>Felt worthless</label>' + _journalSelect('feltWorthless', [
+        { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'sometimes', label: 'Sometimes' },
+      ], entry.feltWorthless) + '</div>'
+    + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
+    + '<button class="btn-cta" data-action="save-evening-journal">Save review</button>'
+    + '</div>';
+
+  document.body.appendChild(el);
+  lockScroll();
+
+  el.addEventListener('click', function (e) {
+    if (e.target === el) hideEveningModal();
+  });
+}
+
+export function hideEveningModal() {
+  var el = document.getElementById('evening-journal-modal');
+  if (!el) return;
+  unlockScroll();
+  el.remove();
+}
+
+export function renderProfileJournal(container, entries) {
+  if (!entries || !entries.length) {
+    container.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-sm);">No journal entries yet.</p>';
+    return;
+  }
+  container.innerHTML = '<div class="journal-history">' + entries.map(function (e) {
+    return '<div class="journal-history-row">'
+      + '<div class="journal-history-date">' + e.date + '</div>'
+      + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
+      + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
+      + '<div class="journal-history-cell">' + (e.tradeCount != null ? e.tradeCount : '—') + '</div>'
+      + '<div class="journal-history-text">' + escHtml(e.morningState || '') + '</div>'
+      + '<div class="journal-history-text">' + escHtml((e.freeConclusion || '').slice(0, 80)) + '</div>'
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+export function showToast(message) {
+  var t = document.createElement('div');
+  t.className = 'notif-toast';
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
+  setTimeout(function () {
+    t.classList.remove('notif-toast--visible');
+    setTimeout(function () { t.remove(); }, 300);
+  }, 3000);
+}
+
 export function clearAllAlerts() {
   Object.keys(_alerts).forEach(function (sym) {
     (_alerts[sym] || []).forEach(function (a) { _removeAlertLine(sym, a); });

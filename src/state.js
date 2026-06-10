@@ -34,6 +34,7 @@ export const state = {
   aiSummaryDate: null,      // ISO timestamp последней генерации
   aiSummaryTradeCount: null, // tradeCount из weekSummary на момент генерации
   briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
+  journalToday: null,  // { date, morningAt, morningState, ... } | null
   notifications: [],
   notifUnread: 0,
   inplayTop: [],   // [{symbol, inplay, A, M, P, dp5m, rvol5m}] — from server inplay_top WS push
