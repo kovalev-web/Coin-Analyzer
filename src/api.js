@@ -795,7 +795,7 @@ export async function analyzeCoin(coin) {
     state.analysisCache[key] = (!res.ok || json.error)
       ? { status: 'error', result: null, error: json.error || 'Ошибка сервера' }
       : { status: 'ok', result: json, timestamp: Date.now() };
-  } catch (err) { state.analysisCache[key] = { status: 'error', result: null, error: 'Не удалось получить анализ. Проверьте соединение и попробуйте ещё раз.' }; }
+  } catch (err) { state.analysisCache[key] = { status: 'error', result: null, error: 'Could not load analysis. Check your connection and try again.' }; }
   emit('card:update', key);
   saveCache();
   emit('analysis:updated', key);
