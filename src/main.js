@@ -27,7 +27,7 @@ function openFV(sym) {
   openCoinFullView(sym);
   if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
 }
-import { initRouter, registerRoute } from './router.js';
+import { initRouter, registerRoute, reloadRoute } from './router.js';
 import './styles.css';
 
 // ── Event delegation ───────────────────────────────────────────────────────
@@ -501,6 +501,13 @@ on('trades:week-updated', function () {
 on('trades:ai-updated', function () {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
+});
+
+// iOS standalone app: re-sync route on restore from frozen/bfcache state
+// (router's currentRoute can get stale relative to the displayed page,
+// causing the next nav click to be ignored since the hash doesn't change)
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) reloadRoute();
 });
 
 // Sync on hide, pull from server on show — bidirectional cross-device sync

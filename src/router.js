@@ -27,6 +27,16 @@ function routeChanged() {
   }
 }
 
+// Force re-render of the current route, bypassing the currentRoute cache.
+// Used when the page is restored from bfcache (iOS standalone app reopen)
+// and JS state may be stale relative to the displayed page.
+export function reloadRoute() {
+  var hash = window.location.hash.replace(/^#/, '') || '/';
+  currentRoute = hash;
+  var handler = routeHandlers[hash] || routeHandlers['/404'];
+  if (handler) handler();
+}
+
 export function initRouter(defaultRoute) {
   window.addEventListener('hashchange', routeChanged);
   if (!window.location.hash || window.location.hash === '#') {
