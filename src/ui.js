@@ -2479,14 +2479,23 @@ function _sessionTimerHTML() {
     + '</div>';
 }
 
-export function updateSessionTimer() {
-  var el = document.getElementById('session-timer');
-  if (!el) return;
+function _sessionTimerMobileHTML() {
   var info = _sessionInfo();
-  var dots = el.querySelector('.session-dots');
-  if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
-  var next = el.querySelector('.session-timer-next');
-  if (next) next.textContent = info.nextText;
+  return '<div class="burger-dd-footer session-timer-mobile" title="' + _sessionTooltip() + '">'
+    + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
+    + '<span class="session-timer-next">' + info.nextText + '</span>'
+    + '</div>';
+}
+
+export function updateSessionTimer() {
+  var info = _sessionInfo();
+  var els = document.querySelectorAll('#session-timer, .session-timer-mobile');
+  els.forEach(function (el) {
+    var dots = el.querySelector('.session-dots');
+    if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
+    var next = el.querySelector('.session-timer-next');
+    if (next) next.textContent = info.nextText;
+  });
 }
 
 function _topbarHTML() {
@@ -2520,6 +2529,7 @@ function _topbarHTML() {
     + '<a class="burger-dd-item" href="#/profile">' + icon('book-open', 14) + 'Journal</a>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Sign out</button>'
+    + _sessionTimerMobileHTML()
     + '</div>'
     + '</div>'
     + '<div class="burger-wrap">'
@@ -2532,6 +2542,7 @@ function _topbarHTML() {
     + '<a class="burger-dd-item" href="#/profile">' + icon('book-open', 14) + 'Journal</a>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
     + '<button class="burger-dd-item" data-action="logout">' + icon('log-out', 14) + 'Sign out</button>'
+    + _sessionTimerMobileHTML()
     + '</div>'
     + '</div>'
     + '</div>'
