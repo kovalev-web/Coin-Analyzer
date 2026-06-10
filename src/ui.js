@@ -2425,11 +2425,12 @@ var TRADING_SESSIONS = [
 function _sessionInfo() {
   var nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
   var activeKeys = [];
+  var activeLabels = [];
   var events = [];
   TRADING_SESSIONS.forEach(function (s) {
     var startMin = s.start * 60, endMin = s.end * 60;
     var isActive = nowMin >= startMin && nowMin < endMin;
-    if (isActive) activeKeys.push(s.key);
+    if (isActive) { activeKeys.push(s.key); activeLabels.push(s.label); }
     var untilStart = startMin - nowMin; if (untilStart <= 0) untilStart += 1440;
     events.push({ type: 'opens', label: s.label, minutes: untilStart });
     if (isActive) {
@@ -2437,6 +2438,9 @@ function _sessionInfo() {
       events.push({ type: 'closes', label: s.label, minutes: untilEnd });
     }
   });
+  if (activeLabels.length >= 2) {
+    return { activeKeys: activeKeys, nextText: 'Overlap: ' + activeLabels.join(' & ') };
+  }
   events.sort(function (a, b) { return a.minutes - b.minutes; });
   var next = events[0];
   var h = Math.floor(next.minutes / 60), m = next.minutes % 60;
