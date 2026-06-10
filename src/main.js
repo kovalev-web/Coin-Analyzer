@@ -619,7 +619,7 @@ registerRoute('/settings', function () {
     '</div>';
 });
 
-registerRoute('/profile', function () {
+registerRoute('/journal', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
     '<div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
