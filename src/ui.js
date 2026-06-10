@@ -1196,7 +1196,7 @@ export function showMorningModal() {
   el.className = 'journal-modal-overlay';
   el.innerHTML =
     '<div class="journal-modal journal-modal--morning">'
-    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span></div>'
+    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>Current state</label><textarea class="ds-input" name="morningState" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>Volume</label><input class="ds-input" type="text" name="volume"></div>'
     + '<div class="journal-field"><label>Plan for the day</label><textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
