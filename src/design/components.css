@@ -272,6 +272,7 @@ span.bp-status{cursor:default;}
 .bp-status-btn:hover{opacity:0.8;}
 .bp-status-locked{cursor:default;opacity:1;}
 .bp-trade-inline{font-size:var(--text-xs);font-weight:var(--font-medium);flex-shrink:0;white-space:nowrap;}
+.bp-trade-inline.up{color:var(--bullish);}
 .bp-status-text{font-size:var(--text-xs);line-height:var(--leading-normal);}
 .bp-note-wrap{position:relative;}
 .bp-note-clear{position:absolute;top:var(--space-3);right:var(--space-3);background:var(--paper);border:none;color:var(--graphite);padding:0;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--radius-md);}
