@@ -2466,11 +2466,20 @@ function _localHourStr(utcHour) {
 }
 
 function _sessionDotsHTML(activeKeys) {
-  return TRADING_SESSIONS.filter(function (s) {
+  var nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+  var active = TRADING_SESSIONS.filter(function (s) {
     return activeKeys.indexOf(s.key) !== -1;
-  }).map(function (s) {
+  });
+  var minUntilEnd = null;
+  active.forEach(function (s) {
+    var untilEnd = s.end * 60 - nowMin; if (untilEnd <= 0) untilEnd += 1440;
+    if (minUntilEnd === null || untilEnd < minUntilEnd) minUntilEnd = untilEnd;
+  });
+  return active.map(function (s) {
     var local = _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
-    return '<span class="session-dot active" title="' + s.label + ' ' + local + '">' + s.label + '</span>';
+    var untilEnd = s.end * 60 - nowMin; if (untilEnd <= 0) untilEnd += 1440;
+    var cls = (active.length > 1 && untilEnd === minUntilEnd) ? 'ending' : 'active';
+    return '<span class="session-dot ' + cls + '" title="' + s.label + ' ' + local + '">' + s.label + '</span>';
   }).join('');
 }
 
