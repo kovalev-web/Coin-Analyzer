@@ -1798,6 +1798,14 @@ async function checkNewListings() {
         : undefined;
       console.log('[Listing] New futures listing detected:', sym);
       await sendTG(INPLAY_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
+      var users = getDb().sqlite.prepare('SELECT id FROM user').all();
+      users.forEach(function (u) {
+        pushNotification(u.id, {
+          type: 'listing',
+          sym: coin.toLowerCase(),
+          message: 'New listing: ' + sym,
+        }).catch(function () {});
+      });
     }
   } catch (e) {
     console.error('[Listing] exchangeInfo check failed:', e.message);
