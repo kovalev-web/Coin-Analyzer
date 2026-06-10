@@ -2448,13 +2448,33 @@ function _sessionInfo() {
   return { activeKeys: activeKeys, nextText: next.label + ' ' + next.type + ' in ' + dur };
 }
 
+function _localHourStr(utcHour) {
+  var offsetMin = new Date().getTimezoneOffset();
+  var localMin = ((utcHour * 60 - offsetMin) % 1440 + 1440) % 1440;
+  var h = Math.floor(localMin / 60), m = localMin % 60;
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+
+function _sessionTooltip() {
+  return TRADING_SESSIONS.map(function (s) {
+    var utc = (s.start < 10 ? '0' : '') + s.start + ':00–' + (s.end < 10 ? '0' : '') + s.end + ':00 UTC';
+    var local = _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
+    return s.label + ' ' + utc + ' (' + local + ')';
+  }).join(' · ');
+}
+
+function _sessionDotsHTML(activeKeys) {
+  return TRADING_SESSIONS.filter(function (s) {
+    return activeKeys.indexOf(s.key) !== -1;
+  }).map(function (s) {
+    return '<span class="session-dot active">' + s.label + '</span>';
+  }).join('');
+}
+
 function _sessionTimerHTML() {
   var info = _sessionInfo();
-  var dots = TRADING_SESSIONS.map(function (s) {
-    return '<span class="session-dot' + (info.activeKeys.indexOf(s.key) !== -1 ? ' active' : '') + '">' + s.label + '</span>';
-  }).join('');
-  return '<div class="session-timer" id="session-timer" title="Asia 00:00–09:00 UTC · Europe 07:00–16:00 UTC · America 12:00–21:00 UTC">'
-    + dots
+  return '<div class="session-timer" id="session-timer" title="' + _sessionTooltip() + '">'
+    + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
     + '<span class="session-timer-next">' + info.nextText + '</span>'
     + '</div>';
 }
@@ -2463,10 +2483,8 @@ export function updateSessionTimer() {
   var el = document.getElementById('session-timer');
   if (!el) return;
   var info = _sessionInfo();
-  var dots = el.querySelectorAll('.session-dot');
-  TRADING_SESSIONS.forEach(function (s, i) {
-    if (dots[i]) dots[i].classList.toggle('active', info.activeKeys.indexOf(s.key) !== -1);
-  });
+  var dots = el.querySelector('.session-dots');
+  if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
   var next = el.querySelector('.session-timer-next');
   if (next) next.textContent = info.nextText;
 }
