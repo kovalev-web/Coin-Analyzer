@@ -1198,6 +1198,12 @@ var JOURNAL_TRIGGER_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+function _briefingCoinsHTML(today) {
+  var syms = (state.briefing || []).filter(function (e) { return e.date === today; }).map(function (e) { return e.sym.toUpperCase(); });
+  if (!syms.length) return '';
+  return '<div class="journal-static" style="margin-bottom:var(--space-4);">In briefing today: ' + syms.join(', ') + '</div>';
+}
+
 export function showMorningModal() {
   if (document.getElementById('morning-journal-modal')) return;
 
@@ -1209,11 +1215,11 @@ export function showMorningModal() {
     '<div class="journal-modal journal-modal--morning">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
-    + '<div class="journal-field"><label>Volume</label><input class="ds-input" type="text" name="volume"></div>'
-    + '<div class="journal-field"><label>Where\'s the stop</label><input class="ds-input" type="text" name="stopLevel"></div>'
-    + '<div class="journal-field"><label>Plan for the day</label><textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
+    + '<div class="journal-field"><label>Max volume</label><input class="ds-input" type="text" name="volume"></div>'
+    + '<div class="journal-field"><label>Allowed loss per trade</label><input class="ds-input" type="text" name="stopLevel"></div>'
+    + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
-    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
+    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — pause trading. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
     + '</div>';
 
