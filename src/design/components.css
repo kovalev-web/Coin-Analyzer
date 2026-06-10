@@ -51,7 +51,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .nav-beta-tag{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--danger);letter-spacing:0.03em;text-transform:uppercase;}
 
 /* ── Session timer (Asia/Europe/America) ───────────────────── */
-.session-timer{display:flex;align-items:center;gap:var(--space-8);margin:0 auto;padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;}
+.session-timer{display:flex;align-items:center;gap:var(--space-8);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;}
 .session-dot{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:var(--font-medium);}
 .session-dot::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--steel);}
 .session-dot.active{color:var(--ink-deep);font-weight:var(--font-semi);}
