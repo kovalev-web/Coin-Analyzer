@@ -270,6 +270,8 @@ function processSingleUpdate(msg) {
 // чтобы не перетирать актуальные данные стейл-данными из REST.
 var _lastKlineAt = {}; // sym → timestamp ms
 
+export function getLastKlineAt(sym) { return _lastKlineAt[sym] || 0; }
+
 function isValidCandle(k) {
   if (!k || !k.time) return false;
   if (!(k.open > 0) || !(k.high > 0) || !(k.low > 0) || !(k.close > 0)) return false;

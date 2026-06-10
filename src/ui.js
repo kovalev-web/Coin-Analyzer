@@ -1,7 +1,7 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -2056,6 +2056,30 @@ function initCharts() {
     _cardObserver.observe(card);
   });
 }
+
+// Diagnostic snapshot for "charts stop rendering after hours" bug.
+// Run window._chartDiag() in devtools when it happens to capture state.
+window._chartDiag = function () {
+  return Array.from(document.querySelectorAll('.coin-card[data-sym]')).map(function (card) {
+    var sym = card.dataset.sym;
+    var rect = card.getBoundingClientRect();
+    var chartEl = document.getElementById('chart-' + sym);
+    var canvas = chartEl ? chartEl.querySelector('canvas') : null;
+    var tf = state.chartTF[sym] || '5m';
+    var cd = state.chartData[sym + '_' + tf];
+    return {
+      sym: sym,
+      cardVisible: rect.width > 0 && rect.height > 0,
+      hasChartInstance: !!_charts[sym],
+      hasSeries: !!_fullSeries[sym],
+      chartElSize: chartEl ? chartEl.offsetWidth + 'x' + chartEl.offsetHeight : null,
+      canvasSize: canvas ? canvas.width + 'x' + canvas.height : null,
+      chartDataStatus: cd ? cd.status : null,
+      candleCount: cd && cd.candles ? cd.candles.length : 0,
+      msSinceLastKline: Date.now() - getLastKlineAt(sym),
+    };
+  });
+};
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
