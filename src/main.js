@@ -454,6 +454,13 @@ document.body.addEventListener('click', function (e) {
     case 'go-screener':
       window.location.hash = '#/screener';
       break;
+    case 'open-journal':
+      if (window.location.hash === '#/journal') {
+        reloadRoute();
+      } else {
+        window.location.hash = '#/journal';
+      }
+      break;
   }
 });
 
