@@ -255,7 +255,6 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fvbd-current:hover{background:var(--fog);}
 .bp-chg{flex:1;font-size:var(--text-xs);font-weight:var(--font-normal);}
 .bp-popup .bp-chg,#fv-briefing-drawer .bp-chg{color:var(--graphite);}
-.bp-popup .bp-chg.up,#fv-briefing-drawer .bp-chg.up{color:var(--bullish);}
 .bp-row-status{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;}
 span.bp-status{cursor:default;}
 .bp-status.bp-s-none,.bp-row-status.bp-s-none{color:var(--graphite);}
