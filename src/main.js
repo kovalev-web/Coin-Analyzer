@@ -21,6 +21,7 @@ import {
   updateSessionTimer,
 } from './ui.js';
 import { on } from './events.js';
+import { icon } from './utils.js';
 
 function openFV(sym) {
   openCoinFullView(sym);
@@ -622,8 +623,8 @@ registerRoute('/profile', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
     '<div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);">👤 Profile</h2>' +
-    '<button data-action="open-evening-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">📝 Evening review</button>' +
+    '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' + icon('book-open', 18) + 'Journal</h2>' +
+    '<button data-action="open-evening-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Evening review</button>' +
     '</div>' +
     '<div id="profile-journal-section"></div>' +
     '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
