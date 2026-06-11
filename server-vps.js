@@ -817,6 +817,7 @@ function journalEntriesToCsv(entries) {
       if (boolCols.indexOf(key) !== -1) val = val ? 'Yes' : 'No';
       else if (yesNoCols.indexOf(key) !== -1) val = yesNoLabels[val] || val;
       else if (tsCols.indexOf(key) !== -1) val = val ? new Date(val).toISOString() : '';
+      else if (key === 'pnl' && val != null) val = val.toFixed(2);
       return csvCell(val);
     });
     lines.push(row.join(','));
