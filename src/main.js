@@ -4,7 +4,7 @@ import {
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
   fetchNotifications,
-  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent,
+  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv,
 } from './api.js';
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -304,6 +304,21 @@ document.body.addEventListener('click', function (e) {
     case 'close-evening-journal':
       hideEveningModal();
       break;
+    case 'toggle-journal-export': {
+      e.stopPropagation();
+      var _jdd = document.getElementById('journal-export-dd');
+      if (_jdd) {
+        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
+        _jdd.classList.toggle('open');
+      }
+      break;
+    }
+    case 'export-journal-csv': {
+      e.stopPropagation();
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
+      exportJournalCsv(target.dataset.range);
+      break;
+    }
     case 'open-morning-journal':
       showMorningModal();
       break;
@@ -656,6 +671,16 @@ registerRoute('/settings', function () {
     '</div>';
 });
 
+var JOURNAL_EXPORT_RANGES = [
+  { value: '1w', label: '1 week' },
+  { value: '2w', label: '2 weeks' },
+  { value: '1m', label: '1 month' },
+  { value: '2m', label: '2 months' },
+  { value: '3m', label: '3 months' },
+  { value: '6m', label: '6 months' },
+  { value: 'all', label: 'All time' },
+];
+
 function _refreshJournalHistory() {
   var section = document.getElementById('profile-journal-section');
   if (!section) return;
@@ -672,6 +697,14 @@ registerRoute('/journal', function () {
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<button data-action="open-morning-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Morning journal (debug)</button>' +
     '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening review</button>' +
+    '<div class="tf-picker">' +
+    '<button data-action="toggle-journal-export" class="btn-cta" style="height:var(--h-input);">Export CSV</button>' +
+    '<div class="dropdown tf-dd" id="journal-export-dd">' +
+    JOURNAL_EXPORT_RANGES.map(function (r) {
+      return '<button data-action="export-journal-csv" data-range="' + r.value + '">' + r.label + '</button>';
+    }).join('') +
+    '</div>' +
+    '</div>' +
     '</div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';

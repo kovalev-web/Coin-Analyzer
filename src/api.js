@@ -867,6 +867,21 @@ export function fetchJournalRecent() {
     .catch(function () { return []; });
 }
 
+export function exportJournalCsv(range) {
+  return fetch(API_BASE + '/api/journal/export?range=' + encodeURIComponent(range), { credentials: 'include' })
+    .then(function (r) { return r.blob(); })
+    .then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'journal_' + range + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+}
+
 
 // ── Trades (Binance Futures via proxy) ────────────────────────────────────
 

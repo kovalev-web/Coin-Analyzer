@@ -768,6 +768,58 @@ function unauthorized(res) {
   res.end(JSON.stringify({ error: 'Unauthorized' }));
 }
 
+function csvCell(val) {
+  if (val == null) return '';
+  var s = String(val);
+  if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function journalEntriesToCsv(entries) {
+  var cols = [
+    ['date', 'Date'],
+    ['morningAt', 'Morning filled at'],
+    ['morningState', 'Morning state'],
+    ['volume', 'Volume'],
+    ['stopLevel', 'Stop level'],
+    ['dayPlan', 'Day plan'],
+    ['triggerWatch', 'Trigger watch'],
+    ['channelsClosed', 'Channels closed'],
+    ['eveningAt', 'Evening filled at'],
+    ['followedProcess', 'Followed process'],
+    ['tradedPlanned', 'Traded as planned'],
+    ['tradeCount', 'Trade count'],
+    ['pnl', 'PnL'],
+    ['stopCraneKept', 'Stop/crane kept'],
+    ['volumeOk', 'Volume ok'],
+    ['triggerRevenge', 'Trigger: revenge'],
+    ['triggerSizeUp', 'Trigger: size up'],
+    ['triggerFomo', 'Trigger: FOMO'],
+    ['triggerOther', 'Trigger: other'],
+    ['triggerFomoOther', 'Trigger: FOMO (other)'],
+    ['triggerAddFunds', 'Trigger: added funds'],
+    ['triggerReplan', 'Trigger: replanned'],
+    ['missedScreening', 'Missed screening'],
+    ['eveningState', 'Evening state'],
+    ['feltWorthless', 'Felt worthless'],
+    ['freeConclusion', 'Notes'],
+  ];
+  var boolCols = ['triggerRevenge', 'triggerSizeUp', 'triggerFomo', 'triggerFomoOther', 'triggerAddFunds', 'triggerReplan'];
+  var tsCols = ['morningAt', 'eveningAt'];
+  var lines = [cols.map(function (c) { return csvCell(c[1]); }).join(',')];
+  entries.forEach(function (e) {
+    var row = cols.map(function (c) {
+      var key = c[0];
+      var val = e[key];
+      if (boolCols.indexOf(key) !== -1) val = val ? 'Yes' : 'No';
+      else if (tsCols.indexOf(key) !== -1) val = val ? new Date(val).toISOString() : '';
+      return csvCell(val);
+    });
+    lines.push(row.join(','));
+  });
+  return lines.join('\r\n');
+}
+
 function journalRowToEntry(row) {
   return {
     date: row.date,
@@ -1004,6 +1056,25 @@ var httpServer = http.createServer(async function (req, res) {
         var jRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY date DESC LIMIT 30').all(jUserId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ entries: jRows.map(journalRowToEntry) }));
+        return;
+      }
+
+      if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/export') {
+        var jRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || 'all';
+        var jRangeDays = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m': 180 }[jRange];
+        var jExportRows;
+        if (jRangeDays) {
+          var jFromDate = new Date(Date.now() - jRangeDays * 86400000).toISOString().slice(0, 10);
+          jExportRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? ORDER BY date ASC').all(jUserId, jFromDate);
+        } else {
+          jExportRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY date ASC').all(jUserId);
+        }
+        var jCsv = journalEntriesToCsv(jExportRows.map(journalRowToEntry));
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="journal_' + jRange + '.csv"',
+        });
+        res.end(jCsv);
         return;
       }
 
