@@ -1483,8 +1483,7 @@ function alertsData() {
 }
 
 function alertLineOpts(a) {
-  var bg = getCSSVar('--canvas');
-  return { color: a.triggered ? (isDark() ? '#6B6060' : '#D1BDBD') : getCSSVar('--danger'), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, axisLabelColor: bg, axisLabelTextColor: bg, title: '' };
+  return { color: a.triggered ? (isDark() ? '#6B6060' : '#D1BDBD') : getCSSVar('--danger'), lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' };
 }
 
 // Create or update the price lines for a single alert (idempotent).
