@@ -313,7 +313,7 @@ document.body.addEventListener('click', function (e) {
       saveJournalMorning({
         morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
         volume:       mModal.querySelector('[name="volume"]').value.trim(),
-        stopLevel:    mModal.querySelector('[name="stopLevel"]').value.trim(),
+        stopLevel:    '0.5%',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
         channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
