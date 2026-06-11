@@ -433,18 +433,18 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .journal-history-row>div:nth-child(4){justify-content:flex-start;}
 .journal-history-row>div:nth-child(6){display:flex;justify-content:flex-end;}
 .journal-history-date{font-weight:var(--font-semi);color:var(--ink-deep);}
-.journal-history-cell{color:var(--graphite);display:flex;align-items:center;justify-content:center;}
-.journal-history-text{color:var(--graphite);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.journal-history-cell{color:var(--ink-deep);display:flex;align-items:center;justify-content:center;}
+.journal-history-text{color:var(--ink-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .journal-history-chevron{display:flex;align-items:center;justify-content:center;color:var(--graphite);}
 summary.journal-history-row{cursor:pointer;list-style:none;}
 summary.journal-history-row::-webkit-details-marker{display:none;}
 summary.journal-history-row::marker{display:none;}
 .journal-history-item[open]>summary.journal-history-row{border-radius:var(--radius-md) var(--radius-md) 0 0;}
 .journal-history-item[open] .journal-history-chevron{transform:rotate(180deg);}
-.journal-history-details{display:flex;flex-direction:column;gap:var(--space-4);background:var(--fog);border-radius:0 0 var(--radius-md) var(--radius-md);padding:var(--space-4) var(--space-8) var(--space-8);font-size:var(--text-xs);color:var(--graphite);}
+.journal-history-details{display:flex;flex-direction:column;gap:var(--space-4);background:var(--fog);border-radius:0 0 var(--radius-md) var(--radius-md);padding:var(--space-4) var(--space-8) var(--space-8);font-size:var(--text-xs);color:var(--ink-deep);}
 .journal-history-item:not([open]) .journal-history-details{display:none;}
 .journal-history-detail{display:flex;gap:var(--space-3);}
-.journal-history-detail-label{font-weight:var(--font-semi);color:var(--ink-deep);min-width:64px;flex-shrink:0;}
+.journal-history-detail-label{font-weight:var(--font-semi);color:var(--graphite);min-width:64px;flex-shrink:0;}
 .journal-history-detail-label::after{content:':';}
 @media(max-width:600px){
   .journal-history-row,.journal-history-header{grid-template-columns:48px 18px 18px 34px 1fr 42px 14px;gap:var(--space-3);padding:var(--space-4) var(--space-6);font-size:var(--text-2xs);}
