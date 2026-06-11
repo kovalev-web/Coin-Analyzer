@@ -446,3 +446,8 @@ summary.journal-history-row::marker{display:none;}
 .journal-history-detail{display:flex;gap:var(--space-3);}
 .journal-history-detail-label{font-weight:var(--font-semi);color:var(--ink-deep);min-width:64px;flex-shrink:0;}
 .journal-history-detail-label::after{content:':';}
+@media(max-width:600px){
+  .journal-history-row,.journal-history-header{grid-template-columns:48px 18px 18px 34px 1fr 42px 14px;gap:var(--space-3);padding:var(--space-4) var(--space-6);font-size:var(--text-2xs);}
+  .journal-history-row>div,.journal-history-header>div{min-width:0;}
+  .journal-history-header>div{overflow:hidden;white-space:nowrap;text-overflow:clip;}
+}
