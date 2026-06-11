@@ -295,6 +295,10 @@ document.body.addEventListener('click', function (e) {
       showAccountModal();
       break;
     case 'open-evening-journal':
+      if (!state.journalToday || !state.journalToday.morningAt) {
+        showToast('Fill in the morning journal first');
+        break;
+      }
       showEveningModal();
       break;
     case 'close-evening-journal':
@@ -721,19 +725,6 @@ async function _revalidateSession() {
   }
 }
 
-// Show the morning journal modal once per day, between 09:30 and 00:00 MSK.
-function _checkMorningGate() {
-  // Москва = UTC+3. Утренний гейт: 09:30 МСК = 06:30 UTC
-  var now = new Date();
-  var minutesUTC = now.getUTCHours() * 60 + now.getUTCMinutes();
-  var gateUTC = 6 * 60 + 30; // 06:30 UTC = 09:30 МСК
-  var endUTC  = 21 * 60;     // 21:00 UTC = 00:00 МСК — ночью не показываем
-  if (minutesUTC < gateUTC || minutesUTC >= endUTC) return;
-  if (!state.journalToday || !state.journalToday.morningAt) {
-    showMorningModal();
-  }
-}
-
 // Check session first — redirect to /login if not authenticated.
 // On network error (server down) we still load the app so WS reconnect can recover.
 (async function () {
@@ -745,9 +736,7 @@ function _checkMorningGate() {
       .then(function (ar) { return ar.json(); })
       .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
       .catch(function () {});
-    fetchJournalToday().then(function () {
-      _checkMorningGate();
-    });
+    fetchJournalToday();
   }
   // result === null: server unreachable — load app anyway; WS will surface the error
 

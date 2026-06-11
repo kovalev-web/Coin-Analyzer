@@ -2040,3 +2040,38 @@ setInterval(async function () {
     console.error('[Weekly scheduler]', e.message);
   }
 }, 60000);
+
+// ── Morning journal reminder ──────────────────────────────────────────────
+// 06:30 UTC = 30 min before the European session opens (07:00 UTC).
+// Sends a Telegram message + in-app notification to anyone who hasn't
+// filled in today's morning journal yet. Doesn't block the UI.
+var _morningReminderSentDate = null;
+setInterval(async function () {
+  try {
+    var now = new Date();
+    if (now.getUTCHours() !== 6 || now.getUTCMinutes() !== 30) return;
+    var today = now.toISOString().slice(0, 10);
+    if (_morningReminderSentDate === today) return;
+    _morningReminderSentDate = today;
+
+    var users = getDb().sqlite.prepare('SELECT id FROM user').all();
+    var jDb2 = getDb().sqlite;
+    for (var i = 0; i < users.length; i++) {
+      var uid = users[i].id;
+      var entryRow = jDb2.prepare('SELECT morning_at FROM journal_entries WHERE user_id = ? AND date = ?').get(uid, today);
+      if (entryRow && entryRow.morning_at) continue;
+
+      pushNotification(uid, {
+        type: 'journal_reminder',
+        message: 'Fill in your morning journal — the European session opens in 30 minutes',
+      }).catch(function () {});
+
+      var chatRes = await redis(['GET', 'tg_chat:' + uid]);
+      if (chatRes && chatRes.result) {
+        sendTG(chatRes.result, '📓 Не забудь заполнить утренний журнал — открытие европейской сессии через 30 минут.').catch(function () {});
+      }
+    }
+  } catch (e) {
+    console.error('[Morning reminder]', e.message);
+  }
+}, 60000);
