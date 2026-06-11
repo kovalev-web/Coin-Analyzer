@@ -3214,7 +3214,7 @@ export function openBriefingPanel() {
     popup.style.top = (btnRect.bottom + (inFixed ? 0 : window.scrollY) + 6) + 'px';
     popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
     popup.style.left = 'auto';
-    popup.style.width = '360px';
+    popup.style.width = '420px';
   }
 }
 
