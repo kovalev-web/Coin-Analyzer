@@ -1984,7 +1984,7 @@ function drawAlertIcons(sym, ctx, rc) {
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
-    if (y == null || y < 0 || y - tagH / 2 > paneH) return;
+    if (y == null || y < 0 || y + tagH / 2 > paneH) return;
     var bellX = 0;
     ctx.save();
     ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
@@ -3406,7 +3406,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
       var tagW = 16, tagH = 18;
-      if (y == null || y < 0 || y - tagH / 2 > paneH) return;
+      if (y == null || y < 0 || y + tagH / 2 > paneH) return;
       var bellX = 0;
       ctx.save();
       ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
