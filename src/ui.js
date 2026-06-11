@@ -2755,6 +2755,23 @@ function fmtBriefingDate(iso) {
   return days[d.getDay()] + ', ' + parts[2] + '.' + parts[1] + '.' + parts[0];
 }
 
+function _dateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function _currentWeekMonday() {
+  var today = new Date();
+  var dow = today.getDay();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() - (dow === 0 ? 6 : dow - 1));
+}
+
+// Keep ~4 weeks of accumulated history (cheap in Redis, enables future weekly-trend AI reports)
+function _briefingHistoryCutoff() {
+  var mon = _currentWeekMonday();
+  mon.setDate(mon.getDate() - 21);
+  return _dateStr(mon);
+}
+
 function briefingDates() {
   var dates = {};
   (state.briefing || []).forEach(function (e) { dates[e.date] = true; });
@@ -2811,9 +2828,7 @@ export function refreshBriefingFromServer() {
   if (briefingJustSynced()) return;
   if (!_briefingUserCode) return;
   var _versionAtStart = _syncVersion;
-  var _today = new Date(); var _dow = _today.getDay();
-  var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
-  var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
+  var _mondayStr = _briefingHistoryCutoff();
   fetch(API_BASE + '/api/briefing', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -2858,11 +2873,8 @@ export function loadBriefing() {
     }
   } catch (e) {}
 
-  // Always filter to current week — old entries disappear automatically each Monday
-  var _today = new Date();
-  var _dow = _today.getDay();
-  var _mon = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate() - (_dow === 0 ? 6 : _dow - 1));
-  var _mondayStr = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0') + '-' + String(_mon.getDate()).padStart(2, '0');
+  // Keep ~4 weeks of history — old entries disappear once they roll past that window
+  var _mondayStr = _briefingHistoryCutoff();
 
   try {
     var local = JSON.parse(localStorage.getItem('pa_briefing') || '[]');
@@ -3079,8 +3091,9 @@ function _weekStatsHTML() {
 function _missedOpportunitiesHTML() {
   var coinMap = {};
   state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
+  var weekMonday = _dateStr(_currentWeekMonday());
   var items = (state.briefing || [])
-    .filter(function (e) { return (e.status === 'missed' || e.status === 'watching') && e.addedPrice; })
+    .filter(function (e) { return e.date >= weekMonday && (e.status === 'missed' || e.status === 'watching') && e.addedPrice; })
     .map(function (e) {
       var coin = coinMap[e.sym];
       var delta = (coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
