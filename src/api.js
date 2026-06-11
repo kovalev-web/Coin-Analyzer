@@ -1053,14 +1053,18 @@ export async function fetchTodayTrades() {
   });
 
   var totalPnl = 0;
+  var orderIds = {};
   entries.forEach(function (e) {
     var t = state.trades[e.sym + ':' + e.date];
-    if (t && t.status === 'ok') totalPnl += t.pnl;
+    if (!t || t.status !== 'ok') return;
+    totalPnl += t.pnl;
+    (t.entries || []).forEach(function (fill) { orderIds[fill.orderId] = true; });
   });
 
   return {
     pnl: totalPnl,
     tradeCount: tradeCount,
+    orderCount: Object.keys(orderIds).length,
     winCount: winCount,
     winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
   };

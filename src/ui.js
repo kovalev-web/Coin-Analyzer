@@ -1293,11 +1293,11 @@ export function showEveningModal() {
   fetchTodayTrades().then(function (stats) {
     var statsEl = el.querySelector('#evening-pnl-stats');
     if (!statsEl) return;
-    if (entry.tradeCount == null && stats) {
+    if (stats) {
       var tradeCountInput = el.querySelector('[name="tradeCount"]');
-      if (tradeCountInput) tradeCountInput.value = stats.tradeCount;
+      if (tradeCountInput) tradeCountInput.value = stats.orderCount;
     }
-    if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
+    if (!stats || stats.orderCount === 0) { statsEl.textContent = 'No trades today'; return; }
     el.dataset.pnl = stats.pnl;
     var sign = stats.pnl >= 0 ? '+' : '';
     statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
