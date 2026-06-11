@@ -1316,7 +1316,10 @@ export function renderProfileJournal(container, entries) {
     container.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-sm);">No journal entries yet.</p>';
     return;
   }
-  container.innerHTML = '<div class="journal-history">' + entries.map(function (e) {
+  var header = '<div class="journal-history-header">'
+    + '<div>Date</div><div>AM</div><div>PM</div><div>Trades</div><div>State</div><div>Notes</div><div></div>'
+    + '</div>';
+  container.innerHTML = header + '<div class="journal-history">' + entries.map(function (e) {
     var cells = '<div class="journal-history-date">' + e.date + '</div>'
       + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
       + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
