@@ -1251,8 +1251,7 @@ export function showEveningModal() {
 
   var today = new Date().toISOString().slice(0, 10);
   var entry = state.journalToday || {};
-  var tradeCount = entry.tradeCount != null ? entry.tradeCount
-    : state.briefing.filter(function (e) { return e.date === today && e.status === 'traded'; }).length;
+  var tradeCount = entry.tradeCount != null ? entry.tradeCount : 0;
 
   var el = document.createElement('div');
   el.id = 'evening-journal-modal';
@@ -1294,6 +1293,10 @@ export function showEveningModal() {
   fetchTodayTrades().then(function (stats) {
     var statsEl = el.querySelector('#evening-pnl-stats');
     if (!statsEl) return;
+    if (entry.tradeCount == null && stats) {
+      var tradeCountInput = el.querySelector('[name="tradeCount"]');
+      if (tradeCountInput) tradeCountInput.value = stats.tradeCount;
+    }
     if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
     el.dataset.pnl = stats.pnl;
     var sign = stats.pnl >= 0 ? '+' : '';
