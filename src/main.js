@@ -319,9 +319,16 @@ document.body.addEventListener('click', function (e) {
       exportJournalCsv(target.dataset.range);
       break;
     }
-    case 'open-morning-journal':
+    case 'open-morning-journal': {
+      var _mNdd = document.getElementById('notif-dd');
+      if (_mNdd) _mNdd.classList.remove('open');
+      if (state.journalToday && state.journalToday.morningAt) {
+        showToast('Morning journal already filled today');
+        break;
+      }
       showMorningModal();
       break;
+    }
     case 'close-morning-journal':
       hideMorningModal();
       break;
@@ -701,7 +708,7 @@ registerRoute('/journal', function () {
     '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
     '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' +
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
-    '<button data-action="open-morning-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Morning journal (debug)</button>' +
+    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + ' style="margin-left:auto;height:var(--h-input);">Morning journal' + (state.journalToday && state.journalToday.morningAt ? ' ✓' : '') + '</button>' +
     '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening review</button>' +
     '<div class="tf-picker">' +
     '<button data-action="toggle-journal-export" class="btn-cta" style="height:var(--h-input);">Export CSV</button>' +

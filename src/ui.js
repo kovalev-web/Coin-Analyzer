@@ -4479,6 +4479,7 @@ function _renderNotifDropdown() {
             + '<span class="notif-time">' + ago + '</span>'
             + '</div>'
             + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
+            + (n.type === 'journal_reminder' ? '<button class="btn-icon" data-action="open-morning-journal">' + icon('arrow-right', 14) + '</button>' : '')
             + '</div>';
         }).join('')
       + '</div>'
