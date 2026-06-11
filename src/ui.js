@@ -2950,7 +2950,8 @@ export function toggleBriefing(sym) {
     state.briefing.splice(idx, 1);
   } else {
     if (!state.briefing) state.briefing = [];
-    state.briefing.push({ sym: sym, date: today, addedAt: Date.now(), status: 'watching', note: '' });
+    var coin = state.coins.find(function (c) { return c.symbol === sym; });
+    state.briefing.push({ sym: sym, date: today, addedAt: Date.now(), addedPrice: (coin && coin.current_price) || null, status: 'watching', note: '' });
   }
   saveBriefingLocal();
   syncBriefingNow();
@@ -3067,6 +3068,33 @@ function _weekStatsHTML() {
   return '<div class="bp-week">'
     + '<div class="bp-week-header">' + loadBtn + '</div>'
     + statsHTML
+    + _missedOpportunitiesHTML()
+    + '</div>';
+}
+
+function _missedOpportunitiesHTML() {
+  var coinMap = {};
+  state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
+  var items = (state.briefing || [])
+    .filter(function (e) { return (e.status === 'missed' || e.status === 'watching') && e.addedPrice; })
+    .map(function (e) {
+      var coin = coinMap[e.sym];
+      var delta = (coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
+      return { sym: e.sym, date: e.date, status: e.status, delta: delta };
+    })
+    .filter(function (x) { return x.delta !== null; })
+    .sort(function (a, b) { return b.delta - a.delta; });
+  if (!items.length) return '';
+  var rows = items.map(function (x) {
+    return '<div class="bp-missed-row">'
+      + '<span class="bp-row-status ' + briefingStatusClass(x.status) + '">' + briefingStatusLabel(x.status) + '</span>'
+      + '<span class="bp-missed-sym">' + x.sym.toUpperCase() + '</span>'
+      + '<span class="bp-missed-delta ' + (x.delta >= 0 ? 'up' : 'dn') + '">' + (x.delta >= 0 ? '+' : '') + x.delta.toFixed(2) + '%</span>'
+      + '</div>';
+  }).join('');
+  return '<div class="bp-missed">'
+    + '<div class="bp-stat-label">Missed opportunities</div>'
+    + rows
     + '</div>';
 }
 
@@ -3128,9 +3156,14 @@ function _refreshBriefingPct() {
       ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
       : (coin.price_change_percentage_24h || 0);
     var span = row.querySelector('.bp-chg');
-    if (!span) return;
-    var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-    span.textContent = newChg;
+    if (span) span.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+    var addedSpan = row.querySelector('.bp-chg-added');
+    var addedPrice = parseFloat(row.dataset.addedPrice);
+    if (addedSpan && addedPrice > 0 && coin.current_price > 0) {
+      var d = (coin.current_price - addedPrice) / addedPrice * 100;
+      addedSpan.textContent = (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
+      addedSpan.className = 'bp-chg-added ' + (d >= 0 ? 'up' : 'dn');
+    }
   });
 }
 setInterval(_refreshBriefingPct, 500);
@@ -3212,13 +3245,15 @@ export function renderBriefingPanel() {
   var rowsHTML = entries.length ? entries.map(function (e) {
     var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
     var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
+    var addedDelta = (e.addedPrice && coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
     var tradeInline = _tradeInlineHTML(e.sym, e.date);
     var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
     var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
     var hasNote = !!e.note;
-    return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' +
+    return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
+      (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '') +
       (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
       '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
       '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
@@ -4165,14 +4200,16 @@ export function renderFVBriefingDrawer() {
     dateMap[date].forEach(function (e) {
       var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
       var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
+      var addedDelta = (e.addedPrice && coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
       var tradeInline = _tradeInlineHTML(e.sym, e.date);
       var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
       var isExpanded = _expandedFvKey === e.sym + ':' + e.date;
       var hasNote = !!e.note;
       var isCurrent = _fvSym === e.sym;
-      html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">'
+      html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
         + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
+        + (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '')
         + (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
         + '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
