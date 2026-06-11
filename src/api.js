@@ -1020,18 +1020,22 @@ export async function fetchTodayTrades() {
     + String(today.getMonth() + 1).padStart(2, '0') + '-'
     + String(today.getDate()).padStart(2, '0');
 
-  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date === todayStr; });
-  if (!entries.length) return null;
+  // Use every symbol ever seen in the briefing/watchlist, not just entries added
+  // today — a coin tracked on a previous day may still be traded today.
+  var syms = {};
+  (state.briefing || []).forEach(function (e) { if (!e.auto) syms[e.sym] = true; });
+  syms = Object.keys(syms);
+  if (!syms.length) return null;
 
-  entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
-  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
+  syms.forEach(function (sym) { delete state.trades[sym + ':' + todayStr]; });
+  await Promise.all(syms.map(function (sym) { return fetchTrades(sym, todayStr); }));
 
   var streams = {};
-  entries.forEach(function (e) {
-    var t = state.trades[e.sym + ':' + e.date];
+  syms.forEach(function (sym) {
+    var t = state.trades[sym + ':' + todayStr];
     if (!t || t.status !== 'ok' || !t.entries) return;
     t.entries.forEach(function (fill) {
-      var key = e.sym + ':' + (fill.positionSide || 'BOTH');
+      var key = sym + ':' + (fill.positionSide || 'BOTH');
       if (!streams[key]) streams[key] = {};
       streams[key][fill.id] = fill;
     });
@@ -1054,8 +1058,8 @@ export async function fetchTodayTrades() {
 
   var totalPnl = 0;
   var orderIds = {};
-  entries.forEach(function (e) {
-    var t = state.trades[e.sym + ':' + e.date];
+  syms.forEach(function (sym) {
+    var t = state.trades[sym + ':' + todayStr];
     if (!t || t.status !== 'ok') return;
     totalPnl += t.pnl;
     (t.entries || []).forEach(function (fill) { orderIds[fill.orderId] = true; });

@@ -1296,9 +1296,9 @@ export function showEveningModal() {
     if (stats) {
       var tradeCountInput = el.querySelector('[name="tradeCount"]');
       if (tradeCountInput) tradeCountInput.value = stats.orderCount;
+      el.dataset.pnl = stats.pnl;
     }
     if (!stats || stats.orderCount === 0) { statsEl.textContent = 'No trades today'; return; }
-    el.dataset.pnl = stats.pnl;
     var sign = stats.pnl >= 0 ? '+' : '';
     statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
   }).finally(function () {
