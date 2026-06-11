@@ -663,7 +663,7 @@ function _refreshJournalHistory() {
 registerRoute('/journal', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
+    '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
     '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' +
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<button data-action="open-morning-journal" class="btn-cta" style="margin-left:auto;height:var(--h-input);">Morning journal (debug)</button>' +
