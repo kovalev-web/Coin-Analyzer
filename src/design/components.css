@@ -436,4 +436,6 @@ summary.journal-history-row::marker{display:none;}
 .journal-history-item[open] .journal-history-chevron{transform:rotate(180deg);}
 .journal-history-details{display:flex;flex-direction:column;gap:var(--space-2);background:var(--fog);border-radius:0 0 var(--radius-md) var(--radius-md);padding:var(--space-4) var(--space-8) var(--space-8);font-size:var(--text-xs);color:var(--graphite);}
 .journal-history-item:not([open]) .journal-history-details{display:none;}
-.journal-history-detail-label{font-weight:var(--font-semi);color:var(--ink-deep);margin-right:var(--space-6);}
+.journal-history-detail{display:flex;gap:var(--space-6);}
+.journal-history-detail-label{font-weight:var(--font-semi);color:var(--ink-deep);min-width:64px;flex-shrink:0;}
+.journal-history-detail-label::after{content:':';}
