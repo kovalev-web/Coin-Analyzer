@@ -2590,7 +2590,7 @@ function _topbarHTML() {
     + _sessionTimerHTML()
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
-    + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
+    + '<button class="btn-topbar bp-watch-btn" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '<span class="bp-stale-badge" id="bp-stale-badge" style="display:none"></span></button>'
     + '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
@@ -2676,6 +2676,7 @@ export function render() {
     + coinsHtml;
   initCharts();
   updateNotifBadge();
+  updateBriefingBadge();
 }
 
 
@@ -2839,6 +2840,7 @@ export function refreshBriefingFromServer() {
     try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {} // no debounce sync — don't push server data back
     renderBriefingPanel();
     updateAllStarButtons();
+    updateBriefingBadge();
     var _fvd = document.getElementById('fv-briefing-drawer');
     if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
   }).catch(function () {});
@@ -2956,6 +2958,7 @@ export function toggleBriefing(sym) {
   saveBriefingLocal();
   syncBriefingNow();
   updateStarButton(sym);
+  updateBriefingBadge();
   renderBriefingPanel();
   var _fvd = document.getElementById('fv-briefing-drawer');
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
@@ -2990,6 +2993,7 @@ function cycleBriefingStatus(sym, date) {
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
   syncBriefingNow();
+  updateBriefingBadge();
   var openNotes = Array.from(document.querySelectorAll('.bp-note-row'))
     .filter(function (el) { return el.style.display !== 'none'; })
     .map(function (el) { return el.id; });
@@ -3167,6 +3171,7 @@ function _refreshBriefingPct() {
   });
 }
 setInterval(_refreshBriefingPct, 500);
+setInterval(updateBriefingBadge, 5 * 60 * 1000);
 on('metrics:update', _refreshBriefingPct); // also fires on every WS push (reliable on iOS)
 
 // ── Briefing Panel ─────────────────────────────────────────────────────────
@@ -4503,6 +4508,18 @@ export function updateNotifBadge() {
   var badge = document.getElementById('notif-badge');
   if (!badge) return;
   badge.style.display = state.notifUnread > 0 ? 'block' : 'none';
+}
+
+var BP_STALE_HOURS = 12;
+export function updateBriefingBadge() {
+  var badge = document.getElementById('bp-stale-badge');
+  if (!badge) return;
+  var threshold = Date.now() - BP_STALE_HOURS * 3600 * 1000;
+  var count = (state.briefing || []).filter(function (e) {
+    return e.status === 'watching' && e.addedAt && e.addedAt < threshold;
+  }).length;
+  if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
 }
 
 function _renderNotifDropdown() {

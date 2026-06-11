@@ -389,6 +389,8 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Notifications ──────────────────────────────────────────── */
 .notif-wrap{position:relative;}
 .notif-badge{position:absolute;top:var(--space-1);right:var(--space-1);width:8px;height:8px;background:var(--danger);border-radius:var(--radius-full);pointer-events:none;}
+.bp-watch-btn{position:relative;}
+.bp-stale-badge{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;padding:0 3px;align-items:center;justify-content:center;font-size:var(--text-2xs);font-weight:var(--font-bold);line-height:1;background:var(--level-deep);color:var(--canvas);border-radius:var(--radius-full);pointer-events:none;}
 .notif-dd{width:320px;max-height:440px;top:calc(100% + var(--space-4));border-radius:var(--radius-xl);z-index:500;}
 .notif-dd .popup-header{padding-bottom:var(--space-6);}
 .notif-dd.open{display:flex;flex-direction:column;}
