@@ -708,10 +708,10 @@ registerRoute('/journal', function () {
     '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
     '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' +
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
-    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + ' style="margin-left:auto;height:var(--h-input);">Morning journal' + (state.journalToday && state.journalToday.morningAt ? ' ✓' : '') + '</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening review</button>' +
+    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + ' style="margin-left:auto;height:var(--h-input);">Morning' + (state.journalToday && state.journalToday.morningAt ? ' ✓' : '') + '</button>' +
+    '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening</button>' +
     '<div class="tf-picker">' +
-    '<button data-action="toggle-journal-export" class="btn-cta" style="height:var(--h-input);">Export CSV</button>' +
+    '<button data-action="toggle-journal-export" class="btn-cta" style="height:var(--h-input);">CSV</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
     JOURNAL_EXPORT_RANGES.map(function (r) {
       return '<button data-action="export-journal-csv" data-range="' + r.value + '">' + r.label + '</button>';
@@ -729,7 +729,7 @@ registerRoute('/journal', function () {
     if (!mBtn) return;
     var filled = !!(state.journalToday && state.journalToday.morningAt);
     mBtn.disabled = filled;
-    mBtn.textContent = 'Morning journal' + (filled ? ' ✓' : '');
+    mBtn.textContent = 'Morning' + (filled ? ' ✓' : '');
   });
 });
 
