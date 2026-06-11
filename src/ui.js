@@ -1201,7 +1201,7 @@ var JOURNAL_TRIGGER_OPTIONS = [
 var JOURNAL_CHANNELS_OPTIONS = [{ value: 'closed', label: 'Closed' }, { value: 'open', label: 'Open' }];
 
 function _journalCheckbox(name, label, checked) {
-  return '<label class="journal-radio"><input type="checkbox" name="' + name + '"' + (checked ? ' checked' : '') + '> ' + label + '</label>';
+  return '<label class="journal-checkbox"><input type="checkbox" name="' + name + '"' + (checked ? ' checked' : '') + '><span>' + label + '</span></label>';
 }
 
 function _briefingCoinsHTML(today) {
@@ -1279,12 +1279,12 @@ export function showEveningModal() {
     + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
     + '<div class="journal-field"><label>Trigger fired today</label>' + _journalRadioGroup('triggerFired', JOURNAL_TRIGGER_OPTIONS, entry.triggerFired || 'none')
         + '<input class="ds-input" type="text" name="triggerOther" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerFired === 'other' ? '' : ' hidden') + '></div>'
-    + '<div class="journal-field"><label>Additional triggers</label><div class="journal-radio-group">'
-        + _journalCheckbox('triggerFomoOther', 'Someone else\'s trade triggered FOMO ("they took it, I didn\'t")', entry.triggerFomoOther)
-        + _journalCheckbox('triggerAddFunds', 'Urge to add funds to recover the account (mechanism blocks it — log the urge itself)', entry.triggerAddFunds)
-        + _journalCheckbox('triggerReplan', 'Urge to re-plan because of a pumping coin / "I picked the wrong one"', entry.triggerReplan)
+    + '<div class="journal-field"><label>Additional triggers</label><div class="journal-checkbox-list">'
+        + _journalCheckbox('triggerFomoOther', 'FOMO from someone else\'s trade ("they took it, I didn\'t")', entry.triggerFomoOther)
+        + _journalCheckbox('triggerAddFunds', 'Urge to add funds to recover the account', entry.triggerAddFunds)
+        + _journalCheckbox('triggerReplan', 'Urge to re-plan because of a pumping coin', entry.triggerReplan)
         + '</div></div>'
-    + '<div class="journal-field"><label>Missed in screening (coin / what matched my criteria this morning / why I didn\'t flag it)</label><textarea class="ds-input" name="missedScreening" rows="3">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it)</label><textarea class="ds-input" name="missedScreening" rows="3">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
     + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
