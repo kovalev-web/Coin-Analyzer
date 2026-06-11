@@ -1319,9 +1319,6 @@ export function showEveningModal() {
     if (saveBtn) saveBtn.disabled = false;
   });
 
-  el.addEventListener('click', function (e) {
-    if (e.target === el) hideEveningModal();
-  });
 }
 
 export function hideEveningModal() {
