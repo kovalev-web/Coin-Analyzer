@@ -73,6 +73,7 @@ function ensureAuthTables() {
       trigger_add_funds  INTEGER,
       trigger_replan     INTEGER,
       missed_screening   TEXT,
+      pnl              REAL,
       evening_state    TEXT,
       felt_worthless   TEXT,
       free_conclusion  TEXT,
@@ -99,6 +100,9 @@ function ensureAuthTables() {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" INTEGER');
     }
   });
+  if (journalCols.indexOf('pnl') === -1) {
+    sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "pnl" REAL');
+  }
 }
 
 module.exports = { ensureAuthTables };

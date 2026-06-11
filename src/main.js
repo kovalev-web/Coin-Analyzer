@@ -347,6 +347,7 @@ document.body.addEventListener('click', function (e) {
         eveningState:     (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
         feltWorthless:    (eModal.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
         freeConclusion:   eModal.querySelector('[name="freeConclusion"]').value.trim(),
+        pnl:              eModal.dataset.pnl != null ? parseFloat(eModal.dataset.pnl) : null,
       }).then(function () {
         hideEveningModal();
         showToast('Review saved');

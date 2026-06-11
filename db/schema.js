@@ -77,6 +77,7 @@ exports.journalEntries = sqliteTable('journal_entries', {
   triggerAddFunds:  integer('trigger_add_funds'),
   triggerReplan:    integer('trigger_replan'),
   missedScreening:  text('missed_screening'),
+  pnl:              real('pnl'),
   eveningState:     text('evening_state'),
   feltWorthless:    text('felt_worthless'),
   freeConclusion:   text('free_conclusion'),
