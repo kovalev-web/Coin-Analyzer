@@ -1217,16 +1217,7 @@ export function showMorningModal() {
     + '<div class="journal-field"><label>Max volume</label><div class="journal-static">$50</div></div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">0.5%</div></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
-    + '<div class="journal-field"><label>What could trigger me today</label><div class="journal-checkbox-list">'
-        + _journalCheckbox('watchRevenge', 'Revenge after a stop', false)
-        + _journalCheckbox('watchSizeUp', 'Sizing up after a streak', false)
-        + _journalCheckbox('watchFomo', 'FOMO', false)
-        + _journalCheckbox('watchFomoOther', 'FOMO from someone else\'s trade', false)
-        + _journalCheckbox('watchAddFunds', 'Urge to add funds to recover the account', false)
-        + _journalCheckbox('watchReplan', 'Urge to re-plan because of a pumping coin', false)
-        + _journalCheckbox('watchOther', 'Other', false)
-        + '</div>'
-        + '<input class="ds-input" type="text" name="watchOtherText" placeholder="Describe what" style="margin-top:var(--space-4);" hidden></div>'
+    + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
     + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — pause trading. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
@@ -1234,11 +1225,6 @@ export function showMorningModal() {
 
   document.body.appendChild(el);
   lockScroll();
-
-  var watchOtherText = el.querySelector('[name="watchOtherText"]');
-  el.querySelector('[name="watchOther"]').addEventListener('change', function (e) {
-    watchOtherText.hidden = !e.target.checked;
-  });
 
   var btn = el.querySelector('[data-action="save-morning-journal"]');
   var hint = el.querySelector('[data-hint="morningState"]');

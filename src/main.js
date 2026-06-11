@@ -315,13 +315,7 @@ document.body.addEventListener('click', function (e) {
         volume:       '50',
         stopLevel:    '0.5%',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
-        watchRevenge:   mModal.querySelector('[name="watchRevenge"]').checked,
-        watchSizeUp:    mModal.querySelector('[name="watchSizeUp"]').checked,
-        watchFomo:      mModal.querySelector('[name="watchFomo"]').checked,
-        watchFomoOther: mModal.querySelector('[name="watchFomoOther"]').checked,
-        watchAddFunds:  mModal.querySelector('[name="watchAddFunds"]').checked,
-        watchReplan:    mModal.querySelector('[name="watchReplan"]').checked,
-        watchOther:     mModal.querySelector('[name="watchOther"]').checked ? mModal.querySelector('[name="watchOtherText"]').value.trim() : '',
+        triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
         channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
       }).then(function () {
         hideMorningModal();
