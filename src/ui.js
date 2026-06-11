@@ -1337,18 +1337,18 @@ export function renderProfileJournal(container, entries) {
     return;
   }
   var header = '<div class="journal-history-header">'
-    + '<div>Date</div><div>AM</div><div>PM</div><div>Trades</div><div>State</div><div>PnL</div><div></div>'
+    + '<div>Date</div><div>Trades</div><div>State</div><div>PnL</div><div>AM</div><div>PM</div><div></div>'
     + '</div>';
   container.innerHTML = header + '<div class="journal-history">' + entries.map(function (e) {
     var pnl = e.pnl != null
       ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
       : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
     var cells = '<div class="journal-history-date">' + e.date + '</div>'
-      + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
-      + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
       + '<div class="journal-history-cell">' + (e.tradeCount != null ? e.tradeCount : '—') + '</div>'
       + '<div class="journal-history-text">' + escHtml(e.morningState || '') + '</div>'
-      + '<div>' + pnl + '</div>';
+      + '<div>' + pnl + '</div>'
+      + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
+      + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>';
 
     var details = '';
     if (e.volume) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Volume</span>' + escHtml(e.volume) + '</div>';
