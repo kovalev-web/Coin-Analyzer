@@ -1219,7 +1219,7 @@ export function showMorningModal() {
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
-    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — pause trading. No exceptions.</div></div>'
+    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
     + '</div>';
 
