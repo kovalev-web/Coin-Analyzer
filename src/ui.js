@@ -1974,6 +1974,9 @@ function drawAlertIcons(sym, ctx, rc) {
   if (!_bellImg || !_bellImg.complete) return;
   var dpr = window.devicePixelRatio || 1;
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
+  var chart = _charts[sym];
+  var timeAxisH = 0; try { if (chart) timeAxisH = chart.timeScale().height(); } catch (_) {}
+  var paneH = cssH - timeAxisH;
   var alerts = _alerts[sym] || [];
   var tagW = 16, tagH = 18;
   alerts.forEach(function (a) {
@@ -1981,7 +1984,7 @@ function drawAlertIcons(sym, ctx, rc) {
     var y = (_alertDragging && _alertDragging.sym === sym && _alertDragging.alert === a && _alertDragging.dragY != null)
       ? _alertDragging.dragY
       : s.priceToCoordinate(a.price);
-    if (y == null || y < 0 || y > cssH) return;
+    if (y == null || y < 0 || y - tagH / 2 > paneH) return;
     var bellX = 0;
     ctx.save();
     ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
@@ -3396,12 +3399,14 @@ function _drawFVOverlays(ctx, rc, sym) {
   if (!_fvSeries) return;
   var dpr = window.devicePixelRatio || 1;
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
+  var timeAxisH = 0; try { if (_fvChart) timeAxisH = _fvChart.timeScale().height(); } catch (_) {}
+  var paneH = cssH - timeAxisH;
   // Alert bell icons
   if (_bellImg && _bellImg.complete) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
-      if (y == null || y < 0 || y > cssH) return;
       var tagW = 16, tagH = 18;
+      if (y == null || y < 0 || y - tagH / 2 > paneH) return;
       var bellX = 0;
       ctx.save();
       ctx.drawImage(a.triggered ? (isDark() ? _bellImgTriggeredDark : _bellImgTriggeredLight) : _bellImg, bellX, y - tagH / 2, tagW, tagH);
