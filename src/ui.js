@@ -1279,7 +1279,7 @@ export function showEveningModal() {
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
     + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
-    + '<button class="btn-cta" data-action="save-evening-journal">Save review</button>'
+    + '<button class="btn-cta" data-action="save-evening-journal" disabled>Save review</button>'
     + '</div>';
 
   document.body.appendChild(el);
@@ -1301,6 +1301,9 @@ export function showEveningModal() {
     el.dataset.pnl = stats.pnl;
     var sign = stats.pnl >= 0 ? '+' : '';
     statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
+  }).finally(function () {
+    var saveBtn = el.querySelector('[data-action="save-evening-journal"]');
+    if (saveBtn) saveBtn.disabled = false;
   });
 
   el.addEventListener('click', function (e) {
