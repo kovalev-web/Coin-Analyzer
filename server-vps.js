@@ -776,6 +776,13 @@ function journalRowToEntry(row) {
     stopLevel: row.stop_level,
     dayPlan: row.day_plan,
     triggerWatch: row.trigger_watch,
+    watchRevenge: row.watch_revenge,
+    watchSizeUp: row.watch_size_up,
+    watchFomo: row.watch_fomo,
+    watchFomoOther: row.watch_fomo_other,
+    watchAddFunds: row.watch_add_funds,
+    watchReplan: row.watch_replan,
+    watchOther: row.watch_other,
     channelsClosed: row.channels_closed,
     morningAt: row.morning_at,
     followedProcess: row.followed_process,
@@ -1010,9 +1017,9 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyM);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, trigger_watch, channels_closed, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
-              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, morning_at = excluded.morning_at'
-            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, Date.now());
+              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, trigger_watch, watch_revenge, watch_size_up, watch_fomo, watch_fomo_other, watch_add_funds, watch_replan, watch_other, channels_closed, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, trigger_watch = excluded.trigger_watch, watch_revenge = excluded.watch_revenge, watch_size_up = excluded.watch_size_up, watch_fomo = excluded.watch_fomo, watch_fomo_other = excluded.watch_fomo_other, watch_add_funds = excluded.watch_add_funds, watch_replan = excluded.watch_replan, watch_other = excluded.watch_other, channels_closed = excluded.channels_closed, morning_at = excluded.morning_at'
+            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.triggerWatch || null, jParsed.watchRevenge ? 1 : 0, jParsed.watchSizeUp ? 1 : 0, jParsed.watchFomo ? 1 : 0, jParsed.watchFomoOther ? 1 : 0, jParsed.watchAddFunds ? 1 : 0, jParsed.watchReplan ? 1 : 0, jParsed.watchOther || null, jParsed.channelsClosed || null, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {

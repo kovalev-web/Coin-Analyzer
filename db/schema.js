@@ -59,6 +59,13 @@ exports.journalEntries = sqliteTable('journal_entries', {
   stopLevel:      text('stop_level'),
   dayPlan:        text('day_plan'),
   triggerWatch:   text('trigger_watch'),
+  watchRevenge:   integer('watch_revenge'),
+  watchSizeUp:    integer('watch_size_up'),
+  watchFomo:      integer('watch_fomo'),
+  watchFomoOther: integer('watch_fomo_other'),
+  watchAddFunds:  integer('watch_add_funds'),
+  watchReplan:    integer('watch_replan'),
+  watchOther:     text('watch_other'),
   channelsClosed: text('channels_closed'),
   morningAt:      integer('morning_at', { mode: 'timestamp' }),
 
