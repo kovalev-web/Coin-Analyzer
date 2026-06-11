@@ -58,6 +58,7 @@ exports.journalEntries = sqliteTable('journal_entries', {
   volume:         text('volume'),
   stopLevel:      text('stop_level'),
   dayPlan:        text('day_plan'),
+  plannedCoins:   text('planned_coins'),
   triggerWatch:   text('trigger_watch'),
   channelsClosed: text('channels_closed'),
   morningAt:      integer('morning_at', { mode: 'timestamp' }),

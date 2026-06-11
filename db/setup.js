@@ -56,6 +56,7 @@ function ensureAuthTables() {
       volume           TEXT,
       stop_level       TEXT,
       day_plan         TEXT,
+      planned_coins    TEXT,
       trigger_watch    TEXT,
       channels_closed  TEXT,
       morning_at       INTEGER,
@@ -85,7 +86,7 @@ function ensureAuthTables() {
   // Idempotent migration: add columns introduced after the initial table creation
   // for installs whose journal_entries table predates them.
   var journalCols = sqlite.prepare('PRAGMA table_info(journal_entries)').all().map(function (c) { return c.name; });
-  ['stop_level', 'trigger_watch', 'trigger_other'].forEach(function (col) {
+  ['stop_level', 'planned_coins', 'trigger_watch', 'trigger_other'].forEach(function (col) {
     if (journalCols.indexOf(col) === -1) {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
     }

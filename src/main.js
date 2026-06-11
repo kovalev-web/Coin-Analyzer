@@ -329,11 +329,17 @@ document.body.addEventListener('click', function (e) {
       var mBtn = target;
       mBtn.disabled = true;
       var mModal = document.getElementById('morning-journal-modal');
+      var mToday = new Date().toISOString().slice(0, 10);
+      var mPlannedCoins = (state.briefing || [])
+        .filter(function (e) { return e.date === mToday; })
+        .map(function (e) { return e.sym.toUpperCase(); })
+        .join(', ');
       saveJournalMorning({
         morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
         volume:       '50',
         stopLevel:    '0.5%',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
+        plannedCoins: mPlannedCoins,
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
         channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
       }).then(function () {

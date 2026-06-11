@@ -1293,10 +1293,10 @@ export function showEveningModal() {
   fetchTodayTrades().then(function (stats) {
     var statsEl = el.querySelector('#evening-pnl-stats');
     if (!statsEl) return;
+    el.dataset.pnl = stats ? stats.pnl : 0;
     if (stats) {
       var tradeCountInput = el.querySelector('[name="tradeCount"]');
       if (tradeCountInput) tradeCountInput.value = stats.tradeCount;
-      el.dataset.pnl = stats.pnl;
     }
     if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
     var sign = stats.pnl >= 0 ? '+' : '';
@@ -1340,6 +1340,7 @@ export function renderProfileJournal(container, entries) {
     var details = '';
     if (e.volume) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Volume</span>' + escHtml(e.volume) + '</div>';
     if (e.dayPlan) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Day plan</span>' + escHtml(e.dayPlan) + '</div>';
+    if (e.plannedCoins) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Planned coins</span>' + escHtml(e.plannedCoins) + '</div>';
     if (e.freeConclusion) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Notes</span>' + escHtml(e.freeConclusion) + '</div>';
 
     if (!details) {
