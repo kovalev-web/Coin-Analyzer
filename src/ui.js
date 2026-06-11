@@ -1295,10 +1295,10 @@ export function showEveningModal() {
     if (!statsEl) return;
     if (stats) {
       var tradeCountInput = el.querySelector('[name="tradeCount"]');
-      if (tradeCountInput) tradeCountInput.value = stats.orderCount;
+      if (tradeCountInput) tradeCountInput.value = stats.tradeCount;
       el.dataset.pnl = stats.pnl;
     }
-    if (!stats || stats.orderCount === 0) { statsEl.textContent = 'No trades today'; return; }
+    if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
     var sign = stats.pnl >= 0 ? '+' : '';
     statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
   }).finally(function () {
