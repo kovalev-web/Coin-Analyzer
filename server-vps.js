@@ -791,6 +791,9 @@ function journalRowToEntry(row) {
     stopCraneKept: row.stop_crane_kept,
     volumeOk: row.volume_ok,
     triggerFired: row.trigger_fired,
+    triggerRevenge: row.trigger_revenge,
+    triggerSizeUp: row.trigger_size_up,
+    triggerFomo: row.trigger_fomo,
     triggerOther: row.trigger_other,
     triggerFomoOther: row.trigger_fomo_other,
     triggerAddFunds: row.trigger_add_funds,
@@ -1037,14 +1040,14 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyE);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, followed_process, traded_planned, trade_count, stop_crane_kept, volume_ok, trigger_fired, trigger_other, trigger_fomo_other, trigger_add_funds, trigger_replan, missed_screening, evening_state, felt_worthless, free_conclusion, evening_at) ' +
-              'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'INSERT INTO journal_entries (user_id, date, followed_process, traded_planned, trade_count, stop_crane_kept, volume_ok, trigger_revenge, trigger_size_up, trigger_fomo, trigger_other, trigger_fomo_other, trigger_add_funds, trigger_replan, missed_screening, evening_state, felt_worthless, free_conclusion, evening_at) ' +
+              'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
               'ON CONFLICT(user_id, date) DO UPDATE SET followed_process = excluded.followed_process, traded_planned = excluded.traded_planned, trade_count = excluded.trade_count, ' +
-              'stop_crane_kept = excluded.stop_crane_kept, volume_ok = excluded.volume_ok, trigger_fired = excluded.trigger_fired, trigger_other = excluded.trigger_other, ' +
+              'stop_crane_kept = excluded.stop_crane_kept, volume_ok = excluded.volume_ok, trigger_revenge = excluded.trigger_revenge, trigger_size_up = excluded.trigger_size_up, trigger_fomo = excluded.trigger_fomo, trigger_other = excluded.trigger_other, ' +
               'trigger_fomo_other = excluded.trigger_fomo_other, trigger_add_funds = excluded.trigger_add_funds, trigger_replan = excluded.trigger_replan, missed_screening = excluded.missed_screening, evening_state = excluded.evening_state, ' +
               'felt_worthless = excluded.felt_worthless, free_conclusion = excluded.free_conclusion, evening_at = excluded.evening_at'
             ).run(jUserId, jToday, jParsed.followedProcess || null, jParsed.tradedPlanned || null, jParsed.tradeCount || 0,
-              jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerFired || null, jParsed.triggerOther || null,
+              jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerRevenge ? 1 : 0, jParsed.triggerSizeUp ? 1 : 0, jParsed.triggerFomo ? 1 : 0, jParsed.triggerOther || null,
               jParsed.triggerFomoOther ? 1 : 0, jParsed.triggerAddFunds ? 1 : 0, jParsed.triggerReplan ? 1 : 0, jParsed.missedScreening || null, jParsed.eveningState || null,
               jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -1191,13 +1191,6 @@ var JOURNAL_SCALE_1_5 = [
 ];
 var JOURNAL_YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
 var JOURNAL_YES_NO_NA = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' }];
-var JOURNAL_TRIGGER_OPTIONS = [
-  { value: 'none', label: 'None' },
-  { value: 'revenge', label: 'Revenge after a stop' },
-  { value: 'size_up', label: 'Sized up after a streak' },
-  { value: 'fomo', label: 'FOMO' },
-  { value: 'other', label: 'Other' },
-];
 var JOURNAL_CHANNELS_OPTIONS = [{ value: 'closed', label: 'Closed' }, { value: 'open', label: 'Open' }];
 var JOURNAL_VOLUME_OPTIONS = [50, 100, 200, 500, 1000, 1500, 2000];
 
@@ -1312,13 +1305,16 @@ export function showEveningModal() {
     + '<div class="journal-field"><label>PnL today</label><div class="journal-static" id="evening-pnl-stats">Loading…</div></div>'
     + '<div class="journal-field"><label>Stop-crane kept after 2 stops</label>' + _journalRadioGroup('stopCraneKept', JOURNAL_YES_NO_NA, entry.stopCraneKept) + '</div>'
     + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
-    + '<div class="journal-field"><label>Trigger fired today</label>' + _journalRadioGroup('triggerFired', JOURNAL_TRIGGER_OPTIONS, entry.triggerFired || 'none')
-        + '<input class="ds-input" type="text" name="triggerOther" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerFired === 'other' ? '' : ' hidden') + '></div>'
-    + '<div class="journal-field"><label>Additional triggers</label><div class="journal-checkbox-list">'
+    + '<div class="journal-field"><label>Trigger fired today</label><div class="journal-checkbox-list">'
+        + _journalCheckbox('triggerRevenge', 'Revenge after a stop', entry.triggerRevenge)
+        + _journalCheckbox('triggerSizeUp', 'Sizing up after a streak', entry.triggerSizeUp)
+        + _journalCheckbox('triggerFomo', 'FOMO', entry.triggerFomo)
         + _journalCheckbox('triggerFomoOther', 'FOMO from someone else\'s trade ("they took it, I didn\'t")', entry.triggerFomoOther)
         + _journalCheckbox('triggerAddFunds', 'Urge to add funds to recover the account', entry.triggerAddFunds)
         + _journalCheckbox('triggerReplan', 'Urge to re-plan because of a pumping coin', entry.triggerReplan)
-        + '</div></div>'
+        + _journalCheckbox('triggerOther', 'Other', !!entry.triggerOther)
+        + '</div>'
+        + '<input class="ds-input" type="text" name="triggerOtherText" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerOther ? '' : ' hidden') + '></div>'
     + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it)</label><textarea class="ds-input" name="missedScreening" rows="3">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
@@ -1329,11 +1325,9 @@ export function showEveningModal() {
   document.body.appendChild(el);
   lockScroll();
 
-  var triggerOtherInput = el.querySelector('[name="triggerOther"]');
-  el.querySelectorAll('[name="triggerFired"]').forEach(function (r) {
-    r.addEventListener('change', function () {
-      triggerOtherInput.hidden = (r.value !== 'other');
-    });
+  var triggerOtherText = el.querySelector('[name="triggerOtherText"]');
+  el.querySelector('[name="triggerOther"]').addEventListener('change', function (e) {
+    triggerOtherText.hidden = !e.target.checked;
   });
 
   fetchTodayTrades().then(function (stats) {

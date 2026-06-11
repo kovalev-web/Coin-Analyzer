@@ -72,6 +72,9 @@ function ensureAuthTables() {
       stop_crane_kept  TEXT,
       volume_ok        TEXT,
       trigger_fired    TEXT,
+      trigger_revenge  INTEGER,
+      trigger_size_up  INTEGER,
+      trigger_fomo     INTEGER,
       trigger_other    TEXT,
       trigger_fomo_other INTEGER,
       trigger_add_funds  INTEGER,
@@ -98,7 +101,7 @@ function ensureAuthTables() {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
     }
   });
-  ['trigger_fomo_other', 'trigger_add_funds', 'trigger_replan', 'watch_revenge', 'watch_size_up', 'watch_fomo', 'watch_fomo_other', 'watch_add_funds', 'watch_replan'].forEach(function (col) {
+  ['trigger_fomo_other', 'trigger_add_funds', 'trigger_replan', 'trigger_revenge', 'trigger_size_up', 'trigger_fomo', 'watch_revenge', 'watch_size_up', 'watch_fomo', 'watch_fomo_other', 'watch_add_funds', 'watch_replan'].forEach(function (col) {
     if (journalCols.indexOf(col) === -1) {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" INTEGER');
     }
