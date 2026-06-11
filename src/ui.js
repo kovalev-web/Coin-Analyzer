@@ -1324,7 +1324,7 @@ export function renderProfileJournal(container, entries) {
     return;
   }
   var header = '<div class="journal-history-header">'
-    + '<div>Date</div><div>AM</div><div>PM</div><div>Trades</div><div>State</div><div>Notes</div><div>PnL</div><div></div>'
+    + '<div>Date</div><div>AM</div><div>PM</div><div>Trades</div><div>State</div><div>PnL</div><div></div>'
     + '</div>';
   container.innerHTML = header + '<div class="journal-history">' + entries.map(function (e) {
     var pnl = e.pnl != null
@@ -1335,7 +1335,6 @@ export function renderProfileJournal(container, entries) {
       + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
       + '<div class="journal-history-cell">' + (e.tradeCount != null ? e.tradeCount : '—') + '</div>'
       + '<div class="journal-history-text">' + escHtml(e.morningState || '') + '</div>'
-      + '<div class="journal-history-text">' + escHtml((e.freeConclusion || '').slice(0, 80)) + '</div>'
       + '<div>' + pnl + '</div>';
 
     var details = '';
