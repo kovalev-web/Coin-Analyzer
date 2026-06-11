@@ -57,6 +57,7 @@ function ensureAuthTables() {
       stop_level       TEXT,
       day_plan         TEXT,
       trigger_watch    TEXT,
+      channels_closed  TEXT,
       morning_at       INTEGER,
       followed_process TEXT,
       traded_planned   TEXT,
@@ -65,6 +66,10 @@ function ensureAuthTables() {
       volume_ok        TEXT,
       trigger_fired    TEXT,
       trigger_other    TEXT,
+      trigger_fomo_other INTEGER,
+      trigger_add_funds  INTEGER,
+      trigger_replan     INTEGER,
+      missed_screening   TEXT,
       evening_state    TEXT,
       felt_worthless   TEXT,
       free_conclusion  TEXT,
@@ -79,6 +84,16 @@ function ensureAuthTables() {
   ['stop_level', 'trigger_watch', 'trigger_other'].forEach(function (col) {
     if (journalCols.indexOf(col) === -1) {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
+    }
+  });
+  ['channels_closed', 'missed_screening'].forEach(function (col) {
+    if (journalCols.indexOf(col) === -1) {
+      sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
+    }
+  });
+  ['trigger_fomo_other', 'trigger_add_funds', 'trigger_replan'].forEach(function (col) {
+    if (journalCols.indexOf(col) === -1) {
+      sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" INTEGER');
     }
   });
 }

@@ -1198,6 +1198,11 @@ var JOURNAL_TRIGGER_OPTIONS = [
   { value: 'fomo', label: 'FOMO' },
   { value: 'other', label: 'Other' },
 ];
+var JOURNAL_CHANNELS_OPTIONS = [{ value: 'closed', label: 'Closed' }, { value: 'open', label: 'Open' }];
+
+function _journalCheckbox(name, label, checked) {
+  return '<label class="journal-radio"><input type="checkbox" name="' + name + '"' + (checked ? ' checked' : '') + '> ' + label + '</label>';
+}
 
 function _briefingCoinsHTML(today) {
   var syms = (state.briefing || []).filter(function (e) { return e.date === today; }).map(function (e) { return e.sym.toUpperCase(); });
@@ -1220,6 +1225,7 @@ export function showMorningModal() {
     + '<div class="journal-field"><label>Allowed loss per trade</label><input class="ds-input" type="text" name="stopLevel"></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
+    + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
     + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — pause trading. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
     + '</div>';
@@ -1234,10 +1240,11 @@ export function showMorningModal() {
     var volume = el.querySelector('[name="volume"]').value.trim();
     var stopLevel = el.querySelector('[name="stopLevel"]').value.trim();
     var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
+    var channelsClosed = (el.querySelector('[name="channelsClosed"]:checked') || {}).value || '';
     hint.hidden = !(morningState && Number(morningState) <= 2);
-    btn.disabled = !(morningState && volume && stopLevel && dayPlan);
+    btn.disabled = !(morningState && volume && stopLevel && dayPlan && channelsClosed);
   }
-  el.querySelectorAll('[name="morningState"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
+  el.querySelectorAll('[name="morningState"], [name="channelsClosed"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
   ['volume', 'stopLevel', 'dayPlan'].forEach(function (name) {
     el.querySelector('[name="' + name + '"]').addEventListener('input', _checkFilled);
   });
@@ -1272,6 +1279,12 @@ export function showEveningModal() {
     + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
     + '<div class="journal-field"><label>Trigger fired today</label>' + _journalRadioGroup('triggerFired', JOURNAL_TRIGGER_OPTIONS, entry.triggerFired || 'none')
         + '<input class="ds-input" type="text" name="triggerOther" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerFired === 'other' ? '' : ' hidden') + '></div>'
+    + '<div class="journal-field"><label>Additional triggers</label><div class="journal-radio-group">'
+        + _journalCheckbox('triggerFomoOther', 'Someone else\'s trade triggered FOMO ("they took it, I didn\'t")', entry.triggerFomoOther)
+        + _journalCheckbox('triggerAddFunds', 'Urge to add funds to recover the account (mechanism blocks it — log the urge itself)', entry.triggerAddFunds)
+        + _journalCheckbox('triggerReplan', 'Urge to re-plan because of a pumping coin / "I picked the wrong one"', entry.triggerReplan)
+        + '</div></div>'
+    + '<div class="journal-field"><label>Missed in screening (coin / what matched my criteria this morning / why I didn\'t flag it)</label><textarea class="ds-input" name="missedScreening" rows="3">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
     + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'

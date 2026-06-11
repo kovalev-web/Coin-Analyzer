@@ -54,12 +54,13 @@ exports.journalEntries = sqliteTable('journal_entries', {
   date:      text('date').notNull(), // 'YYYY-MM-DD', unique per user
 
   // Morning
-  morningState: text('morning_state'),
-  volume:       text('volume'),
-  stopLevel:    text('stop_level'),
-  dayPlan:      text('day_plan'),
-  triggerWatch: text('trigger_watch'),
-  morningAt:    integer('morning_at', { mode: 'timestamp' }),
+  morningState:   text('morning_state'),
+  volume:         text('volume'),
+  stopLevel:      text('stop_level'),
+  dayPlan:        text('day_plan'),
+  triggerWatch:   text('trigger_watch'),
+  channelsClosed: text('channels_closed'),
+  morningAt:      integer('morning_at', { mode: 'timestamp' }),
 
   // Evening
   followedProcess:  text('followed_process'),
@@ -69,6 +70,10 @@ exports.journalEntries = sqliteTable('journal_entries', {
   volumeOk:         text('volume_ok'),
   triggerFired:     text('trigger_fired'),
   triggerOther:     text('trigger_other'),
+  triggerFomoOther: integer('trigger_fomo_other'),
+  triggerAddFunds:  integer('trigger_add_funds'),
+  triggerReplan:    integer('trigger_replan'),
+  missedScreening:  text('missed_screening'),
   eveningState:     text('evening_state'),
   feltWorthless:    text('felt_worthless'),
   freeConclusion:   text('free_conclusion'),

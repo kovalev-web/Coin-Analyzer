@@ -316,6 +316,7 @@ document.body.addEventListener('click', function (e) {
         stopLevel:    mModal.querySelector('[name="stopLevel"]').value.trim(),
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
+        channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
       }).then(function () {
         hideMorningModal();
         _refreshJournalHistory();
@@ -337,6 +338,10 @@ document.body.addEventListener('click', function (e) {
         volumeOk:         (eModal.querySelector('[name="volumeOk"]:checked') || {}).value || '',
         triggerFired:     (eModal.querySelector('[name="triggerFired"]:checked') || {}).value || '',
         triggerOther:     eModal.querySelector('[name="triggerOther"]').value.trim(),
+        triggerFomoOther: eModal.querySelector('[name="triggerFomoOther"]').checked,
+        triggerAddFunds:  eModal.querySelector('[name="triggerAddFunds"]').checked,
+        triggerReplan:    eModal.querySelector('[name="triggerReplan"]').checked,
+        missedScreening:  eModal.querySelector('[name="missedScreening"]').value.trim(),
         eveningState:     (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
         feltWorthless:    (eModal.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
         freeConclusion:   eModal.querySelector('[name="freeConclusion"]').value.trim(),
