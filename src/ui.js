@@ -1222,9 +1222,11 @@ export function showMorningModal() {
     '<div class="journal-modal journal-modal--morning">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
-    + '<div class="journal-field"><label>Max volume</label><select class="ds-input" name="volume">'
-        + JOURNAL_VOLUME_OPTIONS.map(function (v) { return '<option value="' + v + '"' + (v === 50 ? ' selected' : '') + '>$' + v + '</option>'; }).join('')
-        + '</select></div>'
+    + '<div class="journal-field"><label>Max volume</label>'
+        + '<div class="ds-select" id="morning-volume-select"><input type="hidden" name="volume" value="50"><button class="ds-select-btn" type="button"><span class="ds-select-val">$50</span><span class="ds-select-chevron">' + icon('chevron-down', 14) + '</span></button><div class="ds-select-dd">'
+          + JOURNAL_VOLUME_OPTIONS.map(function (v) { return '<div class="ds-select-item' + (v === 50 ? ' selected' : '') + '" data-value="' + v + '">$' + v + '</div>'; }).join('')
+        + '</div></div>'
+      + '</div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">0.5%</div></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
@@ -1235,6 +1237,23 @@ export function showMorningModal() {
 
   document.body.appendChild(el);
   lockScroll();
+
+  var volSelect = el.querySelector('#morning-volume-select');
+  var volInput = volSelect.querySelector('[name="volume"]');
+  var volVal = volSelect.querySelector('.ds-select-val');
+  volSelect.querySelector('.ds-select-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    volSelect.classList.toggle('open');
+  });
+  volSelect.querySelectorAll('.ds-select-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      volInput.value = item.dataset.value;
+      volVal.textContent = item.textContent;
+      volSelect.querySelectorAll('.ds-select-item').forEach(function (i) { i.classList.toggle('selected', i === item); });
+      volSelect.classList.remove('open');
+    });
+  });
+  document.addEventListener('click', function () { volSelect.classList.remove('open'); });
 
   var btn = el.querySelector('[data-action="save-morning-journal"]');
   var hint = el.querySelector('[data-hint="morningState"]');
