@@ -1227,7 +1227,7 @@ export function showMorningModal() {
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
     + '<div class="journal-field"><label>Max volume</label><div class="journal-static">$50</div></div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">0.5%</div></div>'
-    + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
+    + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="2"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
     + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
@@ -1287,10 +1287,10 @@ export function showEveningModal() {
         + _journalCheckbox('triggerOther', 'Other', !!entry.triggerOther)
         + '</div>'
         + '<input class="ds-input" type="text" name="triggerOtherText" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerOther ? '' : ' hidden') + '></div>'
-    + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="3">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="2">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
-    + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="4">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="2">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
     + '<button class="btn-cta" data-action="save-evening-journal" disabled>Save review</button>'
     + '</div>';
 
