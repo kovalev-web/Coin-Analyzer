@@ -2601,9 +2601,9 @@ function _topbarHTML() {
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
     + '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>'
+    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
+    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
     + _sessionTimerMobileHTML()
     + '</div>'
@@ -2611,9 +2611,9 @@ function _topbarHTML() {
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd dropdown" id="burger-dd">'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
     + '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>'
+    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) : icon('moon', 14)) + 'Toggle theme</button>'
+    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
     + _sessionTimerMobileHTML()
     + '</div>'
