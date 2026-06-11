@@ -2,7 +2,7 @@ import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -1327,7 +1327,9 @@ export function renderProfileJournal(container, entries) {
     + '<div>Date</div><div>AM</div><div>PM</div><div>Trades</div><div>State</div><div>Notes</div><div>PnL</div><div></div>'
     + '</div>';
   container.innerHTML = header + '<div class="journal-history">' + entries.map(function (e) {
-    var pnl = e.pnl != null ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>' : '—';
+    var pnl = e.pnl != null
+      ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
+      : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
     var cells = '<div class="journal-history-date">' + e.date + '</div>'
       + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
       + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
@@ -1349,6 +1351,14 @@ export function renderProfileJournal(container, entries) {
       + '<div class="journal-history-details">' + details + '</div>'
       + '</details>';
   }).join('') + '</div>';
+
+  container.querySelectorAll('[data-journal-pnl-date]').forEach(function (el) {
+    var date = el.dataset.journalPnlDate;
+    fetchTradesForDate(date).then(function (stats) {
+      var pnl = stats ? stats.pnl : 0;
+      el.outerHTML = '<span class="journal-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2) + '</span>';
+    });
+  });
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────

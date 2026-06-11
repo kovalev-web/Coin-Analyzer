@@ -1013,26 +1013,21 @@ export async function fetchWeekTrades(force) {
   return state.weekSummary;
 }
 
-// PnL/win-rate for today's briefing entries (used by the evening journal modal).
-export async function fetchTodayTrades() {
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-'
-    + String(today.getMonth() + 1).padStart(2, '0') + '-'
-    + String(today.getDate()).padStart(2, '0');
-
+// PnL/win-rate for the briefing/watchlist symbols' trades on a given date.
+export async function fetchTradesForDate(dateStr) {
   // Use every symbol ever seen in the briefing/watchlist, not just entries added
-  // today — a coin tracked on a previous day may still be traded today.
+  // on that date — a coin tracked on a previous day may still be traded later.
   var syms = {};
   (state.briefing || []).forEach(function (e) { if (!e.auto) syms[e.sym] = true; });
   syms = Object.keys(syms);
   if (!syms.length) return null;
 
-  syms.forEach(function (sym) { delete state.trades[sym + ':' + todayStr]; });
-  await Promise.all(syms.map(function (sym) { return fetchTrades(sym, todayStr); }));
+  syms.forEach(function (sym) { delete state.trades[sym + ':' + dateStr]; });
+  await Promise.all(syms.map(function (sym) { return fetchTrades(sym, dateStr); }));
 
   var streams = {};
   syms.forEach(function (sym) {
-    var t = state.trades[sym + ':' + todayStr];
+    var t = state.trades[sym + ':' + dateStr];
     if (!t || t.status !== 'ok' || !t.entries) return;
     t.entries.forEach(function (fill) {
       var key = sym + ':' + (fill.positionSide || 'BOTH');
@@ -1059,7 +1054,7 @@ export async function fetchTodayTrades() {
   var totalPnl = 0;
   var orderIds = {};
   syms.forEach(function (sym) {
-    var t = state.trades[sym + ':' + todayStr];
+    var t = state.trades[sym + ':' + dateStr];
     if (!t || t.status !== 'ok') return;
     totalPnl += t.pnl;
     (t.entries || []).forEach(function (fill) { orderIds[fill.orderId] = true; });
@@ -1072,6 +1067,15 @@ export async function fetchTodayTrades() {
     winCount: winCount,
     winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
   };
+}
+
+// PnL/win-rate for today's briefing entries (used by the evening journal modal).
+export async function fetchTodayTrades() {
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-'
+    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+    + String(today.getDate()).padStart(2, '0');
+  return fetchTradesForDate(todayStr);
 }
 
 // Call Gemini via proxy to generate a weekly trading summary.
