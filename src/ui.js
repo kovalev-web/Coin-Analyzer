@@ -1180,6 +1180,17 @@ export function showAccountModal() {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
+function _autoGrowTextareas(container) {
+  container.querySelectorAll('textarea.ds-input').forEach(function (t) {
+    var grow = function () {
+      t.style.height = 'auto';
+      t.style.height = t.scrollHeight + 'px';
+    };
+    t.addEventListener('input', grow);
+    grow();
+  });
+}
+
 function _journalRadioGroup(name, options, selected) {
   return '<div class="journal-radio-group">' + options.map(function (o) {
     return '<label class="journal-radio"><input type="radio" name="' + name + '" value="' + o.value + '"' + (o.value === selected ? ' checked' : '') + '> ' + o.label + '</label>';
@@ -1225,6 +1236,7 @@ export function showMorningModal() {
 
   document.body.appendChild(el);
   lockScroll();
+  _autoGrowTextareas(el);
 
   var btn = el.querySelector('[data-action="save-morning-journal"]');
   var hint = el.querySelector('[data-hint="morningState"]');
@@ -1284,6 +1296,7 @@ export function showEveningModal() {
 
   document.body.appendChild(el);
   lockScroll();
+  _autoGrowTextareas(el);
 
   var triggerOtherText = el.querySelector('[name="triggerOtherText"]');
   el.querySelector('[name="triggerOther"]').addEventListener('change', function (e) {

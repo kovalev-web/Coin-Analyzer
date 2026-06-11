@@ -724,6 +724,13 @@ registerRoute('/journal', function () {
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
   });
+  fetchJournalToday().then(function () {
+    var mBtn = document.querySelector('[data-action="open-morning-journal"]');
+    if (!mBtn) return;
+    var filled = !!(state.journalToday && state.journalToday.morningAt);
+    mBtn.disabled = filled;
+    mBtn.textContent = 'Morning journal' + (filled ? ' ✓' : '');
+  });
 });
 
 registerRoute('/404', function () {

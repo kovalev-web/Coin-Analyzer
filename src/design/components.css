@@ -409,7 +409,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .journal-modal .popup-header .btn-topbar{margin-left:auto;}
 .journal-field{margin-bottom:var(--space-8);}
 .journal-field label{display:block;font-size:var(--text-xs);font-weight:var(--font-semi);color:var(--graphite);margin-bottom:var(--space-3);}
-.journal-field textarea.ds-input{height:auto;padding:var(--space-5) var(--space-6);resize:vertical;}
+.journal-field textarea.ds-input{height:auto;padding:var(--space-5) var(--space-6);resize:none;overflow:hidden;}
 .journal-static{font-size:var(--text-sm);color:var(--graphite);padding:0 var(--space-2);}
 .journal-modal .btn-cta{width:100%;margin-top:var(--space-4);}
 .journal-radio-group{display:flex;flex-wrap:wrap;gap:var(--space-4);}
