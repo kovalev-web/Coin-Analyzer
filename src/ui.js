@@ -1192,7 +1192,6 @@ var JOURNAL_SCALE_1_5 = [
 var JOURNAL_YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
 var JOURNAL_YES_NO_NA = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' }];
 var JOURNAL_CHANNELS_OPTIONS = [{ value: 'closed', label: 'Closed' }, { value: 'open', label: 'Open' }];
-var JOURNAL_VOLUME_OPTIONS = [50, 100, 200, 500, 1000, 1500, 2000];
 
 function _journalCheckbox(name, label, checked) {
   return '<label class="journal-checkbox"><input type="checkbox" name="' + name + '"' + (checked ? ' checked' : '') + '><span>' + label + '</span></label>';
@@ -1215,11 +1214,7 @@ export function showMorningModal() {
     '<div class="journal-modal journal-modal--morning">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
-    + '<div class="journal-field"><label>Max volume</label>'
-        + '<div class="ds-select" id="morning-volume-select"><input type="hidden" name="volume" value="50"><button class="ds-select-btn" type="button"><span class="ds-select-val">$50</span><span class="ds-select-chevron">' + icon('chevron-down', 14) + '</span></button><div class="ds-select-dd">'
-          + JOURNAL_VOLUME_OPTIONS.map(function (v) { return '<div class="ds-select-item' + (v === 50 ? ' selected' : '') + '" data-value="' + v + '">$' + v + '</div>'; }).join('')
-        + '</div></div>'
-      + '</div>'
+    + '<div class="journal-field"><label>Max volume</label><div class="journal-static">$50</div></div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">0.5%</div></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="3"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><div class="journal-checkbox-list">'
@@ -1240,23 +1235,6 @@ export function showMorningModal() {
   document.body.appendChild(el);
   lockScroll();
 
-  var volSelect = el.querySelector('#morning-volume-select');
-  var volInput = volSelect.querySelector('[name="volume"]');
-  var volVal = volSelect.querySelector('.ds-select-val');
-  volSelect.querySelector('.ds-select-btn').addEventListener('click', function (e) {
-    e.stopPropagation();
-    volSelect.classList.toggle('open');
-  });
-  volSelect.querySelectorAll('.ds-select-item').forEach(function (item) {
-    item.addEventListener('click', function () {
-      volInput.value = item.dataset.value;
-      volVal.textContent = item.textContent;
-      volSelect.querySelectorAll('.ds-select-item').forEach(function (i) { i.classList.toggle('selected', i === item); });
-      volSelect.classList.remove('open');
-    });
-  });
-  document.addEventListener('click', function () { volSelect.classList.remove('open'); });
-
   var watchOtherText = el.querySelector('[name="watchOtherText"]');
   el.querySelector('[name="watchOther"]').addEventListener('change', function (e) {
     watchOtherText.hidden = !e.target.checked;
@@ -1266,16 +1244,13 @@ export function showMorningModal() {
   var hint = el.querySelector('[data-hint="morningState"]');
   function _checkFilled() {
     var morningState = (el.querySelector('[name="morningState"]:checked') || {}).value || '';
-    var volume = el.querySelector('[name="volume"]').value.trim();
     var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
     var channelsClosed = (el.querySelector('[name="channelsClosed"]:checked') || {}).value || '';
     hint.hidden = !(morningState && Number(morningState) <= 2);
-    btn.disabled = !(morningState && volume && dayPlan && channelsClosed);
+    btn.disabled = !(morningState && dayPlan && channelsClosed);
   }
   el.querySelectorAll('[name="morningState"], [name="channelsClosed"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
-  ['volume', 'dayPlan'].forEach(function (name) {
-    el.querySelector('[name="' + name + '"]').addEventListener('input', _checkFilled);
-  });
+  el.querySelector('[name="dayPlan"]').addEventListener('input', _checkFilled);
 }
 
 export function hideMorningModal() {

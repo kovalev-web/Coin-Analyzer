@@ -312,7 +312,7 @@ document.body.addEventListener('click', function (e) {
       var mModal = document.getElementById('morning-journal-modal');
       saveJournalMorning({
         morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
-        volume:       mModal.querySelector('[name="volume"]').value.trim(),
+        volume:       '50',
         stopLevel:    '0.5%',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         watchRevenge:   mModal.querySelector('[name="watchRevenge"]').checked,
