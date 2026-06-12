@@ -53,7 +53,9 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 /* ── Session timer (Asia/Europe/America) ───────────────────── */
 .session-timer{display:flex;align-items:center;gap:var(--space-8);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;}
 .session-dots{display:inline-flex;align-items:center;gap:var(--space-8);}
-.session-dot{display:inline-flex;align-items:center;font-weight:var(--font-normal);color:var(--graphite);}
+.session-dot{display:inline-flex;align-items:center;gap:var(--space-4);font-weight:var(--font-normal);color:var(--graphite);}
+.session-wheel{flex:none;}
+.session-wheel circle:last-child{transition:stroke-dashoffset 1s linear;}
 .session-dot.active{color:var(--ink-deep);}
 .session-timer-next{color:var(--graphite);font-weight:var(--font-medium);padding-left:var(--space-6);border-left:1px solid var(--steel);}
 .session-dots:empty{display:none;}
@@ -183,7 +185,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .burger-dd,.avatar-dd{top:calc(100% + var(--space-4));border-radius:var(--radius-xl);z-index:500;min-width:160px;}
 .burger-dd-item{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-6) var(--space-8);font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink-deep);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;height:auto;border-radius:0;letter-spacing:0;text-decoration:none;}
 .burger-dd-item:hover{background:var(--fog);opacity:1;}
-.burger-dd-footer{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);padding:var(--space-6) var(--space-8);border-top:1px solid var(--fog);font-size:var(--text-xs);color:var(--graphite);}
+.burger-dd-footer{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-6);padding:var(--space-6) var(--space-8);border-top:1px solid var(--fog);font-size:var(--text-xs);color:var(--graphite);}
 .burger-dd-footer .session-timer-next{border-left:none;padding-left:0;}
 .session-timer-mobile{display:none;}
 @media(max-width:900px){.session-timer-mobile{display:flex;}}

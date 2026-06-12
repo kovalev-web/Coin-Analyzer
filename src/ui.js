@@ -2497,10 +2497,22 @@ var _LOGO_SVG = '<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xml
 // ── Session timer (Asia / Europe / America, desktop nav) ────────────────────
 
 var TRADING_SESSIONS = [
-  { key: 'asia', label: 'Asia', start: 0, end: 9 },
-  { key: 'europe', label: 'Europe', start: 7, end: 16 },
-  { key: 'america', label: 'America', start: 12, end: 21 },
+  { key: 'asia', label: 'Asia', short: 'AS', start: 0, end: 9 },
+  { key: 'europe', label: 'Europe', short: 'EU', start: 7, end: 16 },
+  { key: 'america', label: 'America', short: 'US', start: 12, end: 21 },
 ];
+
+var SESSION_WHEEL_CIRCUMFERENCE = 2 * Math.PI * 5;
+
+function _sessionWheelSVG(percent) {
+  var offset = SESSION_WHEEL_CIRCUMFERENCE * (1 - percent);
+  return '<svg class="session-wheel" width="12" height="12" viewBox="0 0 12 12">'
+    + '<circle cx="6" cy="6" r="5" fill="none" stroke="var(--steel)" stroke-width="3"/>'
+    + '<circle cx="6" cy="6" r="5" fill="none" stroke="var(--bullish)" stroke-width="3" '
+    + 'stroke-dasharray="' + SESSION_WHEEL_CIRCUMFERENCE + '" stroke-dashoffset="' + offset + '" '
+    + 'stroke-linecap="round" transform="rotate(-90 6 6)"/>'
+    + '</svg>';
+}
 
 function _sessionInfo() {
   var nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
@@ -2512,20 +2524,25 @@ function _sessionInfo() {
     var isActive = nowMin >= startMin && nowMin < endMin;
     if (isActive) { activeKeys.push(s.key); activeLabels.push(s.label); }
     var untilStart = startMin - nowMin; if (untilStart <= 0) untilStart += 1440;
-    events.push({ type: 'opens', label: s.label, minutes: untilStart });
+    events.push({ type: 'opens', label: s.label, short: s.short, minutes: untilStart });
     if (isActive) {
       var untilEnd = endMin - nowMin; if (untilEnd <= 0) untilEnd += 1440;
-      events.push({ type: 'closes', label: s.label, minutes: untilEnd });
+      events.push({ type: 'closes', label: s.label, short: s.short, minutes: untilEnd });
     }
   });
   if (activeLabels.length >= 2) {
-    return { activeKeys: activeKeys, nextText: 'Overlap: ' + activeLabels.join(' & ') };
+    var overlapText = 'Overlap: ' + activeLabels.join(' & ');
+    return { activeKeys: activeKeys, nextText: overlapText, nextTextShort: overlapText };
   }
   events.sort(function (a, b) { return a.minutes - b.minutes; });
   var next = events[0];
   var h = Math.floor(next.minutes / 60), m = next.minutes % 60;
   var dur = h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
-  return { activeKeys: activeKeys, nextText: next.label + ' ' + next.type + ' in ' + dur };
+  return {
+    activeKeys: activeKeys,
+    nextText: next.label + ' ' + next.type + ' in ' + dur,
+    nextTextShort: next.short + ' ' + next.type + ' in ' + dur,
+  };
 }
 
 function _localHourStr(utcHour) {
@@ -2549,7 +2566,13 @@ function _sessionDotsHTML(activeKeys) {
     var local = _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
     var untilEnd = s.end * 60 - nowMin; if (untilEnd <= 0) untilEnd += 1440;
     var cls = (active.length > 1 && untilEnd === minUntilEnd) ? 'ending' : 'active';
-    return '<span class="session-dot ' + cls + '" title="' + s.label + ' ' + local + '">' + s.label + '</span>';
+    var idx = TRADING_SESSIONS.indexOf(s);
+    var nextOpen = TRADING_SESSIONS[(idx + 1) % TRADING_SESSIONS.length].start * 60;
+    var interval = (nextOpen - s.start * 60 + 1440) % 1440;
+    var elapsed = (nowMin - s.start * 60 + 1440) % 1440;
+    var percent = elapsed / interval;
+    return '<span class="session-dot ' + cls + '" title="' + s.label + ' ' + local + '">'
+      + _sessionWheelSVG(percent) + s.short + '</span>';
   }).join('');
 }
 
@@ -2565,18 +2588,24 @@ function _sessionTimerMobileHTML() {
   var info = _sessionInfo();
   return '<div class="burger-dd-footer session-timer-mobile">'
     + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
-    + '<span class="session-timer-next">' + info.nextText + '</span>'
+    + '<span class="session-timer-next">' + info.nextTextShort + '</span>'
     + '</div>';
 }
 
 export function updateSessionTimer() {
   var info = _sessionInfo();
-  var els = document.querySelectorAll('#session-timer, .session-timer-mobile');
-  els.forEach(function (el) {
-    var dots = el.querySelector('.session-dots');
+  var desktopEl = document.getElementById('session-timer');
+  if (desktopEl) {
+    var dots = desktopEl.querySelector('.session-dots');
     if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
-    var next = el.querySelector('.session-timer-next');
+    var next = desktopEl.querySelector('.session-timer-next');
     if (next) next.textContent = info.nextText;
+  }
+  document.querySelectorAll('.session-timer-mobile').forEach(function (el) {
+    var mDots = el.querySelector('.session-dots');
+    if (mDots) mDots.innerHTML = _sessionDotsHTML(info.activeKeys);
+    var mNext = el.querySelector('.session-timer-next');
+    if (mNext) mNext.textContent = info.nextTextShort;
   });
 }
 
