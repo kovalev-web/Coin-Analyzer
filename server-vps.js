@@ -950,6 +950,40 @@ var httpServer = http.createServer(async function (req, res) {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/api/rays') {
+    var rayBody = '';
+    req.on('data', function (chunk) { rayBody += chunk; });
+    req.on('end', async function () {
+      try {
+        var raySession = await getSession(req);
+        if (!raySession) return unauthorized(res);
+        var rayUserId = raySession.user.id;
+
+        var rayParsed = JSON.parse(rayBody);
+        var rayAction = rayParsed.action, rays = rayParsed.rays;
+        var rayKey = 'rays:' + rayUserId;
+        if (rayAction === 'get') {
+          var rr = await redis(['GET', rayKey]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ rays: rr.result ? JSON.parse(rr.result) : {} }));
+        } else if (rayAction === 'save') {
+          var normRays = {};
+          Object.keys(rays || {}).forEach(function (s) { normRays[s.toLowerCase()] = rays[s]; });
+          await redis(['SET', rayKey, JSON.stringify(normRays)]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unknown action' }));
+        }
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/api/alerts') {
     var body2 = '';
     req.on('data', function (chunk) { body2 += chunk; });

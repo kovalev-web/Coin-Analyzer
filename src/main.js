@@ -15,7 +15,7 @@ import {
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
-  loadLevels, fetchServerLevels, loadRays,
+  loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   updateSessionTimer,
@@ -778,6 +778,7 @@ async function _revalidateSession() {
     loadAlerts();
     loadBriefing();
     fetchServerLevels();
+    fetchServerRays();
     fetchNotifications();
   }
 }

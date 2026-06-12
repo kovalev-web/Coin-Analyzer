@@ -204,6 +204,7 @@ var _userId = null; // set by setUserId() after session check
 var _userEmail = null;
 var _userAvatar = null;
 var _syncTimer = null;
+var _raySyncTimer = null;
 
 export function setUserId(id) {
   _userId = id;
@@ -1500,8 +1501,61 @@ function raysData() {
   return out;
 }
 
+function syncRaysToServer() {
+  if (!_userId) return;
+  fetch(API_BASE + '/api/rays', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', rays: raysData() }),
+  }).catch(function () {});
+}
+
 function saveRays() {
   try { localStorage.setItem('pa_rays', JSON.stringify(raysData())); } catch (e) {}
+  clearTimeout(_raySyncTimer);
+  _raySyncTimer = setTimeout(syncRaysToServer, 1000);
+}
+
+function applyServerRays(data) {
+  if (!data || Object.keys(data).length === 0) return;
+  Object.keys(_rays).forEach(function (sym) {
+    var s = _fullSeries[sym];
+    (_rays[sym] || []).forEach(function (r) {
+      if (r.line && s) { try { s.removePriceLine(r.line); } catch (e) {} }
+      if (_fvSeries && _fvSym === sym && r.fvLine) { try { _fvSeries.removePriceLine(r.fvLine); } catch (e) {} }
+    });
+  });
+  _rays = {};
+  Object.keys(data).forEach(function (sym) {
+    _rays[sym.toLowerCase()] = data[sym].map(function (r) {
+      return { id: r.id || _rNewId(), time1: r.time1, price1: r.price1, line: null, fvLine: null };
+    });
+  });
+  try { localStorage.setItem('pa_rays', JSON.stringify(data)); } catch (e) {}
+  Object.keys(_rays).forEach(function (sym) {
+    (_rays[sym] || []).forEach(function (r) { attachRay(sym, r); });
+    updateClearBtn(sym);
+  });
+}
+
+export function fetchServerRays() {
+  fetch(API_BASE + '/api/rays', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ action: 'get' }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || !d.rays) return;
+    var serverEmpty = Object.keys(d.rays).length === 0;
+    var localData = raysData();
+    var localHasData = Object.keys(localData).length > 0;
+    if (serverEmpty && localHasData) {
+      syncRaysToServer();
+    } else if (!serverEmpty) {
+      applyServerRays(d.rays);
+    }
+  }).catch(function () {});
 }
 
 export function loadRays() {
@@ -1513,6 +1567,7 @@ export function loadRays() {
       });
     });
   } catch (e) {}
+  if (_userId) fetchServerRays();
 }
 
 // Price line used only for its axis label (lineVisible:false) — the ray
