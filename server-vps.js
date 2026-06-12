@@ -443,9 +443,12 @@ setInterval(function() {
 
 var binanceWS = null;
 var _pushPending = false;
+var _lastTickerPush = 0;
+var TICKER_PUSH_INTERVAL_MS = 1000;
 
 function schedulePush() {
   if (_pushPending) return;
+  if (Date.now() - _lastTickerPush < TICKER_PUSH_INTERVAL_MS) return; // setInterval(pushTicker) will catch up
   _pushPending = true;
   setTimeout(function () { _pushPending = false; pushTicker(); }, 100);
 }
@@ -527,6 +530,7 @@ function connectBinanceWS(symbols) {
 function pushTicker() {
   var arr = Object.values(tickerCache);
   if (!arr.length) return;
+  _lastTickerPush = Date.now();
   var msg = JSON.stringify({ type: 'ticker', data: arr });
   clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
 }
