@@ -2773,7 +2773,7 @@ function _sessionDotsHTML(activeKeys) {
     var nextOpen = TRADING_SESSIONS[(idx + 1) % TRADING_SESSIONS.length].start * 60;
     var interval = (nextOpen - s.start * 60 + 1440) % 1440;
     var elapsed = (nowMin - s.start * 60 + 1440) % 1440;
-    var percent = elapsed / interval;
+    var percent = Math.min(elapsed / interval, 1);
     return '<span class="session-dot ' + cls + '" title="' + s.label + ' ' + local + '">'
       + _sessionWheelSVG(percent) + s.short + '</span>';
   }).join('');
