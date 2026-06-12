@@ -222,10 +222,14 @@ function processTickerPush(arr) {
       newCoins++;
       return;
     }
-    coin.current_price = parseFloat(t.c);
+    var _now = Date.now();
+    // Если по монете идёт kline WS (карточка с открытым графиком) — current_price
+    // обновляется оттуда (тики live), а t.c из @ticker может на сервере "залипать"
+    // (стрим тикера для конкретного символа перестаёт приходить, кэш не обновляется),
+    // что давало флип-флоп % между live-ценой и устаревшим t.c каждую секунду.
+    if (_now - (_lastKlineAt[sym] || 0) >= 3000) coin.current_price = parseFloat(t.c);
     coin.total_volume = Math.round(parseFloat(t.q));
     if (t.P != null) coin.price_change_percentage_24h = parseFloat(t.P);
-    var _now = Date.now();
     if (t.o != null && (!coin._openSyncAt || _now - coin._openSyncAt > 60000)) {
       coin.open_24h = parseFloat(t.o);
       coin._openSyncAt = _now;
