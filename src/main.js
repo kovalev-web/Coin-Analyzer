@@ -7,7 +7,7 @@ import {
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv,
 } from './api.js';
 import {
-  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
+  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -15,7 +15,7 @@ import {
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
-  loadLevels, fetchServerLevels,
+  loadLevels, fetchServerLevels, loadRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   updateSessionTimer,
@@ -273,6 +273,10 @@ document.body.addEventListener('click', function (e) {
     case 'clear-levels':
       closeClearPopup();
       clearLevels(sym);
+      break;
+    case 'clear-rays':
+      closeClearPopup();
+      clearRays(sym);
       break;
     case 'clear-alerts':
       closeClearPopup();
@@ -797,6 +801,7 @@ async function _revalidateSession() {
   loadAlerts();
   loadBriefing();
   loadLevels();
+  loadRays();
   fetchNotifications();
   initRouter('/');
 })();

@@ -1443,13 +1443,164 @@ export function clearLevels(sym) {
 function updateClearBtn(sym) {
   var lCount = (_levels[sym] || []).length;
   var aCount = (_alerts[sym] || []).length;
-  var show = (lCount || aCount) ? 'inline-flex' : 'none';
+  var rCount = (_rays[sym] || []).length;
+  var show = (lCount || aCount || rCount) ? 'inline-flex' : 'none';
   document.querySelectorAll('.btn-icon.clear[data-sym="' + sym + '"]').forEach(function (btn) {
     btn.style.display = show;
   });
 }
 
 function updateLevelsBtn(sym) { updateClearBtn(sym); }
+
+// ── Rays ───────────────────────────────────────────────────────────────────
+//
+// Horizontal ray: anchored at (time1, price1), drawn from the anchor to the
+// right edge of the chart (cross-TF, so time1 is extrapolated rather than
+// snapped to a bar via timeToCoordinate — see _rayCoordMap).
+//
+// Desktop: Ctrl+left-click on empty space adds a ray; Ctrl+left-click on an
+// existing ray grabs it for dragging; Ctrl+right-click removes it.
+
+var _rays = {}; // sym → [{id, time1, price1, line, fvLine}]
+var _rIdSeed = 0;
+var _rayDragging = null;    // card drag: {sym, idx, ray, grabX, grabPrice, grabTime, origPrice1, origTime1}
+var _fvRayDragging = null;  // FV drag: same shape (no sym)
+
+var RAY_TF_SEC = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '1d': 86400 };
+var RAY_COLOR = '#277CC2';
+
+function _rNewId() { return 'r' + (++_rIdSeed) + '_' + Date.now(); }
+
+// Maps between time and x-coordinate by extrapolating from the last loaded
+// candle, so a ray's anchor stays put when switching timeframes (native
+// timeToCoordinate snaps to the new TF's bar grid and would jump the anchor).
+function _rayCoordMap(chart, sym, tf) {
+  var cd = state.chartData[sym + '_' + tf];
+  if (!cd || !cd.candles || !cd.candles.length) return null;
+  var ts = chart.timeScale();
+  var lastT = cd.candles[cd.candles.length - 1].time;
+  var lastX = ts.timeToCoordinate(lastT);
+  if (lastX == null) return null;
+  var barSpacing; try { barSpacing = ts.options().barSpacing; } catch (_) {}
+  if (!barSpacing) return null;
+  var pxPerSec = barSpacing / (RAY_TF_SEC[tf] || 300);
+  return {
+    timeToX: function (t) { return lastX + (t - lastT) * pxPerSec; },
+    xToTime: function (x) { var t = ts.coordinateToTime(x); return t != null ? t : lastT + (x - lastX) / pxPerSec; },
+  };
+}
+
+// Serialize rays for storage (no chart refs).
+function raysData() {
+  var out = {};
+  Object.keys(_rays).forEach(function (sym) {
+    var arr = _rays[sym];
+    if (arr && arr.length) out[sym] = arr.map(function (r) { return { id: r.id, time1: r.time1, price1: r.price1 }; });
+  });
+  return out;
+}
+
+function saveRays() {
+  try { localStorage.setItem('pa_rays', JSON.stringify(raysData())); } catch (e) {}
+}
+
+export function loadRays() {
+  try {
+    var local = JSON.parse(localStorage.getItem('pa_rays') || '{}');
+    Object.keys(local).forEach(function (sym) {
+      _rays[sym.toLowerCase()] = local[sym].map(function (r) {
+        return { id: r.id || _rNewId(), time1: r.time1, price1: r.price1, line: null, fvLine: null };
+      });
+    });
+  } catch (e) {}
+}
+
+// Price line used only for its axis label (lineVisible:false) — the ray
+// itself is drawn on the canvas overlay so it can stop at the anchor.
+function attachRay(sym, ray) {
+  var opts = { color: RAY_COLOR, lineWidth: 1, lineVisible: false, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: RAY_COLOR, title: '' };
+  var s = _fullSeries[sym];
+  if (s) {
+    if (ray.line) { try { s.removePriceLine(ray.line); } catch (e) {} }
+    ray.line = s.createPriceLine(Object.assign({ price: ray.price1 }, opts));
+  }
+  if (_fvSeries && _fvSym === sym) {
+    if (ray.fvLine) { try { _fvSeries.removePriceLine(ray.fvLine); } catch (e) {} }
+    ray.fvLine = _fvSeries.createPriceLine(Object.assign({ price: ray.price1 }, opts));
+  }
+}
+
+function addRay(sym, time1, price1) {
+  if (!_rays[sym]) _rays[sym] = [];
+  var ray = { id: _rNewId(), time1: time1, price1: price1, line: null, fvLine: null };
+  _rays[sym].push(ray);
+  attachRay(sym, ray);
+  saveRays();
+  updateClearBtn(sym);
+}
+
+function removeRay(sym, idx) {
+  if (!_rays[sym] || _rays[sym][idx] == null) return;
+  var ray = _rays[sym][idx];
+  var s = _fullSeries[sym];
+  if (s && ray.line) { try { s.removePriceLine(ray.line); } catch (e) {} }
+  if (_fvSeries && _fvSym === sym && ray.fvLine) { try { _fvSeries.removePriceLine(ray.fvLine); } catch (e) {} }
+  _rays[sym].splice(idx, 1);
+  saveRays();
+  updateClearBtn(sym);
+}
+
+// Hit-test: within 6px vertically of the ray's price, and not to the left of its anchor (-4px slack for the dot).
+function _nearRayIdx(sym, chart, series, tf, px, py) {
+  var rays = _rays[sym] || [];
+  var map = _rayCoordMap(chart, sym, tf);
+  if (!map) return -1;
+  for (var i = 0; i < rays.length; i++) {
+    var ry = series.priceToCoordinate(rays[i].price1);
+    if (ry == null || Math.abs(ry - py) >= 6) continue;
+    var rx = map.timeToX(rays[i].time1);
+    if (px >= rx - 4) return i;
+  }
+  return -1;
+}
+
+// Draw all rays for sym from their anchor to the right edge of the pane (before the price scale).
+function _drawRays(sym, chart, series, ctx, rc) {
+  if (!chart || !series) return;
+  var tf = state.chartTF[sym] || '5m';
+  var map = _rayCoordMap(chart, sym, tf);
+  if (!map) return;
+  var dpr = window.devicePixelRatio || 1;
+  var cssW = rc.width / dpr, cssH = rc.height / dpr;
+  var timeAxisH = 0; try { timeAxisH = chart.timeScale().height(); } catch (_) {}
+  var paneH = cssH - timeAxisH;
+  var psW = 0; try { psW = chart.priceScale('right').width(); } catch (_) {}
+  var endX = cssW - psW;
+  (_rays[sym] || []).forEach(function (r) {
+    var y = series.priceToCoordinate(r.price1);
+    if (y == null || y < 0 || y > paneH) return;
+    var x = map.timeToX(r.time1);
+    if (x >= endX) return;
+    ctx.save();
+    ctx.strokeStyle = RAY_COLOR; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.max(0, x), y); ctx.lineTo(endX, y); ctx.stroke();
+    if (x >= 0) { ctx.fillStyle = RAY_COLOR; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  });
+}
+
+function drawCardRays(sym, ctx, rc) { _drawRays(sym, _charts[sym], _fullSeries[sym], ctx, rc); }
+
+export function clearRays(sym) {
+  var s = _fullSeries[sym];
+  (_rays[sym] || []).forEach(function (r) {
+    if (s && r.line) { try { s.removePriceLine(r.line); } catch (e) {} }
+    if (_fvSeries && _fvSym === sym && r.fvLine) { try { _fvSeries.removePriceLine(r.fvLine); } catch (e) {} }
+  });
+  _rays[sym] = [];
+  saveRays();
+  updateClearBtn(sym);
+}
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
 //
@@ -1897,6 +2048,7 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   var cw = rc.width / dpr, ch = rc.height / dpr;
   drawAlertIcons(sym, ctx, rc);
+  drawCardRays(sym, ctx, rc);
   if (!p1 || !p2 || pr1 == null || pr2 == null) return;
   var pct = ((pr2 - pr1) / Math.abs(pr1) * 100);
   var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
@@ -2001,6 +2153,7 @@ function redrawAlerts(sym) {
   ctx.clearRect(0, 0, rc.width, rc.height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawAlertIcons(sym, ctx, rc);
+  drawCardRays(sym, ctx, rc);
 }
 
 function clearRuler(sym) {
@@ -2032,6 +2185,12 @@ function _attachChartEvents(sym, container) {
     var y = e.clientY - rect.top;
     var price = cs.coordinateToPrice(y);
     if (price == null) return;
+    if (e.ctrlKey) {
+      var x = e.clientX - rect.left;
+      var idx = _nearRayIdx(sym, _charts[sym], cs, state.chartTF[sym] || '5m', x, y);
+      if (idx >= 0) removeRay(sym, idx);
+      return;
+    }
     if (e.shiftKey) {
       if (_alertDragMoved) { _alertDragMoved = false; return; }
       var alerts = _alerts[sym] || [];
@@ -2060,6 +2219,28 @@ function _attachChartEvents(sym, container) {
     if (e.button === 0) {
       if (!cs) return;
       var y = e.clientY - rect.top;
+      // Ctrl+left: add a ray, or grab an existing one to drag
+      if (e.ctrlKey) {
+        var ch0 = _charts[sym];
+        var x0 = e.clientX - rect.left;
+        var tf0 = state.chartTF[sym] || '5m';
+        e.stopPropagation(); e.preventDefault();
+        var rIdx = _nearRayIdx(sym, ch0, cs, tf0, x0, y);
+        if (rIdx >= 0) {
+          var ray = _rays[sym][rIdx];
+          var map0 = _rayCoordMap(ch0, sym, tf0);
+          var grabPrice = cs.coordinateToPrice(y), grabTime = map0 ? map0.xToTime(x0) : null;
+          if (grabPrice != null && grabTime != null) {
+            _rayDragging = { sym: sym, idx: rIdx, ray: ray, grabPrice: grabPrice, grabTime: grabTime, origPrice1: ray.price1, origTime1: ray.time1 };
+            container.style.cursor = 'move';
+          }
+          return;
+        }
+        var map1 = _rayCoordMap(ch0, sym, tf0);
+        var price1 = cs.coordinateToPrice(y), time1 = map1 ? map1.xToTime(x0) : null;
+        if (price1 != null && time1 != null) addRay(sym, time1, price1);
+        return;
+      }
       // Shift+Alt+left: drag alert (trackpad alternative to Shift+right-drag)
       if (e.altKey && e.shiftKey) {
         var alertArr0 = _alerts[sym] || [];
@@ -2124,6 +2305,21 @@ function _attachChartEvents(sym, container) {
     var cs = _fullSeries[sym];
     var rect = container.getBoundingClientRect();
     var y = e.clientY - rect.top;
+    if (_rayDragging && _rayDragging.sym === sym && (e.buttons & 1)) {
+      if (cs) {
+        var ch1 = _charts[sym], x1 = e.clientX - rect.left;
+        var map2 = _rayCoordMap(ch1, sym, state.chartTF[sym] || '5m');
+        var curPrice = cs.coordinateToPrice(y), curTime = map2 ? map2.xToTime(x1) : null;
+        if (curPrice != null && curTime != null) {
+          var ray = _rayDragging.ray;
+          ray.price1 = _rayDragging.origPrice1 + (curPrice - _rayDragging.grabPrice);
+          ray.time1 = _rayDragging.origTime1 + (curTime - _rayDragging.grabTime);
+          if (ray.line) ray.line.applyOptions({ price: ray.price1 });
+          if (ray.fvLine) ray.fvLine.applyOptions({ price: ray.price1 });
+        }
+      }
+      return;
+    }
     if (_dragging && _dragging.sym === sym && (e.buttons & 1)) {
       if (cs) {
         var price = cs.coordinateToPrice(y);
@@ -2172,6 +2368,9 @@ function _attachChartEvents(sym, container) {
   });
 
   container.addEventListener('mouseup', function (e) {
+    if (e.button === 0 && _rayDragging && _rayDragging.sym === sym) {
+      _rayDragging = null; container.style.cursor = ''; saveRays(); return;
+    }
     if (e.button === 0 && _dragging && _dragging.sym === sym) {
       _dragging = null; container.style.cursor = ''; saveLevels(); return;
     }
@@ -2185,6 +2384,7 @@ function _attachChartEvents(sym, container) {
   });
 
   container.addEventListener('mouseleave', function () {
+    if (_rayDragging && _rayDragging.sym === sym) { _rayDragging = null; container.style.cursor = ''; saveRays(); }
     if (_dragging && _dragging.sym === sym) { _dragging = null; saveLevels(); }
     if (_alertDragging && _alertDragging.sym === sym) { var adLeaveSym = _alertDragging.sym; _alertDragging = null; _alertDragBtn = 2; saveAlerts(); redrawAlerts(adLeaveSym); }
     container.style.cursor = '';
@@ -2217,6 +2417,7 @@ function _initChartForSym(sym) {
   el.appendChild(lbl);
   _rulers[sym] = { start: null, canvas: rc, label: lbl };
   (_levels[sym] || []).forEach(function (l) { attachLevel(sym, l); });
+  (_rays[sym] || []).forEach(function (r) { attachRay(sym, r); });
   _syncAlerts(sym);
   (function alertIconLoop(s) {
     if (!_charts[s]) return;
@@ -2233,6 +2434,7 @@ function _initChartForSym(sym) {
       ctx.clearRect(0, 0, rc2.width, rc2.height);
       ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
       drawAlertIcons(s, ctx, rc2);
+      drawCardRays(s, ctx, rc2);
     }
     requestAnimationFrame(function () { alertIconLoop(s); });
   }(sym));
@@ -2244,6 +2446,7 @@ function _destroyChartForSym(sym) {
   if (!_charts[sym]) return;
   try { _charts[sym].remove(); } catch (e) {}
   if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
+  if (_rays[sym]) _rays[sym].forEach(function (r) { r.line = null; });
   (_alerts[sym] || []).forEach(function (a) { if (_aLines[a.id]) _aLines[a.id].card = null; });
   if (_rulers[sym] && _rulers[sym].canvas) { try { _rulers[sym].canvas.remove(); } catch (e) {} }
   delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
@@ -3430,6 +3633,7 @@ function _drawFVOverlays(ctx, rc, sym) {
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var timeAxisH = 0; try { if (_fvChart) timeAxisH = _fvChart.timeScale().height(); } catch (_) {}
   var paneH = cssH - timeAxisH;
+  _drawRays(sym, _fvChart, _fvSeries, ctx, rc);
   // Alert bell icons
   if (_bellImg && _bellImg.complete) {
     (_alerts[sym] || []).forEach(function (a) {
@@ -3503,6 +3707,7 @@ function _setFVData(sym, cd) {
   (_levels[sym] || []).forEach(function (l) {
     if (l.price && !l.fvLine) l.fvLine = _fvSeries.createPriceLine({ price: l.price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: getCSSVar('--primary'), title: '' });
   });
+  (_rays[sym] || []).forEach(function (r) { if (!r.fvLine) attachRay(sym, r); });
   // Sync alert lines — _syncAlertLine handles create-or-update for both card and FV
   (_alerts[sym] || []).forEach(function (a) { _syncAlertLine(sym, a); });
   // Trade entry/exit markers from briefing history
@@ -3533,6 +3738,7 @@ export function openCoinFullView(sym) {
   // Detach FV lines from the previous coin (chart is being destroyed above)
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_rays[_fvSym] || []).forEach(function (r) { r.fvLine = null; });
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = sym;
@@ -3649,6 +3855,12 @@ export function openCoinFullView(sym) {
     var y = e.clientY - rect.top;
     var price = _fvSeries.coordinateToPrice(y);
     if (price == null) return;
+    if (e.ctrlKey) {
+      var x = e.clientX - rect.left;
+      var idx = _nearRayIdx(sym, _fvChart, _fvSeries, state.chartTF[sym] || '5m', x, y);
+      if (idx >= 0) removeRay(sym, idx);
+      return;
+    }
     if (e.shiftKey) {
       if (_fvAlertDragMoved) { _fvAlertDragMoved = false; return; }
       var alerts = _alerts[sym] || [];
@@ -3672,6 +3884,28 @@ export function openCoinFullView(sym) {
     var priceAxisW = 0;
     try { priceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+
+    // Ctrl+left: add a ray, or grab an existing one to drag
+    if (e.button === 0 && e.ctrlKey) {
+      var fvY0 = e.clientY - rect.top, fvX0 = e.clientX - rect.left;
+      var fvTf0 = state.chartTF[sym] || '5m';
+      e.stopPropagation(); e.preventDefault();
+      var fvRIdx = _nearRayIdx(sym, _fvChart, _fvSeries, fvTf0, fvX0, fvY0);
+      if (fvRIdx >= 0) {
+        var fvRay = _rays[sym][fvRIdx];
+        var fvMap0 = _rayCoordMap(_fvChart, sym, fvTf0);
+        var fvGrabPrice = _fvSeries.coordinateToPrice(fvY0), fvGrabTime = fvMap0 ? fvMap0.xToTime(fvX0) : null;
+        if (fvGrabPrice != null && fvGrabTime != null) {
+          _fvRayDragging = { idx: fvRIdx, ray: fvRay, grabPrice: fvGrabPrice, grabTime: fvGrabTime, origPrice1: fvRay.price1, origTime1: fvRay.time1 };
+          el.style.cursor = 'move';
+        }
+        return;
+      }
+      var fvMap1 = _rayCoordMap(_fvChart, sym, fvTf0);
+      var fvPrice1 = _fvSeries.coordinateToPrice(fvY0), fvTime1 = fvMap1 ? fvMap1.xToTime(fvX0) : null;
+      if (fvPrice1 != null && fvTime1 != null) addRay(sym, fvTime1, fvPrice1);
+      return;
+    }
 
     if (e.button === 1) {
       e.preventDefault();
@@ -3733,6 +3967,19 @@ export function openCoinFullView(sym) {
   el.addEventListener('mousemove', function (e) {
     var rect = el.getBoundingClientRect();
     var y = e.clientY - rect.top;
+    if (_fvRayDragging && (e.buttons & 1)) {
+      var fvX1 = e.clientX - rect.left;
+      var fvMap2 = _rayCoordMap(_fvChart, sym, state.chartTF[sym] || '5m');
+      var fvCurPrice = _fvSeries.coordinateToPrice(y), fvCurTime = fvMap2 ? fvMap2.xToTime(fvX1) : null;
+      if (fvCurPrice != null && fvCurTime != null) {
+        var fvRay = _fvRayDragging.ray;
+        fvRay.price1 = _fvRayDragging.origPrice1 + (fvCurPrice - _fvRayDragging.grabPrice);
+        fvRay.time1 = _fvRayDragging.origTime1 + (fvCurTime - _fvRayDragging.grabTime);
+        if (fvRay.line) fvRay.line.applyOptions({ price: fvRay.price1 });
+        if (fvRay.fvLine) fvRay.fvLine.applyOptions({ price: fvRay.price1 });
+      }
+      return;
+    }
     if (_fvDragging && (e.buttons & 1)) {
       var price = _fvSeries.coordinateToPrice(y);
       if (price != null) {
@@ -3832,10 +4079,12 @@ export function openCoinFullView(sym) {
   });
   el.addEventListener('mouseup', function (e) {
     if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
+    if (_fvRayDragging && e.button === 0) { saveRays(); _fvRayDragging = null; el.style.cursor = ''; }
     if (_fvDragging && e.button === 0) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
     if (_fvAlertDragging && e.button === _fvAlertDragBtn) { saveAlerts(); _fvAlertDragging = null; _fvAlertDragBtn = 2; el.style.cursor = ''; }
   });
   el.addEventListener('mouseleave', function () {
+    if (_fvRayDragging) { _fvRayDragging = null; el.style.cursor = ''; saveRays(); }
     if (_fvDragging) { _fvDragging = null; saveLevels(); }
     if (_fvAlertDragging) { _fvAlertDragging = null; _fvAlertDragBtn = 2; saveAlerts(); }
     if (_fvRuler) { _fvRuler._altRuler = false; _fvRuler.start = null; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
@@ -4069,6 +4318,7 @@ export function closeCoinFullView() {
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;
   if (_fvSym) {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
+    (_rays[_fvSym] || []).forEach(function (r) { r.fvLine = null; });
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = null;
@@ -4092,6 +4342,7 @@ export function setFVChartTF(tf) {
   });
   // Remove price lines from series before reload to prevent duplicate orphaned lines
   (_levels[_fvSym] || []).forEach(function (l) { if (l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} l.fvLine = null; } });
+  (_rays[_fvSym] || []).forEach(function (r) { if (r.fvLine) { try { _fvSeries.removePriceLine(r.fvLine); } catch (e) {} r.fvLine = null; } });
   (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   _fvSeries.setData([]);
   _loadFVData(_fvSym, tf);
@@ -4463,7 +4714,8 @@ export function openClearPopup(sym, btn) {
 
   var lCount = (_levels[sym] || []).length;
   var aCount = (_alerts[sym] || []).length;
-  if (!lCount && !aCount) return;
+  var rCount = (_rays[sym] || []).length;
+  if (!lCount && !aCount && !rCount) return;
 
   var overlay = document.createElement('div');
   overlay.id = 'clear-popup-overlay';
@@ -4478,6 +4730,7 @@ export function openClearPopup(sym, btn) {
 
   var html = '';
   if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Price levels<span class="clear-count clear-count--level">' + lCount + '</span></button>';
+  if (rCount) html += '<button class="clear-popup-row" data-action="clear-rays" data-sym="' + sym + '">Rays<span class="clear-count clear-count--level">' + rCount + '</span></button>';
   if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Alerts<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
   popup.innerHTML = html;
   document.body.appendChild(popup);
