@@ -1467,7 +1467,7 @@ var _rayDragging = null;    // card drag: {sym, idx, ray, grabX, grabPrice, grab
 var _fvRayDragging = null;  // FV drag: same shape (no sym)
 
 var RAY_TF_SEC = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '1d': 86400 };
-var RAY_COLOR = '#277CC2';
+var RAY_COLOR = '#d97706';
 
 function _rNewId() { return 'r' + (++_rIdSeed) + '_' + Date.now(); }
 
