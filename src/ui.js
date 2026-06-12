@@ -4102,7 +4102,7 @@ export function openCoinFullView(sym) {
   };
 
 
-  function _fvTMShowMenu(y, price, delMode, delIdx) {
+  function _fvTMShowMenu(y, price, delMode, delIdx, time1) {
     _fvTMHideMenu();
     var p = price.toFixed(calcPriceFormat(price).precision);
     var m = document.createElement('div');
@@ -4115,14 +4115,19 @@ export function openCoinFullView(sym) {
     } else if (delMode === 'alert') {
       html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
         '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete alert · ' + p + '</span></button>';
+    } else if (delMode === 'ray') {
+      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-ray" data-idx="' + delIdx + '">' +
+        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete ray · ' + p + '</span></button>';
     } else {
       html = '<button class="fv-touch-menu-item" data-tm="level">' +
           '<span class="fv-tmi-icon">' + icon('minus', 16) + '</span><span>Price level · ' + p + '</span></button>' +
         '<button class="fv-touch-menu-item" data-tm="alert">' +
-          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Add alert · ' + p + '</span></button>';
+          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Add alert · ' + p + '</span></button>' +
+        '<button class="fv-touch-menu-item" data-tm="ray" data-time="' + time1 + '">' +
+          '<span class="fv-tmi-icon">' + icon('arrow-right', 16) + '</span><span>Ray · ' + p + '</span></button>';
     }
     m.innerHTML = html;
-    var menuH = delMode ? 54 : 108;
+    var menuH = delMode ? 54 : 162;
     var chartH = wrap.offsetHeight;
     var top = (y + 10 + menuH > chartH) ? Math.max(4, y - menuH - 10) : y + 10;
     m.style.top = top + 'px';
@@ -4133,8 +4138,10 @@ export function openCoinFullView(sym) {
       var a = btn.dataset.tm, idx = parseInt(btn.dataset.idx);
       if (a === 'level') addLevel(sym, price);
       else if (a === 'alert') addAlert(sym, price);
+      else if (a === 'ray') { var t1 = parseFloat(btn.dataset.time); if (!isNaN(t1)) addRay(sym, t1, price); }
       else if (a === 'del-level') removeLevel(sym, idx);
       else if (a === 'del-alert') removeAlert(sym, idx);
+      else if (a === 'del-ray') removeRay(sym, idx);
       _fvTMHideMenu();
     });
     // Close on next touchstart outside the menu (not touchend — that fires
@@ -4165,7 +4172,7 @@ export function openCoinFullView(sym) {
     // Reset all state
     _fvTD.active = false; _fvTD.mode = null; _fvTD.item = null;
     _fvTD.near = false; _fvTD.nearMode = null; _fvTD.nearItem = null; _fvTD.nearIdx = null;
-    _fvTD.dragReady = false;
+    _fvTD.dragReady = false; _fvTD.rayGrab = null;
     clearTimeout(_fvTD.readyTimer); _fvTD.readyTimer = null;
     clearTimeout(_fvTD.deleteTimer); _fvTD.deleteTimer = null;
     clearTimeout(_fvTD.addTimer); _fvTD.addTimer = null;
@@ -4212,12 +4219,34 @@ export function openCoinFullView(sym) {
         return;
       }
     }
+    var rTf = state.chartTF[sym] || '5m';
+    var rIdx = _nearRayIdx(sym, _fvChart, _fvSeries, rTf, x, y);
+    if (rIdx >= 0) {
+      var ray = _rays[sym][rIdx];
+      var rMap = _rayCoordMap(_fvChart, sym, rTf);
+      var ry = _fvSeries.priceToCoordinate(ray.price1);
+      _fvTD.near = true; _fvTD.nearMode = 'ray'; _fvTD.nearItem = ray; _fvTD.nearIdx = rIdx;
+      _fvTD.rayGrab = { grabPrice: _fvSeries.coordinateToPrice(y), grabTime: rMap ? rMap.xToTime(x) : null, origPrice1: ray.price1, origTime1: ray.time1 };
+      _fvTMShowHandle(ry != null ? ry : y);
+      if (e.cancelable) e.preventDefault();
+      _fvTD.readyTimer = setTimeout(function () { _fvTD.dragReady = true; }, 200);
+      _fvTD.deleteTimer = setTimeout(function () {
+        if (_fvTD.near && !_fvTD.active) {
+          _fvTMHideHandle(); _fvTD.near = false;
+          var item = _fvTD.nearItem, idx = _fvTD.nearIdx;
+          if (item) _fvTMShowMenu(_fvTD.startY, item.price1, 'ray', idx);
+        }
+      }, 600);
+      return;
+    }
 
     // Empty area — 900ms long-press shows add menu directly (no "+" button)
     _fvTD.addTimer = setTimeout(function () {
       _fvTD.addTimer = null;
       var price = _fvSeries ? _fvSeries.coordinateToPrice(_fvTD.startY) : null;
-      if (price != null) _fvTMShowMenu(_fvTD.startY, price, null, null);
+      var addMap = _rayCoordMap(_fvChart, sym, state.chartTF[sym] || '5m');
+      var time1 = addMap ? addMap.xToTime(_fvTD.startX) : null;
+      if (price != null) _fvTMShowMenu(_fvTD.startY, price, null, null, time1);
     }, 900);
 
   }, { passive: false });
@@ -4225,8 +4254,8 @@ export function openCoinFullView(sym) {
   el.addEventListener('touchmove', function (e) {
     if (e.touches.length !== 1) return;
     var t = e.touches[0], rect = el.getBoundingClientRect();
-    var y = t.clientY - rect.top;
-    var dx = t.clientX - rect.left - _fvTD.startX, dy = y - _fvTD.startY;
+    var x = t.clientX - rect.left, y = t.clientY - rect.top;
+    var dx = x - _fvTD.startX, dy = y - _fvTD.startY;
     var moved = Math.sqrt(dx * dx + dy * dy);
 
     // Cancel add-menu timer if finger moved (treat as scroll)
@@ -4255,9 +4284,24 @@ export function openCoinFullView(sym) {
 
     if (_fvTD.active) {
       if (e.cancelable) e.preventDefault();
+      var item = _fvTD.item;
+      if (_fvTD.mode === 'ray') {
+        var rTfMove = state.chartTF[sym] || '5m';
+        var rMapMove = _rayCoordMap(_fvChart, sym, rTfMove);
+        var curPrice = _fvSeries.coordinateToPrice(y);
+        var curTime = rMapMove ? rMapMove.xToTime(x) : null;
+        if (curPrice != null && curTime != null && _fvTD.rayGrab) {
+          var g = _fvTD.rayGrab;
+          item.price1 = g.origPrice1 + (curPrice - g.grabPrice);
+          item.time1 = g.origTime1 + (curTime - g.grabTime);
+          if (item.line) item.line.applyOptions({ price: item.price1 });
+          if (item.fvLine) item.fvLine.applyOptions({ price: item.price1 });
+        }
+        _fvTMMoveHandle(y);
+        return;
+      }
       var price = _fvSeries.coordinateToPrice(y);
       if (price == null) return;
-      var item = _fvTD.item;
       item.price = price;
       if (_fvTD.mode === 'level') {
         if (item.fvLine) item.fvLine.applyOptions({ price: price });
@@ -4284,6 +4328,7 @@ export function openCoinFullView(sym) {
     _fvTD.near = false; _fvTD.nearItem = null;
     if (_fvTD.active) {
       if (_fvTD.mode === 'level') saveLevels();
+      else if (_fvTD.mode === 'ray') saveRays();
       else saveAlerts();
       _fvTMHideHandle();
       _fvTD.active = false; _fvTD.mode = null; _fvTD.item = null;
