@@ -2502,15 +2502,15 @@ var TRADING_SESSIONS = [
   { key: 'america', label: 'America', short: 'US', start: 12, end: 21 },
 ];
 
-var SESSION_WHEEL_CIRCUMFERENCE = 2 * Math.PI * 5;
+var SESSION_WHEEL_CIRCUMFERENCE = 2 * Math.PI * 6;
 
 function _sessionWheelSVG(percent) {
   var offset = SESSION_WHEEL_CIRCUMFERENCE * (1 - percent);
-  return '<svg class="session-wheel" width="12" height="12" viewBox="0 0 12 12">'
-    + '<circle cx="6" cy="6" r="5" fill="none" stroke="var(--steel)" stroke-width="3"/>'
-    + '<circle cx="6" cy="6" r="5" fill="none" stroke="var(--bullish)" stroke-width="3" '
+  return '<svg class="session-wheel" width="14" height="14" viewBox="0 0 14 14">'
+    + '<circle cx="7" cy="7" r="6" fill="none" stroke="var(--steel)" stroke-width="3"/>'
+    + '<circle cx="7" cy="7" r="6" fill="none" stroke="var(--bullish)" stroke-width="3" '
     + 'stroke-dasharray="' + SESSION_WHEEL_CIRCUMFERENCE + '" stroke-dashoffset="' + offset + '" '
-    + 'stroke-linecap="round" transform="rotate(-90 6 6)"/>'
+    + 'stroke-linecap="round" transform="rotate(-90 7 7)"/>'
     + '</svg>';
 }
 
