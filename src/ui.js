@@ -1518,7 +1518,7 @@ export function loadRays() {
 // Price line used only for its axis label (lineVisible:false) — the ray
 // itself is drawn on the canvas overlay so it can stop at the anchor.
 function attachRay(sym, ray) {
-  var opts = { color: RAY_COLOR, lineWidth: 1, lineVisible: false, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: RAY_COLOR, title: '' };
+  var opts = { color: RAY_COLOR, lineWidth: 1, lineVisible: false, axisLabelVisible: true, axisLabelColor: getCSSVar('--ray-label-bg'), axisLabelTextColor: RAY_COLOR, title: '' };
   var s = _fullSeries[sym];
   if (s) {
     if (ray.line) { try { s.removePriceLine(ray.line); } catch (e) {} }

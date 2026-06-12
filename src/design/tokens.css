@@ -96,6 +96,7 @@
 
   /* ── Color: Level price line ───────────────────────────────── */
   --level-label-bg: #C3DEF3;  /* axis label bg, light theme     */
+  --ray-label-bg: #F6DFC4;    /* ray axis label bg, light theme */
 
 }
 
@@ -120,6 +121,7 @@
     --vol-dn:    rgba(59, 75, 84, 0.20);
 
     --level-label-bg: #0B293D;
+    --ray-label-bg: #3D2A0B;
   }
 }
 
@@ -143,4 +145,5 @@
   --vol-dn:    rgba(59, 75, 84, 0.20);
 
   --level-label-bg: #0B293D;
+  --ray-label-bg: #3D2A0B;
 }
