@@ -1467,7 +1467,6 @@ var _rIdSeed = 0;
 var _rayDragging = null;    // card drag: {sym, idx, ray, grabX, grabPrice, grabTime, origPrice1, origTime1}
 var _fvRayDragging = null;  // FV drag: same shape (no sym)
 
-var RAY_TF_SEC = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '1d': 86400 };
 var RAY_COLOR = '#d97706';
 
 function _rNewId() { return 'r' + (++_rIdSeed) + '_' + Date.now(); }
@@ -1477,14 +1476,15 @@ function _rNewId() { return 'r' + (++_rIdSeed) + '_' + Date.now(); }
 // timeToCoordinate snaps to the new TF's bar grid and would jump the anchor).
 function _rayCoordMap(chart, sym, tf) {
   var cd = state.chartData[sym + '_' + tf];
-  if (!cd || !cd.candles || !cd.candles.length) return null;
+  if (!cd || !cd.candles || cd.candles.length < 2) return null;
   var ts = chart.timeScale();
-  var lastT = cd.candles[cd.candles.length - 1].time;
+  var n = cd.candles.length;
+  var lastT = cd.candles[n - 1].time;
+  var prevT = cd.candles[n - 2].time;
   var lastX = ts.timeToCoordinate(lastT);
-  if (lastX == null) return null;
-  var barSpacing; try { barSpacing = ts.options().barSpacing; } catch (_) {}
-  if (!barSpacing) return null;
-  var pxPerSec = barSpacing / (RAY_TF_SEC[tf] || 300);
+  var prevX = ts.timeToCoordinate(prevT);
+  if (lastX == null || prevX == null || lastX === prevX) return null;
+  var pxPerSec = (lastX - prevX) / (lastT - prevT);
   return {
     timeToX: function (t) { return lastX + (t - lastT) * pxPerSec; },
     xToTime: function (x) { var t = ts.coordinateToTime(x); return t != null ? t : lastT + (x - lastX) / pxPerSec; },
