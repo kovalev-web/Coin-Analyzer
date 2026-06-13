@@ -367,6 +367,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'skip-morning-journal': {
+      if (!confirm('Mark today as a no-trading day? The evening journal will be unavailable.')) break;
       var skipBtn = target;
       skipBtn.disabled = true;
       saveJournalMorning({ skip: true }).then(function () {
