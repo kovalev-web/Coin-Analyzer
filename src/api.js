@@ -867,7 +867,7 @@ export function saveJournalEvening(data) {
 export function fetchJournalRecent() {
   return fetch(API_BASE + '/api/journal/recent', { credentials: 'include' })
     .then(function (r) { return r.json(); })
-    .then(function (d) { return d.entries || []; })
+    .then(function (d) { state.journalEntries = d.entries || []; return state.journalEntries; })
     .catch(function () { return []; });
 }
 

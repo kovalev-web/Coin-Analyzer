@@ -725,6 +725,9 @@ registerRoute('/journal', function () {
     '</div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
+  if (state.journalEntries) {
+    renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
+  }
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
   });
@@ -795,6 +798,7 @@ async function _revalidateSession() {
       .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
       .catch(function () {});
     fetchJournalToday();
+    fetchJournalRecent();
   }
   // result === null: server unreachable — load app anyway; WS will surface the error
 

@@ -1369,6 +1369,7 @@ export function renderProfileJournal(container, entries) {
   container.querySelectorAll('[data-journal-pnl-date]').forEach(function (el) {
     var date = el.dataset.journalPnlDate;
     fetchTradesForDate(date).then(function (stats) {
+      if (!el.isConnected) return;
       var pnl = stats ? stats.pnl : 0;
       el.outerHTML = '<span class="journal-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2) + '</span>';
     });
