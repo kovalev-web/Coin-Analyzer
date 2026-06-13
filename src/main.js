@@ -676,6 +676,7 @@ window.addEventListener('online', function () {
 
 registerRoute('/', function () {
   setScreenerMode(false);
+  if (state.coins.length === 0) state.loading = true;
   render();
   var _autoSym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
   if (_autoSym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
