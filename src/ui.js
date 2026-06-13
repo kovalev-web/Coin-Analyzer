@@ -4608,7 +4608,7 @@ export function renderFVBriefingDrawer() {
         + '<span class="bp-sym-btn">' + e.sym.toUpperCase() + '</span>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
         + (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '')
-        + (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
+        + '<span class="bp-row-status ' + briefingStatusClass(tradeLocked ? 'traded' : e.status) + '">' + briefingStatusLabel(tradeLocked ? 'traded' : e.status) + '</span>'
         + '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
           ? '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
@@ -4617,7 +4617,7 @@ export function renderFVBriefingDrawer() {
         + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
         + '<div class="bp-expand-bar">'
         + (tradeLocked
-          ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>'
+          ? '<span class="bp-status-group"><span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>' + (tradeInline || '') + '</span>'
           : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
         + '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>'
         + '</div>'
