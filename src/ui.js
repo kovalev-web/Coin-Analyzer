@@ -1354,7 +1354,7 @@ export function renderProfileJournal(container, entries) {
     var details = '';
     if (e.volume) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Volume</span>' + escHtml(e.volume) + '</div>';
     if (e.dayPlan) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Day plan</span>' + escHtml(e.dayPlan) + '</div>';
-    if (e.plannedCoins) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Planned coins</span>' + escHtml(e.plannedCoins) + '</div>';
+    if (e.plannedCoins) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Coins</span>' + escHtml(e.plannedCoins) + '</div>';
     if (e.freeConclusion) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Notes</span>' + escHtml(e.freeConclusion) + '</div>';
 
     if (!details) {
