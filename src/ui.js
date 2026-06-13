@@ -1360,11 +1360,12 @@ export function renderProfileJournal(container, entries) {
     if (e.plannedCoins) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Coins</span>' + escHtml(e.plannedCoins) + '</div>';
     if (e.freeConclusion) details += '<div class="journal-history-detail"><span class="journal-history-detail-label">Notes</span>' + escHtml(e.freeConclusion) + '</div>';
 
+    var rowClass = 'journal-history-row' + (e.skipped ? ' journal-history-row--skipped' : '');
     if (!details) {
-      return '<div class="journal-history-row">' + cells + '<div class="journal-history-chevron"></div></div>';
+      return '<div class="' + rowClass + '">' + cells + '<div class="journal-history-chevron"></div></div>';
     }
     return '<details class="journal-history-item">'
-      + '<summary class="journal-history-row">' + cells + '<div class="journal-history-chevron">' + icon('chevron-down', 14) + '</div></summary>'
+      + '<summary class="' + rowClass + '">' + cells + '<div class="journal-history-chevron">' + icon('chevron-down', 14) + '</div></summary>'
       + '<div class="journal-history-details">' + details + '</div>'
       + '</details>';
   }).join('') + '</div>';
