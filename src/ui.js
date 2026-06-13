@@ -4619,11 +4619,13 @@ export function renderFVBriefingDrawer() {
         + (tradeLocked
           ? '<span class="bp-status-group"><span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>' + (tradeInline || '') + '</span>'
           : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
-        + '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>'
+        + (isToday ? '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' : '')
         + '</div>'
-        + '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
-        + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
-        + '</div>'
+        + (isToday
+          ? '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
+            + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
+            + '</div>'
+          : (hasNote ? '<div class="fvbd-history-note">' + escHtml(e.note) + '</div>' : ''))
         + (isToday ? (function () {
           var _fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           var _weekMonday = _dateStr(_currentWeekMonday());
