@@ -2560,6 +2560,17 @@ window._chartDiag = function () {
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
+function _fixScrollbarPaint(el) {
+  if (!el) return;
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      el.style.overflowY = 'hidden';
+      void el.offsetHeight;
+      el.style.overflowY = 'auto';
+    });
+  });
+}
+
 function _popupFullscreen(popup) {
   popup.style.position = 'fixed';
   popup.style.top = '0';
@@ -4803,6 +4814,7 @@ export function openSearchPopup() {
   }
 
   setTimeout(function () { if (input) input.focus(); }, 60);
+  _fixScrollbarPaint(popup.querySelector('.search-popup-list'));
 }
 
 export function closeSearchPopup() {
@@ -4986,6 +4998,7 @@ export function toggleNotifDropdown() {
       _popupFullscreen(dd);
       lockScroll();
     }
+    _fixScrollbarPaint(dd.querySelector('.notif-scroll'));
   }
 }
 
