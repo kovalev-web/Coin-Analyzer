@@ -4626,7 +4626,10 @@ export function renderFVBriefingDrawer() {
         + '</div>'
         + (isToday ? (function () {
           var _fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          var _hist = (state.briefing || []).filter(function (e2) { return e2.sym === e.sym && e2.date !== today && e2.note; });
+          var _weekMonday = _dateStr(_currentWeekMonday());
+          var _hist = (state.briefing || [])
+            .filter(function (e2) { return e2.sym === e.sym && e2.date !== today && e2.date >= _weekMonday && e2.note; })
+            .sort(function (a, b) { return b.date < a.date ? -1 : b.date > a.date ? 1 : 0; });
           if (!_hist.length) return '';
           return '<div class="fvbd-history">' + _hist.map(function (e2) {
             var _p = e2.date.split('-'); var _d = new Date(+_p[0], +_p[1] - 1, +_p[2]);
