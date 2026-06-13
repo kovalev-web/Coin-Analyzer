@@ -2571,7 +2571,7 @@ function _smoothWheelScroll(el) {
       animating = false;
       return;
     }
-    el.scrollTop += diff * 0.2;
+    el.scrollTop += diff * 0.35;
     requestAnimationFrame(step);
   }
   el.addEventListener('wheel', function (e) {
