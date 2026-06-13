@@ -788,6 +788,7 @@ function journalEntriesToCsv(entries) {
     ['stopLevel', 'Stop level'],
     ['dayPlan', 'Day plan'],
     ['plannedCoins', 'Planned coins'],
+    ['coinNotes', 'Coin notes'],
     ['triggerWatch', 'Trigger watch'],
     ['channelsClosed', 'Channels closed'],
     ['eveningAt', 'Evening filled at'],
@@ -1113,7 +1114,18 @@ var httpServer = http.createServer(async function (req, res) {
         } else {
           jExportRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY date ASC').all(jUserId);
         }
-        var jCsv = journalEntriesToCsv(jExportRows.map(journalRowToEntry));
+        var jBriefingR = await redis(['GET', 'briefing:' + jUserId]);
+        var jBriefingEntries = jBriefingR.result ? JSON.parse(jBriefingR.result) : [];
+        var jNotesByDate = {};
+        jBriefingEntries.forEach(function (be) {
+          if (!be.note) return;
+          var line = be.sym.toUpperCase() + ': ' + be.note;
+          jNotesByDate[be.date] = jNotesByDate[be.date] ? jNotesByDate[be.date] + '\n' + line : line;
+        });
+        var jCsv = journalEntriesToCsv(jExportRows.map(journalRowToEntry).map(function (e) {
+          e.coinNotes = jNotesByDate[e.date] || '';
+          return e;
+        }));
         res.writeHead(200, {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'attachment; filename="journal_' + jRange + '.csv"',
