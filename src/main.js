@@ -362,6 +362,10 @@ document.body.addEventListener('click', function (e) {
       }).then(function () {
         hideMorningModal();
         _refreshJournalHistory();
+        var mBtn2 = document.querySelector('[data-action="open-morning-journal"]');
+        if (mBtn2) { mBtn2.disabled = true; mBtn2.innerHTML = 'Morning' + icon('check', 14); }
+        var eBtn2 = document.querySelector('[data-action="open-evening-journal"]');
+        if (eBtn2) eBtn2.disabled = !!state.journalToday.skipped;
       }).catch(function () {
         mBtn.disabled = false;
         showToast('Network error — please try again');
@@ -736,7 +740,7 @@ registerRoute('/journal', function () {
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<div class="journal-page-actions">' +
     '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta"' + (state.journalToday && state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
+    '<button data-action="open-evening-journal" class="btn-cta"' + (!state.journalToday || !state.journalToday.morningAt || state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
     '<div class="tf-picker">' +
     '<button data-action="toggle-journal-export" class="btn-cta">CSV</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
@@ -763,7 +767,7 @@ registerRoute('/journal', function () {
       mBtn.innerHTML = 'Morning' + (filled ? icon('check', 14) : '');
     }
     var eBtn = document.querySelector('[data-action="open-evening-journal"]');
-    if (eBtn) eBtn.disabled = !!(state.journalToday && state.journalToday.skipped);
+    if (eBtn) eBtn.disabled = !state.journalToday || !state.journalToday.morningAt || !!state.journalToday.skipped;
   });
 });
 
