@@ -1211,7 +1211,7 @@ function _journalCheckbox(name, label, checked) {
 
 function _briefingCoinsHTML(today) {
   var syms = (state.briefing || []).filter(function (e) { return e.date === today; }).map(function (e) { return e.sym.toUpperCase(); });
-  if (!syms.length) return '';
+  if (!syms.length) return '<div class="journal-static" style="margin-bottom:var(--space-4);">Add at least one coin to the watchlist before saving.</div>';
   return '<div class="journal-static" style="margin-bottom:var(--space-4);">In briefing today: ' + syms.join(', ') + '</div>';
 }
 
@@ -1245,8 +1245,9 @@ export function showMorningModal() {
     var morningState = (el.querySelector('[name="morningState"]:checked') || {}).value || '';
     var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
     var channelsClosed = (el.querySelector('[name="channelsClosed"]:checked') || {}).value || '';
+    var hasBriefingCoins = (state.briefing || []).some(function (e) { return e.date === today; });
     hint.hidden = !(morningState && Number(morningState) <= 2);
-    btn.disabled = !(morningState && dayPlan && channelsClosed);
+    btn.disabled = !(morningState && dayPlan && channelsClosed && hasBriefingCoins);
   }
   el.querySelectorAll('[name="morningState"], [name="channelsClosed"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
   el.querySelector('[name="dayPlan"]').addEventListener('input', _checkFilled);
