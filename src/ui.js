@@ -2560,15 +2560,29 @@ window._chartDiag = function () {
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
-function _fixScrollbarPaint(el) {
+function _smoothWheelScroll(el) {
   if (!el) return;
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      el.style.overflowY = 'hidden';
-      void el.offsetHeight;
-      el.style.overflowY = 'auto';
-    });
-  });
+  var target = el.scrollTop;
+  var animating = false;
+  function step() {
+    var diff = target - el.scrollTop;
+    if (Math.abs(diff) < 0.5) {
+      el.scrollTop = target;
+      animating = false;
+      return;
+    }
+    el.scrollTop += diff * 0.2;
+    requestAnimationFrame(step);
+  }
+  el.addEventListener('wheel', function (e) {
+    var max = el.scrollHeight - el.clientHeight;
+    target = Math.max(0, Math.min(max, target + e.deltaY));
+    e.preventDefault();
+    if (!animating) {
+      animating = true;
+      requestAnimationFrame(step);
+    }
+  }, { passive: false });
 }
 
 function _popupFullscreen(popup) {
@@ -4814,7 +4828,7 @@ export function openSearchPopup() {
   }
 
   setTimeout(function () { if (input) input.focus(); }, 60);
-  _fixScrollbarPaint(popup.querySelector('.search-popup-list'));
+  _smoothWheelScroll(popup.querySelector('.search-popup-list'));
 }
 
 export function closeSearchPopup() {
@@ -4954,6 +4968,7 @@ function _renderNotifDropdown() {
     + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
     + '</div>';
   dd.innerHTML = header + body + footer;
+  _smoothWheelScroll(dd.querySelector('.notif-scroll'));
 }
 
 
@@ -4998,7 +5013,6 @@ export function toggleNotifDropdown() {
       _popupFullscreen(dd);
       lockScroll();
     }
-    _fixScrollbarPaint(dd.querySelector('.notif-scroll'));
   }
 }
 
