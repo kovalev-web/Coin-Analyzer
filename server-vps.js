@@ -783,6 +783,7 @@ function journalEntriesToCsv(entries) {
   var cols = [
     ['date', 'Date'],
     ['morningAt', 'Morning filled at'],
+    ['skipped', 'Skipped'],
     ['morningState', 'Morning state'],
     ['volume', 'Volume'],
     ['stopLevel', 'Stop level'],
@@ -810,7 +811,7 @@ function journalEntriesToCsv(entries) {
     ['feltWorthless', 'Felt worthless'],
     ['freeConclusion', 'Notes'],
   ];
-  var boolCols = ['triggerRevenge', 'triggerSizeUp', 'triggerFomo', 'triggerFomoOther', 'triggerAddFunds', 'triggerReplan'];
+  var boolCols = ['triggerRevenge', 'triggerSizeUp', 'triggerFomo', 'triggerFomoOther', 'triggerAddFunds', 'triggerReplan', 'skipped'];
   var yesNoCols = ['tradedPlanned', 'stopCraneKept', 'volumeOk', 'feltWorthless'];
   var yesNoLabels = { yes: 'Yes', no: 'No', na: 'N/A' };
   var tsCols = ['morningAt', 'eveningAt'];
@@ -860,6 +861,7 @@ function journalRowToEntry(row) {
     feltWorthless: row.felt_worthless,
     freeConclusion: row.free_conclusion,
     eveningAt: row.evening_at,
+    skipped: !!row.skipped,
   };
 }
 
@@ -1141,9 +1143,9 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyM);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, planned_coins, trigger_watch, channels_closed, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
-              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, morning_at = excluded.morning_at'
-            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.plannedCoins || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, Date.now());
+              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, planned_coins, trigger_watch, channels_closed, skipped, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, skipped = excluded.skipped, morning_at = excluded.morning_at'
+            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.plannedCoins || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, jParsed.skip ? 1 : 0, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {

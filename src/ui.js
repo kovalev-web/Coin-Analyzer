@@ -1233,6 +1233,7 @@ export function showMorningModal() {
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
     + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
+    + '<button class="journal-text-btn" data-action="skip-morning-journal">Not trading today</button>'
     + '</div>';
 
   document.body.appendChild(el);
@@ -1339,14 +1340,16 @@ export function renderProfileJournal(container, entries) {
     + '<div>Date</div><div>Trades</div><div>State</div><div>AM</div><div>PM</div><div>PnL</div><div></div>'
     + '</div>';
   container.innerHTML = header + '<div class="journal-history">' + entries.map(function (e) {
-    var pnl = e.pnl != null
-      ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
-      : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
+    var pnl = e.skipped
+      ? '<span class="journal-pnl-pending">—</span>'
+      : e.pnl != null
+        ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
+        : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
     var dateParts = e.date.split('-');
     var dateLabel = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : e.date;
     var cells = '<div class="journal-history-date">' + dateLabel + '</div>'
       + '<div class="journal-history-cell">' + (e.tradeCount != null ? e.tradeCount : '—') + '</div>'
-      + '<div class="journal-history-text">' + escHtml(e.morningState || '') + '</div>'
+      + '<div class="journal-history-text">' + (e.skipped ? 'Skip' : escHtml(e.morningState || '')) + '</div>'
       + '<div class="journal-history-cell">' + (e.morningAt ? icon('check', 14) : '—') + '</div>'
       + '<div class="journal-history-cell">' + (e.eveningAt ? icon('check', 14) : '—') + '</div>'
       + '<div>' + pnl + '</div>';

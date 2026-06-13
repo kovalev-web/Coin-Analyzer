@@ -303,6 +303,10 @@ document.body.addEventListener('click', function (e) {
         showToast('Fill in the morning journal first');
         break;
       }
+      if (state.journalToday.skipped) {
+        showToast('Today is marked as a no-trading day');
+        break;
+      }
       showEveningModal();
       break;
     case 'close-evening-journal':
@@ -358,6 +362,22 @@ document.body.addEventListener('click', function (e) {
         _refreshJournalHistory();
       }).catch(function () {
         mBtn.disabled = false;
+        showToast('Network error — please try again');
+      });
+      break;
+    }
+    case 'skip-morning-journal': {
+      var skipBtn = target;
+      skipBtn.disabled = true;
+      saveJournalMorning({ skip: true }).then(function () {
+        hideMorningModal();
+        _refreshJournalHistory();
+        var mBtn2 = document.querySelector('[data-action="open-morning-journal"]');
+        if (mBtn2) { mBtn2.disabled = true; mBtn2.innerHTML = 'Morning' + icon('check', 14); }
+        var eBtn2 = document.querySelector('[data-action="open-evening-journal"]');
+        if (eBtn2) eBtn2.disabled = true;
+      }).catch(function () {
+        skipBtn.disabled = false;
         showToast('Network error — please try again');
       });
       break;
@@ -712,7 +732,7 @@ registerRoute('/journal', function () {
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<div class="journal-page-actions">' +
     '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta">Evening</button>' +
+    '<button data-action="open-evening-journal" class="btn-cta"' + (state.journalToday && state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
     '<div class="tf-picker">' +
     '<button data-action="toggle-journal-export" class="btn-cta">CSV</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
@@ -733,10 +753,13 @@ registerRoute('/journal', function () {
   });
   fetchJournalToday().then(function () {
     var mBtn = document.querySelector('[data-action="open-morning-journal"]');
-    if (!mBtn) return;
-    var filled = !!(state.journalToday && state.journalToday.morningAt);
-    mBtn.disabled = filled;
-    mBtn.innerHTML = 'Morning' + (filled ? icon('check', 14) : '');
+    if (mBtn) {
+      var filled = !!(state.journalToday && state.journalToday.morningAt);
+      mBtn.disabled = filled;
+      mBtn.innerHTML = 'Morning' + (filled ? icon('check', 14) : '');
+    }
+    var eBtn = document.querySelector('[data-action="open-evening-journal"]');
+    if (eBtn) eBtn.disabled = !!(state.journalToday && state.journalToday.skipped);
   });
 });
 

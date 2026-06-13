@@ -83,6 +83,7 @@ exports.journalEntries = sqliteTable('journal_entries', {
   feltWorthless:    text('felt_worthless'),
   freeConclusion:   text('free_conclusion'),
   eveningAt:        integer('evening_at', { mode: 'timestamp' }),
+  skipped:          integer('skipped'),
 });
 
 // ── Legacy tables (unused — kept for reference) ────────────────────────────

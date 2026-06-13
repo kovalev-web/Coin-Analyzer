@@ -79,6 +79,7 @@ function ensureAuthTables() {
       felt_worthless   TEXT,
       free_conclusion  TEXT,
       evening_at       INTEGER,
+      skipped          INTEGER,
       UNIQUE(user_id, date)
     );
   `);
@@ -103,6 +104,9 @@ function ensureAuthTables() {
   });
   if (journalCols.indexOf('pnl') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "pnl" REAL');
+  }
+  if (journalCols.indexOf('skipped') === -1) {
+    sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "skipped" INTEGER');
   }
 }
 
