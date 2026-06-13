@@ -1343,7 +1343,7 @@ export function renderProfileJournal(container, entries) {
       ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
       : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
     var dateParts = e.date.split('-');
-    var dateLabel = dateParts.length === 3 ? dateParts[1] + '.' + dateParts[2] + '.' + dateParts[0].slice(2) : e.date;
+    var dateLabel = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : e.date;
     var cells = '<div class="journal-history-date">' + dateLabel + '</div>'
       + '<div class="journal-history-cell">' + (e.tradeCount != null ? e.tradeCount : '—') + '</div>'
       + '<div class="journal-history-text">' + escHtml(e.morningState || '') + '</div>'
