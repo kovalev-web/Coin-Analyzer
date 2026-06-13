@@ -19,7 +19,8 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--steel); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--graphite); }
-::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-corner { display: none; width: 0; height: 0; }
 
 input, select, textarea {
   font-family: inherit;
