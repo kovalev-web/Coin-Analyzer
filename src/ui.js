@@ -2,7 +2,7 @@ import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.
 import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -4929,11 +4929,11 @@ function _renderNotifDropdown() {
           return '<div class="notif-row">'
             + '<span class="notif-icon">' + ic + '</span>'
             + '<div class="notif-body">'
-            + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
+            + '<span class="notif-msg">' + escHtml(n.message) + (!n.read ? '<span class="notif-dot"></span>' : '') + '</span>'
             + '<span class="notif-time">' + ago + '</span>'
             + '</div>'
-            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) ? '<button class="btn-icon" data-action="open-morning-journal">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-notif-id="' + n.id + '" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
             + '</div>';
         }).join('')
       + '</div>'
@@ -4944,6 +4944,16 @@ function _renderNotifDropdown() {
   dd.innerHTML = header + body + footer;
 }
 
+
+export function markNotificationAsRead(id) {
+  var n = state.notifications.find(function (n) { return n.id === id; });
+  if (!n || n.read) return;
+  n.read = true;
+  state.notifUnread = Math.max(0, state.notifUnread - 1);
+  updateNotifBadge();
+  _renderNotifDropdown();
+  markNotificationRead(id);
+}
 
 export function clearNotifications() {
   state.notifications = [];
@@ -4978,11 +4988,6 @@ export function toggleNotifDropdown() {
     }
     state.notifUnread = 0;
     updateNotifBadge();
-    fetch(API_BASE + '/api/notifications', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark-read' }),
-    }).catch(function () {});
   }
 }
 

@@ -1671,6 +1671,24 @@ var httpServer = http.createServer(async function (req, res) {
               }
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ ok: true }));
+            } else if (parsed.action === 'mark-read-one') {
+              var raw3 = await redis(['LRANGE', 'notifications:' + userId, '0', '49']);
+              var items3 = (raw3.result || []).map(function (s) {
+                try {
+                  var n = JSON.parse(s);
+                  if (n.id === parsed.id) n.read = true;
+                  return JSON.stringify(n);
+                } catch (e) { return null; }
+              }).filter(Boolean);
+              if (items3.length) {
+                await redis(['DEL', 'notifications:' + userId]);
+                for (var j = items3.length - 1; j >= 0; j--) {
+                  await redis(['LPUSH', 'notifications:' + userId, items3[j]]);
+                }
+                await redis(['EXPIRE', 'notifications:' + userId, String(30 * 24 * 3600)]);
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
             } else {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Unknown action' }));

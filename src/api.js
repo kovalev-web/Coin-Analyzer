@@ -831,6 +831,14 @@ export function fetchNotifications() {
     .catch(function () {});
 }
 
+export function markNotificationRead(id) {
+  return fetch(API_BASE + '/api/notifications', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'mark-read-one', id: id }),
+  }).catch(function () {});
+}
+
 // ── Journal ────────────────────────────────────────────────────────────────
 
 export function fetchJournalToday() {

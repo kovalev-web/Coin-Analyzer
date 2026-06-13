@@ -16,7 +16,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
-  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   updateSessionTimer,
 } from './ui.js';
@@ -101,6 +101,8 @@ document.body.addEventListener('click', function (e) {
     var _ndd = document.getElementById('notif-dd');
     if (_ndd) _ndd.classList.remove('open');
   }
+
+  if (target.dataset.notifId) markNotificationAsRead(target.dataset.notifId);
 
   switch (action) {
     case 'toggle-burger': {
