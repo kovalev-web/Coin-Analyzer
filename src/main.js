@@ -707,17 +707,19 @@ function _refreshJournalHistory() {
 registerRoute('/journal', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="journal-page">' +
-    '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">' +
-    '<h2 style="display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-bold);">' +
+    '<div class="journal-page-header">' +
+    '<h2 class="journal-page-title">' +
     '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
-    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + ' style="margin-left:auto;height:var(--h-input);">Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta" style="height:var(--h-input);">Evening</button>' +
+    '<div class="journal-page-actions">' +
+    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
+    '<button data-action="open-evening-journal" class="btn-cta">Evening</button>' +
     '<div class="tf-picker">' +
-    '<button data-action="toggle-journal-export" class="btn-cta" style="height:var(--h-input);">CSV</button>' +
+    '<button data-action="toggle-journal-export" class="btn-cta">CSV</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
     JOURNAL_EXPORT_RANGES.map(function (r) {
       return '<button data-action="export-journal-csv" data-range="' + r.value + '">' + r.label + '</button>';
     }).join('') +
+    '</div>' +
     '</div>' +
     '</div>' +
     '</div>' +

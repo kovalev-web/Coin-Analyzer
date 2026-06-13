@@ -1211,8 +1211,8 @@ function _journalCheckbox(name, label, checked) {
 
 function _briefingCoinsHTML(today) {
   var syms = (state.briefing || []).filter(function (e) { return e.date === today; }).map(function (e) { return e.sym.toUpperCase(); });
-  if (!syms.length) return '<div class="journal-static" style="margin-bottom:var(--space-4);">Add at least one coin to the watchlist before saving.</div>';
-  return '<div class="journal-static" style="margin-bottom:var(--space-4);">In briefing today: ' + syms.join(', ') + '</div>';
+  if (!syms.length) return '<div class="journal-static">Add at least one coin to the watchlist before saving.</div>';
+  return '<div class="journal-static">In briefing today: ' + syms.join(', ') + '</div>';
 }
 
 export function showMorningModal() {
@@ -1223,7 +1223,7 @@ export function showMorningModal() {
   el.id = 'morning-journal-modal';
   el.className = 'journal-modal-overlay';
   el.innerHTML =
-    '<div class="journal-modal journal-modal--morning">'
+    '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
     + '<div class="journal-field"><label>Max volume</label><div class="journal-static">$50</div></div>'
@@ -1271,7 +1271,7 @@ export function showEveningModal() {
   el.id = 'evening-journal-modal';
   el.className = 'journal-modal-overlay';
   el.innerHTML =
-    '<div class="journal-modal journal-modal--evening">'
+    '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>Followed process (1 = no, 5 = fully)</label>' + _journalRadioGroup('followedProcess', JOURNAL_SCALE_1_5, entry.followedProcess) + '</div>'
     + '<div class="journal-field"><label>Traded only planned setups</label>' + _journalRadioGroup('tradedPlanned', JOURNAL_YES_NO, entry.tradedPlanned) + '</div>'
