@@ -4932,8 +4932,8 @@ function _renderNotifDropdown() {
             + '<span class="notif-msg">' + escHtml(n.message) + '</span>'
             + '<span class="notif-time">' + ago + '</span>'
             + '</div>'
-            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 14) + '</button>' : '')
-            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) ? '<button class="btn-icon" data-action="open-morning-journal">' + icon('arrow-right', 14) + '</button>' : '')
+            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) ? '<button class="btn-icon" data-action="open-morning-journal">' + icon('arrow-right', 16) + '</button>' : '')
             + '</div>';
         }).join('')
       + '</div>'
