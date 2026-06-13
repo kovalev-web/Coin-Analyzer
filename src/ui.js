@@ -3379,7 +3379,7 @@ function _missedOpportunitiesHTML() {
   state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
   var weekMonday = _dateStr(_currentWeekMonday());
   var items = (state.briefing || [])
-    .filter(function (e) { return e.date >= weekMonday && (e.status === 'missed' || e.status === 'watching') && e.addedPrice; })
+    .filter(function (e) { return e.date >= weekMonday && e.status === 'missed' && e.addedPrice; })
     .map(function (e) {
       var coin = coinMap[e.sym];
       var delta = (coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
