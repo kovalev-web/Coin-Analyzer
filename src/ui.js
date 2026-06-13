@@ -4625,7 +4625,7 @@ export function renderFVBriefingDrawer() {
           ? '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
             + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
             + '</div>'
-          : (hasNote ? '<div class="bp-note-readonly">' + escHtml(e.note) + '</div>' : ''))
+          : (hasNote ? '<div class="fvbd-history"><div class="fvbd-history-note">' + escHtml(e.note) + '</div></div>' : ''))
         + (isToday ? (function () {
           var _fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           var _weekMonday = _dateStr(_currentWeekMonday());
