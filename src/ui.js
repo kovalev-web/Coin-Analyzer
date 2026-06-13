@@ -4986,8 +4986,6 @@ export function toggleNotifDropdown() {
       _popupFullscreen(dd);
       lockScroll();
     }
-    state.notifUnread = 0;
-    updateNotifBadge();
   }
 }
 
