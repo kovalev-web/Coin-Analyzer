@@ -4959,7 +4959,7 @@ function _renderNotifDropdown() {
             + '<span class="notif-time">' + ago + '</span>'
             + '</div>'
             + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-notif-id="' + n.id + '" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && !(state.journalToday && (state.journalToday.morningAt || state.journalToday.skipped)) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
             + '</div>';
         }).join('')
       + '</div>'
