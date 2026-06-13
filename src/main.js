@@ -472,14 +472,12 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-expand': {
       var fvExpandDate = target.dataset.date;
       toggleFvExpand(sym, fvExpandDate);
+      openFV(sym);
       break;
     }
     case 'toggle-fv-briefing':
       toggleFVBriefingDrawer();
       fetchAllBriefingTrades().then(function () { fetchWeekTrades(); });
-      break;
-    case 'fvbd-open':
-      openFV(sym);
       break;
     case 'fvbd-tab':
       state.briefingTab = target.dataset.tab;

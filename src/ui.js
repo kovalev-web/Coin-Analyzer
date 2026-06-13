@@ -4605,7 +4605,7 @@ export function renderFVBriefingDrawer() {
       var hasNote = !!e.note;
       var isCurrent = _fvSym === e.sym;
       html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
-        + '<button class="bp-sym-btn" data-action="fvbd-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>'
+        + '<span class="bp-sym-btn">' + e.sym.toUpperCase() + '</span>'
         + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
         + (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '')
         + (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>')
