@@ -612,16 +612,29 @@ export async function pollCharts(deep) {
           arr.push(candle);
           if (arr.length > 300) arr.shift();
           if (!isLast) hadNewCandle = true; // a closed candle was missing — need full redraw
+        } else {
+          // candle.time < last.time — a gap: a newer candle already landed at the end
+          // (e.g. a kline_update slipped through right after reconnect) while these
+          // earlier candles were missed. Find their correct position and splice them in.
+          var idx = arr.length - 2;
+          while (idx >= 0 && arr[idx].time > candle.time) idx--;
+          if (idx >= 0 && arr[idx].time === candle.time) {
+            arr[idx] = candle;
+          } else {
+            arr.splice(idx + 1, 0, candle);
+            if (arr.length > 300) arr.shift();
+          }
+          hadNewCandle = true; // gap filled — needs full redraw
         }
       }
 
-      // pollCharts обновляет chart только если kline WS молчит >5с (разрыв соединения).
-      // Пока kline WS активен — он единственный рендерер графика.
-      if (klineRecent) continue;
-
-      // Kline WS неактивен — используем pollCharts как fallback
       var s = (window.__chartSeries || {})[c.symbol];
       if (!s) continue;
+
+      // pollCharts обновляет live-свечу только если kline WS молчит >5с (разрыв соединения) —
+      // пока kline WS активен, он единственный рендерер последней свечи.
+      // Но заполненную дырку (hadNewCandle) нужно отрисовать в любом случае.
+      if (klineRecent && !hadNewCandle) continue;
 
       var lastCandle = arr[arr.length - 1];
       var _vc = volClrs();
