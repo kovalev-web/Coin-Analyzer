@@ -1341,7 +1341,7 @@ export function showWeeklyReportModal(report) {
   el.innerHTML =
     '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Weekly summary</span><button class="btn-topbar" data-action="close-weekly-report">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><div class="journal-static" style="white-space:pre-wrap;">' + escHtml(report || '') + '</div></div>'
+    + '<div class="journal-field"><div class="journal-static" style="white-space:pre-wrap;font-weight:var(--font-normal);">' + escHtml(report || '') + '</div></div>'
     + '</div>';
 
   document.body.appendChild(el);
