@@ -4487,6 +4487,9 @@ export function closeCoinFullView() {
     (_levels[_fvSym] || []).forEach(function (l) { l.fvLine = null; });
     (_rays[_fvSym] || []).forEach(function (r) { r.fvLine = null; });
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
+    // TF switched inside FV doesn't touch the grid card's chart — sync it now
+    // so the card reflects state.chartTF without waiting for a tab switch.
+    setChartTF(_fvSym, state.chartTF[_fvSym] || '5m');
   }
   _fvSym = null;
   _expandedFvKey = null;
