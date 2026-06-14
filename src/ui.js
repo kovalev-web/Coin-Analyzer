@@ -3758,6 +3758,12 @@ function _fvLiquidityHTML() {
     + '</div>';
 }
 
+function _fmtDepth(n) {
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(2);
+}
+
 function _spreadClass(bps) {
   if (bps < 10) return 'narrow';
   if (bps > 30) return 'wide';
@@ -3779,8 +3785,8 @@ function renderLiquidityMetrics(metrics) {
   var askVal = document.getElementById('fv-liq-ask-val');
   if (bidBar) bidBar.style.width = (metrics.depthBid / maxDepth * 100) + '%';
   if (askBar) askBar.style.width = (metrics.depthAsk / maxDepth * 100) + '%';
-  if (bidVal) bidVal.textContent = fmt(metrics.depthBid);
-  if (askVal) askVal.textContent = fmt(metrics.depthAsk);
+  if (bidVal) bidVal.textContent = _fmtDepth(metrics.depthBid);
+  if (askVal) askVal.textContent = _fmtDepth(metrics.depthAsk);
 
   var aggr = metrics.aggression;
   var buyBar = document.getElementById('fv-liq-aggr-buy');
