@@ -94,6 +94,7 @@
   .fv-info-top{display:none;}
   .fv-coin-info{display:none;}
   .fv-info-stats{display:none;}
+  #fv-overlay .fv-liquidity{display:none;}
   #bp-popup{border-radius:var(--radius-xl);}
   .bp-note-row textarea{font-size:var(--text-sm) !important;}
 }

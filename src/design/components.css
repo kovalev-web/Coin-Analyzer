@@ -347,6 +347,28 @@ span.bp-status{cursor:default;}
 .fvbd-auto .bp-sym-btn{font-style:italic;}
 .fvbd-empty{padding:var(--space-12) var(--space-8);color:var(--graphite);font-size:var(--text-xs);text-align:center;}
 
+/* ── FV Liquidity Panel ─────────────────────────────────────── */
+.fv-liquidity{width:180px;flex-shrink:0;display:flex;flex-direction:column;background:var(--paper);border-left:1px solid var(--steel);overflow:hidden;}
+.liq-metrics{padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6);flex-shrink:0;border-bottom:1px solid var(--steel);}
+.liq-row{display:flex;flex-direction:column;gap:var(--space-2);}
+.liq-row-head{display:flex;align-items:center;justify-content:space-between;font-size:var(--text-2xs);color:var(--graphite);font-weight:var(--font-medium);text-transform:uppercase;letter-spacing:0.04em;}
+.liq-value{font-size:var(--text-xs);font-weight:var(--font-semi);color:var(--ink-deep);}
+.liq-value.narrow{color:var(--bullish);}
+.liq-value.wide{color:var(--danger);}
+.liq-bar-track{display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
+.liq-bar{height:100%;}
+.liq-bar.bid{background:var(--bullish);}
+.liq-bar.ask{background:var(--danger);}
+.liq-aggr-track{display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
+.liq-aggr-buy{background:var(--bullish);height:100%;}
+.liq-aggr-sell{background:var(--danger);height:100%;}
+.tape-list{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.tape-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) var(--space-6);font-size:var(--text-2xs);font-variant-numeric:tabular-nums;}
+.tape-row.buy{color:var(--bullish);}
+.tape-row.sell{color:var(--danger);}
+.tape-price{flex:1;}
+.tape-qty{color:var(--graphite);}
+
 /* ── Search popup ───────────────────────────────────────────── */
 .search-popup{position:absolute;z-index:1010;width:360px;flex-direction:column;display:none;}
 .search-popup-input-wrap{padding-bottom:var(--space-5);}

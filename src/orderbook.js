@@ -1,0 +1,151 @@
+'use strict';
+
+// Direct browser → Binance Futures WS for FV liquidity panel.
+// depth20@100ms (spread + depth) via /stream?streams=.
+// aggTrade (tape + aggression) via /market/ws + explicit SUBSCRIBE — the combined
+// /stream?streams= and /ws/<symbol>@aggTrade endpoints return zero aggTrade messages
+// for retail connections; /market/ws + SUBSCRIBE delivers real-time data (same
+// endpoint server-vps.js uses for the phase detector's microstructure feed).
+
+var AGGRESSION_WINDOW_MS = 15000;
+var RECONNECT_DELAY_MS = 3000;
+
+var _depthWs = null;
+var _tradeWs = null;
+var _sym = null;
+var _onUpdate = null;
+var _depthReconnectTimer = null;
+var _tradeReconnectTimer = null;
+var _closed = true;
+
+var _bids = [];
+var _asks = [];
+var _trades = []; // [{ ts, qty, isBuy }]
+
+function spreadBps(bids, asks) {
+  if (!bids.length || !asks.length) return null;
+  var bestBid = bids[0][0];
+  var bestAsk = asks[0][0];
+  var mid = (bestBid + bestAsk) / 2;
+  if (mid === 0) return null;
+  return (bestAsk - bestBid) / mid * 10000;
+}
+
+function depthUsdt10bps(levels, mid, side) {
+  if (!levels.length || mid === 0) return 0;
+  var threshold = mid * (side === 'bid' ? (1 - 0.001) : (1 + 0.001));
+  var total = 0;
+  for (var i = 0; i < levels.length; i++) {
+    var price = levels[i][0];
+    var qty = levels[i][1];
+    if (side === 'bid' && price < threshold) break;
+    if (side === 'ask' && price > threshold) break;
+    total += price * qty;
+  }
+  return total;
+}
+
+function trimTrades(now) {
+  while (_trades.length && now - _trades[0].ts > AGGRESSION_WINDOW_MS) _trades.shift();
+}
+
+function aggression(now) {
+  trimTrades(now);
+  var buyVol = 0, sellVol = 0;
+  for (var i = 0; i < _trades.length; i++) {
+    if (_trades[i].isBuy) buyVol += _trades[i].qty; else sellVol += _trades[i].qty;
+  }
+  var total = buyVol + sellVol;
+  return {
+    buyVol: buyVol,
+    sellVol: sellVol,
+    ratio: total > 0 ? buyVol / total : 0.5,
+    tradesPerSec: _trades.length / (AGGRESSION_WINDOW_MS / 1000),
+  };
+}
+
+function buildMetrics() {
+  var metrics = { spread: null, depthBid: 0, depthAsk: 0, aggression: aggression(Date.now()) };
+  if (_bids.length && _asks.length) {
+    var mid = (_bids[0][0] + _asks[0][0]) / 2;
+    metrics.spread = spreadBps(_bids, _asks);
+    metrics.depthBid = depthUsdt10bps(_bids, mid, 'bid');
+    metrics.depthAsk = depthUsdt10bps(_asks, mid, 'ask');
+  }
+  return metrics;
+}
+
+function _openDepthWs() {
+  if (_closed) return;
+  _depthWs = new WebSocket('wss://fstream.binance.com/stream?streams=' + _sym + '@depth20@100ms');
+
+  _depthWs.onmessage = function (ev) {
+    var msg;
+    try { msg = JSON.parse(ev.data); } catch (e) { return; }
+    var data = msg.data || msg;
+    _bids = (data.b || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
+    _asks = (data.a || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
+    if (_onUpdate) _onUpdate({ type: 'depth', metrics: buildMetrics() });
+  };
+
+  _depthWs.onclose = function () {
+    if (_closed) return;
+    _depthReconnectTimer = setTimeout(_openDepthWs, RECONNECT_DELAY_MS);
+  };
+
+  _depthWs.onerror = function () {
+    try { _depthWs.close(); } catch (e) {}
+  };
+}
+
+function _openTradeWs() {
+  if (_closed) return;
+  _tradeWs = new WebSocket('wss://fstream.binance.com/market/ws');
+
+  _tradeWs.onopen = function () {
+    if (_closed) return;
+    _tradeWs.send(JSON.stringify({ method: 'SUBSCRIBE', params: [_sym + '@aggTrade'], id: Date.now() }));
+  };
+
+  _tradeWs.onmessage = function (ev) {
+    var msg;
+    try { msg = JSON.parse(ev.data); } catch (e) { return; }
+    if (msg.e !== 'aggTrade') return;
+    var trade = {
+      ts: msg.T || Date.now(),
+      price: parseFloat(msg.p),
+      qty: parseFloat(msg.q),
+      isBuy: msg.m === false,
+    };
+    _trades.push(trade);
+    if (_onUpdate) _onUpdate({ type: 'trade', trade: trade, metrics: buildMetrics() });
+  };
+
+  _tradeWs.onclose = function () {
+    if (_closed) return;
+    _tradeReconnectTimer = setTimeout(_openTradeWs, RECONNECT_DELAY_MS);
+  };
+
+  _tradeWs.onerror = function () {
+    try { _tradeWs.close(); } catch (e) {}
+  };
+}
+
+export function connectOrderbook(sym, onUpdate) {
+  disconnectOrderbook();
+  _closed = false;
+  _sym = sym.toLowerCase() + 'usdt';
+  _onUpdate = onUpdate;
+  _openDepthWs();
+  _openTradeWs();
+}
+
+export function disconnectOrderbook() {
+  _closed = true;
+  if (_depthReconnectTimer) { clearTimeout(_depthReconnectTimer); _depthReconnectTimer = null; }
+  if (_tradeReconnectTimer) { clearTimeout(_tradeReconnectTimer); _tradeReconnectTimer = null; }
+  if (_depthWs) { try { _depthWs.close(); } catch (e) {} _depthWs = null; }
+  if (_tradeWs) { try { _tradeWs.close(); } catch (e) {} _tradeWs = null; }
+  _sym = null; _onUpdate = null;
+  _bids = []; _asks = []; _trades = [];
+}
