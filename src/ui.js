@@ -2095,6 +2095,25 @@ export function destroyCharts() {
   window.__charts = _charts;
 }
 
+// Force lightweight-charts to re-measure against the current container size.
+// On mobile, returning from background can leave the chart's internal time-scale
+// layout desynced from the canvas (rays/alerts drift horizontally) until a full
+// page reload — this nudges each chart to recompute without recreating it.
+export function resyncChartLayouts() {
+  Object.keys(_charts).forEach(function (sym) {
+    var el = document.getElementById('chart-' + sym);
+    var chart = _charts[sym];
+    if (!el || !chart) return;
+    try { chart.resize(el.offsetWidth, el.offsetHeight || 300, true); } catch (e) {}
+    if (_rulers[sym] && _rulers[sym].canvas) _setCanvasSize(_rulers[sym].canvas, el.offsetWidth, el.offsetHeight || 300);
+  });
+  if (_fvChart) {
+    var fvEl = document.getElementById('fv-chart');
+    if (fvEl) { try { _fvChart.resize(fvEl.offsetWidth, fvEl.offsetHeight, true); } catch (e) {} }
+  }
+}
+window.__resyncChartLayouts = resyncChartLayouts;
+
 function _setCanvasSize(rc, cssW, cssH) {
   var dpr = window.devicePixelRatio || 1;
   rc.width = Math.round(cssW * dpr); rc.height = Math.round(cssH * dpr);

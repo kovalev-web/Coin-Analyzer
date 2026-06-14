@@ -59,11 +59,16 @@ function connectWS() {
     }
     emit('ws:status');
     emit('render');
-    // On reconnect (coins already in state) — force-refresh NATR for all visible coins
-    // and backfill any candles missed while the socket was down (e.g. mobile background).
+    // On reconnect (coins already in state) — force-refresh NATR for all visible coins,
+    // backfill any candles missed while the socket was down, and re-measure chart layouts
+    // (mobile background/foreground can desync ray/alert overlay positions).
     // Wait 800ms for the ticker push to arrive so state.coins is up to date.
     if (state.coins.length > 0) {
-      setTimeout(function () { emit('natr:force-refresh'); pollCharts(true); }, 800);
+      setTimeout(function () {
+        emit('natr:force-refresh');
+        pollCharts(true);
+        if (window.__resyncChartLayouts) window.__resyncChartLayouts();
+      }, 800);
     }
   };
 
