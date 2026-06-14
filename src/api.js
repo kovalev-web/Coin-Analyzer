@@ -650,7 +650,12 @@ export async function pollCharts(deep) {
         if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
         var tvs2 = (window.__tvChartVolSeries || {})[c.symbol];
         if (tvs2) { try { tvs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
-        if (chart && visibleRange) { try { chart.timeScale().setVisibleRange(visibleRange); } catch (e) { } }
+        // Восстанавливаем старый visibleRange только если он ещё пересекается с новыми
+        // данными — после долгого сна весь массив свечей мог сдвинуться в новый временной
+        // диапазон, и setVisibleRange со старым (уже не существующим) диапазоном прижимает
+        // график к правому краю, теряя rightOffset.
+        var dataOverlap = visibleRange && arr.length && visibleRange.from <= arr[arr.length - 1].time && visibleRange.to >= arr[0].time;
+        if (chart && dataOverlap) { try { chart.timeScale().setVisibleRange(visibleRange); } catch (e) { } }
       } else {
         try { s.update(lastCandle); } catch (e) { }
         var vs = (window.__chartVolSeries || {})[c.symbol];
