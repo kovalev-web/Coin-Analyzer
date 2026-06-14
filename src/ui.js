@@ -85,7 +85,7 @@ export function renderCards() {
       var el = existing[sym]; if (el) el.remove();
       try { if (_charts[sym]) _charts[sym].remove(); } catch (e) {}
       if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
-      delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
+      delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym]; delete _chartReady[sym];
       window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
     }
   });
@@ -156,7 +156,7 @@ export function screenerCoins() {
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 
-var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false, _alertDragBtn = 2;
+var _charts = {}, _fullSeries = {}, _volSeries = {}, _rulers = {}, _chartReady = {}, _dragging = null, _alertDragging = null, _alertDragMoved = false, _alertDragBtn = 2;
 var _cardObserver = null;
 var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLastVol = 0;
 var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -1632,6 +1632,7 @@ function _nearRayIdx(sym, chart, series, tf, px, py) {
 // Draw all rays for sym from their anchor to the right edge of the pane (before the price scale).
 function _drawRays(sym, chart, series, ctx, rc) {
   if (!chart || !series) return;
+  if (_chartReady[sym] === false) return;
   var tf = state.chartTF[sym] || '5m';
   var map = _rayCoordMap(chart, sym, tf);
   if (!map) return;
@@ -2009,6 +2010,10 @@ function updateChart(symbol) {
   var visibleCandles = 80;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total + 4 });
   _syncAlerts(symbol);
+  // Дать time scale один кадр на пересчёт координат под новый видимый диапазон,
+  // прежде чем разрешить рисовать лучи — иначе _drawRays успевает поймать
+  // промежуточные координаты (под старый диапазон) и луч "доезжает" на следующем кадре.
+  requestAnimationFrame(function () { _chartReady[symbol] = true; });
 }
 
 export function setChartTF(symbol, tf) {
@@ -2490,7 +2495,7 @@ function _initChartForSym(sym) {
   var s = chart.addCandlestickSeries(getSeriesColors());
   var vs = chart.addHistogramSeries({ color: getCSSVar('--steel'), priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-  _charts[sym] = chart; _fullSeries[sym] = s; _volSeries[sym] = vs;
+  _charts[sym] = chart; _fullSeries[sym] = s; _volSeries[sym] = vs; _chartReady[sym] = false;
   window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
   var rc = document.createElement('canvas');
   rc.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:5;';
@@ -2533,7 +2538,7 @@ function _destroyChartForSym(sym) {
   if (_rays[sym]) _rays[sym].forEach(function (r) { r.line = null; });
   (_alerts[sym] || []).forEach(function (a) { if (_aLines[a.id]) _aLines[a.id].card = null; });
   if (_rulers[sym] && _rulers[sym].canvas) { try { _rulers[sym].canvas.remove(); } catch (e) {} }
-  delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym];
+  delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym]; delete _chartReady[sym];
   window.__chartSeries = _fullSeries; window.__chartVolSeries = _volSeries; window.__charts = _charts;
 }
 
