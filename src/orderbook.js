@@ -9,6 +9,7 @@
 
 var AGGRESSION_WINDOW_MS = 15000;
 var RECONNECT_DELAY_MS = 3000;
+var DEPTH_MEDIAN_WINDOW = 10; // ~1s at depth20@100ms — filters out brief wall spikes
 
 var _depthWs = null;
 var _tradeWs = null;
@@ -21,6 +22,8 @@ var _closed = true;
 var _bids = [];
 var _asks = [];
 var _trades = []; // [{ ts, qty, isBuy }]
+var _depthBidBuf = [];
+var _depthAskBuf = [];
 
 function spreadBps(bids, asks) {
   if (!bids.length || !asks.length) return null;
@@ -31,9 +34,9 @@ function spreadBps(bids, asks) {
   return (bestAsk - bestBid) / mid * 10000;
 }
 
-function depthUsdt10bps(levels, mid, side) {
+function depthUsdt50bps(levels, mid, side) {
   if (!levels.length || mid === 0) return 0;
-  var threshold = mid * (side === 'bid' ? (1 - 0.001) : (1 + 0.001));
+  var threshold = mid * (side === 'bid' ? (1 - 0.005) : (1 + 0.005));
   var total = 0;
   for (var i = 0; i < levels.length; i++) {
     var price = levels[i][0];
@@ -43,6 +46,12 @@ function depthUsdt10bps(levels, mid, side) {
     total += price * qty;
   }
   return total;
+}
+
+function median(arr) {
+  var sorted = arr.slice().sort(function (a, b) { return a - b; });
+  var mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 function trimTrades(now) {
@@ -69,8 +78,12 @@ function buildMetrics() {
   if (_bids.length && _asks.length) {
     var mid = (_bids[0][0] + _asks[0][0]) / 2;
     metrics.spread = spreadBps(_bids, _asks);
-    metrics.depthBid = depthUsdt10bps(_bids, mid, 'bid');
-    metrics.depthAsk = depthUsdt10bps(_asks, mid, 'ask');
+    _depthBidBuf.push(depthUsdt50bps(_bids, mid, 'bid'));
+    _depthAskBuf.push(depthUsdt50bps(_asks, mid, 'ask'));
+    if (_depthBidBuf.length > DEPTH_MEDIAN_WINDOW) _depthBidBuf.shift();
+    if (_depthAskBuf.length > DEPTH_MEDIAN_WINDOW) _depthAskBuf.shift();
+    metrics.depthBid = median(_depthBidBuf);
+    metrics.depthAsk = median(_depthAskBuf);
   }
   return metrics;
 }
@@ -148,4 +161,5 @@ export function disconnectOrderbook() {
   if (_tradeWs) { try { _tradeWs.close(); } catch (e) {} _tradeWs = null; }
   _sym = null; _onUpdate = null;
   _bids = []; _asks = []; _trades = [];
+  _depthBidBuf = []; _depthAskBuf = [];
 }
