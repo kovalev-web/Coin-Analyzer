@@ -59,10 +59,11 @@ function connectWS() {
     }
     emit('ws:status');
     emit('render');
-    // On reconnect (coins already in state) — force-refresh NATR for all visible coins.
+    // On reconnect (coins already in state) — force-refresh NATR for all visible coins
+    // and backfill any candles missed while the socket was down (e.g. mobile background).
     // Wait 800ms for the ticker push to arrive so state.coins is up to date.
     if (state.coins.length > 0) {
-      setTimeout(function () { emit('natr:force-refresh'); }, 800);
+      setTimeout(function () { emit('natr:force-refresh'); pollCharts(true); }, 800);
     }
   };
 
@@ -667,20 +668,6 @@ export function startChartPolling() {
       emit('natr:refresh');
     }
   }, 60000);
-  // iOS PWA: восстанавливаем данные после разморозки из фона.
-  // WS-соединение рвётся при уходе в бэкграунд — при возврате догружаем свечи и NATR.
-  var _hiddenAt = null;
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      _hiddenAt = Date.now();
-    } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000) {
-      _hiddenAt = null;
-      pollCharts(true);
-      emit('natr:force-refresh');
-    } else {
-      _hiddenAt = null;
-    }
-  });
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
