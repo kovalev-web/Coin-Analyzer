@@ -619,12 +619,13 @@ export async function pollCharts(deep) {
           var idx = arr.length - 2;
           while (idx >= 0 && arr[idx].time > candle.time) idx--;
           if (idx >= 0 && arr[idx].time === candle.time) {
+            // Existing candle — REST correction, no structural change.
             arr[idx] = candle;
           } else {
             arr.splice(idx + 1, 0, candle);
             if (arr.length > 300) arr.shift();
+            hadNewCandle = true; // genuine gap fill — needs full redraw
           }
-          hadNewCandle = true; // gap filled — needs full redraw
         }
       }
 
