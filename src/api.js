@@ -692,6 +692,18 @@ export function startChartPolling() {
       emit('natr:refresh');
     }
   }, 60000);
+  // После долгого сворачивания (мобильный фон/сон ОС) накопившиеся расхождения WS/чартов
+  // дешевле и надёжнее чинить полной перезагрузкой страницы, чем точечными патчами.
+  var _hiddenAt = null;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      _hiddenAt = Date.now();
+    } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000) {
+      location.reload();
+    } else {
+      _hiddenAt = null;
+    }
+  });
 }
 
 // ── Chart data (initial fetch, moved from ui.js) ─────────────────────────
