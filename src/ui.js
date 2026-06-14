@@ -1492,7 +1492,11 @@ function _rayCoordMap(chart, sym, tf) {
   if (lastX == null || prevX == null || lastX === prevX) return null;
   var pxPerSec = (lastX - prevX) / (lastT - prevT);
   return {
-    timeToX: function (t) { return lastX + (t - lastT) * pxPerSec; },
+    // Prefer the chart's own mapping when the anchor falls within loaded candles —
+    // accurate and immune to drift from setData()+setVisibleRange() reflows after
+    // a candle backfill. Extrapolation is the fallback for out-of-grid anchors
+    // (e.g. right after a timeframe switch).
+    timeToX: function (t) { var x = ts.timeToCoordinate(t); return x != null ? x : lastX + (t - lastT) * pxPerSec; },
     xToTime: function (x) { var t = ts.coordinateToTime(x); return t != null ? t : lastT + (x - lastX) / pxPerSec; },
   };
 }
