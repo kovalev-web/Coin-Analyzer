@@ -94,7 +94,6 @@
   .fv-info-top{display:none;}
   .fv-coin-info{display:none;}
   .fv-info-stats{display:none;}
-  #fv-overlay .fv-liquidity{display:none;}
   #bp-popup{border-radius:var(--radius-xl);}
   .bp-note-row textarea{font-size:var(--text-sm) !important;}
 }
@@ -103,10 +102,5 @@
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-body{flex:9 1 0%;}
   #fv-overlay:has(#fv-briefing-drawer.open) #fv-briefing-drawer.open{height:auto;flex:11 1 0%;}
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-top:var(--v-md);margin-bottom:var(--v-md);}
-}
-
-@media(max-width:768px) and (orientation:landscape){
-  #fv-overlay{flex-direction:row;}
-  #fv-overlay .fv-liquidity{display:flex;}
 }
 

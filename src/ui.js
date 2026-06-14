@@ -3743,7 +3743,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>';
 }
 
-var TAPE_MAX_ROWS = 30;
+var TAPE_MAX_ROWS = 20;
 var TAPE_MIN_USDT = 50;
 
 function _fvLiquidityHTML() {
@@ -3946,16 +3946,16 @@ export function openCoinFullView(sym) {
       + '<div class="fv-chart-wrap">'
       + _fvCoinInfoHTML(sym, tf)
       + '<div id="fv-chart"></div>'
-      + '</div>'
-      + '</div>'
       + _fvLiquidityHTML()
+      + '</div>'
+      + '</div>'
       + _fvBottomBarHTML(sym, tf)
       + '<div id="fv-briefing-drawer"></div>';
   } else {
     // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
     if (_chartWrap) {
-      _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>';
+      _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>' + _fvLiquidityHTML();
       var _bb = overlay.querySelector('.fv-bottom-bar');
       if (_bb) _bb.outerHTML = _fvBottomBarHTML(sym, tf);
       var _fvdEl = document.getElementById('fv-briefing-drawer');
