@@ -1466,7 +1466,8 @@ function updateLevelsBtn(sym) { updateClearBtn(sym); }
 // snapped to a bar via timeToCoordinate — see _rayCoordMap).
 //
 // Desktop: Ctrl+left-click on empty space adds a ray; Ctrl+left-click on an
-// existing ray grabs it for dragging; Ctrl+right-click removes it.
+// existing ray removes it (or drags it if the mouse moves before release);
+// Ctrl+right-click also removes it.
 
 var _rays = {}; // sym → [{id, time1, price1, line, fvLine}]
 var _rIdSeed = 0;
@@ -2320,7 +2321,7 @@ function _attachChartEvents(sym, container) {
           var map0 = _rayCoordMap(ch0, sym, tf0);
           var grabPrice = cs.coordinateToPrice(y), grabTime = map0 ? map0.xToTime(x0) : null;
           if (grabPrice != null && grabTime != null) {
-            _rayDragging = { sym: sym, idx: rIdx, ray: ray, grabPrice: grabPrice, grabTime: grabTime, origPrice1: ray.price1, origTime1: ray.time1 };
+            _rayDragging = { sym: sym, idx: rIdx, ray: ray, grabPrice: grabPrice, grabTime: grabTime, origPrice1: ray.price1, origTime1: ray.time1, moved: false };
             container.style.cursor = 'move';
           }
           return;
@@ -2403,6 +2404,7 @@ function _attachChartEvents(sym, container) {
           var ray = _rayDragging.ray;
           ray.price1 = _rayDragging.origPrice1 + (curPrice - _rayDragging.grabPrice);
           ray.time1 = _rayDragging.origTime1 + (curTime - _rayDragging.grabTime);
+          _rayDragging.moved = true;
           if (ray.line) ray.line.applyOptions({ price: ray.price1 });
           if (ray.fvLine) ray.fvLine.applyOptions({ price: ray.price1 });
         }
@@ -2458,7 +2460,9 @@ function _attachChartEvents(sym, container) {
 
   container.addEventListener('mouseup', function (e) {
     if (e.button === 0 && _rayDragging && _rayDragging.sym === sym) {
-      _rayDragging = null; container.style.cursor = ''; saveRays(); return;
+      var rd = _rayDragging; _rayDragging = null; container.style.cursor = '';
+      if (!rd.moved) removeRay(sym, rd.idx); else saveRays();
+      return;
     }
     if (e.button === 0 && _dragging && _dragging.sym === sym) {
       _dragging = null; container.style.cursor = ''; saveLevels(); return;
@@ -4010,7 +4014,7 @@ export function openCoinFullView(sym) {
         var fvMap0 = _rayCoordMap(_fvChart, sym, fvTf0);
         var fvGrabPrice = _fvSeries.coordinateToPrice(fvY0), fvGrabTime = fvMap0 ? fvMap0.xToTime(fvX0) : null;
         if (fvGrabPrice != null && fvGrabTime != null) {
-          _fvRayDragging = { idx: fvRIdx, ray: fvRay, grabPrice: fvGrabPrice, grabTime: fvGrabTime, origPrice1: fvRay.price1, origTime1: fvRay.time1 };
+          _fvRayDragging = { idx: fvRIdx, ray: fvRay, grabPrice: fvGrabPrice, grabTime: fvGrabTime, origPrice1: fvRay.price1, origTime1: fvRay.time1, moved: false };
           el.style.cursor = 'move';
         }
         return;
@@ -4089,6 +4093,7 @@ export function openCoinFullView(sym) {
         var fvRay = _fvRayDragging.ray;
         fvRay.price1 = _fvRayDragging.origPrice1 + (fvCurPrice - _fvRayDragging.grabPrice);
         fvRay.time1 = _fvRayDragging.origTime1 + (fvCurTime - _fvRayDragging.grabTime);
+        _fvRayDragging.moved = true;
         if (fvRay.line) fvRay.line.applyOptions({ price: fvRay.price1 });
         if (fvRay.fvLine) fvRay.fvLine.applyOptions({ price: fvRay.price1 });
       }
@@ -4193,7 +4198,10 @@ export function openCoinFullView(sym) {
   });
   el.addEventListener('mouseup', function (e) {
     if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
-    if (_fvRayDragging && e.button === 0) { saveRays(); _fvRayDragging = null; el.style.cursor = ''; }
+    if (_fvRayDragging && e.button === 0) {
+      var frd = _fvRayDragging; _fvRayDragging = null; el.style.cursor = '';
+      if (!frd.moved) removeRay(sym, frd.idx); else saveRays();
+    }
     if (_fvDragging && e.button === 0) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
     if (_fvAlertDragging && e.button === _fvAlertDragBtn) { saveAlerts(); _fvAlertDragging = null; _fvAlertDragBtn = 2; el.style.cursor = ''; }
   });
