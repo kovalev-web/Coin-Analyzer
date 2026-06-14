@@ -698,7 +698,7 @@ export function startChartPolling() {
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
       _hiddenAt = Date.now();
-    } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000) {
+    } else if (_hiddenAt !== null && Date.now() - _hiddenAt > 2 * 60 * 1000 && window.innerWidth < 768) {
       location.reload();
     } else {
       _hiddenAt = null;
