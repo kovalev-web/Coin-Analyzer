@@ -105,3 +105,8 @@
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-top:var(--v-md);margin-bottom:var(--v-md);}
 }
 
+@media(max-width:768px) and (orientation:landscape){
+  #fv-overlay{flex-direction:row;}
+  #fv-overlay .fv-liquidity{display:flex;}
+}
+
