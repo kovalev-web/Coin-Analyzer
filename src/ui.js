@@ -1332,6 +1332,29 @@ export function hideEveningModal() {
   el.remove();
 }
 
+export function showWeeklyReportModal(report) {
+  if (document.getElementById('weekly-report-modal')) return;
+
+  var el = document.createElement('div');
+  el.id = 'weekly-report-modal';
+  el.className = 'journal-modal-overlay';
+  el.innerHTML =
+    '<div class="journal-modal">'
+    + '<div class="popup-header"><span class="popup-title">Weekly summary</span><button class="btn-topbar" data-action="close-weekly-report">' + icon('x', 14) + '</button></div>'
+    + '<div class="journal-field"><div class="journal-static" style="white-space:pre-wrap;">' + escHtml(report || '') + '</div></div>'
+    + '</div>';
+
+  document.body.appendChild(el);
+  lockScroll();
+}
+
+export function hideWeeklyReportModal() {
+  var el = document.getElementById('weekly-report-modal');
+  if (!el) return;
+  unlockScroll();
+  el.remove();
+}
+
 export function renderProfileJournal(container, entries) {
   if (!entries || !entries.length) {
     container.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-sm);">No journal entries yet.</p>';
@@ -5087,6 +5110,7 @@ function _renderNotifDropdown() {
             + '<span class="notif-time">' + ago + '</span>'
             + '</div>'
             + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-notif-id="' + n.id + '" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.type === 'weekly_report' && n.report ? '<button class="btn-icon" data-action="open-weekly-report" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
             + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && !(state.journalToday && (state.journalToday.morningAt || state.journalToday.skipped)) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
             + '</div>';
         }).join('')

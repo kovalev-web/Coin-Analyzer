@@ -2152,7 +2152,7 @@ async function sendWeeklyBriefingReport(chatId) {
   await sendTG(chatId, '📋 <b>Итоги недели</b>\n\n' + summary);
   console.log('[Weekly report] Sent to userId=' + userId + ' chatId=' + chatId);
   if (userId) {
-    pushNotification(userId, { type: 'weekly_report', message: 'Weekly summary is ready' }).catch(function () {});
+    pushNotification(userId, { type: 'weekly_report', message: 'Weekly summary is ready', report: summary }).catch(function () {});
   }
 }
 

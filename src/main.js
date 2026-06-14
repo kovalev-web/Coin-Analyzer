@@ -18,6 +18,7 @@ import {
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
+  showWeeklyReportModal, hideWeeklyReportModal,
   updateSessionTimer,
 } from './ui.js';
 import { on } from './events.js';
@@ -128,6 +129,16 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     }
+    case 'open-weekly-report': {
+      var _ndd3 = document.getElementById('notif-dd');
+      if (_ndd3) _ndd3.classList.remove('open');
+      var _n = state.notifications.find(function (n) { return n.id === target.dataset.notifId; });
+      if (_n) showWeeklyReportModal(_n.report);
+      break;
+    }
+    case 'close-weekly-report':
+      hideWeeklyReportModal();
+      break;
     case 'notif-clear': {
       e.stopPropagation();
       clearNotifications();
