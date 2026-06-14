@@ -1649,7 +1649,7 @@ function _drawRays(sym, chart, series, ctx, rc) {
     ctx.save();
     ctx.strokeStyle = RAY_COLOR; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(Math.max(0, x), y); ctx.lineTo(endX, y); ctx.stroke();
-    if (x >= 0) { ctx.fillStyle = RAY_COLOR; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
+    if (x >= 0) { ctx.fillStyle = RAY_COLOR; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   });
 }
