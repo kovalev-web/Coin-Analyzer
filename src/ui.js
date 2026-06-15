@@ -3,7 +3,7 @@ import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
-import { connectOrderbook, disconnectOrderbook } from './orderbook.js';
+import { connectOrderbook, disconnectOrderbook, AGGRESSION_WINDOW_MS } from './orderbook.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -3775,7 +3775,7 @@ function _fvLiquidityHTML() {
     + '<div class="liq-row"><div class="liq-row-head"><span>Spread</span><span class="liq-value" id="fv-liq-spread">—</span></div></div>'
     + '<div class="liq-row"><div class="liq-row-head"><span>Bid depth</span><span class="liq-value" id="fv-liq-bid-val">—</span></div><div class="liq-bar-track"><div class="liq-bar bid" id="fv-liq-bid-bar" style="width:0%"></div></div></div>'
     + '<div class="liq-row"><div class="liq-row-head"><span>Ask depth</span><span class="liq-value" id="fv-liq-ask-val">—</span></div><div class="liq-bar-track"><div class="liq-bar ask" id="fv-liq-ask-bar" style="width:0%"></div></div></div>'
-    + '<div class="liq-row"><div class="liq-row-head"><span>Tape</span><span class="liq-value" id="fv-liq-tps">—</span></div><div class="liq-aggr-track"><div class="liq-aggr-buy" id="fv-liq-aggr-buy" style="width:50%"></div><div class="liq-aggr-sell" id="fv-liq-aggr-sell" style="width:50%"></div></div></div>'
+    + '<div class="liq-row"><div class="liq-row-head"><span>Tape</span><span class="liq-value" id="fv-liq-tps">—</span></div><div class="liq-aggr-track"><div class="liq-aggr-buy" id="fv-liq-aggr-buy" style="width:50%"></div><div class="liq-aggr-sell" id="fv-liq-aggr-sell" style="width:50%"></div><div class="liq-warmup" id="fv-liq-warmup"></div></div></div>'
     + '</div>'
     + '<div class="tape-list" id="fv-tape-list"></div>'
     + '</div>';
@@ -4024,6 +4024,18 @@ export function openCoinFullView(sym) {
     renderLiquidityMetrics(msg.metrics);
     if (msg.type === 'trade') appendTapeRow(msg.trade);
   });
+
+  // Tape warm-up indicator: aggression ratio needs ~15s of trades to settle
+  var _warmupEl = document.getElementById('fv-liq-warmup');
+  if (_warmupEl) {
+    _warmupEl.style.transition = 'none';
+    _warmupEl.style.width = '100%';
+    _warmupEl.style.display = '';
+    void _warmupEl.offsetWidth; // force reflow so the transition below animates from 100%
+    _warmupEl.style.transition = 'width ' + AGGRESSION_WINDOW_MS + 'ms linear';
+    _warmupEl.style.width = '0%';
+    setTimeout(function () { if (_warmupEl) _warmupEl.style.display = 'none'; }, AGGRESSION_WINDOW_MS);
+  }
 
   // Volume label overlay
   var wrap = document.querySelector('.fv-chart-wrap');

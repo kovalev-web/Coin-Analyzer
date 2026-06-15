@@ -359,9 +359,10 @@ span.bp-status{cursor:default;}
 .liq-bar{height:100%;}
 .liq-bar.bid{background:var(--bullish);}
 .liq-bar.ask{background:var(--danger);}
-.liq-aggr-track{display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
+.liq-aggr-track{position:relative;display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
 .liq-aggr-buy{background:var(--bullish);height:100%;}
 .liq-aggr-sell{background:var(--danger);height:100%;}
+.liq-warmup{position:absolute;top:0;right:0;height:100%;width:100%;background:var(--steel);}
 .tape-list{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .tape-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-8);font-size:var(--text-2xs);font-variant-numeric:tabular-nums;}
 .tape-row.buy{color:var(--bullish);}

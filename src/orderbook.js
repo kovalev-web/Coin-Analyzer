@@ -7,7 +7,7 @@
 // for retail connections; /market/ws + SUBSCRIBE delivers real-time data (same
 // endpoint server-vps.js uses for the phase detector's microstructure feed).
 
-var AGGRESSION_WINDOW_MS = 15000;
+export var AGGRESSION_WINDOW_MS = 15000;
 var RECONNECT_DELAY_MS = 3000;
 var DEPTH_MEDIAN_WINDOW = 10; // ~1s at depth20@100ms — filters out brief wall spikes
 
