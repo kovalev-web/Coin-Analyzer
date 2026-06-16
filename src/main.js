@@ -449,6 +449,16 @@ document.body.addEventListener('click', function (e) {
     case 'close-briefing':
       closeBriefingPanel();
       break;
+    case 'toggle-liq-panel': {
+      var liqPanel = document.getElementById('fv-liquidity');
+      if (liqPanel) liqPanel.classList.toggle('open');
+      break;
+    }
+    case 'close-liq-panel': {
+      var liqPanelClose = document.getElementById('fv-liquidity');
+      if (liqPanelClose) liqPanelClose.classList.remove('open');
+      break;
+    }
     case 'bp-prev-date':
       briefingNavDate(-1);
       fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
