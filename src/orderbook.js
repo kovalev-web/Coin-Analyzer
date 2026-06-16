@@ -22,7 +22,7 @@ var _closed = true;
 var _keepAliveTimer = null;
 var _connectedAt = null;
 var _symWarmCache = {}; // fullSym → { connectedAt, disconnectedAt }
-var WARM_CACHE_TTL = 300000; // 5 min
+var WARM_CACHE_TTL = Infinity; // lives until page reload
 
 var _bids = [];
 var _asks = [];
@@ -151,7 +151,7 @@ function _openTradeWs() {
 
 function _hardDisconnect() {
   _closed = true;
-  if (_sym && _connectedAt) _symWarmCache[_sym] = { connectedAt: _connectedAt, disconnectedAt: Date.now() };
+  if (_sym && _connectedAt) _symWarmCache[_sym] = { connectedAt: _connectedAt, disconnectedAt: Date.now(), trades: _trades.slice() };
   _connectedAt = null;
   if (_depthReconnectTimer) { clearTimeout(_depthReconnectTimer); _depthReconnectTimer = null; }
   if (_tradeReconnectTimer) { clearTimeout(_tradeReconnectTimer); _tradeReconnectTimer = null; }
@@ -176,9 +176,14 @@ export function connectOrderbook(sym, onUpdate) {
   _closed = false;
   _sym = fullSym;
   var cached = _symWarmCache[fullSym];
-  _connectedAt = (cached && cached.connectedAt && (Date.now() - cached.disconnectedAt < WARM_CACHE_TTL))
-    ? cached.connectedAt
-    : Date.now();
+  var isWarmCache = cached && cached.connectedAt && (Date.now() - cached.disconnectedAt < WARM_CACHE_TTL);
+  if (isWarmCache) {
+    _connectedAt = cached.connectedAt;
+    var cutoff = Date.now() - AGGRESSION_WINDOW_MS;
+    _trades = (cached.trades || []).filter(function(t) { return t.ts > cutoff; });
+  } else {
+    _connectedAt = Date.now();
+  }
   _onUpdate = onUpdate;
   _openDepthWs();
   _openTradeWs();
