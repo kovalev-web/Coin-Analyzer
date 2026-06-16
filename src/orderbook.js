@@ -10,6 +10,7 @@
 export var AGGRESSION_WINDOW_MS = 15000;
 var RECONNECT_DELAY_MS = 3000;
 var DEPTH_MEDIAN_WINDOW = 10; // ~1s at depth20@100ms — filters out brief wall spikes
+var KEEP_ALIVE_MS = 12000;
 
 var _depthWs = null;
 var _tradeWs = null;
@@ -18,6 +19,7 @@ var _onUpdate = null;
 var _depthReconnectTimer = null;
 var _tradeReconnectTimer = null;
 var _closed = true;
+var _keepAliveTimer = null;
 
 var _bids = [];
 var _asks = [];
@@ -144,16 +146,7 @@ function _openTradeWs() {
   };
 }
 
-export function connectOrderbook(sym, onUpdate) {
-  disconnectOrderbook();
-  _closed = false;
-  _sym = sym.toLowerCase() + 'usdt';
-  _onUpdate = onUpdate;
-  _openDepthWs();
-  _openTradeWs();
-}
-
-export function disconnectOrderbook() {
+function _hardDisconnect() {
   _closed = true;
   if (_depthReconnectTimer) { clearTimeout(_depthReconnectTimer); _depthReconnectTimer = null; }
   if (_tradeReconnectTimer) { clearTimeout(_tradeReconnectTimer); _tradeReconnectTimer = null; }
@@ -162,4 +155,40 @@ export function disconnectOrderbook() {
   _sym = null; _onUpdate = null;
   _bids = []; _asks = []; _trades = [];
   _depthBidBuf = []; _depthAskBuf = [];
+}
+
+// Returns true if reconnecting to the same symbol within the keep-alive window
+// (aggression data is already warm — caller can skip the warmup wait).
+export function connectOrderbook(sym, onUpdate) {
+  var fullSym = sym.toLowerCase() + 'usdt';
+  if (_keepAliveTimer !== null && _sym === fullSym && !_closed) {
+    clearTimeout(_keepAliveTimer);
+    _keepAliveTimer = null;
+    _onUpdate = onUpdate;
+    return true;
+  }
+  if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
+  _hardDisconnect();
+  _closed = false;
+  _sym = fullSym;
+  _onUpdate = onUpdate;
+  _openDepthWs();
+  _openTradeWs();
+  return false;
+}
+
+export function disconnectOrderbook() {
+  if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
+  _hardDisconnect();
+}
+
+// Keeps WS alive for KEEP_ALIVE_MS so a quick FV reopen skips warmup.
+export function softDisconnectOrderbook() {
+  if (_closed) return;
+  _onUpdate = null;
+  if (_keepAliveTimer) return;
+  _keepAliveTimer = setTimeout(function () {
+    _keepAliveTimer = null;
+    _hardDisconnect();
+  }, KEEP_ALIVE_MS);
 }

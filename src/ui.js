@@ -3,7 +3,7 @@ import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
-import { connectOrderbook, disconnectOrderbook, AGGRESSION_WINDOW_MS } from './orderbook.js';
+import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, AGGRESSION_WINDOW_MS } from './orderbook.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -4023,20 +4023,25 @@ export function openCoinFullView(sym) {
   // Liquidity panel: (re)connect order book + trade tape WS for this symbol
   var _tapeList = document.getElementById('fv-tape-list');
   if (_tapeList) _tapeList.innerHTML = '';
-  connectOrderbook(sym, function (msg) {
+  var _warmReconnect = connectOrderbook(sym, function (msg) {
     renderLiquidityMetrics(msg.metrics);
     if (msg.type === 'trade') appendTapeRow(msg.trade);
   });
 
-  // Enable liq button after aggression warmup period
+  // Enable liq button: immediately on warm reconnect, after warmup otherwise
   var _liqBtn = document.getElementById('fv-liq-btn');
   if (_liqBtn) {
-    setTimeout(function () {
-      if (_liqBtn.isConnected) {
-        _liqBtn.disabled = false;
-        _liqBtn.classList.remove('warming');
-      }
-    }, AGGRESSION_WINDOW_MS);
+    if (_warmReconnect) {
+      _liqBtn.disabled = false;
+      _liqBtn.classList.remove('warming');
+    } else {
+      setTimeout(function () {
+        if (_liqBtn.isConnected) {
+          _liqBtn.disabled = false;
+          _liqBtn.classList.remove('warming');
+        }
+      }, AGGRESSION_WINDOW_MS);
+    }
   }
 
   // Volume label overlay
@@ -4602,7 +4607,7 @@ export function openCoinFullView(sym) {
 }
 
 export function closeCoinFullView() {
-  disconnectOrderbook();
+  softDisconnectOrderbook();
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
