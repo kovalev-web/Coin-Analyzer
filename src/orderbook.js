@@ -167,6 +167,7 @@ export function connectOrderbook(sym, onUpdate) {
   if (_keepAliveTimer !== null && _sym === fullSym && !_closed) {
     clearTimeout(_keepAliveTimer);
     _keepAliveTimer = null;
+    _connectedAt = Math.min(_connectedAt || 0, Date.now() - AGGRESSION_WINDOW_MS);
     _onUpdate = onUpdate;
     return;
   }
