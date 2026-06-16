@@ -353,7 +353,7 @@ span.bp-status{cursor:default;}
 /* ── FV Liquidity Panel ─────────────────────────────────────── */
 .fv-liquidity{display:none;position:absolute;top:46px;left:var(--space-7);max-height:calc(100% - 46px - var(--space-7));width:200px;z-index:11;flex-direction:column;background:var(--paper);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);overflow:hidden;}
 .fv-liquidity.open{display:flex;animation:popup-in 0.15s ease-out;}
-@media(max-width:768px){.fv-liquidity.open{position:fixed;inset:0;width:100%;max-height:100%;border-radius:0;z-index:401;animation:overlay-in 0.2s ease;}}
+@media(pointer:coarse){.fv-liquidity.open{position:fixed;inset:0;width:100%;max-height:100%;border-radius:0;z-index:401;animation:overlay-in 0.2s ease;}}
 @keyframes liq-warming{0%,100%{opacity:0.35;}50%{opacity:0.85;}}
 [data-action="toggle-liq-panel"].warming{animation:liq-warming 1.2s ease-in-out infinite;}
 .liq-metrics{padding:var(--space-8);display:flex;flex-direction:column;gap:var(--space-8);flex-shrink:0;border-bottom:1px solid var(--steel);}
