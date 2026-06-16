@@ -170,7 +170,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-tf-gap{margin-left:var(--space-6);}
 .fv-actions{display:flex;align-items:center;gap:var(--space-4);margin-left:var(--space-8);}
 .fv-info-stats{position:absolute;top:var(--space-7);left:var(--space-7);z-index:10;display:flex;align-items:center;gap:var(--space-5);}
-.fv-info-stats .stat-val{font-weight:var(--font-medium);padding:0;color:var(--ink-deep);}
+.fv-info-stats .stat-val{font-weight:var(--font-medium);padding:0;color:var(--ink-deep);font-variant-numeric:tabular-nums;}
 .fv-info-stats .stat-val.up{color:var(--ink-deep);}
 .fv-info-stats .stat-val.dn{color:var(--danger);}
 .fv-info-stats .stat-val.natr-hi{color:var(--bullish);}
