@@ -3717,6 +3717,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '</div></div>'
     + '</div>'
     + '<div class="fv-bb-right">'
+    + '<button class="btn-icon warming" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
     + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
@@ -4028,21 +4029,18 @@ export function openCoinFullView(sym) {
     if (msg.type === 'trade') appendTapeRow(msg.trade);
   });
 
-  // Enable liq button after remaining warmup time (0 if already warm)
-  var _liqBtn = document.getElementById('fv-liq-btn');
-  if (_liqBtn) {
-    var _ms = msUntilWarm();
-    if (_ms === 0) {
-      _liqBtn.disabled = false;
-      _liqBtn.classList.remove('warming');
-    } else {
-      setTimeout(function () {
-        if (_liqBtn.isConnected) {
-          _liqBtn.disabled = false;
-          _liqBtn.classList.remove('warming');
-        }
-      }, _ms);
-    }
+  // Enable liq buttons after remaining warmup time (0 if already warm)
+  var _liqBtns = document.querySelectorAll('[data-action="toggle-liq-panel"]');
+  var _ms = msUntilWarm();
+  function _enableLiqBtns() {
+    _liqBtns.forEach(function (b) { b.disabled = false; b.classList.remove('warming'); });
+  }
+  if (_ms === 0) {
+    _enableLiqBtns();
+  } else {
+    setTimeout(function () {
+      if (_liqBtns[0] && _liqBtns[0].isConnected) _enableLiqBtns();
+    }, _ms);
   }
 
   // Volume label overlay
