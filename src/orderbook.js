@@ -20,6 +20,7 @@ var _depthReconnectTimer = null;
 var _tradeReconnectTimer = null;
 var _closed = true;
 var _keepAliveTimer = null;
+var _connectedAt = null;
 
 var _bids = [];
 var _asks = [];
@@ -148,6 +149,7 @@ function _openTradeWs() {
 
 function _hardDisconnect() {
   _closed = true;
+  _connectedAt = null;
   if (_depthReconnectTimer) { clearTimeout(_depthReconnectTimer); _depthReconnectTimer = null; }
   if (_tradeReconnectTimer) { clearTimeout(_tradeReconnectTimer); _tradeReconnectTimer = null; }
   if (_depthWs) { try { _depthWs.close(); } catch (e) {} _depthWs = null; }
@@ -157,24 +159,28 @@ function _hardDisconnect() {
   _depthBidBuf = []; _depthAskBuf = [];
 }
 
-// Returns true if reconnecting to the same symbol within the keep-alive window
-// (aggression data is already warm — caller can skip the warmup wait).
 export function connectOrderbook(sym, onUpdate) {
   var fullSym = sym.toLowerCase() + 'usdt';
   if (_keepAliveTimer !== null && _sym === fullSym && !_closed) {
     clearTimeout(_keepAliveTimer);
     _keepAliveTimer = null;
     _onUpdate = onUpdate;
-    return true;
+    return;
   }
   if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
   _hardDisconnect();
   _closed = false;
   _sym = fullSym;
+  _connectedAt = Date.now();
   _onUpdate = onUpdate;
   _openDepthWs();
   _openTradeWs();
-  return false;
+}
+
+// Milliseconds until aggression window is full; 0 if already warm or no active connection.
+export function msUntilWarm() {
+  if (_closed || _connectedAt === null) return AGGRESSION_WINDOW_MS;
+  return Math.max(0, AGGRESSION_WINDOW_MS - (Date.now() - _connectedAt));
 }
 
 export function disconnectOrderbook() {

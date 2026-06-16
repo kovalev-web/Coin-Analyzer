@@ -3,7 +3,7 @@ import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
-import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, AGGRESSION_WINDOW_MS } from './orderbook.js';
+import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -4023,15 +4023,16 @@ export function openCoinFullView(sym) {
   // Liquidity panel: (re)connect order book + trade tape WS for this symbol
   var _tapeList = document.getElementById('fv-tape-list');
   if (_tapeList) _tapeList.innerHTML = '';
-  var _warmReconnect = connectOrderbook(sym, function (msg) {
+  connectOrderbook(sym, function (msg) {
     renderLiquidityMetrics(msg.metrics);
     if (msg.type === 'trade') appendTapeRow(msg.trade);
   });
 
-  // Enable liq button: immediately on warm reconnect, after warmup otherwise
+  // Enable liq button after remaining warmup time (0 if already warm)
   var _liqBtn = document.getElementById('fv-liq-btn');
   if (_liqBtn) {
-    if (_warmReconnect) {
+    var _ms = msUntilWarm();
+    if (_ms === 0) {
       _liqBtn.disabled = false;
       _liqBtn.classList.remove('warming');
     } else {
@@ -4040,7 +4041,7 @@ export function openCoinFullView(sym) {
           _liqBtn.disabled = false;
           _liqBtn.classList.remove('warming');
         }
-      }, AGGRESSION_WINDOW_MS);
+      }, _ms);
     }
   }
 
