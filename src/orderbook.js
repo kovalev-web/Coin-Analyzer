@@ -21,6 +21,8 @@ var _tradeReconnectTimer = null;
 var _closed = true;
 var _keepAliveTimer = null;
 var _connectedAt = null;
+var _symWarmCache = {}; // fullSym → { connectedAt, disconnectedAt }
+var WARM_CACHE_TTL = 300000; // 5 min
 
 var _bids = [];
 var _asks = [];
@@ -149,6 +151,7 @@ function _openTradeWs() {
 
 function _hardDisconnect() {
   _closed = true;
+  if (_sym && _connectedAt) _symWarmCache[_sym] = { connectedAt: _connectedAt, disconnectedAt: Date.now() };
   _connectedAt = null;
   if (_depthReconnectTimer) { clearTimeout(_depthReconnectTimer); _depthReconnectTimer = null; }
   if (_tradeReconnectTimer) { clearTimeout(_tradeReconnectTimer); _tradeReconnectTimer = null; }
@@ -171,7 +174,10 @@ export function connectOrderbook(sym, onUpdate) {
   _hardDisconnect();
   _closed = false;
   _sym = fullSym;
-  _connectedAt = Date.now();
+  var cached = _symWarmCache[fullSym];
+  _connectedAt = (cached && cached.connectedAt && (Date.now() - cached.disconnectedAt < WARM_CACHE_TTL))
+    ? cached.connectedAt
+    : Date.now();
   _onUpdate = onUpdate;
   _openDepthWs();
   _openTradeWs();
