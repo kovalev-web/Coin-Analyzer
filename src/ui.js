@@ -1372,12 +1372,28 @@ export function renderJournalChart(container, history) {
     handleScroll: true, handleScale: true,
   });
 
-  // Cumulative PnL area series
+  // Build lookup and fill all calendar dates between first and last entry
+  var historyMap = {};
+  history.forEach(function (row) { historyMap[row.date] = row; });
+
+  var allDates = [];
+  var _cur = new Date(history[0].date + 'T00:00:00Z');
+  var _end = new Date(history[history.length - 1].date + 'T00:00:00Z');
+  while (_cur <= _end) {
+    allDates.push(_cur.toISOString().slice(0, 10));
+    _cur.setUTCDate(_cur.getUTCDate() + 1);
+  }
+
   var cumulative = 0;
-  var areaData = history.map(function (row) {
-    cumulative += row.pnl || 0;
-    return { time: row.date, value: parseFloat(cumulative.toFixed(2)) };
+  var areaData = [];
+  var histogramData = [];
+  allDates.forEach(function (date) {
+    var row = historyMap[date];
+    if (row) cumulative += row.pnl || 0;
+    areaData.push({ time: date, value: parseFloat(cumulative.toFixed(2)) });
+    histogramData.push({ time: date, value: row ? (row.tradeCount || 0) : 0 });
   });
+
   var totalPnl = areaData[areaData.length - 1].value;
   var lineColor = totalPnl >= 0 ? getCSSVar('--bullish') : getCSSVar('--danger');
   var topColor = totalPnl >= 0 ? 'rgba(38,166,91,0.25)' : 'rgba(239,83,80,0.25)';
@@ -1397,9 +1413,7 @@ export function renderJournalChart(container, history) {
     priceScaleId: 'vol',
     priceFormat: { type: 'volume' },
   });
-  histSeries.setData(history.map(function (row) {
-    return { time: row.date, value: row.tradeCount || 0 };
-  }));
+  histSeries.setData(histogramData);
   chart.priceScale('vol').applyOptions({
     scaleMargins: { top: 0, bottom: 0.85 },
     visible: false,
