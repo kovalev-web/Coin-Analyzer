@@ -1515,7 +1515,7 @@ export function renderProfileJournal(container, entries) {
     var pnl = e.skipped
       ? '<span class="journal-pnl-pending">—</span>'
       : e.pnl != null
-        ? '<span class="journal-pnl ' + (e.pnl >= 0 ? 'up' : 'dn') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
+        ? '<span class="journal-pnl ' + (e.pnl > 0 ? 'up' : e.pnl < 0 ? 'dn' : 'neutral') + '">' + (e.pnl >= 0 ? '+' : '-') + '$' + Math.abs(e.pnl).toFixed(2) + '</span>'
         : '<span class="journal-pnl-pending" data-journal-pnl-date="' + e.date + '">…</span>';
     var dateParts = e.date.split('-');
     var dateLabel = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : e.date;
@@ -1547,7 +1547,7 @@ export function renderProfileJournal(container, entries) {
     fetchTradesForDate(date).then(function (stats) {
       if (!el.isConnected) return;
       var pnl = stats ? stats.pnl : 0;
-      el.outerHTML = '<span class="journal-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2) + '</span>';
+      el.outerHTML = '<span class="journal-pnl ' + (pnl > 0 ? 'up' : pnl < 0 ? 'dn' : 'neutral') + '">' + (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2) + '</span>';
     });
   });
 }
