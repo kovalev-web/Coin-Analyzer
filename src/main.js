@@ -822,7 +822,7 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '</div>' +
-    '<div id="journal-pnl-chart" style="height:400px;margin-bottom:var(--space-8);"></div>' +
+    '<div id="journal-pnl-chart" style="height:400px;margin-bottom:var(--space-8);border-radius:var(--radius-xl);overflow:hidden;"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
   if (state.journalEntries) {
