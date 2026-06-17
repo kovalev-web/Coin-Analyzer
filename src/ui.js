@@ -1398,12 +1398,9 @@ export function renderJournalChart(container, history) {
     histogramData.push({ time: date, value: row ? -(row.tradeCount || 0) : 0 });
   });
 
-  var totalPnl = areaData[areaData.length - 1].value;
-  var lineColor = totalPnl >= 0 ? getCSSVar('--bullish') : getCSSVar('--danger');
-  var topColor = totalPnl >= 0 ? 'rgba(38,166,91,0.25)' : 'rgba(239,83,80,0.25)';
   var areaSeries = chart.addAreaSeries({
-    lineColor: lineColor,
-    topColor: topColor,
+    lineColor: getCSSVar('--primary'),
+    topColor: 'rgba(39,124,194,0.25)',
     bottomColor: 'rgba(0,0,0,0)',
     lineWidth: 2,
     priceScaleId: 'right',
