@@ -444,6 +444,7 @@ document.body.addEventListener('click', function (e) {
       var eOtherText = document.querySelector('#evening-journal-modal [name="triggerOtherText"]');
       if (target.dataset.trigger === 'triggerOther' && eOtherText) {
         eOtherText.hidden = !target.classList.contains('active');
+        if (!eOtherText.hidden) eOtherText.dispatchEvent(new Event('input'));
       }
       break;
     }
