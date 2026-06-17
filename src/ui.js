@@ -1366,7 +1366,7 @@ export function renderJournalChart(container, history) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.15, bottom: 0.1 } },
-    leftPriceScale: { visible: false, borderColor: c.border, scaleMargins: { top: 0, bottom: 0.75 } },
+    leftPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0, bottom: 0.75 } },
     timeScale: { borderColor: c.border, timeVisible: false },
     handleScroll: true, handleScale: true,
   });
