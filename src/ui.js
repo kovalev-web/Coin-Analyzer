@@ -1372,13 +1372,19 @@ export function renderJournalChart(container, history) {
     handleScroll: true, handleScale: true,
   });
 
-  // Build lookup and fill all calendar dates between first and last entry
+  // Build lookup by date
   var historyMap = {};
   history.forEach(function (row) { historyMap[row.date] = row; });
 
+  // Range: from first entry (or 60 days ago, whichever is earlier) to today
+  // Minimum 60 days ensures bars are visually narrow
+  var _today = new Date(); _today.setUTCHours(0, 0, 0, 0);
+  var _firstEntry = new Date(history[0].date + 'T00:00:00Z');
+  var _minStart = new Date(_today.getTime() - 59 * 86400000);
+  var _cur = _firstEntry < _minStart ? _firstEntry : _minStart;
+  var _end = _today;
+
   var allDates = [];
-  var _cur = new Date(history[0].date + 'T00:00:00Z');
-  var _end = new Date(history[history.length - 1].date + 'T00:00:00Z');
   while (_cur <= _end) {
     allDates.push(_cur.toISOString().slice(0, 10));
     _cur.setUTCDate(_cur.getUTCDate() + 1);
@@ -1391,7 +1397,8 @@ export function renderJournalChart(container, history) {
     var row = historyMap[date];
     if (row) cumulative += row.pnl || 0;
     areaData.push({ time: date, value: parseFloat(cumulative.toFixed(2)) });
-    histogramData.push({ time: date, value: row ? (row.tradeCount || 0) : 0 });
+    // Negative values → bars hang downward from 0-line at top of strip
+    histogramData.push({ time: date, value: row ? -(row.tradeCount || 0) : 0 });
   });
 
   var totalPnl = areaData[areaData.length - 1].value;
