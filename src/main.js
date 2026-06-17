@@ -13,7 +13,7 @@ import {
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
-  forceUnlockScroll, reapplyOverlayPositions,
+  forceUnlockScroll, reapplyOverlayPositions, resyncChartLayouts,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
@@ -706,9 +706,10 @@ window.addEventListener('orientationchange', function () {
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
   clearAllCrosshairs();
 
-  // iOS needs ~300ms after orientationchange before the new viewport dimensions
-  // are reported. Re-apply fixed positions so overlays fill the new viewport.
-  setTimeout(reapplyOverlayPositions, 300);
+  // iOS needs ~350ms after orientationchange before viewport dimensions are final.
+  // reapplyOverlayPositions re-anchors fixed overlays; resyncChartLayouts
+  // re-sizes the FV canvas overlay so rays don't overshoot the price scale.
+  setTimeout(function () { reapplyOverlayPositions(); resyncChartLayouts(); }, 350);
 });
 
 // ── Connectivity ────────────────────────────────────────────────────────────

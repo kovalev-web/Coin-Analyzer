@@ -2144,6 +2144,10 @@ export function resyncChartLayouts() {
   if (_fvChart) {
     var fvEl = document.getElementById('fv-chart');
     if (fvEl) { try { _fvChart.resize(fvEl.offsetWidth, fvEl.offsetHeight, true); } catch (e) {} }
+    if (_fvRuler && _fvRuler.canvas) {
+      var fvWrap = document.querySelector('.fv-chart-wrap');
+      if (fvWrap) _setCanvasSize(_fvRuler.canvas, fvWrap.offsetWidth, fvWrap.offsetHeight);
+    }
   }
 }
 window.__resyncChartLayouts = resyncChartLayouts;
