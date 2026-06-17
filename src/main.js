@@ -176,28 +176,6 @@ document.body.addEventListener('click', function (e) {
       }
       break;
     }
-    case 'global-tf-pick': {
-      e.stopPropagation();
-      var gdd = target.parentElement.querySelector('.tf-dd');
-      if (gdd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-        gdd.classList.toggle('open');
-      }
-      break;
-    }
-    case 'global-tf-opt': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-      var newTf = target.dataset.tf;
-      if (!newTf) break;
-      state.globalTF = newTf;
-      var gPill = document.querySelector('.sort-bar .tf-picker .pill');
-      if (gPill) gPill.textContent = newTf;
-      document.querySelectorAll('.coin-card[data-sym]').forEach(function (card) {
-        setChartTF(card.dataset.sym, newTf);
-      });
-      break;
-    }
     case 'tf-pick': {
       e.stopPropagation();
       var dd = target.parentElement.querySelector('.tf-dd');

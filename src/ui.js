@@ -20,7 +20,7 @@ function renderCard(coin) {
   var cache = state.analysisCache[coin.symbol];
   var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
-  var tf = state.chartTF[coin.symbol] || state.globalTF || '5m';
+  var tf = state.chartTF[coin.symbol] || '5m';
   var change = (coin.open_24h > 0 && coin.current_price > 0)
     ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
     : (coin.price_change_percentage_24h || 0);
@@ -2556,7 +2556,7 @@ function _initChartForSym(sym) {
     requestAnimationFrame(function () { alertIconLoop(s); });
   }(sym));
   _attachChartEvents(sym, el);
-  fetchChart(sym, state.chartTF[sym] || state.globalTF || '5m');
+  fetchChart(sym, state.chartTF[sym] || '5m');
 }
 
 function _destroyChartForSym(sym) {
@@ -3013,14 +3013,6 @@ function _sortBarHTML(coins) {
         + '</div>')
     + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
     + '<span class="sort-coin-count">' + coins.length + ' coins</span>'
-    + '<div class="tf-picker">'
-    + '<button class="pill" data-action="global-tf-pick">' + state.globalTF + '</button>'
-    + '<div class="tf-dd dropdown">'
-    + ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
-        return '<button class="' + (t === state.globalTF ? 'active' : '') + '" data-action="global-tf-opt" data-tf="' + t + '">' + t + '</button>';
-      }).join('')
-    + '</div>'
-    + '</div>'
     + '<div class="sort-bar-btns">'
     + '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="Sort by change">' + icon('percent', 16) + '</button>'
     + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="Sort by volume">' + icon('bar-chart-2', 16) + '</button>'
