@@ -1376,12 +1376,9 @@ export function renderJournalChart(container, history) {
   var historyMap = {};
   history.forEach(function (row) { historyMap[row.date] = row; });
 
-  // Range: from first entry (or 60 days ago, whichever is earlier) to today
-  // Minimum 60 days ensures bars are visually narrow
+  // Range: from first entry to today
   var _today = new Date(); _today.setUTCHours(0, 0, 0, 0);
-  var _firstEntry = new Date(history[0].date + 'T00:00:00Z');
-  var _minStart = new Date(_today.getTime() - 59 * 86400000);
-  var _cur = _firstEntry < _minStart ? _firstEntry : _minStart;
+  var _cur = new Date(history[0].date + 'T00:00:00Z');
   var _end = _today;
 
   var allDates = [];
