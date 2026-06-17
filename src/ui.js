@@ -5123,7 +5123,7 @@ export function updateNotifBadge() {
 function _renderNotifDropdown() {
   var dd = document.getElementById('notif-dd');
   if (!dd) return;
-  var items = state.notifications.filter(function (n) { return !(n.type === 'journal_reminder' && n.read); });
+  var items = state.notifications;
   var header = '<div class="popup-header"><span class="popup-title">Notifications</span><button class="btn-topbar" data-action="toggle-notif">' + icon('x', 16) + '</button></div>';
   var body = items.length
     ? '<div class="notif-scroll">'
