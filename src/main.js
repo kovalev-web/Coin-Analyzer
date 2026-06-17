@@ -193,6 +193,8 @@ document.body.addEventListener('click', function (e) {
       state.globalTF = newTf;
       var gPill = document.querySelector('.sort-bar .tf-picker .pill');
       if (gPill) gPill.textContent = newTf;
+      var gDd = document.querySelector('.sort-bar .tf-picker .tf-dd');
+      if (gDd) gDd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === newTf ? 'active' : ''; });
       document.querySelectorAll('.coin-card[data-sym]').forEach(function (card) {
         setChartTF(card.dataset.sym, newTf);
       });
