@@ -821,7 +821,7 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '</div>' +
-    '<div id="journal-pnl-chart" style="height:200px;margin-bottom:var(--space-8);"></div>' +
+    '<div id="journal-pnl-chart" style="height:400px;margin-bottom:var(--space-8);"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
   if (state.journalEntries) {
