@@ -14,6 +14,7 @@ export const state = {
   chartData: {},
   natrData: {},
   chartTF: {},
+  globalTF: '5m',
   lastUpdate: null,
   cacheExpires: 0,
   loading: false,
