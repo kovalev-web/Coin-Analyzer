@@ -328,6 +328,7 @@ function _accLevelsListHTML() {
   var syms = {};
   Object.keys(_levels).forEach(function (s) { if (_levels[s] && _levels[s].length) syms[s] = 1; });
   Object.keys(_alerts).forEach(function (s) { if (_alerts[s] && _alerts[s].length) syms[s] = 1; });
+  Object.keys(_rays).forEach(function (s) { if (_rays[s] && _rays[s].length) syms[s] = 1; });
   var list = Object.keys(syms).sort();
   if (!list.length) return '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
   return list.map(function (s) {

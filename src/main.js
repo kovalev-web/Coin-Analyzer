@@ -322,6 +322,7 @@ document.body.addEventListener('click', function (e) {
     case 'acc-clear-sym': {
       clearLevels(sym);
       clearAlerts(sym);
+      clearRays(sym);
       var row = target.closest('.acc-levels-row');
       if (row) row.remove();
       var accList = document.getElementById('acc-levels-list');
