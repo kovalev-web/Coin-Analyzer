@@ -1352,6 +1352,57 @@ export function hideEveningModal() {
   el.remove();
 }
 
+export function renderJournalChart(container, history) {
+  if (!container) return;
+  if (!history || !history.length) {
+    container.innerHTML = '<div style="color:var(--graphite);font-size:var(--text-xs);padding:var(--space-8) 0;">No PnL data yet — complete an evening review to start tracking</div>';
+    return;
+  }
+
+  var c = getChartColors();
+  var chart = window.LightweightCharts.createChart(container, {
+    autoSize: true,
+    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
+    grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+    crosshair: { mode: 1 },
+    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.15, bottom: 0.1 } },
+    leftPriceScale: { visible: false, borderColor: c.border, scaleMargins: { top: 0, bottom: 0.75 } },
+    timeScale: { borderColor: c.border, timeVisible: false },
+    handleScroll: true, handleScale: true,
+  });
+
+  // Cumulative PnL area series
+  var cumulative = 0;
+  var areaData = history.map(function (row) {
+    cumulative += row.pnl || 0;
+    return { time: row.date, value: parseFloat(cumulative.toFixed(2)) };
+  });
+  var totalPnl = areaData[areaData.length - 1].value;
+  var lineColor = totalPnl >= 0 ? getCSSVar('--bullish') : getCSSVar('--danger');
+  var topColor = totalPnl >= 0 ? 'rgba(38,166,91,0.25)' : 'rgba(239,83,80,0.25)';
+  var areaSeries = chart.addAreaSeries({
+    lineColor: lineColor,
+    topColor: topColor,
+    bottomColor: 'rgba(0,0,0,0)',
+    lineWidth: 2,
+    priceScaleId: 'right',
+    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+  });
+  areaSeries.setData(areaData);
+
+  // Trade count histogram (left scale, compressed to top strip)
+  var histSeries = chart.addHistogramSeries({
+    color: 'rgba(99,120,136,0.35)',
+    priceScaleId: 'left',
+    priceFormat: { type: 'volume' },
+  });
+  histSeries.setData(history.map(function (row) {
+    return { time: row.date, value: row.tradeCount || 0 };
+  }));
+
+  chart.timeScale().fitContent();
+}
+
 export function showWeeklyReportModal(report) {
   if (document.getElementById('weekly-report-modal')) return;
 

@@ -4,7 +4,7 @@ import {
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
   fetchNotifications,
-  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv,
+  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv, fetchPnlHistory,
 } from './api.js';
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -18,7 +18,7 @@ import {
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
-  showWeeklyReportModal, hideWeeklyReportModal,
+  showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
   updateSessionTimer,
 } from './ui.js';
 import { on } from './events.js';
@@ -821,11 +821,15 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '</div>' +
+    '<div id="journal-pnl-chart" style="height:200px;margin-bottom:var(--space-8);"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
   if (state.journalEntries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
   }
+  fetchPnlHistory().then(function (history) {
+    renderJournalChart(document.getElementById('journal-pnl-chart'), history);
+  });
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
   });

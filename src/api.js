@@ -902,6 +902,13 @@ export function fetchJournalRecent() {
     .catch(function () { return []; });
 }
 
+export function fetchPnlHistory() {
+  return fetch(API_BASE + '/api/journal/pnl-history', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { return d.history || []; })
+    .catch(function () { return []; });
+}
+
 export function exportJournalCsv(range) {
   return fetch(API_BASE + '/api/journal/export?range=' + encodeURIComponent(range), { credentials: 'include' })
     .then(function (r) { return r.blob(); })

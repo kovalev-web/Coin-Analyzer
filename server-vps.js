@@ -1106,6 +1106,13 @@ var httpServer = http.createServer(async function (req, res) {
         return;
       }
 
+      if (req.method === 'GET' && req.url === '/api/journal/pnl-history') {
+        var phRows = jDb.prepare('SELECT date, pnl, trade_count FROM journal_entries WHERE user_id = ? AND pnl IS NOT NULL ORDER BY date ASC').all(jUserId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ history: phRows.map(function (r) { return { date: r.date, pnl: r.pnl, tradeCount: r.trade_count || 0 }; }) }));
+        return;
+      }
+
       if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/export') {
         var jRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || 'all';
         var jRangeDays = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m': 180 }[jRange];
