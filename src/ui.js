@@ -1402,7 +1402,7 @@ export function renderJournalChart(container, history) {
     if (row) cumulative += row.pnl || 0;
     var t = _dts(date);
     areaData.push({ time: t, value: parseFloat(cumulative.toFixed(2)) });
-    histogramData.push({ time: t, value: row ? -(row.tradeCount || 0) : 0 });
+    histogramData.push({ time: t, value: row ? (row.tradeCount || 0) : 0 });
   });
 
   var areaSeries = chart.addAreaSeries({
@@ -1410,7 +1410,6 @@ export function renderJournalChart(container, history) {
     topColor: 'rgba(39,124,194,0.25)',
     bottomColor: 'rgba(0,0,0,0)',
     lineWidth: 2,
-    lineType: 2,
     priceScaleId: 'right',
     priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
   });
