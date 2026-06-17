@@ -439,23 +439,32 @@ document.body.addEventListener('click', function (e) {
       });
       break;
     }
+    case 'journal-trigger-pill': {
+      target.classList.toggle('active');
+      var eOtherText = document.querySelector('#evening-journal-modal [name="triggerOtherText"]');
+      if (target.dataset.trigger === 'triggerOther' && eOtherText) {
+        eOtherText.hidden = !target.classList.contains('active');
+      }
+      break;
+    }
     case 'save-evening-journal': {
       var eBtn = target;
       eBtn.disabled = true;
       var eModal = document.getElementById('evening-journal-modal');
+      function _pill(name) { return !!eModal.querySelector('.journal-trigger-pill[data-trigger="' + name + '"].active'); }
       saveJournalEvening({
         followedProcess:  (eModal.querySelector('[name="followedProcess"]:checked') || {}).value || '',
         tradedPlanned:    (eModal.querySelector('[name="tradedPlanned"]:checked') || {}).value || '',
         tradeCount:       parseInt(eModal.querySelector('[name="tradeCount"]').value) || 0,
         stopCraneKept:    (eModal.querySelector('[name="stopCraneKept"]:checked') || {}).value || '',
         volumeOk:         (eModal.querySelector('[name="volumeOk"]:checked') || {}).value || '',
-        triggerRevenge:   eModal.querySelector('[name="triggerRevenge"]').checked,
-        triggerSizeUp:    eModal.querySelector('[name="triggerSizeUp"]').checked,
-        triggerFomo:      eModal.querySelector('[name="triggerFomo"]').checked,
-        triggerOther:     eModal.querySelector('[name="triggerOther"]').checked ? eModal.querySelector('[name="triggerOtherText"]').value.trim() : '',
-        triggerFomoOther: eModal.querySelector('[name="triggerFomoOther"]').checked,
-        triggerAddFunds:  eModal.querySelector('[name="triggerAddFunds"]').checked,
-        triggerReplan:    eModal.querySelector('[name="triggerReplan"]').checked,
+        triggerRevenge:   _pill('triggerRevenge'),
+        triggerSizeUp:    _pill('triggerSizeUp'),
+        triggerFomo:      _pill('triggerFomo'),
+        triggerOther:     _pill('triggerOther') ? eModal.querySelector('[name="triggerOtherText"]').value.trim() : '',
+        triggerFomoOther: _pill('triggerFomoOther'),
+        triggerAddFunds:  _pill('triggerAddFunds'),
+        triggerReplan:    _pill('triggerReplan'),
         missedScreening:  eModal.querySelector('[name="missedScreening"]').value.trim(),
         eveningState:     (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
         feltWorthless:    (eModal.querySelector('[name="feltWorthless"]:checked') || {}).value || '',

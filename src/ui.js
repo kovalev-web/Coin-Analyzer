@@ -1301,14 +1301,18 @@ export function showEveningModal() {
     + '<div class="journal-field"><label>PnL today</label><div class="journal-static" id="evening-pnl-stats">Loading…</div></div>'
     + '<div class="journal-field"><label>Stop-crane kept after 2 stops</label>' + _journalRadioGroup('stopCraneKept', JOURNAL_YES_NO_NA, entry.stopCraneKept) + '</div>'
     + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
-    + '<div class="journal-field"><label>Trigger fired today</label><div class="journal-checkbox-list">'
-        + _journalCheckbox('triggerRevenge', 'Revenge after a stop', entry.triggerRevenge)
-        + _journalCheckbox('triggerSizeUp', 'Sizing up after a streak', entry.triggerSizeUp)
-        + _journalCheckbox('triggerFomo', 'FOMO', entry.triggerFomo)
-        + _journalCheckbox('triggerFomoOther', 'FOMO from someone else\'s trade ("they took it, I didn\'t")', entry.triggerFomoOther)
-        + _journalCheckbox('triggerAddFunds', 'Urge to add funds to recover the account', entry.triggerAddFunds)
-        + _journalCheckbox('triggerReplan', 'Urge to re-plan because of a pumping coin', entry.triggerReplan)
-        + _journalCheckbox('triggerOther', 'Other', !!entry.triggerOther)
+    + '<div class="journal-field"><label>Trigger fired today</label><div class="journal-trigger-pills">'
+        + [
+            ['triggerRevenge',   'Revenge after a stop',           entry.triggerRevenge],
+            ['triggerSizeUp',    'Sizing up after a streak',        entry.triggerSizeUp],
+            ['triggerFomo',      'FOMO',                            entry.triggerFomo],
+            ['triggerFomoOther', 'FOMO (someone else\'s trade)',    entry.triggerFomoOther],
+            ['triggerAddFunds',  'Urge to add funds',               entry.triggerAddFunds],
+            ['triggerReplan',    'Urge to re-plan',                 entry.triggerReplan],
+            ['triggerOther',     'Other',                           !!entry.triggerOther],
+          ].map(function (t) {
+            return '<button type="button" class="pill journal-trigger-pill' + (t[2] ? ' active' : '') + '" data-action="journal-trigger-pill" data-trigger="' + t[0] + '">' + t[1] + '</button>';
+          }).join('')
         + '</div>'
         + '<input class="ds-input" type="text" name="triggerOtherText" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerOther ? '' : ' hidden') + '></div>'
     + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="2">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
@@ -1322,10 +1326,6 @@ export function showEveningModal() {
   lockScroll();
   _autoGrowTextareas(el);
 
-  var triggerOtherText = el.querySelector('[name="triggerOtherText"]');
-  el.querySelector('[name="triggerOther"]').addEventListener('change', function (e) {
-    triggerOtherText.hidden = !e.target.checked;
-  });
 
   fetchTodayTrades().then(function (stats) {
     var statsEl = el.querySelector('#evening-pnl-stats');
