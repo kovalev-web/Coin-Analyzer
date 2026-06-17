@@ -1359,14 +1359,15 @@ export function renderJournalChart(container, history) {
     return;
   }
 
+  container.style.position = 'relative';
+
   var c = getChartColors();
   var chart = window.LightweightCharts.createChart(container, {
     autoSize: true,
     layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
-    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.15, bottom: 0.1 } },
-    leftPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0, bottom: 0.75 } },
+    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
     timeScale: { borderColor: c.border, timeVisible: false },
     handleScroll: true, handleScale: true,
   });
@@ -1390,17 +1391,64 @@ export function renderJournalChart(container, history) {
   });
   areaSeries.setData(areaData);
 
-  // Trade count histogram (left scale, compressed to top strip)
+  // Trade count histogram compressed into top strip via custom scale
   var histSeries = chart.addHistogramSeries({
-    color: 'rgba(99,120,136,0.35)',
-    priceScaleId: 'left',
+    color: 'rgba(99,120,136,0.4)',
+    priceScaleId: 'vol',
     priceFormat: { type: 'volume' },
   });
   histSeries.setData(history.map(function (row) {
     return { time: row.date, value: row.tradeCount || 0 };
   }));
+  chart.priceScale('vol').applyOptions({
+    scaleMargins: { top: 0, bottom: 0.85 },
+    visible: false,
+  });
 
   chart.timeScale().fitContent();
+
+  // Tooltip
+  var toolTip = document.createElement('div');
+  toolTip.style.cssText = 'position:absolute;display:none;z-index:10;pointer-events:none;' +
+    'background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);font-family:Manrope,Arial,sans-serif;' +
+    'padding:var(--space-4) var(--space-6);border-radius:var(--radius-md);box-shadow:var(--shadow-md);' +
+    'border:1px solid var(--steel);min-width:180px;';
+  container.appendChild(toolTip);
+
+  chart.subscribeCrosshairMove(function (param) {
+    if (!param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+      toolTip.style.display = 'none';
+      return;
+    }
+    var pnlData = param.seriesData.get(areaSeries);
+    var hData = param.seriesData.get(histSeries);
+    var pnlVal = pnlData ? pnlData.value : null;
+    var histVal = hData ? hData.value : null;
+    if (pnlVal == null) { toolTip.style.display = 'none'; return; }
+
+    var d = new Date(param.time + 'T00:00:00');
+    var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    var pnlSign = pnlVal >= 0 ? '+' : '';
+    var pnlColor = pnlVal >= 0 ? 'var(--bullish)' : 'var(--danger)';
+
+    toolTip.innerHTML =
+      '<div style="color:var(--graphite);margin-bottom:4px;">' + dateStr + '</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:16px;">' +
+        '<span>Кум. прибыль ($)</span>' +
+        '<strong style="color:' + pnlColor + ';">' + pnlSign + pnlVal.toFixed(2) + '</strong>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:16px;">' +
+        '<span style="color:var(--graphite);">Кол-во сделок</span>' +
+        '<strong>' + (histVal != null ? histVal : '—') + '</strong>' +
+      '</div>';
+
+    toolTip.style.display = 'block';
+    var left = param.point.x + 12;
+    var top = param.point.y + 12;
+    if (left + 200 > container.clientWidth) left = param.point.x - 200;
+    toolTip.style.left = left + 'px';
+    toolTip.style.top = top + 'px';
+  });
 }
 
 export function showWeeklyReportModal(report) {
