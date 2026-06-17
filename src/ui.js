@@ -1410,6 +1410,7 @@ export function renderJournalChart(container, history) {
     topColor: 'rgba(39,124,194,0.25)',
     bottomColor: 'rgba(0,0,0,0)',
     lineWidth: 2,
+    lineType: 2,
     priceScaleId: 'right',
     priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
   });
@@ -1420,6 +1421,7 @@ export function renderJournalChart(container, history) {
     color: 'rgba(99,120,136,0.4)',
     priceScaleId: 'vol',
     priceFormat: { type: 'volume' },
+    borderRadius: 3,
   });
   histSeries.setData(histogramData);
   chart.priceScale('vol').applyOptions({
