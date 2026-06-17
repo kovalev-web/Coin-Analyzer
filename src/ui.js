@@ -1368,7 +1368,11 @@ export function renderJournalChart(container, history) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
-    timeScale: { borderColor: c.border, timeVisible: false },
+    timeScale: { borderColor: c.border, timeVisible: false, tickMarkFormatter: function (t, type) {
+      var d = new Date(t * 1000);
+      var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+      return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
+    }},
     handleScroll: true, handleScale: true,
   });
 
@@ -1387,15 +1391,22 @@ export function renderJournalChart(container, history) {
     _cur.setUTCDate(_cur.getUTCDate() + 1);
   }
 
+  // Convert date string to Unix midnight UTC timestamp
+  function _dts(d) { return Math.floor(new Date(d + 'T00:00:00Z').getTime() / 1000); }
+  var PAD = 3600; // 1-hour padding each side → bar occupies ~8% of day slot = narrow
+
   var cumulative = 0;
   var areaData = [];
   var histogramData = [];
   allDates.forEach(function (date) {
     var row = historyMap[date];
     if (row) cumulative += row.pnl || 0;
-    areaData.push({ time: date, value: parseFloat(cumulative.toFixed(2)) });
-    // Negative values → bars hang downward from 0-line at top of strip
-    histogramData.push({ time: date, value: row ? -(row.tradeCount || 0) : 0 });
+    var t = _dts(date);
+    areaData.push({ time: t, value: parseFloat(cumulative.toFixed(2)) });
+    // Zero-fence points make bars visually narrow; negative value = top-aligned
+    histogramData.push({ time: t - PAD, value: 0 });
+    histogramData.push({ time: t,       value: row ? -(row.tradeCount || 0) : 0 });
+    histogramData.push({ time: t + PAD, value: 0 });
   });
 
   var areaSeries = chart.addAreaSeries({
@@ -1441,7 +1452,7 @@ export function renderJournalChart(container, history) {
     var histVal = hData ? hData.value : null;
     if (pnlVal == null) { toolTip.style.display = 'none'; return; }
 
-    var d = new Date(param.time + 'T00:00:00');
+    var d = new Date(param.time * 1000);
     var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     var pnlSign = pnlVal >= 0 ? '+' : '';
     var pnlColor = pnlVal >= 0 ? 'var(--bullish)' : 'var(--danger)';
@@ -1454,7 +1465,7 @@ export function renderJournalChart(container, history) {
       '</div>' +
       '<div style="display:flex;justify-content:space-between;gap:16px;">' +
         '<span style="color:var(--graphite);">Кол-во сделок</span>' +
-        '<strong>' + (histVal != null ? histVal : '—') + '</strong>' +
+        '<strong>' + (histVal != null ? Math.abs(histVal) : '—') + '</strong>' +
       '</div>';
 
     toolTip.style.display = 'block';
