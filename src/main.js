@@ -319,6 +319,17 @@ document.body.addEventListener('click', function (e) {
       closeClearPopup();
       clearAlerts(sym);
       break;
+    case 'acc-clear-sym': {
+      clearLevels(sym);
+      clearAlerts(sym);
+      var row = target.closest('.acc-levels-row');
+      if (row) row.remove();
+      var accList = document.getElementById('acc-levels-list');
+      if (accList && !accList.querySelector('.acc-levels-row')) {
+        accList.innerHTML = '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
+      }
+      break;
+    }
     case 'open-clear-popup':
       openClearPopup(sym, target);
       break;

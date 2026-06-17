@@ -324,6 +324,20 @@ export function loadLevels() {
 
 var _AVATAR_PRESETS = ['🐋','🚀','🎯','🦊','🌙','💎','🔥','⚡','🐂','🐻','🧠','👾'];
 
+function _accLevelsListHTML() {
+  var syms = {};
+  Object.keys(_levels).forEach(function (s) { if (_levels[s] && _levels[s].length) syms[s] = 1; });
+  Object.keys(_alerts).forEach(function (s) { if (_alerts[s] && _alerts[s].length) syms[s] = 1; });
+  var list = Object.keys(syms).sort();
+  if (!list.length) return '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
+  return list.map(function (s) {
+    return '<div class="acc-row acc-levels-row">'
+      + '<span class="acc-row-val">' + s.toUpperCase() + '</span>'
+      + '<button class="acc-row-edit" data-action="acc-clear-sym" data-sym="' + s + '">Clear</button>'
+      + '</div>';
+  }).join('');
+}
+
 export function showAccountModal() {
   if (document.getElementById('account-overlay')) return;
 
@@ -377,6 +391,11 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
 
+
+        + '<div>'
+          + '<div class="acc-row-label">Levels &amp; Alerts</div>'
+          + '<div id="acc-levels-list">' + _accLevelsListHTML() + '</div>'
+        + '</div>'
 
         + '<button class="btn-cta danger" id="acc-logout-btn">Sign out</button>'
 
