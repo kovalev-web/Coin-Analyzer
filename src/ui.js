@@ -1314,7 +1314,7 @@ export function showEveningModal() {
             return '<button type="button" class="pill journal-trigger-pill' + (t[2] ? ' active' : '') + '" data-action="journal-trigger-pill" data-trigger="' + t[0] + '">' + t[1] + '</button>';
           }).join('')
         + '</div>'
-        + '<input class="ds-input" type="text" name="triggerOtherText" placeholder="Describe what happened" value="' + escHtml(entry.triggerOther || '') + '" style="margin-top:var(--space-4);"' + (entry.triggerOther ? '' : ' hidden') + '></div>'
+        + '<textarea class="ds-input" name="triggerOtherText" placeholder="Describe what happened" rows="2" style="margin-top:var(--space-4);resize:none;"' + (entry.triggerOther ? '' : ' hidden') + '>' + escHtml(entry.triggerOther || '') + '</textarea></div>'
     + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="2">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
     + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
