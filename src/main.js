@@ -399,6 +399,9 @@ document.body.addEventListener('click', function (e) {
         if (mBtn2) { mBtn2.disabled = true; mBtn2.innerHTML = 'Morning' + icon('check', 14); }
         var eBtn2 = document.querySelector('[data-action="open-evening-journal"]');
         if (eBtn2) eBtn2.disabled = !!state.journalToday.skipped;
+        state.notifications.forEach(function (n) {
+          if (n.type === 'journal_reminder') markNotificationAsRead(n.id);
+        });
       }).catch(function () {
         mBtn.disabled = false;
         showToast('Network error — please try again');
