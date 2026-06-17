@@ -1393,7 +1393,6 @@ export function renderJournalChart(container, history) {
 
   // Convert date string to Unix midnight UTC timestamp
   function _dts(d) { return Math.floor(new Date(d + 'T00:00:00Z').getTime() / 1000); }
-  var PAD = 3600; // 1-hour padding each side → bar occupies ~8% of day slot = narrow
 
   var cumulative = 0;
   var areaData = [];
@@ -1403,10 +1402,7 @@ export function renderJournalChart(container, history) {
     if (row) cumulative += row.pnl || 0;
     var t = _dts(date);
     areaData.push({ time: t, value: parseFloat(cumulative.toFixed(2)) });
-    // Zero-fence points make bars visually narrow; negative value = top-aligned
-    histogramData.push({ time: t - PAD, value: 0 });
-    histogramData.push({ time: t,       value: row ? -(row.tradeCount || 0) : 0 });
-    histogramData.push({ time: t + PAD, value: 0 });
+    histogramData.push({ time: t, value: row ? -(row.tradeCount || 0) : 0 });
   });
 
   var areaSeries = chart.addAreaSeries({
