@@ -2084,7 +2084,7 @@ export function toggleTheme() {
   reattachAllLevels();
   if (_fvChart) {
     var fc = getChartColors();
-    _fvChart.applyOptions({ layout: { background: { color: fc.bg }, textColor: fc.text }, grid: { vertLines: { color: fc.grid }, horzLines: { color: fc.grid } }, rightPriceScale: { borderColor: fc.border }, timeScale: { borderColor: fc.border } });
+    _fvChart.applyOptions({ layout: { background: { color: getCSSVar('--cloud') }, textColor: fc.text }, grid: { vertLines: { color: fc.grid }, horzLines: { color: fc.grid } }, rightPriceScale: { borderColor: fc.border }, timeScale: { borderColor: fc.border } });
     if (_fvSeries) _fvSeries.applyOptions(getSeriesColors());
   }
 }
@@ -4164,7 +4164,7 @@ export function openCoinFullView(sym) {
   var c = getChartColors();
   _fvChart = window.LightweightCharts.createChart(el, {
     autoSize: true,
-    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
+    layout: { background: { color: getCSSVar('--cloud') }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 0 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.05, bottom: 0.25 } },
