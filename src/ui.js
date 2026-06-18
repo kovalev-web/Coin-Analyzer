@@ -4232,12 +4232,14 @@ export function openCoinFullView(sym) {
   function _syncFVCanvas() { _setCanvasSize(rc, wrap.offsetWidth || window.innerWidth, wrap.offsetHeight || window.innerHeight); }
   _syncFVCanvas();
   window.addEventListener('resize', _syncFVCanvas);
+  var _fvWrapObs = new ResizeObserver(_syncFVCanvas);
+  _fvWrapObs.observe(wrap);
   function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
   fvLblEl.className = 'ruler-lbl';
   wrap.appendChild(fvLblEl);
-  _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _escHandler: _onEscKey };
+  _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _resizeObserver: _fvWrapObs, _escHandler: _onEscKey };
 
   // On Mac trackpads: vertical scroll passes through; horizontal pans the chart.
   el.addEventListener('wheel', function (e) {
@@ -4763,6 +4765,7 @@ export function closeCoinFullView() {
   softDisconnectOrderbook();
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
+  if (_fvRuler && _fvRuler._resizeObserver) _fvRuler._resizeObserver.disconnect();
   if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
   if (_fvTimerInterval) { clearInterval(_fvTimerInterval); _fvTimerInterval = null; }
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null; _fvTradeMarkersData = [];
