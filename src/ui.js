@@ -3703,17 +3703,11 @@ function _refreshBriefingPct() {
   document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
     var coin = coinMap[row.dataset.sym] || coinMap[(row.dataset.sym || '').toLowerCase()];
     if (!coin) return;
-    var ch = (coin.open_24h > 0 && coin.current_price > 0)
-      ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-      : (coin.price_change_percentage_24h || 0);
     var span = row.querySelector('.bp-chg');
-    if (span) span.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-    var addedSpan = row.querySelector('.bp-chg-added');
     var addedPrice = parseFloat(row.dataset.addedPrice);
-    if (addedSpan && addedPrice > 0 && coin.current_price > 0) {
+    if (span && addedPrice > 0 && coin.current_price > 0) {
       var d = (coin.current_price - addedPrice) / addedPrice * 100;
-      addedSpan.textContent = (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
-      addedSpan.className = 'bp-chg-added ' + (d >= 0 ? 'up' : 'dn');
+      span.textContent = (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
     }
   });
 }
@@ -3803,8 +3797,7 @@ export function renderBriefingPanel() {
     var hasNote = !!e.note;
     return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
-      '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
-      (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '') +
+      (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>') +
       (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
       '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
       '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
@@ -4967,8 +4960,7 @@ export function renderFVBriefingDrawer() {
       var isCurrent = _fvSym === e.sym;
       html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
         + '<span class="bp-sym-btn">' + e.sym.toUpperCase() + '</span>'
-        + '<span class="bp-chg stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
-        + (addedDelta !== null ? '<span class="bp-chg-added ' + (addedDelta >= 0 ? 'up' : 'dn') + '">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '')
+        + (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>')
         + '<span class="bp-row-status ' + briefingStatusClass(tradeLocked ? 'traded' : e.status) + '">' + briefingStatusLabel(tradeLocked ? 'traded' : e.status) + '</span>'
         + '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
