@@ -22,7 +22,7 @@ var _closed = true;
 var _keepAliveTimer = null;
 var _connectedAt = null;
 var _symWarmCache = {}; // fullSym → { connectedAt, disconnectedAt }
-var WARM_CACHE_TTL = Infinity; // lives until page reload
+var WARM_CACHE_TTL = AGGRESSION_WINDOW_MS; // cache expires when all cached trades would be stale
 
 var _bids = [];
 var _asks = [];
@@ -178,7 +178,10 @@ export function connectOrderbook(sym, onUpdate) {
   var cached = _symWarmCache[fullSym];
   var isWarmCache = cached && cached.connectedAt && (Date.now() - cached.disconnectedAt < WARM_CACHE_TTL);
   if (isWarmCache) {
-    _connectedAt = cached.connectedAt;
+    // Warmup time = how long we were offline (gap in data coverage).
+    // If offline 2s → need 2s of fresh data. If offline ≥15s → full warmup (cache expired above).
+    var offlineGap = Date.now() - cached.disconnectedAt;
+    _connectedAt = Date.now() - Math.max(0, AGGRESSION_WINDOW_MS - offlineGap);
     var cutoff = Date.now() - AGGRESSION_WINDOW_MS;
     _trades = (cached.trades || []).filter(function(t) { return t.ts > cutoff; });
   } else {
