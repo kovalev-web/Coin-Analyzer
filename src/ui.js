@@ -1305,8 +1305,9 @@ export function showEveningModal() {
         + [
             ['triggerRevenge',   'Revenge after a stop',           entry.triggerRevenge],
             ['triggerSizeUp',    'Sizing up after a streak',        entry.triggerSizeUp],
-            ['triggerFomo',      'FOMO',                            entry.triggerFomo],
-            ['triggerFomoOther', 'FOMO (someone else\'s trade)',    entry.triggerFomoOther],
+            ['triggerFomo',       'FOMO',                            entry.triggerFomo],
+            ['triggerFomoOther',  'FOMO (someone else\'s trade)',    entry.triggerFomoOther],
+            ['triggerFomoActive', 'FOMO (active coin)',              entry.triggerFomoActive],
             ['triggerAddFunds',  'Urge to add funds',               entry.triggerAddFunds],
             ['triggerReplan',    'Urge to re-plan',                 entry.triggerReplan],
             ['triggerOther',     'Other',                           !!entry.triggerOther],

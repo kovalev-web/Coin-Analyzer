@@ -97,7 +97,7 @@ function ensureAuthTables() {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" TEXT');
     }
   });
-  ['trigger_fomo_other', 'trigger_add_funds', 'trigger_replan', 'trigger_revenge', 'trigger_size_up', 'trigger_fomo'].forEach(function (col) {
+  ['trigger_fomo_other', 'trigger_fomo_active', 'trigger_add_funds', 'trigger_replan', 'trigger_revenge', 'trigger_size_up', 'trigger_fomo'].forEach(function (col) {
     if (journalCols.indexOf(col) === -1) {
       sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + col + '" INTEGER');
     }
