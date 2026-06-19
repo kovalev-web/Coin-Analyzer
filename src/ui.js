@@ -27,9 +27,11 @@ function renderCard(coin) {
   var natr = natrDisplay(coin.symbol);
 
   var badge = '';
-  if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Retry</button>';
-  else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
-  else badge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
+  if (!state.isDemoMode) {
+    if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Retry</button>';
+    else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
+    else badge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
+  }
 
   var tfPicker = '<div class="tf-picker">' +
     '<button class="pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
@@ -3881,9 +3883,11 @@ function _fvBottomBarHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
-  else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-  else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
+  if (!state.isDemoMode) {
+    if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
+    else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
+    else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
+  }
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
   return '<div class="fv-bottom-bar">'
@@ -3915,9 +3919,11 @@ function _fvCoinInfoHTML(sym, tf) {
   var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
   var signal = hasA ? cache.result.signal : null;
   var fvBadge = '';
-  if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
-  else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-  else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
+  if (!state.isDemoMode) {
+    if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
+    else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
+    else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
+  }
 
   var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
   var levelCount = (_levels[sym] && _levels[sym].length) || 0;
