@@ -3136,7 +3136,7 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
     + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
-    + '<button class="btn-topbar desktop-nav-btn" data-action="open-hints" title="Help">' + icon('info', 16) + '</button>'
+    + '<button class="btn-topbar btn-topbar-hints" data-action="open-hints" title="Help">' + icon('info', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="notif-wrap" id="notif-wrap">'
