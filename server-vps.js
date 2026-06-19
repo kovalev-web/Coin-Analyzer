@@ -247,6 +247,7 @@ function mergeAlertData(existing, incoming) {
         price: newA.price,
         triggered: newA.triggered || (prev ? prev.triggered : false),
         createdAt: newA.createdAt,
+        serverReceivedAt: (prev && prev.serverReceivedAt) || Date.now(),
       };
     });
   });
@@ -299,8 +300,10 @@ function checkAlertsForSym(fullSym, cur) {
     var dirty = false;
     (entry.data[sym] || []).forEach(function (a) {
       if (a.triggered) return;
-      // Grace period: ignore alerts set less than 5 seconds ago to prevent immediate firing
-      if (a.createdAt && (now - a.createdAt) < 5000) return;
+      // Grace period: ignore alerts received less than 5 seconds ago to prevent immediate firing.
+      // Use serverReceivedAt (server clock) — never trust client createdAt which can be ahead.
+      var _graceTs = a.serverReceivedAt || a.createdAt;
+      if (_graceTs && (now - _graceTs) < 5000) return;
       var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
       if (!crossed) return;
       var coolKey = code + ':' + sym + ':' + a.price;
@@ -342,10 +345,15 @@ async function pushNotification(userId, payload) {
     createdAt: Date.now(),
     read: false,
   }));
-  await redis(['LPUSH', 'notifications:' + userId, entry]);
-  await redis(['LTRIM', 'notifications:' + userId, '0', '49']);
-  await redis(['EXPIRE', 'notifications:' + userId, String(30 * 24 * 3600)]);
-  broadcastToUser(userId, { type: 'notify', entry: JSON.parse(entry) });
+  var parsed = JSON.parse(entry);
+  // Send WS immediately — don't block on Redis
+  broadcastToUser(userId, { type: 'notify', entry: parsed });
+  // Persist to Redis best-effort for notification history
+  try {
+    await redis(['LPUSH', 'notifications:' + userId, entry]);
+    await redis(['LTRIM', 'notifications:' + userId, '0', '49']);
+    await redis(['EXPIRE', 'notifications:' + userId, String(30 * 24 * 3600)]);
+  } catch (e) {}
 }
 
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
