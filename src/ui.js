@@ -3135,6 +3135,7 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
     + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
+    + '<button class="btn-topbar desktop-nav-btn" data-action="open-hints" title="Help">' + icon('info', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="notif-wrap" id="notif-wrap">'
@@ -5250,6 +5251,48 @@ export function openClearPopup(sym, btn) {
     popup.style.top = (btnRect.bottom + 6) + 'px';
     popup.style.bottom = 'auto';
   }
+}
+
+// ── Hints popup ─────────────────────────────────────────────────────────────
+
+export function openHintsPopup() {
+  if (document.getElementById('hints-overlay')) return;
+  var rows = [
+    { label: 'Add level',       keys: ['Right-click'] },
+    { label: 'Remove level',    keys: ['Right-click on line'] },
+    { label: 'Move level',      keys: ['Drag line'] },
+    { label: 'Add alert',       keys: ['Shift', 'Right-click'] },
+    { label: 'Remove alert',    keys: ['Shift', 'Right-click on line'] },
+    { label: 'Move alert',      keys: ['Shift', 'Right-drag'] },
+    { label: 'Move alert (trackpad)', keys: ['Shift', 'Alt', 'Left-drag'] },
+    { label: 'Add ray',         keys: ['Ctrl', 'Left-click'] },
+    { label: 'Move ray',        keys: ['Ctrl', 'Left-drag on ray'] },
+    { label: 'Remove ray',      keys: ['Ctrl', 'Right-click'] },
+    { label: 'Ruler',           keys: ['Alt', 'Left-drag'] },
+  ];
+  var rowsHTML = rows.map(function (r) {
+    var keysHTML = r.keys.map(function (k) { return '<kbd class="hints-kbd">' + k + '</kbd>'; }).join('');
+    return '<div class="hints-row"><span class="hints-label">' + r.label + '</span><span class="hints-keys">' + keysHTML + '</span></div>';
+  }).join('');
+
+  var el = document.createElement('div');
+  el.id = 'hints-overlay';
+  el.className = 'overlay';
+  el.style.animation = 'overlay-in 0.2s ease';
+  el.innerHTML = '<div class="popup hints-popup">'
+    + '<div class="popup-header"><span class="popup-title">Chart interactions</span>'
+    + '<button class="btn-topbar" data-action="close-hints">' + icon('x', 16) + '</button></div>'
+    + '<div class="popup-body hints-body">' + rowsHTML + '</div>'
+    + '</div>';
+  el.addEventListener('click', function (e) { if (e.target === el) closeHintsPopup(); });
+  document.body.appendChild(el);
+  lockScroll();
+}
+
+export function closeHintsPopup() {
+  var el = document.getElementById('hints-overlay');
+  if (el) el.remove();
+  forceUnlockScroll();
 }
 
 // ── Screener ────────────────────────────────────────────────────────────────

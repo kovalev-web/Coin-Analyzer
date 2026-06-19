@@ -19,6 +19,7 @@ import {
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
+  openHintsPopup, closeHintsPopup,
   updateSessionTimer, injectDemoBanner,
 } from './ui.js';
 import { on } from './events.js';
@@ -306,6 +307,12 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'tv':
       openTVMode();
+      break;
+    case 'open-hints':
+      openHintsPopup();
+      break;
+    case 'close-hints':
+      closeHintsPopup();
       break;
     case 'close-tv':
       closeTVMode();
