@@ -3136,7 +3136,6 @@ function _topbarHTML() {
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
     + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
-    + '<button class="btn-topbar btn-topbar-hints" data-action="open-hints" title="Help">' + icon('info', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="notif-wrap" id="notif-wrap">'
@@ -3149,6 +3148,7 @@ function _topbarHTML() {
     + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
+    + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
     + (!_demo ? _sessionTimerMobileHTML() : '')
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
@@ -3160,6 +3160,7 @@ function _topbarHTML() {
     + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
+    + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
     + (!_demo ? _sessionTimerMobileHTML() : '')
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
