@@ -5292,17 +5292,11 @@ export function openHintsPopup() {
 
   var el = document.createElement('div');
   el.id = 'hints-overlay';
-  el.className = 'overlay';
-  el.style.display = 'flex';
-  el.style.alignItems = 'center';
-  el.style.justifyContent = 'center';
-  el.style.background = 'rgba(0,0,0,0.5)';
-  el.style.zIndex = '99999';
-  el.style.animation = 'overlay-in 0.2s ease';
-  el.innerHTML = '<div class="popup hints-popup">'
+  el.className = 'journal-modal-overlay';
+  el.innerHTML = '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Chart interactions</span>'
     + '<button class="btn-topbar" data-action="close-hints">' + icon('x', 16) + '</button></div>'
-    + '<div class="popup-body hints-body">' + rowsHTML + '</div>'
+    + rowsHTML
     + '</div>';
   el.addEventListener('click', function (e) { if (e.target === el) closeHintsPopup(); });
   document.body.appendChild(el);
@@ -5312,7 +5306,7 @@ export function openHintsPopup() {
 export function closeHintsPopup() {
   var el = document.getElementById('hints-overlay');
   if (el) el.remove();
-  forceUnlockScroll();
+  unlockScroll();
 }
 
 // ── Screener ────────────────────────────────────────────────────────────────
