@@ -811,7 +811,7 @@ export async function analyzeCoin(coin) {
   var natrVal = nd && nd !== 'loading' && nd !== 'error' ? nd.value : null;
   try {
     var res = await fetch(API_BASE + '/api/analyze', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({
         name: coin.name, symbol: coin.symbol.toUpperCase(),
         change24h: (coin.price_change_percentage_24h || 0).toFixed(2),
