@@ -3576,19 +3576,11 @@ function cycleBriefingStatus(sym, date) {
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
   syncBriefingNow();
-  var openNotes = Array.from(document.querySelectorAll('.bp-note-row'))
-    .filter(function (el) { return el.style.display !== 'none'; })
-    .map(function (el) { return el.id; });
+  // Both render functions already restore the expanded row (and textarea height)
+  // from _expandedBpKey/_expandedFvKey — no need to track/force-redisplay rows here.
   renderBriefingPanel();
   var _fvd = document.getElementById('fv-briefing-drawer');
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
-  openNotes.forEach(function (id) {
-    document.querySelectorAll('[id="' + id + '"]').forEach(function (el) {
-      el.style.display = '';
-      var ta = el.querySelector('textarea');
-      if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-    });
-  });
 }
 
 function updateStarButton(sym) {
