@@ -3161,8 +3161,8 @@ export function injectDemoBanner() {
   var el = document.createElement('div');
   el.id = 'demo-banner';
   el.className = 'demo-banner';
-  el.innerHTML = '<span class="demo-banner-text">Demo mode — explore the app, no account needed</span>'
-    + '<a href="/login" class="demo-banner-cta">Sign up free</a>';
+  el.innerHTML = '<span class="demo-banner-text">Sync watchlist · Track PnL · AI weekly analysis</span>'
+    + '<a href="/login" class="demo-banner-cta">Sign up free →</a>';
   document.body.appendChild(el);
   document.body.classList.add('demo-mode');
 }
