@@ -3203,7 +3203,7 @@ function _sortBarHTML(coins) {
     + '<span class="sort-coin-count">' + coins.length + ' coins</span>'
     + '<div class="sort-bar-btns">'
     + '<div class="tf-picker">'
-    + '<button class="pill" data-action="global-tf-pick">' + state.globalTF + '</button>'
+    + '<button class="pill active" data-action="global-tf-pick">' + state.globalTF + '</button>'
     + '<div class="tf-dd dropdown">'
     + ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
         return '<button class="' + (t === state.globalTF ? 'active' : '') + '" data-action="global-tf-opt" data-tf="' + t + '">' + t + '</button>';
