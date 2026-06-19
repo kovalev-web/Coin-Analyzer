@@ -2465,9 +2465,15 @@ function _attachChartEvents(sym, container) {
     var price = cs.coordinateToPrice(y);
     if (price == null) return;
     if (e.ctrlKey) {
+      // On macOS, Ctrl+click is rewritten by the OS into a contextmenu event
+      // (no plain mousedown ever fires), so "add ray" must be handled here too.
       var x = e.clientX - rect.left;
-      var idx = _nearRayIdx(sym, _charts[sym], cs, state.chartTF[sym] || '5m', x, y);
-      if (idx >= 0) removeRay(sym, idx);
+      var tfCm = state.chartTF[sym] || '5m';
+      var idx = _nearRayIdx(sym, _charts[sym], cs, tfCm, x, y);
+      if (idx >= 0) { removeRay(sym, idx); return; }
+      var mapCm = _rayCoordMap(_charts[sym], sym, tfCm);
+      var timeCm = mapCm ? mapCm.xToTime(x) : null;
+      if (price != null && timeCm != null) addRay(sym, timeCm, price);
       return;
     }
     if (e.shiftKey) {
@@ -4302,9 +4308,15 @@ export function openCoinFullView(sym) {
     var price = _fvSeries.coordinateToPrice(y);
     if (price == null) return;
     if (e.ctrlKey) {
+      // On macOS, Ctrl+click is rewritten by the OS into a contextmenu event
+      // (no plain mousedown ever fires), so "add ray" must be handled here too.
       var x = e.clientX - rect.left;
-      var idx = _nearRayIdx(sym, _fvChart, _fvSeries, state.chartTF[sym] || '5m', x, y);
-      if (idx >= 0) removeRay(sym, idx);
+      var tfCm = state.chartTF[sym] || '5m';
+      var idx = _nearRayIdx(sym, _fvChart, _fvSeries, tfCm, x, y);
+      if (idx >= 0) { removeRay(sym, idx); return; }
+      var mapCm = _rayCoordMap(_fvChart, sym, tfCm);
+      var timeCm = mapCm ? mapCm.xToTime(x) : null;
+      if (price != null && timeCm != null) addRay(sym, timeCm, price);
       return;
     }
     if (e.shiftKey) {
