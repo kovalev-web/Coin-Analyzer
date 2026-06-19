@@ -2020,6 +2020,7 @@ export function loadAlerts() {
 }
 
 function addAlert(sym, price) {
+  if (state.isDemoMode) { window.location.href = '/login'; return; }
   if (!_alerts[sym]) _alerts[sym] = [];
   var a = { id: _aNewId(), price: price, triggered: false, createdAt: Date.now() };
   _alerts[sym].push(a);
@@ -3163,7 +3164,7 @@ export function injectDemoBanner() {
   var el = document.createElement('div');
   el.id = 'demo-banner';
   el.className = 'demo-banner';
-  el.innerHTML = '<span class="demo-banner-text">Sync watchlist · Track PnL · Journal · AI analysis</span>'
+  el.innerHTML = '<span class="demo-banner-text">Sync watchlist · Price alerts · Track PnL · Journal · AI analysis</span>'
     + '<a href="/login" class="demo-banner-cta">Sign up free →</a>';
   document.body.appendChild(el);
   document.body.classList.add('demo-mode');
