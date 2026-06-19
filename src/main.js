@@ -145,20 +145,20 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'analyze': {
-      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       var c = state.coins.find(function (x) { return x.symbol === sym; });
       if (c) { openAnalysisPopup(sym, target); }
       break;
     }
     case 'open-analysis': {
-      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       openAnalysisPopup(sym, target);
       break;
     }
     case 'reanalyze': {
-      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       delete state.analysisCache[sym];
       var popup = document.getElementById('analysis-overlay');
       if (popup) {
@@ -352,7 +352,7 @@ document.body.addEventListener('click', function (e) {
       showAccountModal();
       break;
     case 'open-evening-journal':
-      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       if (!state.journalToday || !state.journalToday.morningAt) {
         showToast('Fill in the morning journal first');
         break;
@@ -382,7 +382,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'open-morning-journal': {
-      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       var _mNdd = document.getElementById('notif-dd');
       if (_mNdd) _mNdd.classList.remove('open');
       if (state.journalToday && state.journalToday.morningAt) {
@@ -609,7 +609,7 @@ document.body.addEventListener('click', function (e) {
       window.location.hash = '#/screener';
       break;
     case 'open-journal':
-      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       if (window.location.hash === '#/journal') {
         reloadRoute();
       } else {

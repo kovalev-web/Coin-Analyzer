@@ -3830,6 +3830,9 @@ export function renderBriefingPanel() {
       '</div>';
   }).join('') : '<div class="bp-empty">No coins for today — star them on the dashboard</div>';
 
+  var demoNotice = state.isDemoMode
+    ? '<div class="bp-demo-notice">' + icon('cloud-off', 12) + 'Saves locally — <a href="/login" class="bp-demo-link">sign up to sync</a></div>'
+    : '';
   popup.innerHTML =
     '<div class="popup-header">' +
       '<span class="popup-title">Watchlist</span>' +
@@ -3838,6 +3841,7 @@ export function renderBriefingPanel() {
     '<div class="popup-body bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
       (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Watchlist mode</button>' : '') +
+      demoNotice +
     '</div>';
 
   _refreshBriefingPct();
