@@ -5359,6 +5359,10 @@ function _playNotifSound() {
 
 export function showNotifToast(entry) {
   _playNotifSound();
+  // Tab not focused — show an OS-level notification too, since the in-page toast won't be seen.
+  if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+    try { new Notification('Pump Analyzer', { body: entry.message, icon: '/apple-touch-icon.png' }); } catch (e) {}
+  }
   var t = document.createElement('div');
   t.className = 'notif-toast';
   t.textContent = entry.message;
@@ -5381,6 +5385,9 @@ function _renderNotifDropdown() {
   if (!dd) return;
   var items = state.notifications;
   var header = '<div class="popup-header"><span class="popup-title">Notifications</span><button class="btn-topbar" data-action="toggle-notif">' + icon('x', 16) + '</button></div>';
+  var enableBanner = (window.Notification && Notification.permission === 'default')
+    ? '<div class="notif-enable"><span>Get alerts even when this tab isn\'t active</span><button data-action="enable-desktop-notifs">Enable</button></div>'
+    : '';
   var body = items.length
     ? '<div class="notif-scroll">'
       + items.map(function (n) {
@@ -5402,8 +5409,13 @@ function _renderNotifDropdown() {
   var footer = '<div class="notif-footer">'
     + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
     + '</div>';
-  dd.innerHTML = header + body + footer;
+  dd.innerHTML = header + enableBanner + body + footer;
   _smoothWheelScroll(dd.querySelector('.notif-scroll'));
+}
+
+export function requestDesktopNotifPermission() {
+  if (!window.Notification) return;
+  Notification.requestPermission().then(function () { _renderNotifDropdown(); });
 }
 
 

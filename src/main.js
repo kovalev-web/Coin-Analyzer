@@ -16,7 +16,7 @@ import {
   forceUnlockScroll, reapplyOverlayPositions, resyncChartLayouts,
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
-  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
+  toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
   openHintsPopup, closeHintsPopup,
@@ -143,6 +143,11 @@ document.body.addEventListener('click', function (e) {
     case 'notif-clear': {
       e.stopPropagation();
       clearNotifications();
+      break;
+    }
+    case 'enable-desktop-notifs': {
+      e.stopPropagation();
+      requestDesktopNotifPermission();
       break;
     }
     case 'analyze': {
