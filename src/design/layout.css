@@ -104,3 +104,8 @@
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-top:var(--v-md);margin-bottom:var(--v-md);}
 }
 
+@media(min-width:769px){
+  .desktop-nav-btn{display:inline-flex;}
+  .nav-pill.desktop-nav-btn{display:inline-flex;}
+}
+
