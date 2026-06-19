@@ -5279,6 +5279,10 @@ export function openHintsPopup() {
   var el = document.createElement('div');
   el.id = 'hints-overlay';
   el.className = 'overlay';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
+  el.style.background = 'rgba(0,0,0,0.5)';
   el.style.animation = 'overlay-in 0.2s ease';
   el.innerHTML = '<div class="popup hints-popup">'
     + '<div class="popup-header"><span class="popup-title">Chart interactions</span>'
