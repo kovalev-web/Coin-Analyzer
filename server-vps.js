@@ -910,6 +910,8 @@ var httpServer = http.createServer(async function (req, res) {
   }
 
   if (req.method === 'POST' && req.url === '/api/analyze') {
+    var analyzeSession = await getSession(req);
+    if (!analyzeSession) return unauthorized(res);
     var analyzeBody = '';
     req.on('data', function (chunk) { analyzeBody += chunk; });
     req.on('end', async function () {
