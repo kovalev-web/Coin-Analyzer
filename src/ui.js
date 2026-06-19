@@ -3240,7 +3240,7 @@ initTheme();
 loadLevels();
 on('render', function () {
   var route = getCurrentRoute();
-  if (route === '/' || route === '/screener') render();
+  if (route === '/' || route === '/gainers') render();
 });
 on('cards:sync', renderCards);
 on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });

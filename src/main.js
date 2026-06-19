@@ -606,7 +606,7 @@ document.body.addEventListener('click', function (e) {
       navigate('/');
       break;
     case 'go-screener':
-      navigate('/screener');
+      navigate('/gainers');
       break;
     case 'open-journal':
       if (state.isDemoMode) { window.location.href = '/login'; break; }
@@ -773,7 +773,7 @@ registerRoute('/', function () {
   }
 });
 
-registerRoute('/screener', function () {
+registerRoute('/gainers', function () {
   if (state.coins.length === 0) {
     fetchCoins().then(function () { renderScreener(); startChartPolling(); fetchAllNATR(screenerCoins()); });
   } else {
