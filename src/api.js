@@ -1224,3 +1224,22 @@ export async function generateWeeklySummary() {
   emit('trades:ai-updated');
   return state.aiSummary;
 }
+
+export function deleteWeeklySummary() {
+  state.aiSummary = null;
+  state.aiSummaryTradedKeys = null;
+  state.aiSummaryDate = null;
+  state.aiSummaryTradeCount = null;
+  try {
+    localStorage.removeItem('pa_ai_summary');
+    localStorage.removeItem('pa_ai_traded_keys');
+    localStorage.removeItem('pa_ai_summary_date');
+    localStorage.removeItem('pa_ai_trade_count');
+  } catch (e) {}
+  fetch(API_BASE + '/api/briefing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ action: 'save', skip_entries: true, clear_ai: true }),
+  }).catch(function () {});
+}

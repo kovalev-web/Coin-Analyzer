@@ -1075,7 +1075,9 @@ var httpServer = http.createServer(async function (req, res) {
           if (!parsed.skip_entries) {
             await redis(['SET', key, JSON.stringify(entries || [])]);
           }
-          if (parsed.ai_summary) {
+          if (parsed.clear_ai) {
+            await redis(['DEL', keyAI]);
+          } else if (parsed.ai_summary) {
             await redis(['SET', keyAI, JSON.stringify({ text: parsed.ai_summary, keys: parsed.ai_traded_keys || [], date: parsed.ai_summary_date || null, userId: userId })]);
           }
           if (typeof parsed.utcOffset === 'number' && isFinite(parsed.utcOffset)) {

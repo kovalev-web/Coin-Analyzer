@@ -2,7 +2,7 @@ import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
-  fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary,
+  fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary, deleteWeeklySummary,
   fetchNotifications,
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv, fetchPnlHistory,
 } from './api.js';
@@ -17,6 +17,7 @@ import {
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
+  toggleAiCollapsed,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
   openHintsPopup, closeHintsPopup,
@@ -615,6 +616,13 @@ document.body.addEventListener('click', function (e) {
       });
       break;
     }
+    case 'bp-ai-toggle':
+      toggleAiCollapsed();
+      break;
+    case 'bp-ai-delete':
+      deleteWeeklySummary();
+      renderFVBriefingDrawer();
+      break;
     case 'go-main':
       navigate('/');
       break;

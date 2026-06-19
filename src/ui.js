@@ -3314,6 +3314,7 @@ var _briefingServerLoaded = false; // true after first successful server GET
 var _briefingSyncTimer = null;
 var _expandedBpKey = null; // sym:date of currently expanded popup row
 var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
+var _aiCollapsed = false; // weekly AI report body collapsed in the FV drawer
 
 function todayDate() {
   var d = new Date();
@@ -3687,6 +3688,11 @@ function _missedOpportunitiesHTML() {
     + '</div>';
 }
 
+export function toggleAiCollapsed() {
+  _aiCollapsed = !_aiCollapsed;
+  renderFVBriefingDrawer();
+}
+
 function _weekAIHTML() {
   if (state.isDemoMode) {
     return '<div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to get AI weekly analysis</div>';
@@ -3714,9 +3720,11 @@ function _weekAIHTML() {
     + '<div class="bp-ai-block">'
     + '<div class="bp-ai-header">'
     + dateStr
+    + (aiText ? '<button class="btn-icon" data-action="bp-ai-toggle" title="' + (_aiCollapsed ? 'Expand' : 'Collapse') + '">' + icon(_aiCollapsed ? 'chevron-down' : 'chevron-up', 16) + '</button>' : '')
+    + (aiText ? '<button class="btn-icon" data-action="bp-ai-delete" title="Delete">' + icon('trash', 16) + '</button>' : '')
     + '<button class="acc-row-edit" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Generate</button>'
     + '</div>'
-    + (aiText ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
+    + (aiText && !_aiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
     + '</div>'
     + '</div>';
 }
