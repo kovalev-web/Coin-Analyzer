@@ -2020,7 +2020,15 @@ export function loadAlerts() {
 }
 
 function addAlert(sym, price) {
-  if (state.isDemoMode) { window.location.href = '/login'; return; }
+  if (state.isDemoMode) {
+    var t = document.createElement('div');
+    t.className = 'notif-toast';
+    t.innerHTML = 'Price alerts require an account — <a href="/login" style="color:var(--primary);font-weight:var(--font-semi);">Sign up free</a>';
+    document.body.appendChild(t);
+    setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
+    setTimeout(function () { t.classList.remove('notif-toast--visible'); setTimeout(function () { t.remove(); }, 300); }, 4000);
+    return;
+  }
   if (!_alerts[sym]) _alerts[sym] = [];
   var a = { id: _aNewId(), price: price, triggered: false, createdAt: Date.now() };
   _alerts[sym].push(a);
