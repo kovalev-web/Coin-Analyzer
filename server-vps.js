@@ -350,6 +350,9 @@ async function pushNotification(userId, payload) {
 
 var tickerCache = {}; // symbol → { s, c, o, h, l, v, q }
 var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена текущего UTC-дня (1d kline)
+var klinesCache = new Map(); // 'BTCUSDT:5m:300' → { data, exp }
+var KLINES_TTL_SHORT = 5000;  // polling requests (limit ≤ 10): 5s
+var KLINES_TTL_LONG  = 25000; // initial / historical loads: 25s
 var inplaySymbols     = []; // symbols passing pre-filter, populated after bootstrapTicker
 var _joinTimes        = {}; // sym → ms when added to watchlist (for CVD warmup)
 var _bootstrapPending = new Set(); // syms currently being bootstrapped (throttle guard)
@@ -1758,9 +1761,20 @@ wss.on('connection', function (ws, upgradeReq) {
       }
 
       else if (msg.type === 'fetch_klines') {
-        var url = BINANCE_REST + '/fapi/v1/klines?symbol=' + msg.symbol.toUpperCase() + 'USDT&interval=' + msg.tf + '&limit=' + (msg.limit || 300);
-        var data = await fetchBinance(url);
-        ws.send(JSON.stringify({ type: 'klines', _id: msg._id, symbol: msg.symbol, tf: msg.tf, data: data }));
+        var klSym = msg.symbol.toUpperCase() + 'USDT';
+        var klLimit = msg.limit || 300;
+        var klKey = klSym + ':' + msg.tf + ':' + klLimit;
+        var klCached = klinesCache.get(klKey);
+        var klData;
+        if (klCached && klCached.exp > Date.now()) {
+          klData = klCached.data;
+        } else {
+          var klUrl = BINANCE_REST + '/fapi/v1/klines?symbol=' + klSym + '&interval=' + msg.tf + '&limit=' + klLimit;
+          klData = await fetchBinance(klUrl);
+          var klTTL = klLimit <= 10 ? KLINES_TTL_SHORT : KLINES_TTL_LONG;
+          klinesCache.set(klKey, { data: klData, exp: Date.now() + klTTL });
+        }
+        ws.send(JSON.stringify({ type: 'klines', _id: msg._id, symbol: msg.symbol, tf: msg.tf, data: klData }));
       }
 
       else if (msg.type === 'fetch_natr') {

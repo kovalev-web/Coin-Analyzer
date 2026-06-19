@@ -24,10 +24,6 @@ import {
 import { on } from './events.js';
 import { icon } from './utils.js';
 
-if (new URLSearchParams(window.location.search).get('demo') === '1') {
-  state.isDemoMode = true;
-}
-
 function openFV(sym) {
   openCoinFullView(sym);
   if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
@@ -871,16 +867,15 @@ registerRoute('/404', function () {
 var _API_BASE = (import.meta.env.VITE_WS_URL || '').replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
 var _sessionVerified = false; // true once session confirmed — prevents double-init on revalidate
 
-// Fetch session and apply user state. Returns true (ok), false (no session → redirected), null (network err).
+// Fetch session and apply user state. Returns true (ok), false (no session → demo mode), null (network err).
 async function _applySession() {
   try {
     var r = await fetch(_API_BASE + '/auth/get-session', { credentials: 'include' });
-    if (!r.ok) { window.location.replace('/login'); return false; }
+    if (!r.ok) { state.isDemoMode = true; return false; }
     var s = await r.json();
-    if (!s || !s.user || !s.user.id) { window.location.replace('/login'); return false; }
+    if (!s || !s.user || !s.user.id) { state.isDemoMode = true; return false; }
     setUserId(s.user.id);
     if (s.user.email) setUserEmail(s.user.email);
-
     return true;
   } catch (e) {
     return null; // network error — caller decides
@@ -888,12 +883,10 @@ async function _applySession() {
 }
 
 // Re-check session when returning from long background.
-// Updates emailVerified badge and catches expired sessions without a full reload.
 async function _revalidateSession() {
   var result = await _applySession();
-  if (result === null) return; // server unreachable — keep current state, WS will surface it
-  // result === false → already redirected to /login
-  // result === true → userId/emailVerified refreshed; if first successful auth, load user data
+  if (result === null) return; // server unreachable — keep current state
+  if (result === false && !document.getElementById('demo-banner')) injectDemoBanner();
   if (result === true && !_sessionVerified) {
     _sessionVerified = true;
     loadAlerts();
@@ -904,22 +897,14 @@ async function _revalidateSession() {
   }
 }
 
-// Check session first — redirect to /login if not authenticated.
-// On network error (server down) we still load the app so WS reconnect can recover.
+// Check session; unauthenticated users get demo mode instead of redirect.
+// On network error (server down) load the app anyway — WS reconnect recovers.
 (async function () {
-  if (state.isDemoMode) {
-    loadCache();
-    loadBriefing(); // local-only: _briefingUserCode is null, server call is skipped
-    loadAlerts();
-    loadLevels();
-    loadRays();
-    initRouter('/');
-    injectDemoBanner();
-    return;
-  }
-
   var result = await _applySession();
-  if (result === false) return; // redirected
+  // result === true:  authenticated
+  // result === false: no session → state.isDemoMode = true (set in _applySession)
+  // result === null:  network error → load app, WS will surface the error
+
   if (result === true) {
     _sessionVerified = true;
     fetch(_API_BASE + '/api/account', { credentials: 'include' })
@@ -929,13 +914,13 @@ async function _revalidateSession() {
     fetchJournalToday();
     fetchJournalRecent();
   }
-  // result === null: server unreachable — load app anyway; WS will surface the error
 
   loadCache();
   loadAlerts();
   loadBriefing();
   loadLevels();
   loadRays();
-  fetchNotifications();
+  if (!state.isDemoMode) fetchNotifications();
   initRouter('/');
+  if (state.isDemoMode) injectDemoBanner();
 })();
