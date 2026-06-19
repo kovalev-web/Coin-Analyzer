@@ -8,7 +8,8 @@ export function registerRoute(path, handler) {
 }
 
 export function navigate(path) {
-  window.location.hash = '#' + path;
+  window.history.pushState({}, '', path);
+  routeChanged();
 }
 
 export function getCurrentRoute() {
@@ -16,10 +17,10 @@ export function getCurrentRoute() {
 }
 
 function routeChanged() {
-  var hash = window.location.hash.replace(/^#/, '') || '/';
-  if (hash === currentRoute) return;
-  currentRoute = hash;
-  var handler = routeHandlers[hash];
+  var path = window.location.pathname || '/';
+  if (path === currentRoute) return;
+  currentRoute = path;
+  var handler = routeHandlers[path];
   if (handler) {
     handler();
   } else if (routeHandlers['/404']) {
@@ -31,18 +32,15 @@ function routeChanged() {
 // Used when the page is restored from bfcache (iOS standalone app reopen)
 // and JS state may be stale relative to the displayed page.
 export function reloadRoute() {
-  var hash = window.location.hash.replace(/^#/, '') || '/';
-  currentRoute = hash;
-  var handler = routeHandlers[hash] || routeHandlers['/404'];
+  var path = window.location.pathname || '/';
+  currentRoute = path;
+  var handler = routeHandlers[path] || routeHandlers['/404'];
   if (handler) handler();
 }
 
 export function initRouter(defaultRoute) {
-  window.addEventListener('hashchange', routeChanged);
-  if (!window.location.hash || window.location.hash === '#') {
-    window.location.hash = '#' + (defaultRoute || '/');
-  }
-  currentRoute = window.location.hash.replace(/^#/, '') || '/';
-  var handler = routeHandlers[currentRoute];
+  window.addEventListener('popstate', routeChanged);
+  currentRoute = window.location.pathname || defaultRoute || '/';
+  var handler = routeHandlers[currentRoute] || routeHandlers['/404'];
   if (handler) handler();
 }

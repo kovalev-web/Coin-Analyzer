@@ -28,7 +28,7 @@ function openFV(sym) {
   openCoinFullView(sym);
   if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
 }
-import { initRouter, registerRoute, reloadRoute } from './router.js';
+import { initRouter, registerRoute, reloadRoute, navigate, getCurrentRoute } from './router.js';
 import './styles.css';
 
 // ── Event delegation ───────────────────────────────────────────────────────
@@ -603,17 +603,17 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'go-main':
-      window.location.hash = '#/';
+      navigate('/');
       break;
     case 'go-screener':
-      window.location.hash = '#/screener';
+      navigate('/screener');
       break;
     case 'open-journal':
       if (state.isDemoMode) { window.location.href = '/login'; break; }
-      if (window.location.hash === '#/journal') {
+      if (getCurrentRoute() === '/journal') {
         reloadRoute();
       } else {
-        window.location.hash = '#/journal';
+        navigate('/journal');
       }
       break;
   }
@@ -789,7 +789,7 @@ registerRoute('/settings', function () {
     '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">⚙️ Settings</h2>' +
     '<p style="color:var(--graphite);font-size:var(--text-sm);">Settings page — coming soon.</p>' +
     '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Planned: notifications, default filters, subscription management.</p>' +
-    '<a href="#/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
+    '<a href="/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
 
@@ -816,7 +816,7 @@ registerRoute('/journal', function () {
   app.innerHTML = '<div class="journal-page">' +
     '<div class="journal-page-header">' +
     '<h2 class="journal-page-title">' +
-    '<a href="#/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
+    '<a href="/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<div class="journal-page-actions">' +
     '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
     '<button data-action="open-evening-journal" class="btn-cta"' + (!state.journalToday || !state.journalToday.morningAt || state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
@@ -858,7 +858,7 @@ registerRoute('/404', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
     '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">404 — Page not found</h2>' +
-    '<a href="#/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
+    '<a href="/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
     '</div>';
 });
 
