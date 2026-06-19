@@ -3616,6 +3616,9 @@ function _tradeInlineHTML(sym, date) {
 // ── Weekly summary block ───────────────────────────────────────────────────
 
 function _weekStatsHTML() {
+  if (state.isDemoMode) {
+    return '<div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div>';
+  }
   var ws = state.weekSummary;
   var loadBtn = '<button class="btn-topbar bp-week-load-btn" data-action="bp-load-week" title="Refresh">' + icon('refresh-cw', 16) + '</button>';
   var statsHTML = ws
@@ -3665,6 +3668,9 @@ function _missedOpportunitiesHTML() {
 }
 
 function _weekAIHTML() {
+  if (state.isDemoMode) {
+    return '<div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to get AI weekly analysis</div>';
+  }
   var ws = state.weekSummary;
   var aiText = state.aiSummary;
   var currentKeys = (state.briefing || [])
