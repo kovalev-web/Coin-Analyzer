@@ -211,6 +211,7 @@ var _raySyncTimer = null;
 
 export function setUserId(id) {
   _userId = id;
+  state.userId = id; // exposed via shared state so api.js can scope its own localStorage keys
   _briefingUserCode = id; // briefing section uses its own var
 }
 
@@ -224,10 +225,10 @@ export function setUserEmail(email) { _userEmail = email; }
 export function setUserAvatar(av) {
   if (!av) {
     _userAvatar = null;
-    localStorage.removeItem('pa_avatar');
+    localStorage.removeItem(_userScopedKey('pa_avatar'));
   } else {
     _userAvatar = av;
-    localStorage.setItem('pa_avatar', av);
+    localStorage.setItem(_userScopedKey('pa_avatar'), av);
   }
   // Desktop: avatar button in topbar-actions
   var btn = document.getElementById('avatar-btn');
@@ -3133,7 +3134,7 @@ export function updateSessionTimer() {
 }
 
 function _topbarHTML() {
-  var _av = _userAvatar || localStorage.getItem('pa_avatar') || '';
+  var _av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')) || '';
   var _demo = state.isDemoMode;
   return '<div class="topbar"><div class="filters">'
     + '<button class="topbar-logo' + (_av ? ' mob-has-avatar' : '') + '" id="topbar-logo-btn" data-action="refresh" title="Refresh">'
@@ -3155,7 +3156,7 @@ function _topbarHTML() {
     + '<div class="notif-dd dropdown" id="notif-dd"></div>'
     + '</div>'
     + '<div class="avatar-wrap">'
-    + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
+    + (function() { var av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
@@ -3379,7 +3380,7 @@ export function autoSetTradedStatus() {
 }
 
 function saveBriefingLocal() {
-  try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_briefing'), JSON.stringify(state.briefing)); } catch (e) {}
   clearTimeout(_briefingSyncTimer);
   _briefingSyncTimer = setTimeout(syncBriefingToServer, 1000);
 }
@@ -3431,7 +3432,7 @@ export function refreshBriefingFromServer() {
     state.briefing = _merged;
     _briefingServerLoaded = true;
     if (_needsSync) syncBriefingToServer(); // only if local note was newer
-    try { localStorage.setItem('pa_briefing', JSON.stringify(state.briefing)); } catch (e) {} // no debounce sync — don't push server data back
+    try { localStorage.setItem(_userScopedKey('pa_briefing'), JSON.stringify(state.briefing)); } catch (e) {} // no debounce sync — don't push server data back
     renderBriefingPanel();
     updateAllStarButtons();
     var _fvd = document.getElementById('fv-briefing-drawer');
@@ -3440,32 +3441,21 @@ export function refreshBriefingFromServer() {
 }
 
 export function loadBriefing() {
-  // Clear cached data if user switched to prevent cross-user data leakage
-  try {
-    var _storedUserId = localStorage.getItem('pa_user_id');
-    if (_userId && _storedUserId !== _userId) {
-      ['pa_briefing', 'pa_ai_summary', 'pa_ai_traded_keys', 'pa_ai_summary_date', 'pa_ai_trade_count'].forEach(function (k) {
-        localStorage.removeItem(k);
-      });
-      localStorage.setItem('pa_user_id', _userId);
-    }
-  } catch (e) {}
-
   // Keep ~4 weeks of history — old entries disappear once they roll past that window
   var _mondayStr = _briefingHistoryCutoff();
 
   try {
-    var local = JSON.parse(localStorage.getItem('pa_briefing') || '[]');
+    var local = JSON.parse(localStorage.getItem(_userScopedKey('pa_briefing')) || '[]');
     if (Array.isArray(local)) state.briefing = local.filter(function (e) { return e.date >= _mondayStr; });
   } catch (e) {}
   try {
-    var savedAI = localStorage.getItem('pa_ai_summary');
+    var savedAI = localStorage.getItem(_userScopedKey('pa_ai_summary'));
     if (savedAI) state.aiSummary = savedAI;
-    var savedKeys = localStorage.getItem('pa_ai_traded_keys');
+    var savedKeys = localStorage.getItem(_userScopedKey('pa_ai_traded_keys'));
     if (savedKeys) state.aiSummaryTradedKeys = JSON.parse(savedKeys);
-    var savedDate = localStorage.getItem('pa_ai_summary_date');
+    var savedDate = localStorage.getItem(_userScopedKey('pa_ai_summary_date'));
     if (savedDate) state.aiSummaryDate = savedDate;
-    var savedCount = localStorage.getItem('pa_ai_trade_count');
+    var savedCount = localStorage.getItem(_userScopedKey('pa_ai_trade_count'));
     if (savedCount !== null) state.aiSummaryTradeCount = parseInt(savedCount, 10) || 0;
   } catch (e) {}
   if (!_briefingUserCode) return;
@@ -3503,9 +3493,9 @@ export function loadBriefing() {
       state.aiSummaryTradedKeys = d.ai_traded_keys || [];
       state.aiSummaryDate = d.ai_summary_date || null;
       try {
-        localStorage.setItem('pa_ai_summary', state.aiSummary);
-        localStorage.setItem('pa_ai_traded_keys', JSON.stringify(state.aiSummaryTradedKeys));
-        if (state.aiSummaryDate) localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
+        localStorage.setItem(_userScopedKey('pa_ai_summary'), state.aiSummary);
+        localStorage.setItem(_userScopedKey('pa_ai_traded_keys'), JSON.stringify(state.aiSummaryTradedKeys));
+        if (state.aiSummaryDate) localStorage.setItem(_userScopedKey('pa_ai_summary_date'), state.aiSummaryDate);
       } catch (e) {}
       var _drawer = document.getElementById('fv-briefing-drawer');
       if (_drawer && _drawer.classList.contains('open') && state.briefingTab === 'ai') {
@@ -3518,10 +3508,10 @@ export function loadBriefing() {
       state.aiSummaryDate = null;
       state.aiSummaryTradeCount = null;
       try {
-        localStorage.removeItem('pa_ai_summary');
-        localStorage.removeItem('pa_ai_traded_keys');
-        localStorage.removeItem('pa_ai_summary_date');
-        localStorage.removeItem('pa_ai_trade_count');
+        localStorage.removeItem(_userScopedKey('pa_ai_summary'));
+        localStorage.removeItem(_userScopedKey('pa_ai_traded_keys'));
+        localStorage.removeItem(_userScopedKey('pa_ai_summary_date'));
+        localStorage.removeItem(_userScopedKey('pa_ai_trade_count'));
       } catch (e) {}
       var _drawer2 = document.getElementById('fv-briefing-drawer');
       if (_drawer2 && _drawer2.classList.contains('open') && state.briefingTab === 'ai') {

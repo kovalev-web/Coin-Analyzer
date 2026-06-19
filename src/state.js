@@ -9,6 +9,7 @@ export const CACHE_TTL_MS = 2 * 60 * 1000;
 export const ANALYZE_DELAY_MS = 400;
 
 export const state = {
+  userId: null,
   coins: [],
   analysisCache: {},
   chartData: {},

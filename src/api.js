@@ -8,6 +8,9 @@ export var API_BASE = _wsEnv
   ? _wsEnv.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '')
   : '';
 
+// localStorage keys holding personal data (PnL/AI summary) must be scoped per account.
+function _uKey(base) { return base + ':' + (state.userId || 'anon'); }
+
 
 // TV update throttle: max once per 2s (TV hardware is slow)
 var _tvKlineThrottle = {};
@@ -1209,10 +1212,10 @@ export async function generateWeeklySummary() {
   state.aiSummaryDate = new Date().toISOString();
   state.aiSummaryTradeCount = state.weekSummary ? state.weekSummary.tradeCount : 0;
   try {
-    localStorage.setItem('pa_ai_summary', state.aiSummary);
-    localStorage.setItem('pa_ai_traded_keys', JSON.stringify(tradedKeys));
-    localStorage.setItem('pa_ai_summary_date', state.aiSummaryDate);
-    localStorage.setItem('pa_ai_trade_count', String(state.aiSummaryTradeCount));
+    localStorage.setItem(_uKey('pa_ai_summary'), state.aiSummary);
+    localStorage.setItem(_uKey('pa_ai_traded_keys'), JSON.stringify(tradedKeys));
+    localStorage.setItem(_uKey('pa_ai_summary_date'), state.aiSummaryDate);
+    localStorage.setItem(_uKey('pa_ai_trade_count'), String(state.aiSummaryTradeCount));
   } catch (e) {}
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
@@ -1231,10 +1234,10 @@ export function deleteWeeklySummary() {
   state.aiSummaryDate = null;
   state.aiSummaryTradeCount = null;
   try {
-    localStorage.removeItem('pa_ai_summary');
-    localStorage.removeItem('pa_ai_traded_keys');
-    localStorage.removeItem('pa_ai_summary_date');
-    localStorage.removeItem('pa_ai_trade_count');
+    localStorage.removeItem(_uKey('pa_ai_summary'));
+    localStorage.removeItem(_uKey('pa_ai_traded_keys'));
+    localStorage.removeItem(_uKey('pa_ai_summary_date'));
+    localStorage.removeItem(_uKey('pa_ai_trade_count'));
   } catch (e) {}
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
