@@ -2023,6 +2023,7 @@ function addAlert(sym, price) {
   if (state.isDemoMode) {
     var t = document.createElement('div');
     t.className = 'notif-toast';
+    t.style.pointerEvents = 'auto';
     t.innerHTML = 'Price alerts require an account — <a href="/login" style="color:var(--primary);font-weight:var(--font-semi);">Sign up free</a>';
     document.body.appendChild(t);
     setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
