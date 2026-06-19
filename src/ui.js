@@ -5259,22 +5259,35 @@ export function openClearPopup(sym, btn) {
 
 export function openHintsPopup() {
   if (document.getElementById('hints-overlay')) return;
-  var rows = [
-    { label: 'Add level',       keys: ['Right-click'] },
-    { label: 'Remove level',    keys: ['Right-click on line'] },
-    { label: 'Move level',      keys: ['Drag line'] },
-    { label: 'Add alert',       keys: ['Shift', 'Right-click'] },
-    { label: 'Remove alert',    keys: ['Shift', 'Right-click on line'] },
-    { label: 'Move alert',      keys: ['Shift', 'Right-drag'] },
-    { label: 'Move alert (trackpad)', keys: ['Shift', 'Alt', 'Left-drag'] },
-    { label: 'Add ray',         keys: ['Ctrl', 'Left-click'] },
-    { label: 'Move ray',        keys: ['Ctrl', 'Left-drag on ray'] },
-    { label: 'Remove ray',      keys: ['Ctrl', 'Right-click'] },
-    { label: 'Ruler',           keys: ['Alt', 'Left-drag'] },
+  var groups = [
+    { title: 'Level', rows: [
+      { label: 'Add',    value: 'Right-click' },
+      { label: 'Remove', value: 'Right-click on line' },
+      { label: 'Move',   value: 'Drag line' },
+    ] },
+    { title: 'Alert', rows: [
+      { label: 'Add',              value: 'Shift + Right-click' },
+      { label: 'Remove',           value: 'Shift + Right-click on line' },
+      { label: 'Move',             value: 'Shift + Right-drag' },
+      { label: 'Move (trackpad)',  value: 'Shift + Alt + Left-drag' },
+    ] },
+    { title: 'Ray', rows: [
+      { label: 'Add',    value: 'Ctrl + Left-click' },
+      { label: 'Move',   value: 'Ctrl + Left-drag on ray' },
+      { label: 'Remove', value: 'Ctrl + Right-click' },
+    ] },
+    { title: 'Ruler', rows: [
+      { label: '', value: 'Alt + Left-drag' },
+    ] },
   ];
-  var rowsHTML = rows.map(function (r) {
-    var keysHTML = r.keys.map(function (k) { return '<kbd class="hints-kbd">' + k + '</kbd>'; }).join('');
-    return '<div class="hints-row"><span class="hints-label">' + r.label + '</span><span class="hints-keys">' + keysHTML + '</span></div>';
+  var rowsHTML = groups.map(function (g) {
+    if (g.rows.length === 1 && !g.rows[0].label) {
+      return '<div class="hints-group"><div class="hints-section-title hints-title-row"><span>' + g.title + '</span><span class="hints-value">' + g.rows[0].value + '</span></div></div>';
+    }
+    var groupRows = g.rows.map(function (r) {
+      return '<div class="hints-row"><span class="hints-label">' + r.label + '</span><span class="hints-value">' + r.value + '</span></div>';
+    }).join('');
+    return '<div class="hints-group"><div class="hints-section-title">' + g.title + '</div>' + groupRows + '</div>';
   }).join('');
 
   var el = document.createElement('div');
