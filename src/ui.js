@@ -1703,7 +1703,7 @@ function syncRaysToServer() {
 }
 
 function saveRays() {
-  try { localStorage.setItem('pa_rays', JSON.stringify(raysData())); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_rays'), JSON.stringify(raysData())); } catch (e) {}
   clearTimeout(_raySyncTimer);
   _raySyncTimer = setTimeout(syncRaysToServer, 1000);
 }
@@ -1723,7 +1723,7 @@ function applyServerRays(data) {
       return { id: r.id || _rNewId(), time1: r.time1, price1: r.price1, line: null, fvLine: null };
     });
   });
-  try { localStorage.setItem('pa_rays', JSON.stringify(data)); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_rays'), JSON.stringify(data)); } catch (e) {}
   Object.keys(_rays).forEach(function (sym) {
     (_rays[sym] || []).forEach(function (r) { attachRay(sym, r); });
     updateClearBtn(sym);
@@ -1751,7 +1751,7 @@ export function fetchServerRays() {
 
 export function loadRays() {
   try {
-    var local = JSON.parse(localStorage.getItem('pa_rays') || '{}');
+    var local = JSON.parse(localStorage.getItem(_userScopedKey('pa_rays')) || '{}');
     Object.keys(local).forEach(function (sym) {
       _rays[sym.toLowerCase()] = local[sym].map(function (r) {
         return { id: r.id || _rNewId(), time1: r.time1, price1: r.price1, line: null, fvLine: null };
