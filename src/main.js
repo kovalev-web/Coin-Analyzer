@@ -590,7 +590,9 @@ document.body.addEventListener('click', function (e) {
     case 'fvbd-expand': {
       var fvExpandDate = target.dataset.date;
       toggleFvExpand(sym, fvExpandDate);
-      openFV(sym);
+      // Already viewing this coin — don't reopen it (would reset chart zoom and close the orderbook popup).
+      var _fvCurrentRow = document.querySelector('.bp-row.fvbd-current');
+      if (!_fvCurrentRow || _fvCurrentRow.dataset.sym !== sym) openFV(sym);
       break;
     }
     case 'toggle-fv-briefing':
