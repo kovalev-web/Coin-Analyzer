@@ -207,3 +207,13 @@ body {
 }
 
 .auth-back:hover { color: var(--ink-deep); }
+
+/* ── Demo link ───────────────────────────────────────────────── */
+.auth-demo-link {
+  text-decoration: none;
+  color: var(--primary);
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--steel);
+  padding-top: var(--space-6);
+}
+.auth-demo-link:hover { color: var(--primary); opacity: 0.8; }
