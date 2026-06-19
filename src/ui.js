@@ -214,6 +214,11 @@ export function setUserId(id) {
   _briefingUserCode = id; // briefing section uses its own var
 }
 
+// Local caches (levels/alerts/chatId) must be scoped per account — otherwise
+// data left in localStorage by one user leaks into another user's session
+// (and even gets re-uploaded to their server-side storage) after switching accounts.
+function _userScopedKey(base) { return base + ':' + (_userId || 'anon'); }
+
 export function setUserEmail(email) { _userEmail = email; }
 
 export function setUserAvatar(av) {
@@ -259,7 +264,7 @@ function syncToServer() {
 }
 
 function saveLevels() {
-  try { localStorage.setItem('pa_levels', JSON.stringify(levelsData())); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_levels'), JSON.stringify(levelsData())); } catch (e) {}
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(syncToServer, 1000);
 }
@@ -290,7 +295,7 @@ function applyServerLevels(data) {
   Object.keys(data).forEach(function (sym) {
     _levels[sym.toLowerCase()] = data[sym].map(function (p) { return { price: p, line: null }; });
   });
-  try { localStorage.setItem('pa_levels', JSON.stringify(data)); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_levels'), JSON.stringify(data)); } catch (e) {}
   reattachAllLevels();
 }
 
@@ -315,7 +320,7 @@ export function fetchServerLevels() {
 
 export function loadLevels() {
   try {
-    var local = JSON.parse(localStorage.getItem('pa_levels') || '{}');
+    var local = JSON.parse(localStorage.getItem(_userScopedKey('pa_levels')) || '{}');
     Object.keys(local).forEach(function (sym) {
       _levels[sym.toLowerCase()] = local[sym].map(function (p) { return { price: p, line: null }; });
     });
@@ -1856,7 +1861,7 @@ var _alerts = {};
 var _aLines = {};       // alertId → { card, fv }
 var _aIdSeed = 0;
 
-var _chatId = localStorage.getItem('pa_chat_id') || '';
+var _chatId = '';
 var _alertSyncTimer = null;
 
 function _aNewId() { return 'a' + (++_aIdSeed) + '_' + Date.now(); }
@@ -1944,7 +1949,7 @@ function _syncAllAlerts() {
 function _updateAlertsBtn(sym) { updateClearBtn(sym); }
 
 function saveAlerts() {
-  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  try { localStorage.setItem(_userScopedKey('pa_alerts'), JSON.stringify(alertsData())); } catch (e) {}
   // Push via WS immediately so server is up-to-date before any pending HTTP response.
   if (_userId) sendWS({ type: 'save_alerts', code: _userId, chatId: _chatId, data: alertsData() });
   clearTimeout(_alertSyncTimer);
@@ -1966,7 +1971,7 @@ function syncAlertsToServer() {
 function applyServerAlerts(entry) {
   // Guard: server returned nothing — preserve local state, only update chatId.
   if (!entry || !entry.data || Object.keys(entry.data).length === 0) {
-    if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
+    if (entry && entry.chatId) { _chatId = entry.chatId; localStorage.setItem(_userScopedKey('pa_chat_id'), _chatId); }
     return;
   }
   // Remove chart lines for every current alert before replacing data.
@@ -1980,8 +1985,8 @@ function applyServerAlerts(entry) {
       return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
     });
   });
-  if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem('pa_chat_id', _chatId); }
-  try { localStorage.setItem('pa_alerts', JSON.stringify(alertsData())); } catch (e) {}
+  if (entry.chatId) { _chatId = entry.chatId; localStorage.setItem(_userScopedKey('pa_chat_id'), _chatId); }
+  try { localStorage.setItem(_userScopedKey('pa_alerts'), JSON.stringify(alertsData())); } catch (e) {}
   _syncAllAlerts();
 }
 
@@ -2009,12 +2014,13 @@ function fetchServerAlerts() {
 
 export function loadAlerts() {
   try {
-    var local = JSON.parse(localStorage.getItem('pa_alerts') || '{}');
+    var local = JSON.parse(localStorage.getItem(_userScopedKey('pa_alerts')) || '{}');
     Object.keys(local).forEach(function (sym) {
       _alerts[sym.toLowerCase()] = local[sym].map(function (a) {
         return { id: a.id || _aNewId(), price: a.price, triggered: a.triggered || false, createdAt: a.createdAt };
       });
     });
+    _chatId = localStorage.getItem(_userScopedKey('pa_chat_id')) || '';
   } catch (e) {}
   if (_userId) fetchServerAlerts();
 }
