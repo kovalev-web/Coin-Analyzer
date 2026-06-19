@@ -19,7 +19,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-topbar,.btn-avatar{background:var(--fog);color:var(--ink-deep);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
 .btn-topbar:hover,.btn-avatar:hover{opacity:0.8;}
 .desktop-nav-btn{display:none;}
-@media(min-width:769px){.desktop-nav-btn{display:inline-flex;}}
 
 /* ── WS indicator ───────────────────────────────────────────── */
 .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 var(--space-3) 0 0;}
@@ -49,7 +48,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .nav-pill:hover{color:var(--ink-deep);}
 .nav-pill.active{background:var(--fog);color:var(--ink-deep);}
 .nav-pill.desktop-nav-btn{display:none;}
-@media(min-width:769px){.nav-pill.desktop-nav-btn{display:inline-flex;}}
 .nav-beta-tag{font-size:var(--text-2xs);font-weight:var(--font-bold);color:var(--danger);letter-spacing:0.03em;text-transform:uppercase;}
 
 /* ── Session timer (Asia/Europe/America) ───────────────────── */
