@@ -40,6 +40,7 @@ export const state = {
   notifications: [],
   notifUnread: 0,
   inplayTop: [],   // [{symbol, inplay, A, M, P, dp5m, rvol5m}] — from server inplay_top WS push
+  isDemoMode: false,
 };
 
 export function filteredCoins() {

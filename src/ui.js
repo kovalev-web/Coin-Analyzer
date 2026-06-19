@@ -3110,6 +3110,7 @@ export function updateSessionTimer() {
 
 function _topbarHTML() {
   var _av = _userAvatar || localStorage.getItem('pa_avatar') || '';
+  var _demo = state.isDemoMode;
   return '<div class="topbar"><div class="filters">'
     + '<button class="topbar-logo' + (_av ? ' mob-has-avatar' : '') + '" id="topbar-logo-btn" data-action="refresh" title="Refresh">'
     + '<span class="logo-svg">' + _LOGO_SVG + '</span>'
@@ -3117,40 +3118,54 @@ function _topbarHTML() {
     + '</button>'
     + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
     + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Gainers</button>'
-    + '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>'
+    + (!_demo ? '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>' : '')
     + _sessionTimerHTML()
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
     + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
-    + '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>'
+    + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + '<div class="notif-wrap" id="notif-wrap">'
     + '<button class="btn-topbar" data-action="toggle-notif" id="notif-btn" title="Notifications">' + icon('bell', 16) + '<span class="notif-badge" id="notif-badge" style="display:none"></span></button>'
     + '<div class="notif-dd dropdown" id="notif-dd"></div>'
     + '</div>'
-    + '<div class="avatar-wrap">'
-    + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
-    + '<div class="avatar-dd dropdown" id="avatar-dd">'
-    + '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>'
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
-    + _sessionTimerMobileHTML()
-    + '</div>'
-    + '</div>'
+    + (_demo
+      ? '<a href="/login" class="btn-cta demo-topbar-signup">Sign up</a>'
+      : '<div class="avatar-wrap">'
+        + (function() { var av = _userAvatar || localStorage.getItem('pa_avatar'); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
+        + '<div class="avatar-dd dropdown" id="avatar-dd">'
+        + '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>'
+        + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
+        + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
+        + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
+        + _sessionTimerMobileHTML()
+        + '</div>'
+        + '</div>')
     + '<div class="burger-wrap">'
     + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
     + '<div class="burger-dd dropdown" id="burger-dd">'
-    + '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>'
+    + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>'
-    + _sessionTimerMobileHTML()
+    + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
+    + (!_demo ? _sessionTimerMobileHTML() : '')
+    + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('user-round', 14) + 'Sign up</a>' : '')
     + '</div>'
     + '</div>'
     + '</div>'
     + '</div></div>';
+}
+
+export function injectDemoBanner() {
+  if (document.getElementById('demo-banner')) return;
+  var el = document.createElement('div');
+  el.id = 'demo-banner';
+  el.className = 'demo-banner';
+  el.innerHTML = '<span class="demo-banner-text">Demo mode — explore the app, no account needed</span>'
+    + '<a href="/login" class="demo-banner-cta">Sign up free</a>';
+  document.body.appendChild(el);
+  document.body.classList.add('demo-mode');
 }
 
 // ── Sort Bar ───────────────────────────────────────────────────────────────

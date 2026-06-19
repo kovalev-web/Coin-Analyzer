@@ -518,3 +518,15 @@ summary.journal-history-row::marker{display:none;}
   .journal-history-row>div,.journal-history-header>div{min-width:0;}
   .journal-history-header>div{overflow:hidden;white-space:nowrap;text-overflow:clip;}
 }
+
+/* ── Demo mode banner ────────────────────────────────────────── */
+.demo-banner{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:var(--space-8);padding:var(--space-4) var(--space-16);background:var(--primary);color:#fff;font-size:var(--text-sm);font-weight:var(--font-medium);z-index:300;animation:demo-banner-in 0.3s ease-out;}
+.demo-banner-text{opacity:0.92;}
+.demo-banner-cta{background:rgba(255,255,255,0.18);color:#fff;border-radius:var(--radius-md);padding:var(--space-2) var(--space-8);font-weight:var(--font-semi);font-size:var(--text-sm);text-decoration:none;white-space:nowrap;transition:background 0.15s;}
+.demo-banner-cta:hover{background:rgba(255,255,255,0.32);}
+.demo-topbar-signup{height:var(--h-btn-sm);padding:0 var(--space-8);font-size:var(--text-xs);white-space:nowrap;}
+.demo-burger-signup{text-decoration:none;color:var(--primary)!important;}
+body.demo-mode{padding-bottom:44px;}
+@keyframes demo-banner-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(max-width:480px){.demo-banner-text{display:none;}}
+

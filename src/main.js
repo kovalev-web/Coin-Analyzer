@@ -19,10 +19,14 @@ import {
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
-  updateSessionTimer,
+  updateSessionTimer, injectDemoBanner,
 } from './ui.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
+
+if (new URLSearchParams(window.location.search).get('demo') === '1') {
+  state.isDemoMode = true;
+}
 
 function openFV(sym) {
   openCoinFullView(sym);
@@ -145,17 +149,20 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'analyze': {
+      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       var c = state.coins.find(function (x) { return x.symbol === sym; });
       if (c) { openAnalysisPopup(sym, target); }
       break;
     }
     case 'open-analysis': {
+      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       openAnalysisPopup(sym, target);
       break;
     }
     case 'reanalyze': {
+      if (state.isDemoMode) { showToast('Sign up to unlock AI analysis'); break; }
       delete state.analysisCache[sym];
       var popup = document.getElementById('analysis-overlay');
       if (popup) {
@@ -345,9 +352,11 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     case 'open-account':
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
       showAccountModal();
       break;
     case 'open-evening-journal':
+      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
       if (!state.journalToday || !state.journalToday.morningAt) {
         showToast('Fill in the morning journal first');
         break;
@@ -377,6 +386,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'open-morning-journal': {
+      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
       var _mNdd = document.getElementById('notif-dd');
       if (_mNdd) _mNdd.classList.remove('open');
       if (state.journalToday && state.journalToday.morningAt) {
@@ -482,6 +492,7 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'logout': {
+      if (state.isDemoMode) { window.location.replace('/login'); break; }
       var _wsEnv2 = import.meta.env.VITE_WS_URL || '';
       var _apiBase2 = _wsEnv2.replace(/^wss?:\/\//, 'https://').replace(/\/ws$/, '');
       fetch(_apiBase2 + '/auth/sign-out', { method: 'POST', credentials: 'include' })
@@ -602,6 +613,7 @@ document.body.addEventListener('click', function (e) {
       window.location.hash = '#/screener';
       break;
     case 'open-journal':
+      if (state.isDemoMode) { showToast('Sign up to access your journal'); break; }
       if (window.location.hash === '#/journal') {
         reloadRoute();
       } else {
@@ -895,6 +907,17 @@ async function _revalidateSession() {
 // Check session first — redirect to /login if not authenticated.
 // On network error (server down) we still load the app so WS reconnect can recover.
 (async function () {
+  if (state.isDemoMode) {
+    loadCache();
+    loadBriefing(); // local-only: _briefingUserCode is null, server call is skipped
+    loadAlerts();
+    loadLevels();
+    loadRays();
+    initRouter('/');
+    injectDemoBanner();
+    return;
+  }
+
   var result = await _applySession();
   if (result === false) return; // redirected
   if (result === true) {
