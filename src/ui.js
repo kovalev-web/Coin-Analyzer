@@ -2,7 +2,7 @@ import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.
 import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 
 // ── Utility ────────────────────────────────────────────────────────────────
@@ -4983,20 +4983,29 @@ export function briefingRemove(sym, date) {
   }
 }
 
+function _fvbdJournalActionsHTML() {
+  var morningFilled = !!(state.journalToday && state.journalToday.morningAt);
+  var eveningDisabled = !state.journalToday || !state.journalToday.morningAt || !!state.journalToday.skipped;
+  return '<div class="fvbd-journal-actions">'
+    + '<button data-action="open-morning-journal" class="btn-cta"' + (morningFilled ? ' disabled' : '') + '>Morning' + (morningFilled ? icon('check', 14) : '') + '</button>'
+    + '<button data-action="open-evening-journal" class="btn-cta"' + (eveningDisabled ? ' disabled' : '') + '>Evening</button>'
+    + '</div>';
+}
+
 export function renderFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   var today = todayDate();
   var allEntries = state.briefing || [];
   if (!allEntries.length) {
-    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div><div class="fvbd-empty">Watchlist is empty</div>';
+    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + _fvbdJournalActionsHTML() + '<div class="fvbd-empty">Watchlist is empty</div>';
     return;
   }
   // Group by date descending
   var dateMap = {};
   allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
   var dates = Object.keys(dateMap).sort().reverse();
-  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>';
+  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + _fvbdJournalActionsHTML();
   dates.forEach(function (date, idx) {
     var isToday = date === today;
     if (idx > 0 && dates[idx - 1] === today) html += '<div class="fvbd-divider"></div>';
@@ -5085,6 +5094,7 @@ export function openFVBriefingDrawer() {
   drawer.classList.add('open');
   renderFVBriefingDrawer();
   refreshBriefingFromServer();
+  if (!state.isDemoMode) fetchJournalToday().then(renderFVBriefingDrawer);
 }
 
 export function closeFVBriefingDrawer() {

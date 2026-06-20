@@ -332,6 +332,8 @@ span.bp-status{cursor:default;}
 @media(orientation:landscape) and (max-height:500px){#fv-briefing-drawer.open{width:340px;}}
 .fvbd-header{display:flex;align-items:center;padding:var(--space-8) var(--space-8);flex-shrink:0;}
 .fvbd-title{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink-deep);flex:1;}
+.fvbd-journal-actions{display:flex;gap:var(--space-4);padding:0 var(--space-8) var(--space-8);flex-shrink:0;}
+.fvbd-journal-actions .btn-cta{flex:1;}
 .fvbd-date-label{font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);padding:var(--space-8) var(--space-8) var(--space-3);}
 #fv-briefing-drawer .bp-row{padding-left:var(--space-8);padding-right:var(--space-8);}
 #fv-briefing-drawer .bp-note-row{padding-left:var(--space-8);padding-right:var(--space-8);}

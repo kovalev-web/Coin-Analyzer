@@ -919,8 +919,6 @@ registerRoute('/journal', function () {
     '<h2 class="journal-page-title">' +
     '<a href="/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<div class="journal-page-actions">' +
-    '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
-    '<button data-action="open-evening-journal" class="btn-cta"' + (!state.journalToday || !state.journalToday.morningAt || state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
     '<div class="tf-picker">' +
     '<button data-action="journal-range-pick" class="btn-topbar-label journal-range-btn"><span class="tf-label">' + (JOURNAL_SUMMARY_RANGES.find(function (r) { return r.value === state.journalRange; }) || JOURNAL_SUMMARY_RANGES[0]).label + '</span>' + icon('chevron-down', 16) + '</button>' +
     '<div class="dropdown tf-dd" id="journal-range-dd">' +
@@ -961,16 +959,7 @@ registerRoute('/journal', function () {
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
   });
-  fetchJournalToday().then(function () {
-    var mBtn = document.querySelector('[data-action="open-morning-journal"]');
-    if (mBtn) {
-      var filled = !!(state.journalToday && state.journalToday.morningAt);
-      mBtn.disabled = filled;
-      mBtn.innerHTML = 'Morning' + (filled ? icon('check', 14) : '');
-    }
-    var eBtn = document.querySelector('[data-action="open-evening-journal"]');
-    if (eBtn) eBtn.disabled = !state.journalToday || !state.journalToday.morningAt || !!state.journalToday.skipped;
-  });
+  fetchJournalToday();
 });
 
 registerRoute('/404', function () {
