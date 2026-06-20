@@ -1458,6 +1458,7 @@ export function renderJournalChart(container, history) {
     lineWidth: 2,
     priceScaleId: 'right',
     priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+    priceLineVisible: false,
   });
   areaSeries.setData(areaData);
 
