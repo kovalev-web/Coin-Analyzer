@@ -930,7 +930,7 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '<div class="tf-picker">' +
-    '<button data-action="toggle-journal-export" class="btn-cta">CSV</button>' +
+    '<button data-action="toggle-journal-export" class="btn-topbar" title="Export CSV">' + icon('clipboard-minus', 16) + '</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
     JOURNAL_EXPORT_RANGES.map(function (r) {
       return '<button data-action="export-journal-csv" data-range="' + r.value + '">' + r.label + '</button>';
