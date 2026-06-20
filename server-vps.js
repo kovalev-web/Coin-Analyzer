@@ -1106,10 +1106,16 @@ var httpServer = http.createServer(async function (req, res) {
       var jSession = await getSession(req);
       if (!jSession) return unauthorized(res);
       var jUserId = jSession.user.id;
-      // "Today" follows the user's Account-settings timezone (falls back to UTC if unset),
-      // so the journal's day boundary matches what they see in the app.
-      var jTzRes = await redis(['GET', 'account_tz:' + jUserId]);
-      var jToday = _getUserTimeInfo(jTzRes && jTzRes.result ? jTzRes.result : null, 0).userNow.toISOString().slice(0, 10);
+      // "Today" follows the user's Account-settings timezone, falling back to the
+      // browser-derived offset (briefing_tz, auto-captured on every briefing save)
+      // and only then to UTC — same fallback chain as the weekly report, so the
+      // journal's day boundary matches what the client (which falls back to the
+      // browser's own timezone, not UTC) shows.
+      var jTzIanaRes = await redis(['GET', 'account_tz:' + jUserId]);
+      var jTzNumRes = await redis(['GET', 'briefing_tz:' + jUserId]);
+      var jUtcOffset = (jTzNumRes && jTzNumRes.result !== null) ? parseFloat(jTzNumRes.result) : 0;
+      if (!isFinite(jUtcOffset)) jUtcOffset = 0;
+      var jToday = _getUserTimeInfo(jTzIanaRes && jTzIanaRes.result ? jTzIanaRes.result : null, jUtcOffset).userNow.toISOString().slice(0, 10);
       var jDb = getDb().sqlite;
 
       if (req.method === 'GET' && req.url === '/api/journal/today') {
@@ -1541,6 +1547,15 @@ var httpServer = http.createServer(async function (req, res) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, newEmail: newEmailConfirmed }));
         } else if (parsed.action === 'save-timezone') {
+          if (parsed.clear) {
+            // Revert to auto-detection: forget the manual override so the
+            // browser-derived offset (briefing_tz) takes over again next time
+            // they use the app, e.g. after moving and the saved zone going stale.
+            await redis(['DEL', 'account_tz:' + userId]);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, cleared: true }));
+            return;
+          }
           var tz = (parsed.timezone || '').trim();
           try { new Intl.DateTimeFormat('en', { timeZone: tz }).format(); } catch (e) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -2247,7 +2262,10 @@ setInterval(async function () {
       // when checking whether they've already filled it in, even though the
       // reminder itself fires at a fixed UTC moment (tied to the market session open).
       var uidTzRes = await redis(['GET', 'account_tz:' + uid]);
-      var uidToday = _getUserTimeInfo(uidTzRes && uidTzRes.result ? uidTzRes.result : null, 0).userNow.toISOString().slice(0, 10);
+      var uidTzNumRes = await redis(['GET', 'briefing_tz:' + uid]);
+      var uidUtcOffset = (uidTzNumRes && uidTzNumRes.result !== null) ? parseFloat(uidTzNumRes.result) : 0;
+      if (!isFinite(uidUtcOffset)) uidUtcOffset = 0;
+      var uidToday = _getUserTimeInfo(uidTzRes && uidTzRes.result ? uidTzRes.result : null, uidUtcOffset).userNow.toISOString().slice(0, 10);
       var entryRow = jDb2.prepare('SELECT morning_at FROM journal_entries WHERE user_id = ? AND date = ?').get(uid, uidToday);
       if (entryRow && entryRow.morning_at) continue;
 

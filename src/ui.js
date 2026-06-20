@@ -397,6 +397,7 @@ export function showAccountModal() {
           + '<div class="acc-field-err" id="acc-tz-msg"></div>'
           + '<div class="acc-bin-actions">'
             + '<button class="btn-cta" id="acc-tz-save">Save</button>'
+            + '<button class="acc-row-edit" id="acc-tz-auto">Use auto-detected</button>'
           + '</div>'
         + '</div>'
 
@@ -940,6 +941,18 @@ export function showAccountModal() {
     }
   });
 
+  function _applyTzResult(newTz) {
+    var oldToday = tzDateStr();
+    state.timezone = newTz;
+    var dayShifted = tzDateStr() !== oldToday;
+    _tzEditor.style.display = 'none';
+    document.getElementById('acc-tz-change-btn').textContent = 'Change';
+    renderBriefingPanel();
+    if (dayShifted) {
+      showToast('Timezone updated — note that "today" may now point to a different date for the journal/briefing.');
+    }
+  }
+
   document.getElementById('acc-tz-save').addEventListener('click', function () {
     var btn = document.getElementById('acc-tz-save');
     var msg = document.getElementById('acc-tz-msg');
@@ -951,11 +964,8 @@ export function showAccountModal() {
       body: JSON.stringify({ action: 'save-timezone', timezone: _tzSel.value }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
-        state.timezone = _tzSel.value;
         _tzSetDisplay(_tzSel.value, 'saved');
-        _tzEditor.style.display = 'none';
-        document.getElementById('acc-tz-change-btn').textContent = 'Change';
-        renderBriefingPanel();
+        _applyTzResult(_tzSel.value);
       } else {
         msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Error';
       }
@@ -963,6 +973,30 @@ export function showAccountModal() {
     }).catch(function () {
       msg.style.color = 'var(--danger)'; msg.textContent = 'Network error';
       btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
+    });
+  });
+
+  document.getElementById('acc-tz-auto').addEventListener('click', function () {
+    var autoBtn = document.getElementById('acc-tz-auto');
+    var msg = document.getElementById('acc-tz-msg');
+    autoBtn.disabled = true;
+    fetch(API_BASE + '/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'save-timezone', clear: true }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      autoBtn.disabled = false;
+      if (d.ok) {
+        _tzSel.value = _autoTz;
+        _tzSetDisplay(_autoTz, 'auto-detect');
+        _applyTzResult(null);
+      } else {
+        msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Error';
+      }
+    }).catch(function () {
+      autoBtn.disabled = false;
+      msg.style.color = 'var(--danger)'; msg.textContent = 'Network error';
     });
   });
 
