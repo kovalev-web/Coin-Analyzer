@@ -3192,10 +3192,10 @@ function _topbarHTML() {
     + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
     + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
-    + '<div class="notif-wrap" id="notif-wrap">'
+    + (!_demo ? '<div class="notif-wrap" id="notif-wrap">'
     + '<button class="btn-topbar" data-action="toggle-notif" id="notif-btn" title="Notifications">' + icon('bell', 16) + '<span class="notif-badge" id="notif-badge" style="display:none"></span></button>'
     + '<div class="notif-dd dropdown" id="notif-dd"></div>'
-    + '</div>'
+    + '</div>' : '')
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
     + '<div class="avatar-dd dropdown" id="avatar-dd">'
