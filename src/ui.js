@@ -3204,7 +3204,7 @@ function _topbarHTML() {
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
-    + (!_demo ? _sessionTimerMobileHTML() : '')
+    + _sessionTimerMobileHTML()
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
     + '</div>'
     + '</div>'
@@ -3216,7 +3216,7 @@ function _topbarHTML() {
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
-    + (!_demo ? _sessionTimerMobileHTML() : '')
+    + _sessionTimerMobileHTML()
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
     + '</div>'
     + '</div>'
