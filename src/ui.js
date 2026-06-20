@@ -5424,7 +5424,7 @@ function _renderNotifDropdown() {
   var items = state.notifications;
   var header = '<div class="popup-header"><span class="popup-title">Notifications</span><button class="btn-topbar" data-action="toggle-notif">' + icon('x', 16) + '</button></div>';
   var enableBanner = (window.Notification && Notification.permission === 'default')
-    ? '<div class="notif-enable"><span>Get alerts even when this tab isn\'t active</span><button data-action="enable-desktop-notifs">Enable</button></div>'
+    ? '<div class="notif-enable"><span>Get alerts even when this tab isn\'t active</span><button class="acc-row-edit" data-action="enable-desktop-notifs">Enable</button></div>'
     : '';
   var body = items.length
     ? '<div class="notif-scroll">'
@@ -5444,9 +5444,11 @@ function _renderNotifDropdown() {
         }).join('')
       + '</div>'
     : '<div class="notif-empty">No notifications yet</div>';
-  var footer = '<div class="notif-footer">'
-    + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
-    + '</div>';
+  var footer = items.length
+    ? '<div class="notif-footer">'
+      + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
+      + '</div>'
+    : '';
   dd.innerHTML = header + enableBanner + body + footer;
   _smoothWheelScroll(dd.querySelector('.notif-scroll'));
 }
