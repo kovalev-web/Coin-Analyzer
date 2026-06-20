@@ -1507,8 +1507,8 @@ export function renderJournalChart(container, history) {
     var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
     var dayRow = historyMap[d.toISOString().slice(0, 10)];
     var dayPnl = dayRow ? (dayRow.pnl || 0) : 0;
-    var pnlSign = dayPnl >= 0 ? '+' : '';
-    var pnlColor = dayPnl >= 0 ? 'var(--bullish)' : 'var(--danger)';
+    var pnlSign = dayPnl > 0 ? '+' : '';
+    var pnlColor = dayPnl > 0 ? 'var(--bullish)' : dayPnl < 0 ? 'var(--danger)' : 'var(--graphite)';
 
     toolTip.innerHTML =
       '<div style="color:var(--graphite);margin-bottom:var(--space-4);">' + dateStr + '</div>' +
