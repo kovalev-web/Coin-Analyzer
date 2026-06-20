@@ -1586,16 +1586,6 @@ export function renderJournalSummarySection() {
           + '</div>';
       })()
     : '<div class="fvbd-empty">Loading...</div>';
-  var missedHTML = (s && s.missed && s.missed.length)
-    ? '<div class="bp-missed"><div class="bp-stat-label">Missed opportunities</div>'
-      + s.missed.map(function (x) {
-          return '<div class="bp-missed-row">'
-            + '<span class="bp-missed-sym">' + x.sym.toUpperCase() + '</span>'
-            + '<span class="bp-missed-delta ' + (x.delta >= 0 ? 'up' : 'dn') + '">' + (x.delta >= 0 ? '+' : '') + x.delta.toFixed(2) + '%</span>'
-            + '</div>';
-        }).join('')
-      + '</div>'
-    : '';
 
   var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
   var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
@@ -1616,7 +1606,7 @@ export function renderJournalSummarySection() {
       + (aiText && !_journalAiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
       + '</div>';
 
-  container.innerHTML = '<div class="bp-week">' + statsHTML + missedHTML + '</div>' + aiHTML;
+  container.innerHTML = '<div class="bp-week">' + statsHTML + '</div>' + aiHTML;
 }
 
 export function renderProfileJournal(container, entries) {

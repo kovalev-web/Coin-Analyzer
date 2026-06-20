@@ -958,16 +958,6 @@ async function computeJournalRangeStats(userId, today, range) {
     });
   });
 
-  var missed = entries
-    .filter(function (e) { return e.status === 'missed' && e.addedPrice; })
-    .map(function (e) {
-      var cur = prevPrices[e.sym.toLowerCase()];
-      var delta = (cur && cur > 0) ? (cur - e.addedPrice) / e.addedPrice * 100 : null;
-      return { sym: e.sym, date: e.date, delta: delta };
-    })
-    .filter(function (x) { return x.delta !== null; })
-    .sort(function (a, b) { return b.delta - a.delta; });
-
   return {
     entries: entries,
     dayCache: dayCache,
@@ -975,7 +965,6 @@ async function computeJournalRangeStats(userId, today, range) {
     tradeCount: tradeCount,
     winCount: winCount,
     winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
-    missed: missed,
     from: fromDate,
     to: today,
   };
@@ -1333,7 +1322,6 @@ var httpServer = http.createServer(async function (req, res) {
               tradeCount: jStats.tradeCount,
               winCount: jStats.winCount,
               winRate: jStats.winRate,
-              missed: jStats.missed,
               from: jStats.from,
               to: jStats.to,
             }));
