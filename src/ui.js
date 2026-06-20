@@ -1414,7 +1414,7 @@ export function renderJournalChart(container, history) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
-    timeScale: { borderColor: c.border, timeVisible: false, fixLeftEdge: true, tickMarkFormatter: function (t, type) {
+    timeScale: { borderColor: c.border, timeVisible: false, tickMarkFormatter: function (t, type) {
       var d = new Date(t * 1000);
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
@@ -1453,7 +1453,7 @@ export function renderJournalChart(container, history) {
 
   var areaSeries = chart.addAreaSeries({
     lineColor: getCSSVar('--primary'),
-    topColor: 'rgba(39,124,194,0.25)',
+    topColor: 'rgba(0,0,0,0)',
     bottomColor: 'rgba(0,0,0,0)',
     lineWidth: 2,
     priceScaleId: 'right',
@@ -1474,13 +1474,11 @@ export function renderJournalChart(container, history) {
     visible: false,
   });
 
-  // Use the exact first/last data timestamps (not fitContent's default half-bar margin)
-  // so the line touches both chart edges with no empty space on either side.
-  var _fromTs = _dts(history[0].date);
-  var _toTs   = _dts(history[history.length - 1].date);
-  chart.timeScale().setVisibleRange({ from: _fromTs, to: _toTs });
+  chart.timeScale().fitContent();
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
+  var _fromTs = _dts(history[0].date);
+  var _toTs   = _dts(history[history.length - 1].date) + 86400;
   container.addEventListener('dblclick', function () {
     setTimeout(function () { chart.timeScale().setVisibleRange({ from: _fromTs, to: _toTs }); }, 0);
   });
