@@ -3897,7 +3897,7 @@ export function renderBriefingPanel() {
   }).join('') : '<div class="bp-empty">No coins for today — star them on the dashboard</div>';
 
   var demoNotice = state.isDemoMode
-    ? '<div class="bp-demo-notice">' + icon('cloud-off', 12) + 'Saves locally — <a href="/login" class="bp-demo-link">sign up to sync</a></div>'
+    ? '<div class="bp-demo-notice"><span class="notif-icon">' + icon('cloud-off', 14) + '</span>Saves locally — <a href="/login" class="bp-demo-link">sign up to sync</a></div>'
     : '';
   popup.innerHTML =
     '<div class="popup-header">' +
