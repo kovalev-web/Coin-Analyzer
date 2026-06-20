@@ -1426,7 +1426,10 @@ export function renderJournalChart(container, history) {
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
     }},
-    handleScroll: true, handleScale: true,
+    handleScroll: true,
+    // axisDoubleClickReset off — on touch, double-tapping the time axis triggered
+    // a scale reset that visually flattened the line.
+    handleScale: { axisPressedMouseMove: true, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
   });
   container._lwChart = chart;
 
@@ -1468,15 +1471,7 @@ export function renderJournalChart(container, history) {
   });
   areaSeries.setData(areaData);
 
-  // Position first/last bar centers exactly at the plot edges (logical index
-  // i is bar i's center, so 0..length-1 spans center-to-center with no margin)
-  // without permanently locking scroll/zoom like fixLeftEdge/fixRightEdge would.
-  // Deferred one frame because autoSize applies the container's real width via
-  // ResizeObserver asynchronously — calling this synchronously races a 0-width canvas.
-  requestAnimationFrame(function () {
-    if (!container.isConnected) return;
-    chart.timeScale().setVisibleLogicalRange({ from: 0, to: areaData.length - 1 });
-  });
+  chart.timeScale().fitContent();
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
   var _fromTs = _dts(history[0].date);
