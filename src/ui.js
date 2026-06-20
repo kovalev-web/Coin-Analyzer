@@ -1427,9 +1427,9 @@ export function renderJournalChart(container, history) {
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
     }},
     handleScroll: true,
-    // axisDoubleClickReset off — on touch, double-tapping the time axis triggered
-    // a scale reset that visually flattened the line.
-    handleScale: { axisPressedMouseMove: true, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
+    // axisPressedMouseMove/axisDoubleClickReset off — on touch, tapping/double-tapping
+    // near the time axis triggered axis-drag scaling or a scale reset, squishing the line.
+    handleScale: { axisPressedMouseMove: false, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
   });
   container._lwChart = chart;
 
