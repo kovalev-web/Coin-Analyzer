@@ -1552,11 +1552,45 @@ export function hideWeeklyReportModal() {
   el.remove();
 }
 
-var _journalAiCollapsed = false;
+export function showJournalAiModal() {
+  if (document.getElementById('journal-ai-modal')) { renderJournalAiModalContent(); return; }
 
-export function toggleJournalAiCollapsed() {
-  _journalAiCollapsed = !_journalAiCollapsed;
-  renderJournalSummarySection();
+  var el = document.createElement('div');
+  el.id = 'journal-ai-modal';
+  el.className = 'journal-modal-overlay';
+  el.innerHTML =
+    '<div class="journal-modal">'
+    + '<div class="popup-header"><span class="popup-title">AI analysis</span><button class="btn-topbar" data-action="close-journal-ai-modal">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-body" id="journal-ai-modal-body"></div>'
+    + '<div class="popup-footer">'
+    + '<button class="btn-cta" data-action="journal-regen-ai">Regenerate</button>'
+    + '<button class="btn-cta danger" data-action="journal-ai-delete">Delete</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(el);
+  lockScroll();
+  renderJournalAiModalContent();
+}
+
+export function hideJournalAiModal() {
+  var el = document.getElementById('journal-ai-modal');
+  if (!el) return;
+  unlockScroll();
+  el.remove();
+}
+
+export function renderJournalAiModalContent() {
+  var body = document.getElementById('journal-ai-modal-body');
+  if (!body) return;
+  var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
+  var dateStr = '';
+  if (state.aiSummaryDate) {
+    var d = new Date(state.aiSummaryDate);
+    dateStr = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', timeZone: effectiveTZ() }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() });
+  }
+  body.innerHTML = (dateStr ? '<div class="bp-ai-date">' + dateStr + '</div>' : '')
+    + '<div class="bp-ai-text">' + escHtml(aiText || '') + '</div>';
 }
 
 export function renderJournalSummarySection() {
@@ -1583,29 +1617,16 @@ export function renderJournalSummarySection() {
 
   var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
   var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
-  var dateStr = '';
-  if (aiText && state.aiSummaryDate) {
-    var d = new Date(state.aiSummaryDate);
-    dateStr = '<span class="bp-ai-date">' + d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', timeZone: effectiveTZ() }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() }) + '</span>';
-  }
-  var aiHTML = !aiEligible
-    ? '<div class="bp-ai-block"><div class="fvbd-empty">AI analysis is available for intervals up to 1 month</div></div>'
-    : '<div class="bp-ai-block">'
-      + '<div class="bp-ai-header">'
-      + dateStr
-      + (aiText ? '<button class="btn-icon" data-action="journal-ai-toggle" title="' + (_journalAiCollapsed ? 'Expand' : 'Collapse') + '">' + icon(_journalAiCollapsed ? 'chevron-down' : 'chevron-up', 16) + '</button>' : '')
-      + (aiText ? '<button class="btn-icon" data-action="journal-ai-delete" title="Delete">' + icon('trash', 16) + '</button>' : '')
-      + '</div>'
-      + (aiText && !_journalAiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
-      + '</div>';
 
-  if (container) container.innerHTML = aiHTML;
+  if (container) container.innerHTML = aiEligible ? '' : '<div class="bp-ai-block"><div class="fvbd-empty">AI analysis is available for intervals up to 1 month</div></div>';
 
   var genBtn = document.getElementById('journal-gen-ai-btn');
   if (genBtn) {
     genBtn.disabled = !aiEligible;
-    genBtn.textContent = aiText ? 'Regenerate' : 'Generate';
+    genBtn.textContent = aiText ? 'View report' : 'Generate';
   }
+
+  renderJournalAiModalContent();
 }
 
 export function renderProfileJournal(container, entries) {

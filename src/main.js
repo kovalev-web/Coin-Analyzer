@@ -20,7 +20,7 @@ import {
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
-  renderJournalSummarySection, toggleJournalAiCollapsed,
+  renderJournalSummarySection, showJournalAiModal, hideJournalAiModal, renderJournalAiModalContent,
   openHintsPopup, closeHintsPopup,
   updateSessionTimer, injectDemoBanner,
 } from './ui.js';
@@ -419,6 +419,8 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'journal-gen-ai': {
+      var _hasAiText = state.aiSummary && state.aiSummaryRange === state.journalRange;
+      if (_hasAiText) { showJournalAiModal(); break; }
       var _jaiBtn = target;
       _jaiBtn.disabled = true;
       _jaiBtn.classList.add('btn-loading');
@@ -426,15 +428,29 @@ document.body.addEventListener('click', function (e) {
         _jaiBtn.disabled = false;
         _jaiBtn.classList.remove('btn-loading');
         renderJournalSummarySection();
+        if (state.aiSummary && state.aiSummaryRange === state.journalRange) showJournalAiModal();
       });
       break;
     }
-    case 'journal-ai-toggle':
-      toggleJournalAiCollapsed();
+    case 'journal-regen-ai': {
+      var _jrgBtn = target;
+      _jrgBtn.disabled = true;
+      _jrgBtn.classList.add('btn-loading');
+      generateJournalAiSummary(state.journalRange).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
+        _jrgBtn.disabled = false;
+        _jrgBtn.classList.remove('btn-loading');
+        renderJournalSummarySection();
+        renderJournalAiModalContent();
+      });
+      break;
+    }
+    case 'close-journal-ai-modal':
+      hideJournalAiModal();
       break;
     case 'journal-ai-delete':
       deleteJournalAiSummary();
       renderJournalSummarySection();
+      hideJournalAiModal();
       break;
     case 'open-morning-journal': {
       if (state.isDemoMode) { window.location.href = '/login'; break; }
