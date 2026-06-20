@@ -1468,10 +1468,10 @@ export function renderJournalChart(container, history) {
   });
   areaSeries.setData(areaData);
 
-  // Position first/last bar centers at the plot edges (eliminates the default
-  // half-bar margin) without permanently locking scroll/zoom like fixLeftEdge/
-  // fixRightEdge would — those caused weird zoom behavior when tried before.
-  chart.timeScale().setVisibleLogicalRange({ from: -0.5, to: areaData.length - 0.5 });
+  // Position first/last bar centers exactly at the plot edges (logical index
+  // i is bar i's center, so 0..length-1 spans center-to-center with no margin)
+  // without permanently locking scroll/zoom like fixLeftEdge/fixRightEdge would.
+  chart.timeScale().setVisibleLogicalRange({ from: 0, to: areaData.length - 1 });
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
   var _fromTs = _dts(history[0].date);
