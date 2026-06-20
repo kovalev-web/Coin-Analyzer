@@ -489,7 +489,7 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .journal-history-header>div:nth-child(6){justify-content:flex-end;}
 .journal-history-row>div:nth-child(2){justify-content:flex-start;}
 .journal-history-row>div:nth-child(6){display:flex;justify-content:flex-end;}
-.journal-history-date{font-weight:var(--font-semi);color:var(--ink-deep);}
+.journal-history-date{font-weight:var(--font-semi);color:var(--graphite);}
 .journal-history-cell{color:var(--ink-deep);display:flex;align-items:center;justify-content:center;}
 .journal-history-text{color:var(--ink-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .journal-history-chevron{display:flex;align-items:center;justify-content:center;color:var(--graphite);}
