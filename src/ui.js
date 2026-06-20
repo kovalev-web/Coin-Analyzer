@@ -1475,6 +1475,13 @@ export function renderJournalChart(container, history) {
 
   chart.timeScale().fitContent();
 
+  // Double-click resets the view — using fitContent() (same call as on load,
+  // known safe) instead of the native axisDoubleClickReset gesture we disabled
+  // above, which was squishing the line.
+  container.addEventListener('dblclick', function () {
+    chart.timeScale().fitContent();
+  });
+
   // Tooltip
   var toolTip = document.createElement('div');
   toolTip.style.cssText = 'position:absolute;display:none;z-index:10;pointer-events:none;' +
