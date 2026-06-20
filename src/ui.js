@@ -1421,7 +1421,7 @@ export function renderJournalChart(container, history) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
-    timeScale: { borderColor: c.border, timeVisible: false, fixLeftEdge: true, fixRightEdge: true, tickMarkFormatter: function (t, type) {
+    timeScale: { borderColor: c.border, timeVisible: false, tickMarkFormatter: function (t, type) {
       var d = new Date(t * 1000);
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
@@ -1468,7 +1468,10 @@ export function renderJournalChart(container, history) {
   });
   areaSeries.setData(areaData);
 
-  chart.timeScale().fitContent();
+  // Position first/last bar centers at the plot edges (eliminates the default
+  // half-bar margin) without permanently locking scroll/zoom like fixLeftEdge/
+  // fixRightEdge would — those caused weird zoom behavior when tried before.
+  chart.timeScale().setVisibleLogicalRange({ from: -0.5, to: areaData.length - 0.5 });
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
   var _fromTs = _dts(history[0].date);
