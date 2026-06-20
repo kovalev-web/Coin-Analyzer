@@ -2078,7 +2078,7 @@ function addAlert(sym, price) {
     var t = document.createElement('div');
     t.className = 'notif-toast';
     t.style.pointerEvents = 'auto';
-    t.innerHTML = 'Price alerts require an account — <a href="/login" style="color:var(--primary);font-weight:var(--font-semi);">Sign up free</a>';
+    t.innerHTML = 'Price alerts require an account — <a href="/login" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">Sign up free</a>';
     document.body.appendChild(t);
     setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
     setTimeout(function () { t.classList.remove('notif-toast--visible'); setTimeout(function () { t.remove(); }, 300); }, 4000);
