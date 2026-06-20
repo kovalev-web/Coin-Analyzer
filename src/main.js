@@ -887,6 +887,7 @@ registerRoute('/journal', function () {
     }).join('') +
     '</div>' +
     '</div>' +
+    '<button data-action="journal-gen-ai" class="btn-cta" id="journal-gen-ai-btn">Generate</button>' +
     '</div>' +
     '</div>' +
     '<div class="journal-chart-row">' +

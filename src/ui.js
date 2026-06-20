@@ -1595,12 +1595,17 @@ export function renderJournalSummarySection() {
       + dateStr
       + (aiText ? '<button class="btn-icon" data-action="journal-ai-toggle" title="' + (_journalAiCollapsed ? 'Expand' : 'Collapse') + '">' + icon(_journalAiCollapsed ? 'chevron-down' : 'chevron-up', 16) + '</button>' : '')
       + (aiText ? '<button class="btn-icon" data-action="journal-ai-delete" title="Delete">' + icon('trash', 16) + '</button>' : '')
-      + '<button class="acc-row-edit" data-action="journal-gen-ai">' + (aiText ? 'Regenerate' : 'Generate') + '</button>'
       + '</div>'
       + (aiText && !_journalAiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
       + '</div>';
 
   if (container) container.innerHTML = aiHTML;
+
+  var genBtn = document.getElementById('journal-gen-ai-btn');
+  if (genBtn) {
+    genBtn.disabled = !aiEligible;
+    genBtn.textContent = aiText ? 'Regenerate' : 'Generate';
+  }
 }
 
 export function renderProfileJournal(container, entries) {
