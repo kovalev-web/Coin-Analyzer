@@ -1421,7 +1421,7 @@ export function renderJournalChart(container, history) {
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
-    timeScale: { borderColor: c.border, timeVisible: false, tickMarkFormatter: function (t, type) {
+    timeScale: { borderColor: c.border, timeVisible: false, fixLeftEdge: true, fixRightEdge: true, tickMarkFormatter: function (t, type) {
       var d = new Date(t * 1000);
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
