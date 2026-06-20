@@ -922,7 +922,7 @@ registerRoute('/journal', function () {
     '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
     '<button data-action="open-evening-journal" class="btn-cta"' + (!state.journalToday || !state.journalToday.morningAt || state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
     '<div class="tf-picker">' +
-    '<button data-action="journal-range-pick" class="btn-topbar-label"><span class="tf-label">' + (JOURNAL_SUMMARY_RANGES.find(function (r) { return r.value === state.journalRange; }) || JOURNAL_SUMMARY_RANGES[0]).label + '</span>' + icon('chevron-down', 16) + '</button>' +
+    '<button data-action="journal-range-pick" class="btn-topbar-label journal-range-btn"><span class="tf-label">' + (JOURNAL_SUMMARY_RANGES.find(function (r) { return r.value === state.journalRange; }) || JOURNAL_SUMMARY_RANGES[0]).label + '</span>' + icon('chevron-down', 16) + '</button>' +
     '<div class="dropdown tf-dd" id="journal-range-dd">' +
     JOURNAL_SUMMARY_RANGES.map(function (r) {
       return '<button class="' + (r.value === state.journalRange ? 'active' : '') + '" data-action="journal-range-opt" data-range="' + r.value + '">' + r.label + '</button>';
