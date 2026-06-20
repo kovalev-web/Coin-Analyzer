@@ -1426,10 +1426,7 @@ export function renderJournalChart(container, history) {
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
     }},
-    handleScroll: true,
-    // axisPressedMouseMove/axisDoubleClickReset off — on touch, tapping/double-tapping
-    // near the time axis triggered axis-drag scaling or a scale reset, squishing the line.
-    handleScale: { axisPressedMouseMove: false, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
+    handleScroll: true, handleScale: true,
   });
   container._lwChart = chart;
 
