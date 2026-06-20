@@ -1471,7 +1471,12 @@ export function renderJournalChart(container, history) {
   // Position first/last bar centers exactly at the plot edges (logical index
   // i is bar i's center, so 0..length-1 spans center-to-center with no margin)
   // without permanently locking scroll/zoom like fixLeftEdge/fixRightEdge would.
-  chart.timeScale().setVisibleLogicalRange({ from: 0, to: areaData.length - 1 });
+  // Deferred one frame because autoSize applies the container's real width via
+  // ResizeObserver asynchronously — calling this synchronously races a 0-width canvas.
+  requestAnimationFrame(function () {
+    if (!container.isConnected) return;
+    chart.timeScale().setVisibleLogicalRange({ from: 0, to: areaData.length - 1 });
+  });
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
   var _fromTs = _dts(history[0].date);
