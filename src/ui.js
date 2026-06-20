@@ -1400,6 +1400,13 @@ export function hideEveningModal() {
 
 export function renderJournalChart(container, history) {
   if (!container) return;
+  // Re-rendering (e.g. interval change) leaves a stale chart instance behind
+  // unless the previous one is disposed first — createChart() doesn't replace it.
+  if (container._lwChart) {
+    try { container._lwChart.remove(); } catch (e) {}
+    container._lwChart = null;
+  }
+  container.innerHTML = '';
   if (!history || !history.length) {
     container.innerHTML = '<div style="color:var(--graphite);font-size:var(--text-xs);padding:var(--space-8) 0;">No PnL data yet — complete an evening review to start tracking</div>';
     return;
@@ -1421,6 +1428,7 @@ export function renderJournalChart(container, history) {
     }},
     handleScroll: true, handleScale: true,
   });
+  container._lwChart = chart;
 
   // Build lookup by date
   var historyMap = {};
