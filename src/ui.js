@@ -1470,13 +1470,6 @@ export function renderJournalChart(container, history) {
 
   chart.timeScale().fitContent();
 
-  // Double-click resets to first→last trade date (not LightweightCharts default)
-  var _fromTs = _dts(history[0].date);
-  var _toTs   = _dts(history[history.length - 1].date) + 86400;
-  container.addEventListener('dblclick', function () {
-    setTimeout(function () { chart.timeScale().setVisibleRange({ from: _fromTs, to: _toTs }); }, 0);
-  });
-
   // Tooltip
   var toolTip = document.createElement('div');
   toolTip.style.cssText = 'position:absolute;display:none;z-index:10;pointer-events:none;' +
