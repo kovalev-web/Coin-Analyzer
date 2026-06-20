@@ -1450,13 +1450,11 @@ export function renderJournalChart(container, history) {
 
   var cumulative = 0;
   var areaData = [];
-  var histogramData = [];
   allDates.forEach(function (date) {
     var row = historyMap[date];
     if (row) cumulative += row.pnl || 0;
     var t = _dts(date);
     areaData.push({ time: t, value: parseFloat(cumulative.toFixed(2)) });
-    histogramData.push({ time: t, value: row ? -(row.tradeCount || 0) : 0 });
   });
 
   var areaSeries = chart.addAreaSeries({
@@ -1469,18 +1467,6 @@ export function renderJournalChart(container, history) {
     priceLineVisible: false,
   });
   areaSeries.setData(areaData);
-
-  // Trade count histogram compressed into top strip via custom scale
-  var histSeries = chart.addHistogramSeries({
-    color: 'rgba(99,120,136,0.4)',
-    priceScaleId: 'vol',
-    priceFormat: { type: 'volume' },
-  });
-  histSeries.setData(histogramData);
-  chart.priceScale('vol').applyOptions({
-    scaleMargins: { top: 0, bottom: 0.85 },
-    visible: false,
-  });
 
   chart.timeScale().fitContent();
 
@@ -1505,9 +1491,7 @@ export function renderJournalChart(container, history) {
       return;
     }
     var pnlData = param.seriesData.get(areaSeries);
-    var hData = param.seriesData.get(histSeries);
     var pnlVal = pnlData ? pnlData.value : null;
-    var histVal = hData ? hData.value : null;
     if (pnlVal == null) { toolTip.style.display = 'none'; return; }
 
     var d = new Date(param.time * 1000);
@@ -1516,6 +1500,7 @@ export function renderJournalChart(container, history) {
     var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
     var dayRow = historyMap[d.toISOString().slice(0, 10)];
     var dayPnl = dayRow ? (dayRow.pnl || 0) : 0;
+    var tradeCount = dayRow ? (dayRow.tradeCount || 0) : 0;
     var pnlSign = dayPnl > 0 ? '+' : '';
     var pnlColor = dayPnl > 0 ? 'var(--bullish)' : dayPnl < 0 ? 'var(--danger)' : 'var(--graphite)';
 
@@ -1527,7 +1512,7 @@ export function renderJournalChart(container, history) {
       '</div>' +
       '<div style="display:flex;justify-content:space-between;gap:16px;">' +
         '<span>Кол-во сделок</span>' +
-        '<strong>' + (histVal != null ? Math.abs(histVal) : '—') + '</strong>' +
+        '<strong>' + tradeCount + '</strong>' +
       '</div>';
 
     toolTip.style.display = 'block';
