@@ -419,13 +419,12 @@ document.body.addEventListener('click', function (e) {
       break;
     }
     case 'journal-gen-ai': {
+      if (target.classList.contains('disabled')) break;
       var _hasAiText = state.aiSummary && state.aiSummaryRange === state.journalRange;
       if (_hasAiText) { showJournalAiModal(); break; }
       var _jaiBtn = target;
-      _jaiBtn.disabled = true;
       _jaiBtn.classList.add('btn-loading');
       generateJournalAiSummary(state.journalRange).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
-        _jaiBtn.disabled = false;
         _jaiBtn.classList.remove('btn-loading');
         renderJournalSummarySection();
         if (state.aiSummary && state.aiSummaryRange === state.journalRange) showJournalAiModal();
@@ -938,7 +937,7 @@ registerRoute('/journal', function () {
     }).join('') +
     '</div>' +
     '</div>' +
-    '<button data-action="journal-gen-ai" class="btn-cta journal-icon-btn" id="journal-gen-ai-btn" title="Generate">' + GEMINI_ICON_SVG + '</button>' +
+    '<div data-action="journal-gen-ai" class="journal-icon-btn" id="journal-gen-ai-btn" title="Generate">' + GEMINI_ICON_SVG + '</div>' +
     '</div>' +
     '</div>' +
     '<div class="journal-chart-row">' +

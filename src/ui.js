@@ -1622,7 +1622,7 @@ export function renderJournalSummarySection() {
 
   var genBtn = document.getElementById('journal-gen-ai-btn');
   if (genBtn) {
-    genBtn.disabled = !aiEligible;
+    genBtn.classList.toggle('disabled', !aiEligible);
     genBtn.title = aiText ? 'View report' : 'Generate';
   }
 
