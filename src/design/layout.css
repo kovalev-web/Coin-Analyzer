@@ -27,7 +27,7 @@
 .cards-sort{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-7);margin-top:var(--space-7);}
 .cards-sort span{font-size:var(--text-2xs);color:var(--graphite);font-weight:var(--font-medium);text-transform:uppercase;letter-spacing:0.8px;}
 .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);}
-@media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:1120px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
 
 /* ── Coin card ──────────────────────────────────────────────── */
 .coin-card{background:var(--paper);border-radius:var(--radius-xl);overflow:hidden;display:flex;flex-direction:column;position:relative;}
