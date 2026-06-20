@@ -889,7 +889,10 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '</div>' +
-    '<div id="journal-pnl-chart" style="height:400px;margin-bottom:var(--space-8);border-radius:var(--radius-xl);overflow:hidden;"></div>' +
+    '<div class="journal-chart-row">' +
+    '<div id="journal-pnl-chart" style="height:400px;border-radius:var(--radius-xl);overflow:hidden;"></div>' +
+    '<div id="journal-stats-col" class="journal-stats-col"></div>' +
+    '</div>' +
     '<div id="journal-summary-section" style="margin-bottom:var(--space-8);"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';

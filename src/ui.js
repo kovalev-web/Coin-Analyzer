@@ -1561,9 +1561,11 @@ export function toggleJournalAiCollapsed() {
 
 export function renderJournalSummarySection() {
   var container = document.getElementById('journal-summary-section');
-  if (!container) return;
+  var statsContainer = document.getElementById('journal-stats-col');
+  if (!container && !statsContainer) return;
   if (state.isDemoMode) {
-    container.innerHTML = '<div class="bp-week"><div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div></div>';
+    if (statsContainer) statsContainer.innerHTML = '';
+    if (container) container.innerHTML = '<div class="bp-week"><div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div></div>';
     return;
   }
   var s = state.journalSummary;
@@ -1571,14 +1573,13 @@ export function renderJournalSummarySection() {
     ? (function () {
         var pnlSign = s.pnl >= 0 ? '+' : '';
         var pnlCls = s.pnl >= 0 ? 'up' : 'dn';
-        return '<div class="bp-week-stats">'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + s.pnl.toFixed(2) + '</div></div>'
+        return '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + s.pnl.toFixed(2) + '</div></div>'
           + '<div class="bp-stat-card"><div class="bp-stat-label">Trades</div><div class="bp-stat-val">' + s.tradeCount + '</div></div>'
           + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + s.winRate + '%</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + s.winCount + '/' + s.tradeCount + '</div></div>'
-          + '</div>';
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + s.winCount + '/' + s.tradeCount + '</div></div>';
       })()
     : '<div class="fvbd-empty">Loading...</div>';
+  if (statsContainer) statsContainer.innerHTML = statsHTML;
 
   var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
   var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
@@ -1599,7 +1600,7 @@ export function renderJournalSummarySection() {
       + (aiText && !_journalAiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
       + '</div>';
 
-  container.innerHTML = '<div class="bp-week">' + statsHTML + '</div>' + aiHTML;
+  if (container) container.innerHTML = aiHTML;
 }
 
 export function renderProfileJournal(container, entries) {
