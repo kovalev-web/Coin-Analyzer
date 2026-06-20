@@ -1522,9 +1522,14 @@ export function renderJournalChart(container, history) {
       '</div>';
 
     toolTip.style.display = 'block';
+    var tipW = toolTip.offsetWidth;
+    var tipH = toolTip.offsetHeight;
     var left = param.point.x + 12;
     var top = param.point.y + 12;
-    if (left + 200 > container.clientWidth) left = param.point.x - 200;
+    if (left + tipW > container.clientWidth) left = param.point.x - tipW - 12;
+    if (left < 0) left = 0;
+    if (top + tipH > container.clientHeight) top = param.point.y - tipH - 12;
+    if (top < 0) top = 0;
     toolTip.style.left = left + 'px';
     toolTip.style.top = top + 'px';
   });
