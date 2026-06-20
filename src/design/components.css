@@ -22,7 +22,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-topbar-label:hover{opacity:0.8;}
 .btn-topbar-label svg{margin-left:auto;transition:transform 0.15s;}
 .tf-picker:has(.tf-dd.open) .btn-topbar-label svg{transform:rotate(180deg);}
-.journal-range-btn{width:115px;}
+.journal-range-btn{width:108px;}
 .desktop-nav-btn{display:none;}
 
 /* ── WS indicator ───────────────────────────────────────────── */
