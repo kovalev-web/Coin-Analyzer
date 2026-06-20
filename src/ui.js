@@ -1474,11 +1474,13 @@ export function renderJournalChart(container, history) {
     visible: false,
   });
 
-  chart.timeScale().fitContent();
+  // Use the exact first/last data timestamps (not fitContent's default half-bar margin)
+  // so the line touches both chart edges with no empty space on either side.
+  var _fromTs = _dts(history[0].date);
+  var _toTs   = _dts(history[history.length - 1].date);
+  chart.timeScale().setVisibleRange({ from: _fromTs, to: _toTs });
 
   // Double-click resets to first→last trade date (not LightweightCharts default)
-  var _fromTs = _dts(history[0].date);
-  var _toTs   = _dts(history[history.length - 1].date) + 86400;
   container.addEventListener('dblclick', function () {
     setTimeout(function () { chart.timeScale().setVisibleRange({ from: _fromTs, to: _toTs }); }, 0);
   });
