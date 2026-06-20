@@ -497,7 +497,7 @@ summary.journal-history-row::marker{display:none;}
 .journal-history-detail-label{font-weight:var(--font-semi);color:var(--graphite);min-width:64px;flex-shrink:0;}
 .journal-history-detail-label::after{content:':';}
 .journal-page{padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;}
-.journal-chart-row{display:flex;gap:var(--space-8);margin-bottom:var(--space-8);align-items:stretch;}
+.journal-chart-row{display:flex;gap:var(--space-8);margin-bottom:var(--space-12);align-items:stretch;}
 .journal-chart-row #journal-pnl-chart{flex:1;min-width:0;margin-bottom:0;}
 .journal-stats-col{display:flex;flex-direction:column;gap:var(--space-8);width:200px;flex-shrink:0;}
 .journal-stats-col .bp-stat-card{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:var(--space-6);background:var(--canvas);}
