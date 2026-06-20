@@ -878,6 +878,109 @@ function journalRowToEntry(row) {
   };
 }
 
+var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m': 180 };
+
+// Shared by /api/journal/summary and /api/journal/ai-summary: gathers watchlist
+// entries + (cached or fresh) Binance fills for the range, and aggregates pnl/win-rate.
+// Past days are cached forever in Redis (immutable); today is always refetched.
+async function computeJournalRangeStats(userId, today, range) {
+  var days = JOURNAL_RANGE_DAYS[range];
+  if (!days) throw new Error('Invalid range');
+  var fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+  var briefRes = await redis(['GET', 'briefing:' + userId]);
+  var briefEntries = briefRes.result ? JSON.parse(briefRes.result) : [];
+  var entries = briefEntries.filter(function (e) { return !e.auto && e.date >= fromDate && e.date <= today; });
+
+  var binRaw = await redis(['GET', 'binance_keys:' + userId]);
+  var hasBinanceKeys = !!(binRaw && binRaw.result);
+  var BIN_KEY, BIN_SEC;
+  if (hasBinanceKeys) {
+    var binParsed = JSON.parse(binRaw.result);
+    BIN_KEY = decryptStr(binParsed.key);
+    BIN_SEC = decryptStr(binParsed.secret);
+  }
+
+  async function getDayTrades(sym, dateStr) {
+    var cacheKey = 'trades_day:' + userId + ':' + sym + ':' + dateStr;
+    if (dateStr < today) {
+      var cachedRes = await redis(['GET', cacheKey]);
+      if (cachedRes && cachedRes.result) return JSON.parse(cachedRes.result);
+    }
+    if (!hasBinanceKeys || !BIN_KEY || !BIN_SEC) return [];
+    var binSym = sym.toUpperCase() + 'USDT';
+    var dParts = dateStr.split('-');
+    var startMs = Date.UTC(+dParts[0], +dParts[1] - 1, +dParts[2], 0, 0, 0, 0);
+    var endMs = Date.UTC(+dParts[0], +dParts[1] - 1, +dParts[2], 23, 59, 59, 999);
+    var params = new URLSearchParams({ symbol: binSym, timestamp: String(Date.now()), limit: '1000', startTime: String(startMs), endTime: String(endMs) });
+    var qs = params.toString();
+    var sig = crypto.createHmac('sha256', BIN_SEC).update(qs).digest('hex');
+    var url = 'https://fapi.binance.com/fapi/v1/userTrades?' + qs + '&signature=' + sig;
+    try {
+      var binRes = await fetch(url, { headers: { 'X-MBX-APIKEY': BIN_KEY } });
+      var binData = await binRes.json();
+      if (!binRes.ok || !Array.isArray(binData)) return [];
+      if (dateStr < today) await redis(['SET', cacheKey, JSON.stringify(binData)]);
+      return binData;
+    } catch (e) { return []; }
+  }
+
+  var dayCache = {};
+  await Promise.all(entries.map(async function (e) {
+    dayCache[e.sym + ':' + e.date] = await getDayTrades(e.sym, e.date);
+  }));
+
+  // Round-trips (0→X→0) per (sym, positionSide) stream, net of commission — same
+  // counting logic as the client's fetchWeekTrades().
+  var streams = {};
+  var totalPnl = 0;
+  entries.forEach(function (e) {
+    var fills = dayCache[e.sym + ':' + e.date] || [];
+    fills.forEach(function (f) { totalPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
+    fills.forEach(function (fill) {
+      var sKey = e.sym + ':' + (fill.positionSide || 'BOTH');
+      if (!streams[sKey]) streams[sKey] = {};
+      streams[sKey][fill.id] = fill;
+    });
+  });
+  var tradeCount = 0, winCount = 0;
+  Object.values(streams).forEach(function (fillMap) {
+    var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
+    var position = 0, roundPnl = 0;
+    fills.forEach(function (fill) {
+      position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
+      roundPnl += parseFloat(fill.realizedPnl || 0) - parseFloat(fill.commission || 0);
+      if (Math.abs(position) < 0.00001) {
+        tradeCount++;
+        if (roundPnl > 0) winCount++;
+        roundPnl = 0;
+      }
+    });
+  });
+
+  var missed = entries
+    .filter(function (e) { return e.status === 'missed' && e.addedPrice; })
+    .map(function (e) {
+      var cur = prevPrices[e.sym.toLowerCase()];
+      var delta = (cur && cur > 0) ? (cur - e.addedPrice) / e.addedPrice * 100 : null;
+      return { sym: e.sym, date: e.date, delta: delta };
+    })
+    .filter(function (x) { return x.delta !== null; })
+    .sort(function (a, b) { return b.delta - a.delta; });
+
+  return {
+    entries: entries,
+    dayCache: dayCache,
+    pnl: totalPnl,
+    tradeCount: tradeCount,
+    winCount: winCount,
+    winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
+    missed: missed,
+    from: fromDate,
+    to: today,
+  };
+}
+
 var httpServer = http.createServer(async function (req, res) {
   var origin = req.headers.origin;
   res.setHeader('Access-Control-Allow-Origin', CORS_ORIGINS.includes(origin) ? origin : 'https://questtick.com');
@@ -1070,6 +1173,7 @@ var httpServer = http.createServer(async function (req, res) {
             ai_summary: aiOwned ? (aiData.text || null) : null,
             ai_traded_keys: aiOwned ? (aiData.keys || null) : null,
             ai_summary_date: aiOwned ? (aiData.date || null) : null,
+            ai_range: aiOwned ? (aiData.range || null) : null,
           }));
         } else if (action === 'save') {
           if (!parsed.skip_entries) {
@@ -1208,6 +1312,95 @@ var httpServer = http.createServer(async function (req, res) {
               jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/journal/summary') {
+        var jBodyS = '';
+        req.on('data', function (chunk) { jBodyS += chunk; });
+        req.on('end', async function () {
+          try {
+            var jParsedS = JSON.parse(jBodyS);
+            var jStats = await computeJournalRangeStats(jUserId, jToday, jParsedS.range);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              pnl: jStats.pnl,
+              tradeCount: jStats.tradeCount,
+              winCount: jStats.winCount,
+              winRate: jStats.winRate,
+              missed: jStats.missed,
+              from: jStats.from,
+              to: jStats.to,
+            }));
+          } catch (e) {
+            res.writeHead(e.message === 'Invalid range' ? 400 : 502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/journal/ai-summary') {
+        var jBodyA = '';
+        req.on('data', function (chunk) { jBodyA += chunk; });
+        req.on('end', async function () {
+          try {
+            var jParsedA = JSON.parse(jBodyA);
+            var jAiRangeLabels = { '1w': 'неделю', '2w': '2 недели', '1m': 'месяц' };
+            var jAiLabel = jAiRangeLabels[jParsedA.range];
+            if (!jAiLabel) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'AI analysis is only available for ranges up to 1 month' }));
+              return;
+            }
+            var jAiStats = await computeJournalRangeStats(jUserId, jToday, jParsedA.range);
+
+            var jByDate = {};
+            jAiStats.entries.forEach(function (e) { if (!jByDate[e.date]) jByDate[e.date] = []; jByDate[e.date].push(e); });
+            var jBriefingText = Object.keys(jByDate).sort().reverse().map(function (date) {
+              return date + ':\n' + jByDate[date].map(function (e) {
+                var fills = jAiStats.dayCache[e.sym + ':' + e.date] || [];
+                var pnlStr;
+                if (fills.length) {
+                  var dayPnl = 0;
+                  fills.forEach(function (f) { dayPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
+                  pnlStr = ' | PnL: $' + dayPnl.toFixed(2) + ' (' + fills.length + ' fills)';
+                } else {
+                  pnlStr = ' | нет сделок';
+                }
+                var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
+                var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
+                return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
+              }).join('\n');
+            }).join('\n\n');
+
+            var jStatsText = 'Итого за период: PnL $' + jAiStats.pnl.toFixed(2) + ', сделок ' + jAiStats.tradeCount
+              + ', win rate ' + jAiStats.winRate + '%';
+            var jWordLimit = jParsedA.range === '1m' ? 450 : 300;
+            var jAiPrompt = 'Ты торговый аналитик. Разбери мою торговую активность за ' + jAiLabel + '.\n\n'
+              + 'Брифинги (монеты + заметки с уровнями + реальный PnL по каждой):\n'
+              + jBriefingText + '\n\n' + jStatsText
+              + '\n\nНапиши краткий разбор: что сработало, что нет, паттерны в заметках vs реальных сделках. '
+              + 'До ' + jWordLimit + ' слов. На русском.';
+
+            var GEM_KEY_J = process.env.GEMINI_API_KEY;
+            if (!GEM_KEY_J) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Gemini key not configured' })); return; }
+            var gemUrlJ = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEM_KEY_J;
+            var gemResJ = await fetch(gemUrlJ, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: jAiPrompt }] }], generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }) });
+            var gemDataJ = await gemResJ.json();
+            if (!gemResJ.ok) { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Gemini error: ' + (gemDataJ.error && gemDataJ.error.message || gemResJ.status) })); return; }
+            var gemPartsJ = (gemDataJ.candidates && gemDataJ.candidates[0] && gemDataJ.candidates[0].content && gemDataJ.candidates[0].content.parts) || [];
+            var gemPartJ = gemPartsJ.find(function (p) { return !p.thought; }) || gemPartsJ[0] || {};
+            var jAiText = gemPartJ.text || '';
+
+            await redis(['SET', 'briefing_ai:' + jUserId, JSON.stringify({ text: jAiText, range: jParsedA.range, date: new Date().toISOString(), userId: jUserId })]);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ text: jAiText }));
           } catch (e) {
             res.writeHead(502, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));

@@ -1559,6 +1559,66 @@ export function hideWeeklyReportModal() {
   el.remove();
 }
 
+var _journalAiCollapsed = false;
+
+export function toggleJournalAiCollapsed() {
+  _journalAiCollapsed = !_journalAiCollapsed;
+  renderJournalSummarySection();
+}
+
+export function renderJournalSummarySection() {
+  var container = document.getElementById('journal-summary-section');
+  if (!container) return;
+  if (state.isDemoMode) {
+    container.innerHTML = '<div class="bp-week"><div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div></div>';
+    return;
+  }
+  var s = state.journalSummary;
+  var statsHTML = s
+    ? (function () {
+        var pnlSign = s.pnl >= 0 ? '+' : '';
+        var pnlCls = s.pnl >= 0 ? 'up' : 'dn';
+        return '<div class="bp-week-stats">'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + s.pnl.toFixed(2) + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Trades</div><div class="bp-stat-val">' + s.tradeCount + '</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + s.winRate + '%</div></div>'
+          + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + s.winCount + '/' + s.tradeCount + '</div></div>'
+          + '</div>';
+      })()
+    : '<div class="fvbd-empty">Loading...</div>';
+  var missedHTML = (s && s.missed && s.missed.length)
+    ? '<div class="bp-missed"><div class="bp-stat-label">Missed opportunities</div>'
+      + s.missed.map(function (x) {
+          return '<div class="bp-missed-row">'
+            + '<span class="bp-missed-sym">' + x.sym.toUpperCase() + '</span>'
+            + '<span class="bp-missed-delta ' + (x.delta >= 0 ? 'up' : 'dn') + '">' + (x.delta >= 0 ? '+' : '') + x.delta.toFixed(2) + '%</span>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+    : '';
+
+  var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
+  var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
+  var dateStr = '';
+  if (aiText && state.aiSummaryDate) {
+    var d = new Date(state.aiSummaryDate);
+    dateStr = '<span class="bp-ai-date">' + d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', timeZone: effectiveTZ() }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() }) + '</span>';
+  }
+  var aiHTML = !aiEligible
+    ? '<div class="bp-ai-block"><div class="fvbd-empty">AI analysis is available for intervals up to 1 month</div></div>'
+    : '<div class="bp-ai-block">'
+      + '<div class="bp-ai-header">'
+      + dateStr
+      + (aiText ? '<button class="btn-icon" data-action="journal-ai-toggle" title="' + (_journalAiCollapsed ? 'Expand' : 'Collapse') + '">' + icon(_journalAiCollapsed ? 'chevron-down' : 'chevron-up', 16) + '</button>' : '')
+      + (aiText ? '<button class="btn-icon" data-action="journal-ai-delete" title="Delete">' + icon('trash', 16) + '</button>' : '')
+      + '<button class="acc-row-edit" data-action="journal-gen-ai">' + (aiText ? 'Regenerate' : 'Generate') + '</button>'
+      + '</div>'
+      + (aiText && !_journalAiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
+      + '</div>';
+
+  container.innerHTML = '<div class="bp-week">' + statsHTML + missedHTML + '</div>' + aiHTML;
+}
+
 export function renderProfileJournal(container, entries) {
   if (!entries || !entries.length) {
     container.innerHTML = '<p style="color:var(--graphite);font-size:var(--text-sm);">No journal entries yet.</p>';
@@ -3362,7 +3422,6 @@ var _briefingServerLoaded = false; // true after first successful server GET
 var _briefingSyncTimer = null;
 var _expandedBpKey = null; // sym:date of currently expanded popup row
 var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
-var _aiCollapsed = false; // weekly AI report body collapsed in the FV drawer
 
 function todayDate() {
   return tzDateStr();
@@ -3495,12 +3554,10 @@ export function loadBriefing() {
   try {
     var savedAI = localStorage.getItem(_userScopedKey('pa_ai_summary'));
     if (savedAI) state.aiSummary = savedAI;
-    var savedKeys = localStorage.getItem(_userScopedKey('pa_ai_traded_keys'));
-    if (savedKeys) state.aiSummaryTradedKeys = JSON.parse(savedKeys);
     var savedDate = localStorage.getItem(_userScopedKey('pa_ai_summary_date'));
     if (savedDate) state.aiSummaryDate = savedDate;
-    var savedCount = localStorage.getItem(_userScopedKey('pa_ai_trade_count'));
-    if (savedCount !== null) state.aiSummaryTradeCount = parseInt(savedCount, 10) || 0;
+    var savedRange = localStorage.getItem(_userScopedKey('pa_ai_summary_range'));
+    if (savedRange) state.aiSummaryRange = savedRange;
   } catch (e) {}
   if (!_briefingUserCode) return;
   fetch(API_BASE + '/api/briefing', {
@@ -3534,33 +3591,25 @@ export function loadBriefing() {
     }
     if (d && d.ai_summary) {
       state.aiSummary = d.ai_summary;
-      state.aiSummaryTradedKeys = d.ai_traded_keys || [];
       state.aiSummaryDate = d.ai_summary_date || null;
+      state.aiSummaryRange = d.ai_range || null;
       try {
         localStorage.setItem(_userScopedKey('pa_ai_summary'), state.aiSummary);
-        localStorage.setItem(_userScopedKey('pa_ai_traded_keys'), JSON.stringify(state.aiSummaryTradedKeys));
         if (state.aiSummaryDate) localStorage.setItem(_userScopedKey('pa_ai_summary_date'), state.aiSummaryDate);
+        if (state.aiSummaryRange) localStorage.setItem(_userScopedKey('pa_ai_summary_range'), state.aiSummaryRange);
       } catch (e) {}
-      var _drawer = document.getElementById('fv-briefing-drawer');
-      if (_drawer && _drawer.classList.contains('open') && state.briefingTab === 'ai') {
-        renderFVBriefingDrawer();
-      }
+      if (getCurrentRoute() === '/journal') renderJournalSummarySection();
     } else if (d) {
       // Server returned no AI summary — clear any locally cached data (may belong to another user)
       state.aiSummary = null;
-      state.aiSummaryTradedKeys = null;
       state.aiSummaryDate = null;
-      state.aiSummaryTradeCount = null;
+      state.aiSummaryRange = null;
       try {
         localStorage.removeItem(_userScopedKey('pa_ai_summary'));
-        localStorage.removeItem(_userScopedKey('pa_ai_traded_keys'));
         localStorage.removeItem(_userScopedKey('pa_ai_summary_date'));
-        localStorage.removeItem(_userScopedKey('pa_ai_trade_count'));
+        localStorage.removeItem(_userScopedKey('pa_ai_summary_range'));
       } catch (e) {}
-      var _drawer2 = document.getElementById('fv-briefing-drawer');
-      if (_drawer2 && _drawer2.classList.contains('open') && state.briefingTab === 'ai') {
-        renderFVBriefingDrawer();
-      }
+      if (getCurrentRoute() === '/journal') renderJournalSummarySection();
     }
   }).catch(function () {});
 }
@@ -3664,101 +3713,6 @@ function _tradeInlineHTML(sym, date) {
   var sign = t.pnl >= 0 ? '+' : '';
   var cls = t.pnl >= 0 ? 'up' : 'dn';
   return '<span class="bp-trade-inline stat-val ' + cls + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
-}
-
-// ── Weekly summary block ───────────────────────────────────────────────────
-
-function _weekStatsHTML() {
-  if (state.isDemoMode) {
-    return '<div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div>';
-  }
-  var ws = state.weekSummary;
-  var loadBtn = '<button class="btn-topbar bp-week-load-btn" data-action="bp-load-week" title="Refresh">' + icon('refresh-cw', 16) + '</button>';
-  var statsHTML = ws
-    ? (function () {
-        var pnlSign = ws.pnl >= 0 ? '+' : '';
-        var pnlCls = ws.pnl >= 0 ? 'up' : 'dn';
-        return '<div class="bp-week-stats">'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">PnL</div><div class="bp-stat-val ' + pnlCls + '">' + pnlSign + '$' + ws.pnl.toFixed(2) + '</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Trades</div><div class="bp-stat-val">' + ws.tradeCount + '</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + ws.winRate + '%</div></div>'
-          + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + ws.winCount + '/' + ws.tradeCount + '</div></div>'
-          + '</div>';
-      })()
-    : '<div class="fvbd-empty">Click refresh to load</div>';
-  return '<div class="bp-week">'
-    + '<div class="bp-week-header">' + loadBtn + '</div>'
-    + statsHTML
-    + _missedOpportunitiesHTML()
-    + '</div>';
-}
-
-function _missedOpportunitiesHTML() {
-  var coinMap = {};
-  state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
-  var weekMonday = _dateStr(_currentWeekMonday());
-  var items = (state.briefing || [])
-    .filter(function (e) { return e.date >= weekMonday && e.status === 'missed' && e.addedPrice; })
-    .map(function (e) {
-      var coin = coinMap[e.sym];
-      var delta = (coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
-      return { sym: e.sym, date: e.date, status: e.status, delta: delta };
-    })
-    .filter(function (x) { return x.delta !== null; })
-    .sort(function (a, b) { return b.delta - a.delta; });
-  if (!items.length) return '';
-  var rows = items.map(function (x) {
-    return '<div class="bp-missed-row">'
-      + '<span class="bp-row-status ' + briefingStatusClass(x.status) + '">' + briefingStatusLabel(x.status) + '</span>'
-      + '<span class="bp-missed-sym">' + x.sym.toUpperCase() + '</span>'
-      + '<span class="bp-missed-delta ' + (x.delta >= 0 ? 'up' : 'dn') + '">' + (x.delta >= 0 ? '+' : '') + x.delta.toFixed(2) + '%</span>'
-      + '</div>';
-  }).join('');
-  return '<div class="bp-missed">'
-    + '<div class="bp-stat-label">Missed opportunities</div>'
-    + rows
-    + '</div>';
-}
-
-export function toggleAiCollapsed() {
-  _aiCollapsed = !_aiCollapsed;
-  renderFVBriefingDrawer();
-}
-
-function _weekAIHTML() {
-  if (state.isDemoMode) {
-    return '<div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to get AI weekly analysis</div>';
-  }
-  var ws = state.weekSummary;
-  var aiText = state.aiSummary;
-  var currentKeys = (state.briefing || [])
-    .filter(function (e) { return e.status === 'traded'; })
-    .map(function (e) { return e.sym + ':' + e.date; })
-    .sort().join(',');
-  var savedKeys = (state.aiSummaryTradedKeys || []).slice().sort().join(',');
-  var hasNewTraded = currentKeys !== savedKeys;
-  var savedTradeCount = typeof state.aiSummaryTradeCount === 'number' ? state.aiSummaryTradeCount : 0;
-  var hasMoreTrades = ws && ws.tradeCount > savedTradeCount;
-  var btnDisabled = !ws || (!!aiText && !hasNewTraded && !hasMoreTrades);
-  var dateStr = '';
-  if (aiText && state.aiSummaryDate) {
-    var d = new Date(state.aiSummaryDate);
-    dateStr = '<span class="bp-ai-date">'
-      + d.toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', timeZone: effectiveTZ() })
-      + ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', timeZone: effectiveTZ() })
-      + '</span>';
-  }
-  return '<div class="bp-week">'
-    + '<div class="bp-ai-block">'
-    + '<div class="bp-ai-header">'
-    + dateStr
-    + (aiText ? '<button class="btn-icon" data-action="bp-ai-toggle" title="' + (_aiCollapsed ? 'Expand' : 'Collapse') + '">' + icon(_aiCollapsed ? 'chevron-down' : 'chevron-up', 16) + '</button>' : '')
-    + (aiText ? '<button class="btn-icon" data-action="bp-ai-delete" title="Delete">' + icon('trash', 16) + '</button>' : '')
-    + '<button class="acc-row-edit" data-action="bp-gen-ai"' + (btnDisabled ? ' disabled' : '') + '>Generate</button>'
-    + '</div>'
-    + (aiText && !_aiCollapsed ? '<div class="bp-ai-text">' + escHtml(aiText) + '</div>' : '')
-    + '</div>'
-    + '</div>';
 }
 
 var _refreshBriefingPctLast = 0;
@@ -5032,15 +4986,7 @@ export function renderFVBriefingDrawer() {
   var dateMap = {};
   allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
   var dates = Object.keys(dateMap).sort().reverse();
-  var tab = state.briefingTab || 'coins';
-  var tabs = '<div class="fvbd-tabs">'
-    + '<button class="fvbd-tab pill' + (tab === 'coins' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="coins">Coins</button>'
-    + '<button class="fvbd-tab pill' + (tab === 'week' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="week">Summary</button>'
-    + '<button class="fvbd-tab pill' + (tab === 'ai' ? ' active' : '') + '" data-action="fvbd-tab" data-tab="ai">AI analysis</button>'
-    + '</div>';
-  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + tabs;
-  if (tab === 'week') { drawer.innerHTML = html + _weekStatsHTML(); _refreshBriefingPct(); return; }
-  if (tab === 'ai')   { drawer.innerHTML = html + _weekAIHTML();   _refreshBriefingPct(); return; }
+  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>';
   dates.forEach(function (date, idx) {
     var isToday = date === today;
     if (idx > 0 && dates[idx - 1] === today) html += '<div class="fvbd-divider"></div>';

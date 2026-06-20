@@ -31,14 +31,13 @@ export const state = {
   briefing: [],        // [{sym, date, addedAt, status, note}]
   briefingViewDate: null, // currently viewed date in panel (null = today)
   trades: {},          // 'sym:date' → {status:'ok'|'loading'|'error', pnl, count, entries[]}
-  weekSummary: null,   // агрегат за неделю {pnl, tradeCount, winRate, conversion, ...}
-  aiSummary: null,     // текст от Gemini
-  aiSummaryTradedKeys: null, // 'sym:date' traded-записей на момент генерации
+  aiSummary: null,     // текст от Gemini (journal AI-анализ)
   aiSummaryDate: null,      // ISO timestamp последней генерации
-  aiSummaryTradeCount: null, // tradeCount из weekSummary на момент генерации
-  briefingTab: 'coins', // активный таб дровера: 'coins' | 'week' | 'ai'
+  aiSummaryRange: null, // диапазон ('1w'|'2w'|'1m'), за который сгенерирован journal AI-анализ
   journalToday: null,  // { date, morningAt, morningState, ... } | null
   journalEntries: null, // cached /api/journal/recent result for instant render
+  journalRange: '1w',  // выбранный интервал на странице Journal
+  journalSummary: null, // { pnl, tradeCount, winCount, winRate, missed, from, to } за journalRange
   notifications: [],
   notifUnread: 0,
   inplayTop: [],   // [{symbol, inplay, A, M, P, dp5m, rvol5m}] — from server inplay_top WS push

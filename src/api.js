@@ -1003,75 +1003,6 @@ export async function fetchAllBriefingTrades() {
   emit('trades:updated');
 }
 
-// Fetch trades for all briefing entries this week (Mon–today), compute weekly aggregate.
-// Counts by unique orderId (not fills) to match Binance trade count.
-export async function fetchWeekTrades(force) {
-  var todayStr = tzDateStr();
-  var todayParts = todayStr.split('-');
-  var today = new Date(Date.UTC(+todayParts[0], +todayParts[1] - 1, +todayParts[2]));
-
-  // Compute Monday of current week (in the account's effective timezone)
-  var daysToMon = today.getUTCDay() === 0 ? 6 : today.getUTCDay() - 1;
-  var mon = new Date(today.getTime() - daysToMon * 24 * 3600 * 1000);
-  var monStr = mon.getUTCFullYear() + '-' + String(mon.getUTCMonth() + 1).padStart(2, '0') + '-' + String(mon.getUTCDate()).padStart(2, '0');
-
-  // All briefing entries Mon–today
-  var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= monStr && e.date <= todayStr; });
-  if (!entries.length) { emit('trades:week-updated'); return null; }
-
-  // Always refetch (day isn't over, new trades may appear). Clear cache every time.
-  entries.forEach(function (e) { delete state.trades[e.sym + ':' + e.date]; });
-
-  await Promise.all(entries.map(function (e) { return fetchTrades(e.sym, e.date); }));
-
-  // Group fills by (sym:positionSide) stream, dedup by fill id across multiple
-  // date-range fetches of the same symbol. Track net position per stream.
-  var streams = {}; // key -> { id: fill }
-  entries.forEach(function (e) {
-    var t = state.trades[e.sym + ':' + e.date];
-    if (!t || t.status !== 'ok' || !t.entries) return;
-    t.entries.forEach(function (fill) {
-      var key = e.sym + ':' + (fill.positionSide || 'BOTH');
-      if (!streams[key]) streams[key] = {};
-      streams[key][fill.id] = fill;
-    });
-  });
-
-  // Count round-trips: position 0→X→0 = one trade (open+adds+partial closes+close).
-  // Uses net PnL (realizedPnl - commission) for win/loss determination.
-  var tradeCount = 0, winCount = 0;
-  Object.values(streams).forEach(function (fillMap) {
-    var fills = Object.values(fillMap).sort(function (a, b) { return a.time - b.time; });
-    var position = 0, roundPnl = 0;
-    fills.forEach(function (fill) {
-      position += fill.side === 'BUY' ? parseFloat(fill.qty) : -parseFloat(fill.qty);
-      roundPnl += parseFloat(fill.realizedPnl || 0) - parseFloat(fill.commission || 0);
-      if (Math.abs(position) < 0.00001) {
-        tradeCount++;
-        if (roundPnl > 0) winCount++;
-        roundPnl = 0;
-      }
-    });
-  });
-
-  // PnL: sum from state.trades (already commission-deducted)
-  var totalPnl = 0;
-  entries.forEach(function (e) {
-    var t = state.trades[e.sym + ':' + e.date];
-    if (t && t.status === 'ok') totalPnl += t.pnl;
-  });
-
-  state.weekSummary = {
-    pnl: totalPnl,
-    tradeCount: tradeCount,
-    winCount: winCount,
-    winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
-    fromDate: todayStr,
-  };
-  emit('trades:week-updated');
-  return state.weekSummary;
-}
-
 // PnL/win-rate for the briefing/watchlist symbols' trades on a given date.
 export async function fetchTradesForDate(dateStr) {
   // Use every symbol ever seen in the briefing/watchlist, not just entries added
@@ -1130,111 +1061,39 @@ export async function fetchTodayTrades() {
   return fetchTradesForDate(tzDateStr());
 }
 
-// Call Gemini via proxy to generate a weekly trading summary.
-export async function generateWeeklySummary() {
-  var todayParts = tzDateStr().split('-');
-  var today = new Date(Date.UTC(+todayParts[0], +todayParts[1] - 1, +todayParts[2]));
-  var dayOfWeek = today.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
-  var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  var monday = new Date(today.getTime() - daysToMonday * 24 * 3600 * 1000);
-  var weekAgoStr = monday.getUTCFullYear() + '-'
-    + String(monday.getUTCMonth() + 1).padStart(2, '0') + '-'
-    + String(monday.getUTCDate()).padStart(2, '0');
-  var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
 
-  // Build briefing text grouped by date
-  var byDate = {};
-  entries.forEach(function (e) { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+// ── Journal: interval-based trading summary + AI analysis ──────────────────
 
-  var briefingText = Object.keys(byDate).sort().reverse().map(function (date) {
-    return date + ':\n' + byDate[date].map(function (e) {
-      var t = state.trades[e.sym + ':' + e.date];
-      var pnlStr;
-      if (t && t.status === 'ok' && t.count > 0) {
-        // Count round-trips (0→X→0) by positionSide — same logic as fetchWeekTrades
-        var _streams = {};
-        (t.entries || []).sort(function (a, b) { return a.time - b.time; }).forEach(function (f) {
-          var ps = f.positionSide || 'BOTH';
-          if (!_streams[ps]) _streams[ps] = [];
-          _streams[ps].push(f);
-        });
-        var _rt = 0;
-        Object.values(_streams).forEach(function (fs) {
-          var p = 0;
-          fs.forEach(function (f) {
-            p += f.side === 'BUY' ? parseFloat(f.qty) : -parseFloat(f.qty);
-            if (Math.abs(p) < 0.00001) { _rt++; p = 0; }
-          });
-        });
-        pnlStr = ' | PnL: $' + t.pnl.toFixed(2) + ' (' + (_rt || t.count) + ' сд.)';
-      } else {
-        pnlStr = ' | нет сделок';
-      }
-      var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
-      var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
-      return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
-    }).join('\n');
-  }).join('\n\n');
-
-  var ws = state.weekSummary;
-  var statsText = ws
-    ? 'Итого за неделю: PnL $' + ws.pnl.toFixed(2) + ', сделок ' + ws.tradeCount
-      + ', win rate ' + ws.winRate + '%, конверсия ' + ws.conversion + '%'
-    : '';
-
-  var prompt = 'Ты торговый аналитик. Разбери мою торговую неделю.\n\n'
-    + 'Брифинги (монеты + заметки с уровнями + реальный PnL по каждой):\n'
-    + briefingText + '\n\n' + statsText
-    + '\n\nНапиши краткий разбор: что сработало, что нет, паттерны в заметках vs реальных сделках. '
-    + 'До 300 слов. На русском.';
-
-  var res = await fetch(API_BASE + '/api/proxy', {
+export function fetchJournalSummary(range) {
+  return fetch(API_BASE + '/api/journal/summary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({
-      service: 'gemini',
-      payload: { prompt: prompt },
-    }),
+    body: JSON.stringify({ range: range }),
+  }).then(function (r) { return r.json(); })
+    .then(function (d) { state.journalSummary = d.error ? null : d; return state.journalSummary; })
+    .catch(function () { state.journalSummary = null; return null; });
+}
+
+export async function generateJournalAiSummary(range) {
+  var res = await fetch(API_BASE + '/api/journal/ai-summary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ range: range }),
   });
   var data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Proxy error');
+  if (!res.ok) throw new Error(data.error || 'AI analysis failed');
   state.aiSummary = data.text || '';
-  var tradedKeys = (state.briefing || [])
-    .filter(function (e) { return e.status === 'traded'; })
-    .map(function (e) { return e.sym + ':' + e.date; })
-    .sort();
-  state.aiSummaryTradedKeys = tradedKeys;
+  state.aiSummaryRange = range;
   state.aiSummaryDate = new Date().toISOString();
-  state.aiSummaryTradeCount = state.weekSummary ? state.weekSummary.tradeCount : 0;
-  try {
-    localStorage.setItem(_uKey('pa_ai_summary'), state.aiSummary);
-    localStorage.setItem(_uKey('pa_ai_traded_keys'), JSON.stringify(tradedKeys));
-    localStorage.setItem(_uKey('pa_ai_summary_date'), state.aiSummaryDate);
-    localStorage.setItem(_uKey('pa_ai_trade_count'), String(state.aiSummaryTradeCount));
-  } catch (e) {}
-  fetch(API_BASE + '/api/briefing', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ action: 'save', entries: state.briefing,
-      ai_summary: state.aiSummary, ai_traded_keys: state.aiSummaryTradedKeys, ai_summary_date: state.aiSummaryDate }),
-  }).catch(function () {});
-  emit('trades:ai-updated');
   return state.aiSummary;
 }
 
-export function deleteWeeklySummary() {
+export function deleteJournalAiSummary() {
   state.aiSummary = null;
-  state.aiSummaryTradedKeys = null;
+  state.aiSummaryRange = null;
   state.aiSummaryDate = null;
-  state.aiSummaryTradeCount = null;
-  try {
-    localStorage.removeItem(_uKey('pa_ai_summary'));
-    localStorage.removeItem(_uKey('pa_ai_traded_keys'));
-    localStorage.removeItem(_uKey('pa_ai_summary_date'));
-    localStorage.removeItem(_uKey('pa_ai_trade_count'));
-  } catch (e) {}
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

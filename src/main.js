@@ -2,9 +2,10 @@ import { state, filteredCoins } from './state.js';
 import {
   fetchCoins, analyzeCoinBySymbol, analyzeAll,
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
-  fetchBriefingTrades, fetchAllBriefingTrades, fetchWeekTrades, generateWeeklySummary, deleteWeeklySummary,
+  fetchBriefingTrades, fetchAllBriefingTrades,
   fetchNotifications,
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv, fetchPnlHistory,
+  fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary,
 } from './api.js';
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -17,9 +18,9 @@ import {
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
-  toggleAiCollapsed,
   showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal, renderJournalChart,
+  renderJournalSummarySection, toggleJournalAiCollapsed,
   openHintsPopup, closeHintsPopup,
   updateSessionTimer, injectDemoBanner,
 } from './ui.js';
@@ -395,6 +396,46 @@ document.body.addEventListener('click', function (e) {
       exportJournalCsv(target.dataset.range);
       break;
     }
+    case 'journal-range-pick': {
+      e.stopPropagation();
+      var _jrdd = document.getElementById('journal-range-dd');
+      if (_jrdd) {
+        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
+        _jrdd.classList.toggle('open');
+      }
+      break;
+    }
+    case 'journal-range-opt': {
+      e.stopPropagation();
+      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
+      var newRange = target.dataset.range;
+      if (!newRange || newRange === state.journalRange) break;
+      state.journalRange = newRange;
+      var _jrBtn = document.querySelector('[data-action="journal-range-pick"]');
+      if (_jrBtn) _jrBtn.textContent = target.textContent;
+      var _jrDd = document.getElementById('journal-range-dd');
+      if (_jrDd) _jrDd.querySelectorAll('button').forEach(function (btn) { btn.classList.toggle('active', btn.dataset.range === newRange); });
+      _refreshJournalSummary();
+      break;
+    }
+    case 'journal-gen-ai': {
+      var _jaiBtn = target;
+      _jaiBtn.disabled = true;
+      _jaiBtn.classList.add('btn-loading');
+      generateJournalAiSummary(state.journalRange).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
+        _jaiBtn.disabled = false;
+        _jaiBtn.classList.remove('btn-loading');
+        renderJournalSummarySection();
+      });
+      break;
+    }
+    case 'journal-ai-toggle':
+      toggleJournalAiCollapsed();
+      break;
+    case 'journal-ai-delete':
+      deleteJournalAiSummary();
+      renderJournalSummarySection();
+      break;
     case 'open-morning-journal': {
       if (state.isDemoMode) { window.location.href = '/login'; break; }
       var _mNdd = document.getElementById('notif-dd');
@@ -545,7 +586,7 @@ document.body.addEventListener('click', function (e) {
     case 'bp-open':
       closeBriefingPanel();
       openFV(sym);
-      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
+      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
       break;
     case 'go-briefing': {
       var today = tzDateStr();
@@ -559,7 +600,7 @@ document.body.addEventListener('click', function (e) {
       if (first) {
         closeBriefingPanel();
         openFV(first.sym);
-        setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
+        setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
       }
       break;
     }
@@ -596,33 +637,7 @@ document.body.addEventListener('click', function (e) {
     }
     case 'toggle-fv-briefing':
       toggleFVBriefingDrawer();
-      fetchAllBriefingTrades().then(function () { fetchWeekTrades(); });
-      break;
-    case 'fvbd-tab':
-      state.briefingTab = target.dataset.tab;
-      renderFVBriefingDrawer();
-      break;
-    case 'bp-load-week':
-      target.disabled = true;
-      target.classList.add('btn-loading');
-      fetchWeekTrades(true);
-      break;
-    case 'bp-gen-ai': {
-      var _aiBtn = target;
-      _aiBtn.disabled = true;
-      _aiBtn.classList.add('btn-loading');
-      generateWeeklySummary().catch(function (e) { console.error('AI summary:', e); }).finally(function () {
-        _aiBtn.disabled = false;
-        _aiBtn.classList.remove('btn-loading');
-      });
-      break;
-    }
-    case 'bp-ai-toggle':
-      toggleAiCollapsed();
-      break;
-    case 'bp-ai-delete':
-      deleteWeeklySummary();
-      renderFVBriefingDrawer();
+      fetchAllBriefingTrades();
       break;
     case 'go-main':
       navigate('/');
@@ -676,18 +691,6 @@ on('trades:updated', function () {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
   applyFVTradeMarkers();
-});
-
-// Re-render weekly summary block when week aggregate is ready
-on('trades:week-updated', function () {
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
-});
-
-// Re-render AI summary text when Gemini responds
-on('trades:ai-updated', function () {
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
 });
 
 // iOS standalone app: re-sync route on restore from frozen/bfcache state
@@ -833,6 +836,32 @@ function _refreshJournalHistory() {
   });
 }
 
+var JOURNAL_SUMMARY_RANGES = [
+  { value: '1w', label: '1 week' },
+  { value: '2w', label: '2 weeks' },
+  { value: '1m', label: '1 month' },
+  { value: '2m', label: '2 months' },
+  { value: '3m', label: '3 months' },
+  { value: '6m', label: '6 months' },
+];
+var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m': 180 };
+var _journalPnlHistoryFull = [];
+
+function _renderJournalPnlChart() {
+  var days = JOURNAL_RANGE_DAYS[state.journalRange] || 7;
+  var fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  var filtered = _journalPnlHistoryFull.filter(function (h) { return h.date >= fromDate; });
+  renderJournalChart(document.getElementById('journal-pnl-chart'), filtered);
+}
+
+function _refreshJournalSummary() {
+  _renderJournalPnlChart();
+  renderJournalSummarySection();
+  fetchJournalSummary(state.journalRange).then(function () {
+    renderJournalSummarySection();
+  });
+}
+
 registerRoute('/journal', function () {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="journal-page">' +
@@ -842,6 +871,14 @@ registerRoute('/journal', function () {
     '<div class="journal-page-actions">' +
     '<button data-action="open-morning-journal" class="btn-cta"' + (state.journalToday && state.journalToday.morningAt ? ' disabled' : '') + '>Morning' + (state.journalToday && state.journalToday.morningAt ? icon('check', 14) : '') + '</button>' +
     '<button data-action="open-evening-journal" class="btn-cta"' + (!state.journalToday || !state.journalToday.morningAt || state.journalToday.skipped ? ' disabled' : '') + '>Evening</button>' +
+    '<div class="tf-picker">' +
+    '<button data-action="journal-range-pick" class="btn-cta">' + (JOURNAL_SUMMARY_RANGES.find(function (r) { return r.value === state.journalRange; }) || JOURNAL_SUMMARY_RANGES[0]).label + '</button>' +
+    '<div class="dropdown tf-dd" id="journal-range-dd">' +
+    JOURNAL_SUMMARY_RANGES.map(function (r) {
+      return '<button class="' + (r.value === state.journalRange ? 'active' : '') + '" data-action="journal-range-opt" data-range="' + r.value + '">' + r.label + '</button>';
+    }).join('') +
+    '</div>' +
+    '</div>' +
     '<div class="tf-picker">' +
     '<button data-action="toggle-journal-export" class="btn-cta">CSV</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
@@ -853,13 +890,19 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '<div id="journal-pnl-chart" style="height:400px;margin-bottom:var(--space-8);border-radius:var(--radius-xl);overflow:hidden;"></div>' +
+    '<div id="journal-summary-section" style="margin-bottom:var(--space-8);"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
   if (state.journalEntries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
   }
   fetchPnlHistory().then(function (history) {
-    renderJournalChart(document.getElementById('journal-pnl-chart'), history);
+    _journalPnlHistoryFull = history;
+    _renderJournalPnlChart();
+  });
+  renderJournalSummarySection();
+  fetchJournalSummary(state.journalRange).then(function () {
+    renderJournalSummarySection();
   });
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
