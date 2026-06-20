@@ -1505,17 +1505,19 @@ export function renderJournalChart(container, history) {
     // param.time is a UTC-midnight-anchored day bucket (see renderJournalChart) — must
     // read it back in UTC, not the effective timezone, or the date can shift by a day.
     var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-    var pnlSign = pnlVal >= 0 ? '+' : '';
-    var pnlColor = pnlVal >= 0 ? 'var(--bullish)' : 'var(--danger)';
+    var dayRow = historyMap[d.toISOString().slice(0, 10)];
+    var dayPnl = dayRow ? (dayRow.pnl || 0) : 0;
+    var pnlSign = dayPnl >= 0 ? '+' : '';
+    var pnlColor = dayPnl >= 0 ? 'var(--bullish)' : 'var(--danger)';
 
     toolTip.innerHTML =
-      '<div style="color:var(--graphite);margin-bottom:4px;">' + dateStr + '</div>' +
-      '<div style="display:flex;justify-content:space-between;gap:16px;">' +
-        '<span>Кум. прибыль ($)</span>' +
-        '<strong style="color:' + pnlColor + ';">' + pnlSign + pnlVal.toFixed(2) + '</strong>' +
+      '<div style="color:var(--graphite);margin-bottom:var(--space-4);">' + dateStr + '</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:var(--space-4);">' +
+        '<span>PnL за день ($)</span>' +
+        '<strong style="color:' + pnlColor + ';">' + pnlSign + dayPnl.toFixed(2) + '</strong>' +
       '</div>' +
       '<div style="display:flex;justify-content:space-between;gap:16px;">' +
-        '<span style="color:var(--graphite);">Кол-во сделок</span>' +
+        '<span>Кол-во сделок</span>' +
         '<strong>' + (histVal != null ? Math.abs(histVal) : '—') + '</strong>' +
       '</div>';
 
