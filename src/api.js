@@ -1,5 +1,5 @@
 import { state, STABLE_SYMBOLS, CACHE_TTL_MS, ANALYZE_DELAY_MS, filteredCoins } from './state.js';
-import { fmt, sleep } from './utils.js';
+import { fmt, sleep, tzDateStr } from './utils.js';
 import { emit } from './events.js';
 
 // API base URL — derived from VITE_WS_URL so Vercel frontend hits the VPS
@@ -1006,15 +1006,14 @@ export async function fetchAllBriefingTrades() {
 // Fetch trades for all briefing entries this week (Mon–today), compute weekly aggregate.
 // Counts by unique orderId (not fills) to match Binance trade count.
 export async function fetchWeekTrades(force) {
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-'
-    + String(today.getMonth() + 1).padStart(2, '0') + '-'
-    + String(today.getDate()).padStart(2, '0');
+  var todayStr = tzDateStr();
+  var todayParts = todayStr.split('-');
+  var today = new Date(Date.UTC(+todayParts[0], +todayParts[1] - 1, +todayParts[2]));
 
-  // Compute Monday of current week
-  var daysToMon = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  // Compute Monday of current week (in the account's effective timezone)
+  var daysToMon = today.getUTCDay() === 0 ? 6 : today.getUTCDay() - 1;
   var mon = new Date(today.getTime() - daysToMon * 24 * 3600 * 1000);
-  var monStr = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+  var monStr = mon.getUTCFullYear() + '-' + String(mon.getUTCMonth() + 1).padStart(2, '0') + '-' + String(mon.getUTCDate()).padStart(2, '0');
 
   // All briefing entries Mon–today
   var entries = (state.briefing || []).filter(function (e) { return !e.auto && e.date >= monStr && e.date <= todayStr; });
@@ -1128,22 +1127,19 @@ export async function fetchTradesForDate(dateStr) {
 
 // PnL/win-rate for today's briefing entries (used by the evening journal modal).
 export async function fetchTodayTrades() {
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-'
-    + String(today.getMonth() + 1).padStart(2, '0') + '-'
-    + String(today.getDate()).padStart(2, '0');
-  return fetchTradesForDate(todayStr);
+  return fetchTradesForDate(tzDateStr());
 }
 
 // Call Gemini via proxy to generate a weekly trading summary.
 export async function generateWeeklySummary() {
-  var today = new Date();
-  var dayOfWeek = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  var todayParts = tzDateStr().split('-');
+  var today = new Date(Date.UTC(+todayParts[0], +todayParts[1] - 1, +todayParts[2]));
+  var dayOfWeek = today.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
   var daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   var monday = new Date(today.getTime() - daysToMonday * 24 * 3600 * 1000);
-  var weekAgoStr = monday.getFullYear() + '-'
-    + String(monday.getMonth() + 1).padStart(2, '0') + '-'
-    + String(monday.getDate()).padStart(2, '0');
+  var weekAgoStr = monday.getUTCFullYear() + '-'
+    + String(monday.getUTCMonth() + 1).padStart(2, '0') + '-'
+    + String(monday.getUTCDate()).padStart(2, '0');
   var entries = (state.briefing || []).filter(function (e) { return e.date >= weekAgoStr; });
 
   // Build briefing text grouped by date

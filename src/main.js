@@ -24,7 +24,7 @@ import {
   updateSessionTimer, injectDemoBanner,
 } from './ui.js';
 import { on } from './events.js';
-import { icon } from './utils.js';
+import { icon, tzDateStr } from './utils.js';
 
 function openFV(sym) {
   openCoinFullView(sym);
@@ -413,7 +413,7 @@ document.body.addEventListener('click', function (e) {
       var mBtn = target;
       mBtn.disabled = true;
       var mModal = document.getElementById('morning-journal-modal');
-      var mToday = new Date().toISOString().slice(0, 10);
+      var mToday = tzDateStr();
       var mPlannedCoins = (state.briefing || [])
         .filter(function (e) { return e.date === mToday; })
         .map(function (e) { return e.sym.toUpperCase(); })
@@ -514,7 +514,7 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'open-briefing':
       openBriefingPanel();
-      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
+      fetchBriefingTrades(state.briefingViewDate || tzDateStr());
       break;
     case 'close-briefing':
       closeBriefingPanel();
@@ -531,11 +531,11 @@ document.body.addEventListener('click', function (e) {
     }
     case 'bp-prev-date':
       briefingNavDate(-1);
-      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
+      fetchBriefingTrades(state.briefingViewDate || tzDateStr());
       break;
     case 'bp-next-date':
       briefingNavDate(+1);
-      fetchBriefingTrades(state.briefingViewDate || new Date().toISOString().slice(0, 10));
+      fetchBriefingTrades(state.briefingViewDate || tzDateStr());
       break;
     case 'bp-cycle-status': {
       var bStatusDate = target.dataset.date;
@@ -548,8 +548,7 @@ document.body.addEventListener('click', function (e) {
       setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades().then(function () { fetchWeekTrades(); }); }, 50);
       break;
     case 'go-briefing': {
-      var _td = new Date();
-      var today = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
+      var today = tzDateStr();
       var first = (state.briefing || []).find(function (e) { return e.date === today; });
       if (!first) {
         // Find the most recent past date and take its first entry
@@ -932,7 +931,7 @@ async function _revalidateSession() {
     _sessionVerified = true;
     fetch(_API_BASE + '/api/account', { credentials: 'include' })
       .then(function (ar) { return ar.json(); })
-      .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); })
+      .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); state.timezone = d.timezone || null; })
       .catch(function () {});
     fetchJournalToday();
     fetchJournalRecent();

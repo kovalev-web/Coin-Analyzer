@@ -1,3 +1,56 @@
+import { state } from './state.js';
+
+// Account-configured timezone (Account settings) overrides the browser's
+// detected timezone everywhere the app needs to know "what day/time it is".
+export function effectiveTZ() {
+  return state.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+// Intl.DateTimeFormat construction is relatively expensive — cache by tz+option-key
+// so high-frequency callers (live trade tape, chart tick formatters) don't rebuild
+// a formatter on every call.
+var _tzFmtCache = {};
+function _cachedFmt(key, opts) {
+  var tz = effectiveTZ();
+  var cacheKey = key + ':' + tz;
+  if (!_tzFmtCache[cacheKey]) _tzFmtCache[cacheKey] = new Intl.DateTimeFormat('en-US', Object.assign({ timeZone: tz }, opts));
+  return _tzFmtCache[cacheKey];
+}
+
+// YYYY-MM-DD for `date` (default: now) in the effective timezone.
+export function tzDateStr(date) {
+  var tz = effectiveTZ();
+  var cacheKey = 'date:' + tz;
+  if (!_tzFmtCache[cacheKey]) _tzFmtCache[cacheKey] = new Intl.DateTimeFormat('en-CA', { timeZone: tz });
+  return _tzFmtCache[cacheKey].format(date || new Date());
+}
+
+// HH:MM (24h) for `date` in the effective timezone.
+export function tzTimeStr(date) {
+  return _tzPartsStr(_cachedFmt('hm', { hour: '2-digit', minute: '2-digit', hour12: false }), date);
+}
+
+// HH:MM:SS (24h) for `date` in the effective timezone.
+export function tzTimeStrSec(date) {
+  return _tzPartsStr(_cachedFmt('hms', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }), date, true);
+}
+
+function _tzPartsStr(fmtObj, date, withSeconds) {
+  var parts = {};
+  fmtObj.formatToParts(date || new Date()).forEach(function (p) { if (p.type !== 'literal') parts[p.type] = p.value; });
+  var hh = parts.hour === '24' ? '00' : parts.hour;
+  return withSeconds ? (hh + ':' + parts.minute + ':' + parts.second) : (hh + ':' + parts.minute);
+}
+
+// Raw formatToParts dict (weekday/year/month/day/hour/minute) for `date` in the effective timezone.
+export function tzParts(date) {
+  var fmtObj = _cachedFmt('full', { weekday: 'short', year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  var parts = {};
+  fmtObj.formatToParts(date || new Date()).forEach(function (p) { if (p.type !== 'literal') parts[p.type] = p.value; });
+  if (parts.hour === '24') parts.hour = '00';
+  return parts;
+}
+
 export function fmt(n) {
   if (n == null) return '—';
   if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';

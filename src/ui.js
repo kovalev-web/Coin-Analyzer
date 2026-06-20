@@ -1,5 +1,5 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
-import { fmt, fmtPrice, escHtml, signalLabel, icon } from './utils.js';
+import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead } from './api.js';
@@ -951,9 +951,11 @@ export function showAccountModal() {
       body: JSON.stringify({ action: 'save-timezone', timezone: _tzSel.value }),
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.ok) {
+        state.timezone = _tzSel.value;
         _tzSetDisplay(_tzSel.value, 'saved');
         _tzEditor.style.display = 'none';
         document.getElementById('acc-tz-change-btn').textContent = 'Change';
+        renderBriefingPanel();
       } else {
         msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Error';
       }
@@ -978,6 +980,7 @@ export function showAccountModal() {
       if (d.timezone) {
         _tzSel.value = d.timezone;
         _tzSetDisplay(d.timezone, 'saved');
+        state.timezone = d.timezone;
       }
       _emailHasPassword = !!d.hasPassword;
       _emailTgConnected = !!d.tgConnected;
@@ -1247,7 +1250,7 @@ function _briefingCoinsHTML(today) {
 export function showMorningModal() {
   if (document.getElementById('morning-journal-modal')) return;
 
-  var today = new Date().toISOString().slice(0, 10);
+  var today = tzDateStr();
   var el = document.createElement('div');
   el.id = 'morning-journal-modal';
   el.className = 'journal-modal-overlay';
@@ -1293,7 +1296,7 @@ export function hideMorningModal() {
 export function showEveningModal() {
   if (document.getElementById('evening-journal-modal')) return;
 
-  var today = new Date().toISOString().slice(0, 10);
+  var today = tzDateStr();
   var entry = state.journalToday || {};
   var tradeCount = entry.tradeCount != null ? entry.tradeCount : 0;
 
@@ -1389,8 +1392,8 @@ export function renderJournalChart(container, history) {
   var historyMap = {};
   history.forEach(function (row) { historyMap[row.date] = row; });
 
-  // Range: from first entry to today
-  var _today = new Date(); _today.setUTCHours(0, 0, 0, 0);
+  // Range: from first entry to today (in the account's effective timezone)
+  var _today = new Date(tzDateStr() + 'T00:00:00Z');
   var _cur = new Date(history[0].date + 'T00:00:00Z');
   var _end = _today;
 
@@ -1465,7 +1468,9 @@ export function renderJournalChart(container, history) {
     if (pnlVal == null) { toolTip.style.display = 'none'; return; }
 
     var d = new Date(param.time * 1000);
-    var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    // param.time is a UTC-midnight-anchored day bucket (see renderJournalChart) — must
+    // read it back in UTC, not the effective timezone, or the date can shift by a day.
+    var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
     var pnlSign = pnlVal >= 0 ? '+' : '';
     var pnlColor = pnlVal >= 0 ? 'var(--bullish)' : 'var(--danger)';
 
@@ -2142,27 +2147,20 @@ export function calcPriceFormat(price) {
   return { type: 'price', precision: 0, minMove: 1 };
 }
 
-// Форматирует Unix timestamp (секунды) в локальное время устройства
+// Форматирует Unix timestamp (секунды) в эффективном часовом поясе
+// (настройка Account, либо часовой пояс браузера, если не задана).
 function _localTimeFmt(ts) {
-  var d = new Date(ts * 1000);
-  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var hh = d.getHours().toString().padStart(2, '0');
-  var mm = d.getMinutes().toString().padStart(2, '0');
-  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ', ' + hh + ':' + mm;
+  var p = tzParts(new Date(ts * 1000));
+  return p.weekday + ', ' + p.day + ' ' + p.month + ', ' + p.hour + ':' + p.minute;
 }
 
 // Форматирует метки на оси времени с учётом уровня детализации
 function _tickMarkFmt(ts, type) {
-  var d = new Date(ts * 1000);
-  var h = d.getHours().toString().padStart(2, '0');
-  var m = d.getMinutes().toString().padStart(2, '0');
-  var day = d.getDate().toString().padStart(2, '0');
-  var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  var p = tzParts(new Date(ts * 1000));
   // type: 0=Year, 1=Month, 2=DayOfMonth, 3=Time, 4=TimeWithSeconds
-  if (type <= 1) return mon + ' ' + d.getFullYear();
-  if (type === 2) return day + ' ' + mon;
-  return h + ':' + m;
+  if (type <= 1) return p.month + ' ' + p.year;
+  if (type === 2) return p.day + ' ' + p.month;
+  return p.hour + ':' + p.minute;
 }
 
 export function getChartOpts() {
@@ -2394,8 +2392,8 @@ function drawRuler(sym, p1, p2, pr1, pr2) {
 function drawAlertLabel(ctx, a, y, labelX) {
   if (!a.createdAt) return;
   var d = new Date(a.createdAt);
-  var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) +
-              ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  var label = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() }) +
+              ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', timeZone: effectiveTZ() });
   ctx.font = '10px Manrope, Arial, sans-serif';
   var tw = ctx.measureText(label).width;
   var px = 4, bh = 14;
@@ -2968,7 +2966,7 @@ export function updateAnalysisPopup(sym) {
   content.style.display = 'block';
   if (cache.status === 'ok' && cache.result) {
     var r = cache.result;
-    var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() }) : '';
     var extIcon = icon('external-link', 11, 'vertical-align:middle;margin-left:3px;margin-bottom:1px');
     var newsBlock = '';
     if (r.news_summary) {
@@ -3069,11 +3067,12 @@ function _sessionInfo() {
   };
 }
 
+// Displays a session-boundary UTC hour in the effective timezone (Account setting, else browser's).
+// The session windows themselves stay UTC (real market hours) — only this label is localized.
 function _localHourStr(utcHour) {
-  var offsetMin = new Date().getTimezoneOffset();
-  var localMin = ((utcHour * 60 - offsetMin) % 1440 + 1440) % 1440;
-  var h = Math.floor(localMin / 60), m = localMin % 60;
-  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  var d = new Date();
+  d.setUTCHours(utcHour, 0, 0, 0);
+  return tzTimeStr(d);
 }
 
 function _sessionDotsHTML(activeKeys) {
@@ -3324,8 +3323,7 @@ var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
 var _aiCollapsed = false; // weekly AI report body collapsed in the FV drawer
 
 function todayDate() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return tzDateStr();
 }
 
 function fmtBriefingDate(iso) {
@@ -3335,20 +3333,24 @@ function fmtBriefingDate(iso) {
   return days[d.getDay()] + ', ' + parts[2] + '.' + parts[1] + '.' + parts[0];
 }
 
+// `d` is always a UTC-midnight-anchored Date produced by _currentWeekMonday() —
+// must read UTC fields, not local ones, to avoid drifting a day near the browser's own midnight.
 function _dateStr(d) {
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 }
 
 function _currentWeekMonday() {
-  var today = new Date();
-  var dow = today.getDay();
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() - (dow === 0 ? 6 : dow - 1));
+  var parts = todayDate().split('-');
+  var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+  var dow = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+  return d;
 }
 
 // Keep ~4 weeks of accumulated history (cheap in Redis, enables future weekly-trend AI reports)
 function _briefingHistoryCutoff() {
   var mon = _currentWeekMonday();
-  mon.setDate(mon.getDate() - 21);
+  mon.setUTCDate(mon.getUTCDate() - 21);
   return _dateStr(mon);
 }
 
@@ -3700,8 +3702,8 @@ function _weekAIHTML() {
   if (aiText && state.aiSummaryDate) {
     var d = new Date(state.aiSummaryDate);
     dateStr = '<span class="bp-ai-date">'
-      + d.toLocaleDateString('en-US', { month:'2-digit', day:'2-digit' })
-      + ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
+      + d.toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', timeZone: effectiveTZ() })
+      + ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', timeZone: effectiveTZ() })
       + '</span>';
   }
   return '<div class="bp-week">'
@@ -4036,10 +4038,8 @@ function appendTapeRow(trade) {
   if (!list) return;
   var row = document.createElement('div');
   row.className = 'tape-row ' + (trade.isBuy ? 'buy' : 'sell');
-  var t = new Date(trade.ts);
-  var hh = String(t.getHours()).padStart(2, '0');
-  var mm = String(t.getMinutes()).padStart(2, '0');
-  var ss = String(t.getSeconds()).padStart(2, '0');
+  var hms = tzTimeStrSec(new Date(trade.ts)).split(':');
+  var hh = hms[0], mm = hms[1], ss = hms[2];
   row.innerHTML = '<span class="tape-time">' + hh + ':' + mm + ':' + ss + '</span>'
     + '<span class="tape-price">' + fmtPrice(trade.price).replace('$', '') + '</span>'
     + '<span class="tape-qty">' + _fmtQty(trade.qty) + '</span>';
@@ -5397,7 +5397,7 @@ function _renderNotifDropdown() {
             + '</div>'
             + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-notif-id="' + n.id + '" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
             + (n.type === 'weekly_report' && n.report ? '<button class="btn-icon" data-action="open-weekly-report" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + (n.type === 'journal_reminder' && new Date(n.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && !(state.journalToday && (state.journalToday.morningAt || state.journalToday.skipped)) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
+            + (n.type === 'journal_reminder' && tzDateStr(new Date(n.createdAt)) === tzDateStr() && !(state.journalToday && (state.journalToday.morningAt || state.journalToday.skipped)) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
             + '</div>';
         }).join('')
       + '</div>'

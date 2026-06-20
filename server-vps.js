@@ -1106,7 +1106,10 @@ var httpServer = http.createServer(async function (req, res) {
       var jSession = await getSession(req);
       if (!jSession) return unauthorized(res);
       var jUserId = jSession.user.id;
-      var jToday = new Date().toISOString().slice(0, 10);
+      // "Today" follows the user's Account-settings timezone (falls back to UTC if unset),
+      // so the journal's day boundary matches what they see in the app.
+      var jTzRes = await redis(['GET', 'account_tz:' + jUserId]);
+      var jToday = _getUserTimeInfo(jTzRes && jTzRes.result ? jTzRes.result : null, 0).userNow.toISOString().slice(0, 10);
       var jDb = getDb().sqlite;
 
       if (req.method === 'GET' && req.url === '/api/journal/today') {
@@ -2240,7 +2243,12 @@ setInterval(async function () {
     var jDb2 = getDb().sqlite;
     for (var i = 0; i < users.length; i++) {
       var uid = users[i].id;
-      var entryRow = jDb2.prepare('SELECT morning_at FROM journal_entries WHERE user_id = ? AND date = ?').get(uid, today);
+      // The journal's own "today" follows the user's account timezone — match that
+      // when checking whether they've already filled it in, even though the
+      // reminder itself fires at a fixed UTC moment (tied to the market session open).
+      var uidTzRes = await redis(['GET', 'account_tz:' + uid]);
+      var uidToday = _getUserTimeInfo(uidTzRes && uidTzRes.result ? uidTzRes.result : null, 0).userNow.toISOString().slice(0, 10);
+      var entryRow = jDb2.prepare('SELECT morning_at FROM journal_entries WHERE user_id = ? AND date = ?').get(uid, uidToday);
       if (entryRow && entryRow.morning_at) continue;
 
       pushNotification(uid, {

@@ -10,6 +10,7 @@ export const ANALYZE_DELAY_MS = 400;
 
 export const state = {
   userId: null,
+  timezone: null, // IANA string from Account settings; null = use browser's detected timezone
   coins: [],
   analysisCache: {},
   chartData: {},
