@@ -1417,7 +1417,7 @@ export function renderJournalChart(container, history) {
   var c = getChartColors();
   var chart = window.LightweightCharts.createChart(container, {
     autoSize: true,
-    layout: { background: { color: c.bg }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
+    layout: { background: { color: getCSSVar('--cloud') }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
     grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
     crosshair: { mode: 1 },
     rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
@@ -1458,7 +1458,7 @@ export function renderJournalChart(container, history) {
   });
 
   var areaSeries = chart.addAreaSeries({
-    lineColor: getCSSVar('--primary'),
+    lineColor: getCSSVar('--ink-deep'),
     topColor: 'rgba(0,0,0,0)',
     bottomColor: 'rgba(0,0,0,0)',
     lineWidth: 2,
