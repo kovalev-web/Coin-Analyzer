@@ -1426,7 +1426,12 @@ export function renderJournalChart(container, history) {
       var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
       return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
     }},
-    handleScroll: true, handleScale: true,
+    handleScroll: true,
+    // axisDoubleClickReset disabled — double-clicking the time axis was squishing
+    // the line (a default LightweightCharts reset gesture misbehaving here, not
+    // our own code). axisPressedMouseMove/mouseWheel/pinch stay at their defaults
+    // so drag-zoom on the axis and wheel/pinch zoom keep working normally.
+    handleScale: { axisPressedMouseMove: true, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
   });
   container._lwChart = chart;
 
