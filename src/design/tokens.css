@@ -157,7 +157,7 @@
 /* ── Dark mode: manual override ──────────────────────────────── */
 /* Keep in sync with media query block above.                     */
 :root[data-theme="dark"] {
-  --canvas:   #121517;
+  --canvas:   #111518;
   --paper:    #181d21;
   --cloud:    #0a0d0f;
   --fog:      #1e252a;
