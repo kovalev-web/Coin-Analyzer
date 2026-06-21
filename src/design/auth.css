@@ -40,19 +40,6 @@ body {
   flex-shrink: 0;
 }
 
-.auth-mode-label {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--graphite);
-  font-size: var(--text-sm);
-  font-family: var(--font-family);
-  cursor: pointer;
-  padding: 0;
-}
-
-.auth-mode-label:hover { color: var(--ink-deep); }
-
 .auth-forgot-link {
   display: block;
   background: none;
