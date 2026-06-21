@@ -258,7 +258,7 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 /* ── Briefing buttons ───────────────────────────────────────── */
 
 /* ── Briefing popup ─────────────────────────────────────────── */
-.bp-popup{position:absolute;z-index:1000;width:420px;display:none;}
+.bp-popup{position:absolute;z-index:1000;width:380px;display:none;}
 .bp-date-nav{display:flex;align-items:center;gap:var(--space-3);}
 .bp-date-label{font-size:var(--text-xs);font-weight:var(--font-normal);color:var(--ink-deep);white-space:nowrap;}
 .bp-today-tag{font-size:var(--text-2xs);font-weight:var(--font-semi);background:var(--primary);color:var(--canvas);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);margin-left:var(--space-2);vertical-align:middle;}
@@ -328,7 +328,7 @@ span.bp-status{cursor:default;}
 
 /* ── FV Briefing Drawer ─────────────────────────────────────── */
 #fv-briefing-drawer{width:0;overflow:hidden;background:var(--canvas);transition:width 0.2s ease;flex-shrink:0;}
-#fv-briefing-drawer.open{width:420px;overflow-y:auto;border-left:1px solid var(--steel);}
+#fv-briefing-drawer.open{width:380px;overflow-y:auto;border-left:1px solid var(--steel);}
 @media(orientation:landscape) and (max-height:500px){#fv-briefing-drawer.open{width:340px;}}
 .fvbd-header{display:flex;align-items:center;padding:var(--space-8) var(--space-8);flex-shrink:0;}
 .fvbd-title{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink-deep);flex:1;}
