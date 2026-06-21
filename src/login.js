@@ -18,6 +18,7 @@ if (savedEmail) emailEl.value = savedEmail;
 var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
+var modeLabelEl = document.getElementById('mode-label');
 var forgotEl = document.getElementById('forgot-btn');
 var googleEl = document.getElementById('google-btn');
 var errEl    = document.getElementById('login-error');
@@ -28,6 +29,7 @@ function setMode(reg) {
   formEl.dataset.mode = '';
   submitEl.textContent = reg ? 'Sign up' : 'Sign in';
   toggleEl.textContent = reg ? 'Already have an account? Sign in' : 'No account? Sign up';
+  modeLabelEl.textContent = reg ? 'Sign up' : 'Sign in';
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
   formEl.style.display = 'block';
@@ -62,6 +64,7 @@ googleEl.addEventListener('click', async function () {
 });
 
 toggleEl.addEventListener('click', function () { setMode(!isRegister); });
+modeLabelEl.addEventListener('click', function () { setMode(!isRegister); });
 
 forgotEl.addEventListener('click', function () {
   errEl.style.display = 'none';
