@@ -3278,6 +3278,7 @@ function _topbarHTML() {
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
+    + '<a href="/faq" class="burger-dd-item">' + icon('help-circle', 14) + 'FAQ</a>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
     + _sessionTimerMobileHTML()
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
@@ -3290,6 +3291,7 @@ function _topbarHTML() {
     + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
     + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
     + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
+    + '<a href="/faq" class="burger-dd-item">' + icon('help-circle', 14) + 'FAQ</a>'
     + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
     + _sessionTimerMobileHTML()
     + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
