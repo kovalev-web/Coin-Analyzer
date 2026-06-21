@@ -53,6 +53,13 @@ body {
 
 .auth-mode-label:hover { color: var(--ink-deep); }
 
+.auth-forgot-label {
+  color: var(--graphite);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-6);
+}
+
 .auth-forgot-link {
   display: block;
   background: none;
