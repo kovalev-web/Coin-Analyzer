@@ -1565,8 +1565,8 @@ export function showJournalAiModal() {
     + '<div class="popup-header"><span class="popup-title">AI analysis</span><button class="btn-topbar" data-action="close-journal-ai-modal">' + icon('x', 14) + '</button></div>'
     + '<div class="popup-body" id="journal-ai-modal-body"></div>'
     + '<div class="popup-footer">'
-    + '<button class="btn-cta" data-action="journal-regen-ai">Regenerate</button>'
     + '<button class="btn-cta danger" data-action="journal-ai-delete">Delete</button>'
+    + '<button class="btn-cta" data-action="journal-regen-ai">Regenerate</button>'
     + '</div>'
     + '</div>';
 
