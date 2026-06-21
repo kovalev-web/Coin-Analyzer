@@ -322,7 +322,14 @@ span.bp-status{cursor:default;}
 .bp-ai-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3);}
 .bp-ai-label{font-size:var(--text-2xs);font-weight:var(--font-semi);color:var(--graphite);text-transform:uppercase;letter-spacing:0.05em;}
 .bp-ai-date{font-size:var(--text-xs);color:var(--graphite);flex:1;margin-bottom:var(--space-8);}
-.bp-ai-text{font-size:var(--text-sm);line-height:1.5;color:var(--ink-deep);white-space:pre-wrap;}
+.bp-ai-text{font-size:var(--text-sm);line-height:1.5;color:var(--ink-deep);}
+.bp-ai-text p{margin:0 0 var(--space-6);}
+.bp-ai-text p:last-child{margin-bottom:0;}
+.bp-ai-text strong{font-weight:var(--font-semi);}
+.bp-ai-heading{font-weight:var(--font-bold);margin:0 0 var(--space-4);}
+.bp-ai-text ul{margin:0 0 var(--space-6);padding-left:var(--space-8);}
+.bp-ai-text ul ul{margin-bottom:0;}
+.bp-ai-text li{margin-bottom:var(--space-2);}
 .bp-ai-spinner{color:var(--graphite);font-size:var(--text-xs);padding:var(--space-4) 0;}
 
 /* ── FV Briefing Drawer ─────────────────────────────────────── */

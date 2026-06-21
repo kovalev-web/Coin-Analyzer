@@ -1582,6 +1582,46 @@ export function hideJournalAiModal() {
   el.remove();
 }
 
+// Minimal markdown subset used by the AI summary: **bold**, "# " headings,
+// "* "/"- " bullets (one nesting level via leading whitespace). Inline text is
+// escaped before any tag is added, so raw markdown chars never reach the DOM
+// unescaped.
+function _aiInline(s) {
+  return escHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function _aiMarkdownToHtml(raw) {
+  var lines = (raw || '').replace(/\r\n/g, '\n').split('\n');
+  var html = '';
+  var listDepth = 0;
+  function closeLists() { while (listDepth > 0) { html += '</ul>'; listDepth--; } }
+  lines.forEach(function (line) {
+    var trimmed = line.trim();
+    if (trimmed === '') { closeLists(); return; }
+
+    var headerMatch = trimmed.match(/^#{1,6}\s+(.*)/);
+    if (headerMatch) {
+      closeLists();
+      html += '<div class="bp-ai-heading">' + _aiInline(headerMatch[1]) + '</div>';
+      return;
+    }
+
+    var bulletMatch = line.match(/^(\s*)[*-]\s+(.*)/);
+    if (bulletMatch) {
+      var depth = bulletMatch[1].length >= 2 ? 2 : 1;
+      while (listDepth < depth) { html += '<ul>'; listDepth++; }
+      while (listDepth > depth) { html += '</ul>'; listDepth--; }
+      html += '<li>' + _aiInline(bulletMatch[2]) + '</li>';
+      return;
+    }
+
+    closeLists();
+    html += '<p>' + _aiInline(trimmed) + '</p>';
+  });
+  closeLists();
+  return html;
+}
+
 export function renderJournalAiModalContent() {
   var body = document.getElementById('journal-ai-modal-body');
   if (!body) return;
@@ -1592,7 +1632,7 @@ export function renderJournalAiModalContent() {
     dateStr = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', timeZone: effectiveTZ() }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() });
   }
   body.innerHTML = (dateStr ? '<div class="bp-ai-date">' + dateStr + '</div>' : '')
-    + '<div class="bp-ai-text">' + escHtml(aiText || '') + '</div>';
+    + '<div class="bp-ai-text">' + _aiMarkdownToHtml(aiText || '') + '</div>';
 }
 
 export function renderJournalSummarySection() {
