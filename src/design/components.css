@@ -375,10 +375,10 @@ span.bp-status{cursor:default;}
 .tape-row.large.buy{color:var(--bullish);}
 .tape-row.large.sell{color:var(--danger);}
 .tape-time{display:none;}
-.tape-price{flex:1;}
+.tape-price{flex:1;color:var(--graphite);}
 .tape-qty{color:var(--graphite);}
-.tape-row.large.buy .tape-qty{color:var(--bullish);}
-.tape-row.large.sell .tape-qty{color:var(--danger);}
+.tape-row.large.buy .tape-price,.tape-row.large.buy .tape-qty{color:var(--bullish);}
+.tape-row.large.sell .tape-price,.tape-row.large.sell .tape-qty{color:var(--danger);}
 
 /* ── Search popup ───────────────────────────────────────────── */
 .search-popup{position:absolute;z-index:1010;width:360px;flex-direction:column;display:none;}
