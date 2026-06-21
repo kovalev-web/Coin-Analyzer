@@ -234,3 +234,17 @@ body {
   margin-top: var(--space-12);
 }
 .auth-demo-link:hover { color: var(--primary); opacity: 0.8; }
+
+/* ── Login form spacing — bespoke gaps, scoped to #login-card only
+   so they don't leak into reset-password.html / design.html, which
+   reuse the same .auth-card/.popup-footer/.auth-btn-primary classes.
+   Each value below neutralizes the shared class's own margin first,
+   so gaps don't stack on top of each other. ─────────────────────── */
+#login-card .auth-divider { margin: 14px 0; }
+#login-card #email { margin-bottom: 12px; }
+#login-card #password { margin-bottom: 0; }
+#login-card .auth-forgot-link { margin: 8px 0 18px; }
+#login-card .auth-btn-primary { margin-top: 0; }
+#login-card #toggle-mode { margin-top: 0; }
+#login-card .auth-demo-link { margin-top: 0; }
+#login-card .popup-footer { gap: 32px; padding-bottom: 24px; }
