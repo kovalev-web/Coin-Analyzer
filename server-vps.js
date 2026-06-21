@@ -1418,6 +1418,11 @@ var httpServer = http.createServer(async function (req, res) {
             var gemPartsJ = (gemDataJ.candidates && gemDataJ.candidates[0] && gemDataJ.candidates[0].content && gemDataJ.candidates[0].content.parts) || [];
             var gemPartJ = gemPartsJ.find(function (p) { return !p.thought; }) || gemPartsJ[0] || {};
             var jAiText = gemPartJ.text || '';
+            // Gemini echoes the YYYY-MM-DD dates from the prompt verbatim — reformat
+            // to DD.MM.YY to match the date format used everywhere else in the app.
+            jAiText = jAiText.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, function (m, y, mo, d) {
+              return d + '.' + mo + '.' + y.slice(2);
+            });
 
             await redis(['SET', 'briefing_ai:' + jUserId, JSON.stringify({ text: jAiText, range: jParsedA.range, date: new Date().toISOString(), userId: jUserId })]);
             res.writeHead(200, { 'Content-Type': 'application/json' });
