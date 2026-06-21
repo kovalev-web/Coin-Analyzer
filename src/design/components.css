@@ -507,16 +507,16 @@ summary.journal-history-row::marker{display:none;}
 .journal-history-detail-label::after{content:':';}
 .journal-page{padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;}
 .journal-chart-row{display:flex;gap:var(--space-8);margin-bottom:var(--space-12);align-items:stretch;}
-.journal-chart-row #journal-pnl-chart{flex:1;min-width:0;margin-bottom:0;}
+.journal-chart-row #journal-pnl-chart{flex:1;min-width:0;margin-bottom:0;height:400px;}
 .journal-stats-col{display:flex;flex-direction:column;gap:var(--space-8);width:200px;flex-shrink:0;}
 .journal-stats-col .bp-stat-card{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:var(--space-6);background:var(--canvas);}
 .journal-stats-col .bp-stat-val{font-size:var(--text-lg);}
 .journal-stats-col .bp-stat-val.up,.journal-stats-col .bp-stat-val.dn{color:var(--ink-deep);}
 @media(max-width:768px){
   .journal-chart-row{flex-direction:column;}
-  .journal-chart-row #journal-pnl-chart{flex:none;width:100%;}
+  .journal-chart-row #journal-pnl-chart{flex:none;width:100%;height:200px;}
   .journal-stats-col{width:auto;flex-direction:row;flex-wrap:wrap;}
-  .journal-stats-col .bp-stat-card{flex:1 1 calc(50% - var(--space-3));}
+  .journal-stats-col .bp-stat-card{flex:1 1 calc(50% - var(--space-4));}
 }
 .journal-page-header{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);}
 .journal-page-title{display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-2xl);font-weight:var(--font-bold);}
