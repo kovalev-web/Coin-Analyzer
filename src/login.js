@@ -22,6 +22,7 @@ var backBtnEl = document.getElementById('back-to-signin');
 var googleBtnTextEl = document.getElementById('google-btn-text');
 var forgotEl = document.getElementById('forgot-btn');
 var googleEl = document.getElementById('google-btn');
+var dividerEl = document.getElementById('auth-divider');
 var errEl    = document.getElementById('login-error');
 var msgEl    = document.getElementById('login-msg');
 
@@ -39,6 +40,8 @@ function setMode(reg) {
   toggleEl.style.display = 'block';
   forgotEl.style.display = reg ? 'none' : 'block';
   backBtnEl.style.display = 'none';
+  googleEl.style.display = 'flex';
+  dividerEl.style.display = 'flex';
 }
 
 googleEl.addEventListener('click', async function () {
@@ -80,6 +83,8 @@ forgotEl.addEventListener('click', function () {
   isRegister = false;
   formEl.dataset.mode = 'forgot';
   backBtnEl.style.display = 'block';
+  googleEl.style.display = 'none';
+  dividerEl.style.display = 'none';
 });
 
 formEl.addEventListener('submit', async function (e) {
