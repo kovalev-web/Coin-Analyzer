@@ -5002,7 +5002,9 @@ export function renderFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   var today = todayDate();
-  var allEntries = state.briefing || [];
+  var weekMonday = _dateStr(_currentWeekMonday());
+  var weekSunday = (function () { var d = _currentWeekMonday(); d.setUTCDate(d.getUTCDate() + 6); return _dateStr(d); })();
+  var allEntries = (state.briefing || []).filter(function (e) { return e.date >= weekMonday && e.date <= weekSunday; });
   if (!allEntries.length) {
     drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + _fvbdJournalActionsHTML() + '<div class="fvbd-empty">Watchlist is empty</div>';
     return;
