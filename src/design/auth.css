@@ -245,6 +245,8 @@ body {
 #login-card #password { margin-bottom: 0; }
 #login-card .auth-forgot-link { margin: 8px 0 18px; }
 #login-card .auth-btn-primary { margin-top: 0; }
-#login-card #toggle-mode { margin-top: 0; }
-#login-card .auth-demo-link { margin-top: 0; }
+/* .auth-btn-link's own 8px vertical padding was adding on top of the gaps
+   below, inflating every visual gap by 8-16px beyond the intended value. */
+#login-card #toggle-mode { margin-top: 0; padding-top: 0; padding-bottom: 0; }
+#login-card .auth-demo-link { margin-top: 0; padding-top: 0; padding-bottom: 0; }
 #login-card .popup-footer { gap: 32px; padding-bottom: 24px; }
