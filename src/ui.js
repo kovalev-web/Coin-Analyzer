@@ -4,6 +4,9 @@ import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
+
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip);
 
 // ── Utility ────────────────────────────────────────────────────────────────
 
@@ -1401,10 +1404,10 @@ export function hideEveningModal() {
 export function renderJournalChart(container, history) {
   if (!container) return;
   // Re-rendering (e.g. interval change) leaves a stale chart instance behind
-  // unless the previous one is disposed first — createChart() doesn't replace it.
-  if (container._lwChart) {
-    try { container._lwChart.remove(); } catch (e) {}
-    container._lwChart = null;
+  // unless the previous one is destroyed first.
+  if (container._chart) {
+    try { container._chart.destroy(); } catch (e) {}
+    container._chart = null;
   }
   container.innerHTML = '';
   if (!history || !history.length) {
@@ -1413,27 +1416,6 @@ export function renderJournalChart(container, history) {
   }
 
   container.style.position = 'relative';
-
-  var c = getChartColors();
-  var chart = window.LightweightCharts.createChart(container, {
-    autoSize: true,
-    layout: { background: { color: getCSSVar('--cloud') }, textColor: c.text, fontSize: 11, fontFamily: 'Manrope, Arial, sans-serif' },
-    grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
-    crosshair: { mode: 1 },
-    rightPriceScale: { visible: true, borderColor: c.border, scaleMargins: { top: 0.2, bottom: 0.05 } },
-    timeScale: { borderColor: c.border, timeVisible: false, tickMarkFormatter: function (t, type) {
-      var d = new Date(t * 1000);
-      var day = d.getUTCDate(); var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
-      return type <= 1 ? mon + ' ' + d.getUTCFullYear() : day + ' ' + mon;
-    }},
-    handleScroll: true,
-    // axisDoubleClickReset disabled — double-clicking the time axis was squishing
-    // the line (a default LightweightCharts reset gesture misbehaving here, not
-    // our own code). axisPressedMouseMove/mouseWheel/pinch stay at their defaults
-    // so drag-zoom on the axis and wheel/pinch zoom keep working normally.
-    handleScale: { axisPressedMouseMove: true, axisDoubleClickReset: false, mouseWheel: true, pinch: true },
-  });
-  container._lwChart = chart;
 
   // Build lookup by date
   var historyMap = {};
@@ -1450,39 +1432,25 @@ export function renderJournalChart(container, history) {
     _cur.setUTCDate(_cur.getUTCDate() + 1);
   }
 
-  // Convert date string to Unix midnight UTC timestamp
-  function _dts(d) { return Math.floor(new Date(d + 'T00:00:00Z').getTime() / 1000); }
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function _axisLabel(d) { var dt = new Date(d + 'T00:00:00Z'); return dt.getUTCDate() + ' ' + MONTHS[dt.getUTCMonth()]; }
 
   var cumulative = 0;
-  var areaData = [];
+  var dataPoints = [];
+  var labels = [];
   allDates.forEach(function (date) {
     var row = historyMap[date];
     if (row) cumulative += row.pnl || 0;
-    var t = _dts(date);
-    areaData.push({ time: t, value: parseFloat(cumulative.toFixed(2)) });
+    dataPoints.push(parseFloat(cumulative.toFixed(2)));
+    labels.push(_axisLabel(date));
   });
 
-  var areaSeries = chart.addAreaSeries({
-    lineColor: getCSSVar('--ink-deep'),
-    topColor: 'rgba(0,0,0,0)',
-    bottomColor: 'rgba(0,0,0,0)',
-    lineWidth: 2,
-    priceScaleId: 'right',
-    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
-    priceLineVisible: false,
-  });
-  areaSeries.setData(areaData);
+  var c = getChartColors();
+  var canvas = document.createElement('canvas');
+  container.appendChild(canvas);
 
-  chart.timeScale().fitContent();
-
-  // Double-click resets the view — using fitContent() (same call as on load,
-  // known safe) instead of the native axisDoubleClickReset gesture we disabled
-  // above, which was squishing the line.
-  container.addEventListener('dblclick', function () {
-    chart.timeScale().fitContent();
-  });
-
-  // Tooltip
+  // Custom HTML tooltip (positioned div) — matches DS styling, which Chart.js's
+  // canvas-drawn default tooltip can't do (no per-line color, no CSS vars).
   var toolTip = document.createElement('div');
   toolTip.style.cssText = 'position:absolute;display:none;z-index:10;pointer-events:none;' +
     'background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);font-family:Manrope,Arial,sans-serif;' +
@@ -1490,20 +1458,16 @@ export function renderJournalChart(container, history) {
     'border:1px solid var(--steel);min-width:180px;';
   container.appendChild(toolTip);
 
-  chart.subscribeCrosshairMove(function (param) {
-    if (!param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+  function externalTooltip(ctx) {
+    var tooltipModel = ctx.tooltip;
+    if (!tooltipModel || tooltipModel.opacity === 0 || !tooltipModel.dataPoints || !tooltipModel.dataPoints.length) {
       toolTip.style.display = 'none';
       return;
     }
-    var pnlData = param.seriesData.get(areaSeries);
-    var pnlVal = pnlData ? pnlData.value : null;
-    if (pnlVal == null) { toolTip.style.display = 'none'; return; }
-
-    var d = new Date(param.time * 1000);
-    // param.time is a UTC-midnight-anchored day bucket (see renderJournalChart) — must
-    // read it back in UTC, not the effective timezone, or the date can shift by a day.
-    var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-    var dayRow = historyMap[d.toISOString().slice(0, 10)];
+    var idx = tooltipModel.dataPoints[0].dataIndex;
+    var date = allDates[idx];
+    var dateStr = new Date(date + 'T00:00:00Z').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    var dayRow = historyMap[date];
     var dayPnl = dayRow ? (dayRow.pnl || 0) : 0;
     var tradeCount = dayRow ? (dayRow.tradeCount || 0) : 0;
     var pnlSign = dayPnl > 0 ? '+' : '';
@@ -1523,15 +1487,48 @@ export function renderJournalChart(container, history) {
     toolTip.style.display = 'block';
     var tipW = toolTip.offsetWidth;
     var tipH = toolTip.offsetHeight;
-    var left = param.point.x + 12;
-    var top = param.point.y + 12;
-    if (left + tipW > container.clientWidth) left = param.point.x - tipW - 12;
+    var left = tooltipModel.caretX + 12;
+    var top = tooltipModel.caretY + 12;
+    if (left + tipW > container.clientWidth) left = tooltipModel.caretX - tipW - 12;
     if (left < 0) left = 0;
-    if (top + tipH > container.clientHeight) top = param.point.y - tipH - 12;
+    if (top + tipH > container.clientHeight) top = tooltipModel.caretY - tipH - 12;
     if (top < 0) top = 0;
     toolTip.style.left = left + 'px';
     toolTip.style.top = top + 'px';
+  }
+
+  var chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: dataPoints,
+        borderColor: getCSSVar('--ink-deep'),
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: getCSSVar('--ink-deep'),
+        pointHoverBorderWidth: 0,
+        fill: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { grid: { color: c.grid }, border: { color: c.border }, ticks: { color: c.text, font: { size: 11, family: 'Manrope, Arial, sans-serif' }, autoSkip: true, maxRotation: 0 } },
+        y: { position: 'right', grid: { color: c.grid }, border: { color: c.border }, ticks: { color: c.text, font: { size: 11, family: 'Manrope, Arial, sans-serif' }, callback: function (v) { return v.toFixed(2); } } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false, external: externalTooltip },
+      },
+    },
   });
+  container._chart = chart;
 }
 
 export function showWeeklyReportModal(report) {
