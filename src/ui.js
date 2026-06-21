@@ -3982,8 +3982,18 @@ function _fvCoinInfoHTML(sym, tf) {
 
 var TAPE_MAX_ROWS = 20;
 var TAPE_MIN_USDT = 50;
+var TAPE_NOTIONAL_WINDOW = 50; // rolling sample of recent trade sizes, for the relative "large" threshold below
+var TAPE_LARGE_MULTIPLIER = 3; // a trade is "large" once it's this many times the coin's recent median size
+var _tapeNotionals = [];
+
+function _tapeMedian(arr) {
+  var sorted = arr.slice().sort(function (a, b) { return a - b; });
+  var mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
 
 function _fvLiquidityHTML() {
+  _tapeNotionals = [];
   return '<div class="fv-liquidity" id="fv-liquidity">'
     + '<div class="popup-header"><span class="popup-title">Orderbook</span>'
     + '<button class="btn-topbar" data-action="close-liq-panel">' + icon('x', 14) + '</button></div>'
@@ -4044,11 +4054,19 @@ function _fmtQty(n) {
 }
 
 function appendTapeRow(trade) {
-  if (trade.price * trade.qty < TAPE_MIN_USDT) return;
+  var notional = trade.price * trade.qty;
+  if (notional < TAPE_MIN_USDT) return;
   var list = document.getElementById('fv-tape-list');
   if (!list) return;
+
+  // "Large" is relative to this coin's own recent trades, not a fixed USDT amount —
+  // a $500 trade is huge on a thin altcoin and unremarkable on BTC.
+  var isLarge = _tapeNotionals.length >= 5 && notional >= _tapeMedian(_tapeNotionals) * TAPE_LARGE_MULTIPLIER;
+  _tapeNotionals.push(notional);
+  if (_tapeNotionals.length > TAPE_NOTIONAL_WINDOW) _tapeNotionals.shift();
+
   var row = document.createElement('div');
-  row.className = 'tape-row ' + (trade.isBuy ? 'buy' : 'sell');
+  row.className = 'tape-row' + (isLarge ? ' large ' + (trade.isBuy ? 'buy' : 'sell') : '');
   var hms = tzTimeStrSec(new Date(trade.ts)).split(':');
   var hh = hms[0], mm = hms[1], ss = hms[2];
   row.innerHTML = '<span class="tape-time">' + hh + ':' + mm + ':' + ss + '</span>'
