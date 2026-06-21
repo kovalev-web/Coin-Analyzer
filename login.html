@@ -10,7 +10,8 @@
 </head>
 <body>
   <div id="login-card" class="auth-card">
-    <div class="popup-header">
+    <div class="popup-header auth-header">
+      <img src="/favicon.svg" class="auth-logo" alt="" width="28" height="28">
       <h1 class="auth-title">Questtick</h1>
     </div>
     <div class="popup-body">
@@ -23,14 +24,14 @@
       <form id="login-form" autocomplete="on">
         <input type="email" id="email" placeholder="Email" required autocomplete="email">
         <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+        <button type="button" id="forgot-btn" class="auth-forgot-link">Forgot password?</button>
         <div id="login-error" class="auth-error"></div>
         <button type="submit" id="submit-btn" class="auth-btn-primary">Sign in</button>
       </form>
     </div>
     <div class="popup-footer">
       <button id="toggle-mode" class="auth-btn-link">No account? Sign up</button>
-      <button id="forgot-btn" class="auth-btn-link">Forgot password?</button>
-      <a href="/" class="auth-btn-link auth-demo-link">Try without account →</a>
+      <a href="/" class="auth-btn-link auth-demo-link">Try without account</a>
     </div>
   </div>
 </body>
