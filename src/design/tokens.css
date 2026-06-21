@@ -133,7 +133,7 @@
 /* ── Dark mode: system preference ────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas:   #121517;
+    --canvas:   #111518;
     --paper:    #181d21;
     --cloud:    #0a0d0f;
     --fog:      #1e252a;
