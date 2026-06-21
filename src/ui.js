@@ -1620,7 +1620,7 @@ export function renderJournalSummarySection() {
   var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
   var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
 
-  if (container) container.innerHTML = aiEligible ? '' : '<div class="bp-ai-block"><div class="fvbd-empty">AI analysis is available for intervals up to 1 month</div></div>';
+  if (container) container.innerHTML = '';
 
   var genBtn = document.getElementById('journal-gen-ai-btn');
   if (genBtn) {

@@ -319,7 +319,6 @@ span.bp-status{cursor:default;}
 .bp-stat-val{font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink-deep);margin-top:var(--space-1);}
 .bp-stat-val.up{color:var(--bullish);}
 .bp-stat-val.dn{color:var(--danger);}
-.bp-ai-block{margin-top:var(--space-3);}
 .bp-ai-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3);}
 .bp-ai-label{font-size:var(--text-2xs);font-weight:var(--font-semi);color:var(--graphite);text-transform:uppercase;letter-spacing:0.05em;}
 .bp-ai-date{font-size:var(--text-xs);color:var(--graphite);flex:1;}
