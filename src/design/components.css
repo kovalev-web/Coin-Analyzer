@@ -102,7 +102,7 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .popup-body{padding:var(--space-8) var(--space-6) 0;}
 .analysis-overlay .popup-body{padding-bottom:var(--space-8);}
 .popup-footer{display:flex;flex-direction:column;gap:var(--space-6);margin-top:var(--space-8);padding:0 var(--space-6) var(--space-8);}
-.btn-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-3);height:var(--h-btn-lg);padding:0 var(--space-7);font-size:var(--text-xs);font-weight:var(--font-semi);border-radius:var(--radius-md);background:transparent;color:var(--ink-deep);border:1px solid var(--steel);cursor:pointer;white-space:nowrap;}
+.btn-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-3);height:var(--h-btn-lg);padding:0 var(--space-7);font-size:var(--text-xs);font-weight:var(--font-medium);border-radius:var(--radius-md);background:transparent;color:var(--ink-deep);border:1px solid var(--steel);cursor:pointer;white-space:nowrap;}
 .btn-cta:hover:not(:disabled){opacity:0.8;}
 .btn-cta:disabled{opacity:0.5;cursor:default;}
 .btn-cta.danger{color:var(--danger);border-color:var(--danger);background:transparent;}
