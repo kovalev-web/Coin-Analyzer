@@ -364,7 +364,7 @@ span.bp-status{cursor:default;}
 .liq-value.wide{color:var(--danger);}
 .liq-bar-track{display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
 .liq-bar{height:100%;}
-.liq-bar.bid{background:var(--ink-deep);}
+.liq-bar.bid{background:var(--graphite);}
 .liq-bar.ask{background:var(--graphite);}
 .liq-aggr-track{position:relative;display:flex;height:6px;border-radius:var(--radius-full);overflow:hidden;background:var(--fog);}
 .liq-aggr-buy{background:var(--bullish);height:100%;}
