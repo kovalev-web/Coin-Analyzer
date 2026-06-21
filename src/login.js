@@ -18,6 +18,7 @@ if (savedEmail) emailEl.value = savedEmail;
 var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
+var backBtnEl = document.getElementById('back-to-signin');
 var googleBtnTextEl = document.getElementById('google-btn-text');
 var forgotEl = document.getElementById('forgot-btn');
 var googleEl = document.getElementById('google-btn');
@@ -37,6 +38,7 @@ function setMode(reg) {
   passEl.required = true;
   toggleEl.style.display = 'block';
   forgotEl.style.display = reg ? 'none' : 'block';
+  backBtnEl.style.display = 'none';
 }
 
 googleEl.addEventListener('click', async function () {
@@ -65,6 +67,8 @@ googleEl.addEventListener('click', async function () {
 
 toggleEl.addEventListener('click', function () { setMode(!isRegister); });
 
+backBtnEl.addEventListener('click', function () { setMode(false); });
+
 forgotEl.addEventListener('click', function () {
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
@@ -75,6 +79,7 @@ forgotEl.addEventListener('click', function () {
   submitEl.textContent = 'Send email';
   isRegister = false;
   formEl.dataset.mode = 'forgot';
+  backBtnEl.style.display = 'block';
 });
 
 formEl.addEventListener('submit', async function (e) {
