@@ -243,8 +243,10 @@ body {
 #login-card .auth-divider { margin: 14px 0; }
 #login-card #email { margin-bottom: 12px; }
 #login-card #password { margin-bottom: 0; }
-#login-card .auth-forgot-link { margin: 8px 0 18px; }
-#login-card .auth-btn-primary { margin-top: 0; }
+/* margin-top (not bottom) so the 18px gap above Sign in/Sign up still holds
+   when #forgot-btn is display:none in sign-up mode (see login.js). */
+#login-card .auth-forgot-link { margin: 8px 0 0; }
+#login-card .auth-btn-primary { margin-top: 18px; }
 /* .auth-btn-link's own 8px vertical padding was adding on top of the gaps
    below, inflating every visual gap by 8-16px beyond the intended value. */
 #login-card #toggle-mode { margin-top: 0; padding-top: 0; padding-bottom: 0; }
