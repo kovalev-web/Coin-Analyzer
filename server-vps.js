@@ -934,9 +934,33 @@ async function computeJournalRangeStats(userId, today, range) {
   // counting logic as the client's fetchWeekTrades().
   var streams = {};
   var totalPnl = 0;
+  // Per-day breakdown for the journal chart — dayCache is already keyed by
+  // (sym, date), so each entry's fills belong to exactly one date, no cross-day
+  // contamination like the streams merge below.
+  var dailyPnl = {}, dailyTradeCount = {};
   entries.forEach(function (e) {
     var fills = dayCache[e.sym + ':' + e.date] || [];
-    fills.forEach(function (f) { totalPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
+    var dayNet = 0;
+    fills.forEach(function (f) { dayNet += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
+    totalPnl += dayNet;
+    dailyPnl[e.date] = (dailyPnl[e.date] || 0) + dayNet;
+
+    var bySide = {};
+    fills.forEach(function (f) {
+      var sideKey = f.positionSide || 'BOTH';
+      (bySide[sideKey] = bySide[sideKey] || []).push(f);
+    });
+    var dayTrades = 0;
+    Object.values(bySide).forEach(function (sideFills) {
+      sideFills.sort(function (a, b) { return a.time - b.time; });
+      var position = 0;
+      sideFills.forEach(function (f) {
+        position += f.side === 'BUY' ? parseFloat(f.qty) : -parseFloat(f.qty);
+        if (Math.abs(position) < 0.00001) dayTrades++;
+      });
+    });
+    dailyTradeCount[e.date] = (dailyTradeCount[e.date] || 0) + dayTrades;
+
     fills.forEach(function (fill) {
       var sKey = e.sym + ':' + (fill.positionSide || 'BOTH');
       if (!streams[sKey]) streams[sKey] = {};
@@ -958,6 +982,10 @@ async function computeJournalRangeStats(userId, today, range) {
     });
   });
 
+  var daily = Object.keys(dailyPnl).sort().map(function (d) {
+    return { date: d, pnl: parseFloat(dailyPnl[d].toFixed(2)), tradeCount: dailyTradeCount[d] || 0 };
+  });
+
   return {
     entries: entries,
     dayCache: dayCache,
@@ -967,6 +995,7 @@ async function computeJournalRangeStats(userId, today, range) {
     winRate: tradeCount > 0 ? Math.round(winCount / tradeCount * 100) : 0,
     from: fromDate,
     to: today,
+    daily: daily,
   };
 }
 
@@ -1327,6 +1356,7 @@ var httpServer = http.createServer(async function (req, res) {
               winRate: jStats.winRate,
               from: jStats.from,
               to: jStats.to,
+              daily: jStats.daily,
             }));
           } catch (e) {
             res.writeHead(e.message === 'Invalid range' ? 400 : 502, { 'Content-Type': 'application/json' });

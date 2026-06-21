@@ -4,7 +4,7 @@ import {
   loadCache, startChartPolling, fetchAllNATR, fetchNATR,
   fetchBriefingTrades, fetchAllBriefingTrades,
   fetchNotifications,
-  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv, fetchPnlHistory,
+  fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv,
   fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary,
 } from './api.js';
 import {
@@ -895,20 +895,20 @@ var JOURNAL_SUMMARY_RANGES = [
   { value: '6m', label: '6 months' },
 ];
 var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m': 180 };
-var _journalPnlHistoryFull = [];
 
+// Chart uses the same Binance-derived daily breakdown as the PnL summary card
+// (state.journalSummary.daily) — not the manually-entered journal_entries.pnl —
+// so the chart's total always matches the card's total.
 function _renderJournalPnlChart() {
-  var days = JOURNAL_RANGE_DAYS[state.journalRange] || 7;
-  var fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-  var filtered = _journalPnlHistoryFull.filter(function (h) { return h.date >= fromDate; });
-  renderJournalChart(document.getElementById('journal-pnl-chart'), filtered);
+  var daily = (state.journalSummary && state.journalSummary.daily) || [];
+  renderJournalChart(document.getElementById('journal-pnl-chart'), daily);
 }
 
 function _refreshJournalSummary() {
-  _renderJournalPnlChart();
   renderJournalSummarySection();
   fetchJournalSummary(state.journalRange).then(function () {
     renderJournalSummarySection();
+    _renderJournalPnlChart();
   });
 }
 
@@ -948,13 +948,10 @@ registerRoute('/journal', function () {
   if (state.journalEntries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
   }
-  fetchPnlHistory().then(function (history) {
-    _journalPnlHistoryFull = history;
-    _renderJournalPnlChart();
-  });
   renderJournalSummarySection();
   fetchJournalSummary(state.journalRange).then(function () {
     renderJournalSummarySection();
+    _renderJournalPnlChart();
   });
   fetchJournalRecent().then(function (entries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), entries);
