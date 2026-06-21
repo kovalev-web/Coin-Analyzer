@@ -14,7 +14,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: auto;
 }
 
 /* ── Auth card ───────────────────────────────────────────────── */

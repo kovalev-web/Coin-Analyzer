@@ -39,7 +39,7 @@ body {
   display: flow-root;
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: auto;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
