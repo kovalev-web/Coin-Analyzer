@@ -19,6 +19,7 @@ var passEl   = document.getElementById('password');
 var submitEl = document.getElementById('submit-btn');
 var toggleEl = document.getElementById('toggle-mode');
 var modeLabelEl = document.getElementById('mode-label');
+var googleBtnTextEl = document.getElementById('google-btn-text');
 var forgotEl = document.getElementById('forgot-btn');
 var googleEl = document.getElementById('google-btn');
 var errEl    = document.getElementById('login-error');
@@ -30,6 +31,7 @@ function setMode(reg) {
   submitEl.textContent = reg ? 'Sign up' : 'Sign in';
   toggleEl.textContent = reg ? 'Already have an account? Sign in' : 'No account? Sign up';
   modeLabelEl.textContent = reg ? 'Sign up' : 'Sign in';
+  googleBtnTextEl.textContent = reg ? 'Sign up with Google' : 'Sign in with Google';
   errEl.style.display = 'none';
   msgEl.style.display = 'none';
   formEl.style.display = 'block';
