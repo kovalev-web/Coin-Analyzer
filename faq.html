@@ -15,7 +15,8 @@
     .faq-section-title { font-size: var(--text-base); font-weight: var(--font-bold); margin-bottom: var(--v-sm); }
     details { border-bottom: 1px solid var(--steel); }
     details:last-of-type { border-bottom: none; }
-    summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding: var(--space-7) 0; font-size: var(--text-sm); font-weight: var(--font-semi); cursor: pointer; list-style: none; }
+    summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding: var(--space-7) 0; font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--graphite); cursor: pointer; list-style: none; }
+    details[open] > summary { color: var(--ink-deep); }
     summary::-webkit-details-marker { display: none; }
     summary::after { content: '+'; color: var(--graphite); font-weight: var(--font-normal); flex-shrink: 0; }
     details[open] summary::after { content: '−'; }
