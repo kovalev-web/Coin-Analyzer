@@ -1003,7 +1003,7 @@ var httpServer = http.createServer(async function (req, res) {
   var origin = req.headers.origin;
   res.setHeader('Access-Control-Allow-Origin', CORS_ORIGINS.includes(origin) ? origin : 'https://questtick.com');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
@@ -1381,6 +1381,11 @@ var httpServer = http.createServer(async function (req, res) {
             }
             var jAiStats = await computeJournalRangeStats(jUserId, jToday, jParsedA.range);
 
+            // Cached per (user, range) in Redis — the source of truth for the cache
+            // check lives server-side, so this stays correct across the user's devices
+            // (no reliance on a device-local cache for the "did anything change" decision).
+            var jAiCacheKey = 'journal_ai:' + jUserId + ':' + jParsedA.range;
+
             var jByDate = {};
             jAiStats.entries.forEach(function (e) { if (!jByDate[e.date]) jByDate[e.date] = []; jByDate[e.date].push(e); });
             var jBriefingText = Object.keys(jByDate).sort().reverse().map(function (date) {
@@ -1402,6 +1407,19 @@ var httpServer = http.createServer(async function (req, res) {
 
             var jStatsText = 'Итого за период: PnL $' + jAiStats.pnl.toFixed(2) + ', сделок ' + jAiStats.tradeCount
               + ', win rate ' + jAiStats.winRate + '%';
+
+            // Fingerprint of everything that feeds the prompt — if this is unchanged
+            // since the last generation for this (user, range), the trade data hasn't
+            // moved and we can return the cached text without spending Gemini tokens.
+            var jAiFingerprint = crypto.createHash('sha256').update(jBriefingText + '\n' + jStatsText).digest('hex');
+            var jAiCachedRes = await redis(['GET', jAiCacheKey]);
+            var jAiCached = jAiCachedRes.result ? JSON.parse(jAiCachedRes.result) : null;
+            if (jAiCached && jAiCached.fingerprint === jAiFingerprint && !jParsedA.force) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ text: jAiCached.text, date: jAiCached.date, cached: true }));
+              return;
+            }
+
             var jWordLimit = jParsedA.range === '1m' ? 450 : 300;
             var jAiPrompt = 'Ты торговый аналитик. Разбери мою торговую активность за ' + jAiLabel + '.\n\n'
               + 'Брифинги (монеты + заметки с уровнями + реальный PnL по каждой):\n'
@@ -1424,9 +1442,28 @@ var httpServer = http.createServer(async function (req, res) {
               return d + '.' + mo + '.' + y.slice(2);
             });
 
-            await redis(['SET', 'briefing_ai:' + jUserId, JSON.stringify({ text: jAiText, range: jParsedA.range, date: new Date().toISOString(), userId: jUserId })]);
+            var jAiDate = new Date().toISOString();
+            await redis(['SET', jAiCacheKey, JSON.stringify({ text: jAiText, date: jAiDate, fingerprint: jAiFingerprint, userId: jUserId })]);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ text: jAiText }));
+            res.end(JSON.stringify({ text: jAiText, date: jAiDate, cached: false }));
+          } catch (e) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+        return;
+      }
+
+      if (req.method === 'DELETE' && req.url === '/api/journal/ai-summary') {
+        var jBodyD = '';
+        req.on('data', function (chunk) { jBodyD += chunk; });
+        req.on('end', async function () {
+          try {
+            var jParsedD = JSON.parse(jBodyD || '{}');
+            if (!jParsedD.range) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'range required' })); return; }
+            await redis(['DEL', 'journal_ai:' + jUserId + ':' + jParsedD.range]);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
           } catch (e) {
             res.writeHead(502, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));

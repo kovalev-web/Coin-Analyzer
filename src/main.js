@@ -435,7 +435,7 @@ document.body.addEventListener('click', function (e) {
       var _jrgBtn = target;
       _jrgBtn.disabled = true;
       _jrgBtn.classList.add('btn-loading');
-      generateJournalAiSummary(state.journalRange).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
+      generateJournalAiSummary(state.journalRange, true).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
         _jrgBtn.disabled = false;
         _jrgBtn.classList.remove('btn-loading');
         renderJournalSummarySection();
@@ -447,7 +447,7 @@ document.body.addEventListener('click', function (e) {
       hideJournalAiModal();
       break;
     case 'journal-ai-delete':
-      deleteJournalAiSummary();
+      deleteJournalAiSummary(state.journalRange);
       renderJournalSummarySection();
       hideJournalAiModal();
       break;

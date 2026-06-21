@@ -1068,29 +1068,36 @@ export function fetchJournalSummary(range) {
     .catch(function () { state.journalSummary = null; return null; });
 }
 
-export async function generateJournalAiSummary(range) {
+// The backend caches the generation per (user, range) in Redis and skips the
+// Gemini call entirely if the underlying trade data hasn't changed since the
+// last generation for that range — so calling this on every device is free
+// (no token cost) whenever nothing's changed, and stays in sync across devices
+// since the cache lives server-side, not in localStorage.
+export async function generateJournalAiSummary(range, force) {
   var res = await fetch(API_BASE + '/api/journal/ai-summary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ range: range }),
+    body: JSON.stringify({ range: range, force: !!force }),
   });
   var data = await res.json();
   if (!res.ok) throw new Error(data.error || 'AI analysis failed');
   state.aiSummary = data.text || '';
   state.aiSummaryRange = range;
-  state.aiSummaryDate = new Date().toISOString();
+  state.aiSummaryDate = data.date || new Date().toISOString();
   return state.aiSummary;
 }
 
-export function deleteJournalAiSummary() {
-  state.aiSummary = null;
-  state.aiSummaryRange = null;
-  state.aiSummaryDate = null;
-  fetch(API_BASE + '/api/briefing', {
-    method: 'POST',
+export function deleteJournalAiSummary(range) {
+  if (state.aiSummaryRange === range) {
+    state.aiSummary = null;
+    state.aiSummaryRange = null;
+    state.aiSummaryDate = null;
+  }
+  fetch(API_BASE + '/api/journal/ai-summary', {
+    method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ action: 'save', skip_entries: true, clear_ai: true }),
+    body: JSON.stringify({ range: range }),
   }).catch(function () {});
 }
