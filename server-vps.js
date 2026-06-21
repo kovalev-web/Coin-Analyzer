@@ -1204,8 +1204,11 @@ var httpServer = http.createServer(async function (req, res) {
       // and only then to UTC — same fallback chain as the weekly report, so the
       // journal's day boundary matches what the client (which falls back to the
       // browser's own timezone, not UTC) shows.
-      var jTzIanaRes = await redis(['GET', 'account_tz:' + jUserId]);
-      var jTzNumRes = await redis(['GET', 'briefing_tz:' + jUserId]);
+      var jTzResults = await Promise.all([
+        redis(['GET', 'account_tz:' + jUserId]),
+        redis(['GET', 'briefing_tz:' + jUserId]),
+      ]);
+      var jTzIanaRes = jTzResults[0], jTzNumRes = jTzResults[1];
       var jUtcOffset = (jTzNumRes && jTzNumRes.result !== null) ? parseFloat(jTzNumRes.result) : 0;
       if (!isFinite(jUtcOffset)) jUtcOffset = 0;
       var jToday = _getUserTimeInfo(jTzIanaRes && jTzIanaRes.result ? jTzIanaRes.result : null, jUtcOffset).userNow.toISOString().slice(0, 10);
