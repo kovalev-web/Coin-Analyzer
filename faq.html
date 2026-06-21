@@ -20,7 +20,7 @@
     summary::-webkit-details-marker { display: none; }
     summary::after { content: '+'; color: var(--graphite); font-weight: var(--font-normal); flex-shrink: 0; }
     details[open] summary::after { content: '−'; }
-    details > p, details > ul { font-size: var(--text-sm); color: var(--graphite); line-height: var(--leading-relaxed); padding: 0 0 var(--space-8); margin: 0; }
+    details > p, details > ul { font-size: var(--text-sm); color: color-mix(in srgb, var(--ink-deep) 75%, var(--graphite)); line-height: var(--leading-relaxed); padding: 0 0 var(--space-8); margin: 0; }
     details > ul { padding-left: var(--space-16); }
     details > p + ul, details > ul + p { margin-top: var(--space-4); }
   </style>
