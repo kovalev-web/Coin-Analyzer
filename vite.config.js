@@ -20,6 +20,7 @@ export default defineConfig({
         resetPassword:       'reset-password.html',
         confirmEmailChange:  'confirm-email-change.html',
         design:              'design.html',
+        faq:                 'faq.html',
       },
     },
   },

@@ -12,6 +12,7 @@
     { "source": "/login",         "destination": "/login.html" },
     { "source": "/verify-email",   "destination": "/verify-email.html" },
     { "source": "/reset-password", "destination": "/reset-password.html" },
+    { "source": "/faq",            "destination": "/faq.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

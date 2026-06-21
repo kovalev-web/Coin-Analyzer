@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questtick — FAQ</title>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin />
+  <link rel="stylesheet" href="/src/auth.css" />
+  <style>
+    body { display: block; align-items: initial; justify-content: initial; min-height: 100dvh; }
+    .faq-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-24) var(--space-16) var(--space-32); }
+    .faq-h1 { font-size: var(--text-3xl); font-weight: var(--font-bold); letter-spacing: -0.3px; margin-bottom: var(--space-3); }
+    .faq-sub { color: var(--graphite); font-size: var(--text-sm); margin-bottom: var(--v-lg); }
+    .faq-section + .faq-section { margin-top: var(--v-lg); }
+    .faq-section-title { font-size: var(--text-base); font-weight: var(--font-bold); margin-bottom: var(--v-sm); }
+    details { border-bottom: 1px solid var(--steel); }
+    details:last-of-type { border-bottom: none; }
+    summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding: var(--space-7) 0; font-size: var(--text-sm); font-weight: var(--font-semi); cursor: pointer; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--graphite); font-weight: var(--font-normal); flex-shrink: 0; }
+    details[open] summary::after { content: '−'; }
+    details > p, details > ul { font-size: var(--text-sm); color: var(--graphite); line-height: var(--leading-relaxed); padding: 0 0 var(--space-8); margin: 0; }
+    details > ul { padding-left: var(--space-16); }
+    details > p + ul, details > ul + p { margin-top: var(--space-4); }
+  </style>
+</head>
+<body>
+  <div class="faq-wrap">
+    <h1 class="faq-h1">FAQ</h1>
+    <p class="faq-sub">Everything Questtick does, from creating an account to reading your weekly AI journal summary — with a focus on how your data and keys are protected.</p>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Getting started</div>
+
+      <details open>
+        <summary>What is Questtick?</summary>
+        <p>Questtick is a crypto trading assistant for Binance Futures altcoins. It tracks live price/volume across the market, lets you build a daily watchlist ("briefing"), keeps a trading journal with AI-assisted weekly reviews, and runs a real-time phase detector for in-play coins.</p>
+      </details>
+
+      <details>
+        <summary>How do I sign up?</summary>
+        <p>Sign up with an email and password (minimum 8 characters), or with Google. Email/password accounts must verify their email before the account is fully active — we send a verification link automatically.</p>
+      </details>
+
+      <details>
+        <summary>Can I try it without creating an account?</summary>
+        <p>Yes — "Try without account" puts you in demo mode. You can browse the main board, Gainers, Full View, TV Mode, the liquidity panel and search freely, and draw levels/rays (they just stay local to your browser instead of syncing).</p>
+        <p>What's gated behind sign-up: AI coin analysis, saving alerts, the briefing watchlist, the trading journal, notifications, and Telegram/Binance integrations — anything that needs to be remembered between sessions or sent to you.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Account &amp; security</div>
+
+      <details>
+        <summary>How are my password and login protected?</summary>
+        <p>Passwords are hashed with scrypt before storage — we never store your plain password. Sign-in and sign-up are rate-limited (max 5 sign-in attempts and 3 sign-up attempts per minute per source) to slow down brute-force and credential-stuffing attempts.</p>
+      </details>
+
+      <details>
+        <summary>How long does my session last?</summary>
+        <p>Sessions last 30 days and are tied to a secure cookie. Changing your password or confirming an email change revokes your other active sessions automatically.</p>
+      </details>
+
+      <details>
+        <summary>What happens if I get a "password changed" email I didn't request?</summary>
+        <p>Every password change triggers a notification email with a "this wasn't me" link. Clicking it immediately revokes all sessions on the account, so you can act before anyone with access to your inbox can lock you out.</p>
+      </details>
+
+      <details>
+        <summary>How does changing my email work?</summary>
+        <p>Changing email is a 3-step, verified flow: first you confirm your identity (your password, or a 6-digit code sent to your linked Telegram), then we email a confirmation code to both your old and new address, and only after that code is entered does the email actually change. This prevents someone who only has temporary access to your session from silently taking over the account.</p>
+      </details>
+
+      <details>
+        <summary>Is there two-factor authentication?</summary>
+        <p>There's no standalone TOTP app yet, but a linked Telegram account is used as a second factor for sensitive actions like email changes — a one-time 6-digit code is sent to your Telegram chat and expires after 2 minutes.</p>
+      </details>
+
+      <details>
+        <summary>What happens when I delete my account?</summary>
+        <p>Account deletion is permanent and removes your stored levels, briefing history, AI summaries, Telegram link, Binance API keys, avatar, and timezone setting from our servers immediately.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Integrations (Telegram &amp; Binance)</div>
+
+      <details>
+        <summary>What is the Telegram integration for?</summary>
+        <p>Linking Telegram lets Questtick send you alerts, your weekly briefing review, and journal reminders directly in chat, and lets Telegram act as a second factor for account-security actions.</p>
+      </details>
+
+      <details>
+        <summary>Is it safe to connect my Binance API key?</summary>
+        <p>Your key is only used to read account data (balances, fills) for journal PnL and is never used to place orders. Before saving, we validate the key directly against Binance and reject it unless it is read-only — any key with trading or withdrawal permissions enabled is refused. Once saved, the key and secret are encrypted with AES-256-GCM using a key derived from our server secret; they are never stored or transmitted in plain text.</p>
+      </details>
+
+      <details>
+        <summary>Can Questtick withdraw funds or place trades with my Binance key?</summary>
+        <p>No. Keys with any permission beyond read-only are rejected at save time, so even if our systems were compromised, the key itself cannot move funds or place orders on Binance's side.</p>
+      </details>
+
+      <details>
+        <summary>Can I remove my Binance key or Telegram link later?</summary>
+        <p>Yes, both can be disconnected at any time from the Integrations tab of your account settings, and removing them deletes the stored credentials.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Main board, Gainers &amp; in-play detector</div>
+
+      <details>
+        <summary>What do I see on the main board ("Tear")?</summary>
+        <p>Coin cards filtered by 24h trading volume (you can raise the bar to $50M or $100M), each with a live price chart, 24h change, NATR volatility and volume, updated in real time over a WebSocket connection.</p>
+      </details>
+
+      <details>
+        <summary>What's "Gainers"?</summary>
+        <p>The same card layout, but switched to showing the top movers by 24h price change instead of filtering by volume — useful for spotting whatever is moving the most right now, regardless of size.</p>
+      </details>
+
+      <details>
+        <summary>What happens when I open a coin (Full View)?</summary>
+        <p>Clicking a card, a search result, or a briefing entry opens Full View: a large interactive chart with drawing tools, the liquidity panel, and the briefing drawer for that coin, all in one screen.</p>
+      </details>
+
+      <details>
+        <summary>How do I draw price levels and trend lines?</summary>
+        <p>Right-click the chart to drop a horizontal level at that price. Hold Ctrl and right-click (or Ctrl-click, on trackpads) to draw a ray/trend line through that point instead. Both can be dragged to adjust and right-clicked again to remove. They're tied to the symbol and timeframe, and sync to your account if you're signed in.</p>
+      </details>
+
+      <details>
+        <summary>How do price alerts work?</summary>
+        <p>Hold Shift and right-click the chart to set an alert at that price. When the price touches it, you get an in-app toast and notification, plus a Telegram message if you've linked your bot. Saving and syncing alerts requires an account.</p>
+      </details>
+
+      <details>
+        <summary>What's TV Mode?</summary>
+        <p>A fullscreen 3×2 grid showing six live charts at once (the current top movers), so you can watch several coins simultaneously without flipping between cards. Click any tile to open it in Full View, or exit to go back.</p>
+      </details>
+
+      <details>
+        <summary>What's the liquidity panel?</summary>
+        <p>Inside Full View, the orderbook icon opens a panel with live spread, bid/ask depth, buy/sell aggression, and a trade tape — built directly from Binance's order book and trade stream, useful for reading short-term support and pressure.</p>
+      </details>
+
+      <details>
+        <summary>How does search work?</summary>
+        <p>The search button opens a quick lookup by symbol; results are ranked by match and 24h change, and selecting one opens Full View for that coin.</p>
+      </details>
+
+      <details>
+        <summary>What is the in-play phase detector?</summary>
+        <p>A separate real-time tool (the "Phase" tab) that watches order flow — klines, trades, order book depth — across the most liquid futures pairs and scores which coins are currently showing an active trading phase, so you can react while it's happening rather than after the move.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Briefing</div>
+
+      <details>
+        <summary>What is the briefing?</summary>
+        <p>Your daily watchlist: add coins you're tracking for a given date, attach notes, and mark each one as watching, traded, skipped, or missed once the day plays out.</p>
+      </details>
+
+      <details>
+        <summary>What's the weekly report?</summary>
+        <p>Every Sunday evening (in your account's timezone), Questtick gathers your week's briefing entries and notes, sends them to Gemini for a short review of recurring patterns in your decision-making, and returns 2–3 concrete rules to apply the following week. The report is delivered as both a Telegram message and an in-app notification.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Trading journal</div>
+
+      <details>
+        <summary>What do I fill in each day?</summary>
+        <p>A short morning entry (your state, the day's plan, coins you expect to watch, what could trigger a bad decision) and a short evening entry (whether you followed the plan, trade count, whether you kept your stop, and which trading-error patterns showed up). You can also mark a day as skipped if you didn't trade.</p>
+      </details>
+
+      <details>
+        <summary>Where does my PnL come from?</summary>
+        <p>If you've connected a read-only Binance API key, your daily PnL is calculated automatically from your account's fills and shown alongside your journal entries — you don't enter it manually.</p>
+      </details>
+
+      <details>
+        <summary>What does the AI journal summary do?</summary>
+        <p>Over a 1-week, 2-week or 1-month range you can request an AI summary: Questtick sends your briefing entries and journal notes for that period to Gemini, which compares your stated plans against what you actually did and returns a short written review (300–450 words) of the gap between the two.</p>
+      </details>
+
+      <details>
+        <summary>Can I export my journal?</summary>
+        <p>Yes, journal history can be exported as CSV for any date range.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">AI coin analysis (Gemini)</div>
+
+      <details>
+        <summary>What does the "Analyze" button do?</summary>
+        <p>It sends the coin's current price, volume and volatility data along with recent news headlines to Gemini, which returns a short read on the catalyst behind the move and a signal (bullish / caution / neutral) — for example flagging that a delisting headline is not a bullish catalyst, while a Binance listing is.</p>
+      </details>
+
+      <details>
+        <summary>Is the analysis financial advice?</summary>
+        <p>No — it's a fast summary of the public news and data behind a price move, meant to save you a search, not to recommend a trade.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Notifications</div>
+
+      <details>
+        <summary>What shows up in the bell icon?</summary>
+        <p>Price-alert triggers, your weekly briefing report, and reminders to fill in your journal before the European session opens. Each notification can be marked read individually or all at once, and the list can be cleared from the same dropdown.</p>
+      </details>
+
+      <details>
+        <summary>How long are notifications kept?</summary>
+        <p>Notifications are kept for 30 days and then expire automatically.</p>
+      </details>
+    </div>
+
+    <div class="faq-section">
+      <div class="faq-section-title">Data &amp; privacy</div>
+
+      <details>
+        <summary>Where is my data stored?</summary>
+        <p>Account, session and journal records live in our SQLite database; fast-changing data like your briefing, levels, alerts and notifications live in Redis. Binance API keys are the only credentials stored, and they're always encrypted at rest.</p>
+      </details>
+
+      <details>
+        <summary>Who can access my account data?</summary>
+        <p>Every endpoint that reads or writes your data (analysis, levels, briefing, journal, account, notifications) requires a valid session — there is no way to read another user's data through the API.</p>
+      </details>
+    </div>
+  </div>
+</body>
+</html>
