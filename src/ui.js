@@ -4989,6 +4989,7 @@ export function briefingRemove(sym, date) {
 }
 
 function _fvbdJournalActionsHTML() {
+  if (state.isDemoMode) return '';
   var morningFilled = !!(state.journalToday && state.journalToday.morningAt);
   var eveningDisabled = !state.journalToday || !state.journalToday.morningAt || !!state.journalToday.skipped;
   return '<div class="fvbd-journal-actions">'
