@@ -1070,9 +1070,31 @@ export function fetchJournalSummary(range) {
 
 // The backend caches the generation per (user, range) in Redis and skips the
 // Gemini call entirely if the underlying trade data hasn't changed since the
-// last generation for that range — so calling this on every device is free
-// (no token cost) whenever nothing's changed, and stays in sync across devices
-// since the cache lives server-side, not in localStorage.
+// last generation for that range — so calling this on every device is cheap
+// (no token cost) whenever nothing's changed, and stays in sync across devices.
+//
+// We also mirror the last successfully fetched text into localStorage, keyed
+// by range + userId and touched *only* by these two functions — unlike the
+// old pa_ai_summary keys (removed; they were shared with an unrelated dead
+// feature and could clobber this with stale data). This is purely a local
+// fallback so a transient network blip doesn't leave the user looking at a
+// blank modal — loadJournalAiSummaryCache() is what reads it back.
+function _journalAiCacheKey(range) {
+  return 'pa_journal_ai:' + range + ':' + (state.userId || 'anon');
+}
+
+export function loadJournalAiSummaryCache(range) {
+  try {
+    var raw = localStorage.getItem(_journalAiCacheKey(range));
+    if (!raw) return false;
+    var cached = JSON.parse(raw);
+    state.aiSummary = cached.text;
+    state.aiSummaryDate = cached.date;
+    state.aiSummaryRange = range;
+    return true;
+  } catch (e) { return false; }
+}
+
 export async function generateJournalAiSummary(range, force) {
   var res = await fetch(API_BASE + '/api/journal/ai-summary', {
     method: 'POST',
@@ -1085,6 +1107,7 @@ export async function generateJournalAiSummary(range, force) {
   state.aiSummary = data.text || '';
   state.aiSummaryRange = range;
   state.aiSummaryDate = data.date || new Date().toISOString();
+  try { localStorage.setItem(_journalAiCacheKey(range), JSON.stringify({ text: state.aiSummary, date: state.aiSummaryDate })); } catch (e) {}
   return state.aiSummary;
 }
 
@@ -1094,6 +1117,7 @@ export function deleteJournalAiSummary(range) {
     state.aiSummaryRange = null;
     state.aiSummaryDate = null;
   }
+  try { localStorage.removeItem(_journalAiCacheKey(range)); } catch (e) {}
   fetch(API_BASE + '/api/journal/ai-summary', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },

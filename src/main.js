@@ -5,7 +5,7 @@ import {
   fetchBriefingTrades, fetchAllBriefingTrades,
   fetchNotifications,
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent, exportJournalCsv,
-  fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary,
+  fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary, loadJournalAiSummaryCache,
 } from './api.js';
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
@@ -424,10 +424,23 @@ document.body.addEventListener('click', function (e) {
     case 'journal-gen-ai': {
       if (target.classList.contains('disabled')) break;
       var _hasAiText = state.aiSummary && state.aiSummaryRange === state.journalRange;
-      if (_hasAiText) { showJournalAiModal(); break; }
+      if (!_hasAiText) _hasAiText = loadJournalAiSummaryCache(state.journalRange);
+      if (_hasAiText) {
+        // Show what we already have immediately, then quietly refresh — the
+        // server cache makes this free when nothing's changed. A failed
+        // refresh just leaves the already-shown text in place.
+        showJournalAiModal();
+        generateJournalAiSummary(state.journalRange).then(function () {
+          renderJournalSummarySection();
+        }).catch(function (err) { console.error('Journal AI summary refresh:', err); });
+        break;
+      }
       var _jaiBtn = target;
       _jaiBtn.classList.add('btn-loading');
-      generateJournalAiSummary(state.journalRange).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
+      generateJournalAiSummary(state.journalRange).catch(function (err) {
+        console.error('Journal AI summary:', err);
+        showToast('Could not generate analysis — please try again');
+      }).finally(function () {
         _jaiBtn.classList.remove('btn-loading');
         renderJournalSummarySection();
         if (state.aiSummary && state.aiSummaryRange === state.journalRange) showJournalAiModal();
@@ -438,7 +451,10 @@ document.body.addEventListener('click', function (e) {
       var _jrgBtn = target;
       _jrgBtn.disabled = true;
       _jrgBtn.classList.add('btn-loading');
-      generateJournalAiSummary(state.journalRange, true).catch(function (err) { console.error('Journal AI summary:', err); }).finally(function () {
+      generateJournalAiSummary(state.journalRange, true).catch(function (err) {
+        console.error('Journal AI summary:', err);
+        showToast('Could not regenerate analysis — please try again');
+      }).finally(function () {
         _jrgBtn.disabled = false;
         _jrgBtn.classList.remove('btn-loading');
         renderJournalSummarySection();
