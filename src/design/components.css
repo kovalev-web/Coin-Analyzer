@@ -526,8 +526,8 @@ summary.journal-history-row::marker{display:none;}
 @media(max-width:768px){
   .journal-chart-row{flex-direction:column;}
   .journal-chart-row #journal-pnl-chart{flex:none;width:100%;height:200px;}
-  .journal-stats-col{width:auto;flex-direction:row;flex-wrap:wrap;}
-  .journal-stats-col .bp-stat-card{flex:1 1 calc(50% - var(--space-4));}
+  .journal-stats-col{width:auto;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:168px;}
+  .journal-stats-col .bp-stat-card{flex:none;}
 }
 .journal-page-header{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);}
 .journal-page-title{display:flex;align-items:center;gap:var(--space-4);font-size:var(--text-2xl);font-weight:var(--font-bold);}
