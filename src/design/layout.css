@@ -101,7 +101,7 @@
 @media(max-width:768px) and (orientation:portrait){
   #fv-overlay:has(#fv-briefing-drawer.open) .fv-body{flex:9 1 0%;}
   #fv-overlay:has(#fv-briefing-drawer.open) #fv-briefing-drawer.open{height:auto;flex:11 1 0%;}
-  #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-top:var(--v-md);margin-bottom:var(--v-md);}
+  #fv-overlay:has(#fv-briefing-drawer.open) .fv-bottom-bar{margin-top:0;margin-bottom:0;}
 }
 
 @media(min-width:769px){
