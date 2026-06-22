@@ -174,8 +174,13 @@
       <div class="faq-section-title">Trading journal</div>
 
       <details>
+        <summary>Where do the volume/drawdown numbers in the morning entry come from?</summary>
+        <p>From Account → Profile → Trading limits, where you set your daily working volume, allowed drawdown per trade, and max trades per day. The morning journal entry displays these live, so updating the numbers in settings immediately changes what you see there — no need to re-enter them each day.</p>
+      </details>
+
+      <details>
         <summary>What do I fill in each day?</summary>
-        <p>A short morning entry (your state, the day's plan, coins you expect to watch, what could trigger a bad decision) and a short evening entry (whether you followed the plan, trade count, whether you kept your stop, and which trading-error patterns showed up). You can also mark a day as skipped if you didn't trade.</p>
+        <p>A short morning entry (your state, the day's plan, coins you expect to watch, what could trigger a bad decision, plus your configured volume/drawdown/trade-count limits) and a short evening entry (whether you followed the plan, trade count, whether you kept your stop, and which trading-error patterns showed up). You can also mark a day as skipped if you didn't trade.</p>
       </details>
 
       <details>
@@ -185,7 +190,8 @@
 
       <details>
         <summary>What does the AI journal summary do?</summary>
-        <p>Over a 1-week, 2-week or 1-month range you can request an AI summary: Questtick sends your briefing entries and journal notes for that period to Gemini, which compares your stated plans against what you actually did and returns a short written review (300–450 words) of the gap between the two.</p>
+        <p>Over a 1-week, 2-week or 1-month range you can request an AI summary. Questtick sends Gemini your briefing entries (coins, notes, real PnL), your full morning and evening journal answers for each day — mood, plan, discipline checks, which trigger fired — and your current trading limits, then asks it to compare days against each other and surface patterns: where plan and discipline drifted from the result, repeating triggers, and whether your volume/drawdown/trade-count limits were respected.</p>
+        <p>For the 1-month range, days are grouped into weekly summaries (PnL, trade count, limit violations, trigger tally) instead of being listed individually, so Gemini compares weeks and spots a trend rather than getting buried in 30 days of detail. The result is a short written review, 300–450 words.</p>
       </details>
 
       <details>
