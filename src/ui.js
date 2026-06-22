@@ -3719,14 +3719,6 @@ export function loadBriefing() {
     var local = JSON.parse(localStorage.getItem(_userScopedKey('pa_briefing')) || '[]');
     if (Array.isArray(local)) state.briefing = local.filter(function (e) { return e.date >= _mondayStr; });
   } catch (e) {}
-  try {
-    var savedAI = localStorage.getItem(_userScopedKey('pa_ai_summary'));
-    if (savedAI) state.aiSummary = savedAI;
-    var savedDate = localStorage.getItem(_userScopedKey('pa_ai_summary_date'));
-    if (savedDate) state.aiSummaryDate = savedDate;
-    var savedRange = localStorage.getItem(_userScopedKey('pa_ai_summary_range'));
-    if (savedRange) state.aiSummaryRange = savedRange;
-  } catch (e) {}
   if (!_briefingUserCode) return;
   fetch(API_BASE + '/api/briefing', {
     method: 'POST',
@@ -3756,28 +3748,6 @@ export function loadBriefing() {
       updateAllStarButtons();
       var _fvd = document.getElementById('fv-briefing-drawer');
       if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
-    }
-    if (d && d.ai_summary) {
-      state.aiSummary = d.ai_summary;
-      state.aiSummaryDate = d.ai_summary_date || null;
-      state.aiSummaryRange = d.ai_range || null;
-      try {
-        localStorage.setItem(_userScopedKey('pa_ai_summary'), state.aiSummary);
-        if (state.aiSummaryDate) localStorage.setItem(_userScopedKey('pa_ai_summary_date'), state.aiSummaryDate);
-        if (state.aiSummaryRange) localStorage.setItem(_userScopedKey('pa_ai_summary_range'), state.aiSummaryRange);
-      } catch (e) {}
-      if (getCurrentRoute() === '/journal') renderJournalSummarySection();
-    } else if (d) {
-      // Server returned no AI summary — clear any locally cached data (may belong to another user)
-      state.aiSummary = null;
-      state.aiSummaryDate = null;
-      state.aiSummaryRange = null;
-      try {
-        localStorage.removeItem(_userScopedKey('pa_ai_summary'));
-        localStorage.removeItem(_userScopedKey('pa_ai_summary_date'));
-        localStorage.removeItem(_userScopedKey('pa_ai_summary_range'));
-      } catch (e) {}
-      if (getCurrentRoute() === '/journal') renderJournalSummarySection();
     }
   }).catch(function () {});
 }
