@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questtick — Privacy Policy</title>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/geist-sans-variable.woff2" crossorigin />
+  <link rel="stylesheet" href="/src/auth.css" />
+  <style>
+    body { display: block; align-items: initial; justify-content: initial; min-height: 100dvh; }
+    .faq-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-24) var(--space-16) var(--space-32); }
+    .faq-title-row { display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-3); }
+    .faq-h1 { font-size: var(--text-3xl); font-weight: var(--font-normal); letter-spacing: -0.3px; }
+    .faq-sub { color: var(--graphite); font-size: var(--text-sm); margin-bottom: var(--v-lg); }
+    .faq-section + .faq-section { margin-top: var(--v-lg); }
+    .faq-section-title { font-size: var(--text-base); font-weight: var(--font-normal); margin-bottom: var(--v-sm); }
+    .legal-body p, .legal-body ul { font-size: var(--text-sm); color: color-mix(in srgb, var(--ink-deep) 75%, var(--graphite)); line-height: var(--leading-relaxed); margin: 0 0 var(--space-8); }
+    .legal-body ul { padding-left: var(--space-16); }
+    .legal-body strong { color: var(--ink-deep); font-weight: var(--font-semi); }
+    .legal-body a { color: var(--primary); text-decoration: none; }
+    .legal-body a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="faq-wrap">
+    <div class="faq-title-row">
+      <a href="/" class="btn-icon" title="Back"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></a>
+      <h1 class="faq-h1">Privacy Policy</h1>
+    </div>
+    <p class="faq-sub">Last updated: June 22, 2026. Questtick is operated by an individual developer ("we", "us"). This page explains what data we collect, why, and how to get it deleted.</p>
+
+    <div class="legal-body">
+
+      <div class="faq-section">
+        <div class="faq-section-title">What we collect</div>
+        <ul>
+          <li><strong>Account:</strong> email and password (hashed with scrypt — we never store or see your plain password), or your name/email from Google if you sign in with Google.</li>
+          <li><strong>Profile settings:</strong> avatar choice, timezone, and the daily trading limits you configure (working volume, drawdown per trade, max trades per day).</li>
+          <li><strong>Binance API key</strong> (optional): only read-only keys are accepted — we reject any key with trading or withdrawal permission at save time. Stored encrypted (AES-256-GCM) and used solely to read your balances/fills for journal PnL.</li>
+          <li><strong>Telegram chat ID</strong> (optional): set when you link our bot, used to deliver price alerts, your weekly briefing report, and journal reminders.</li>
+          <li><strong>Your content:</strong> watchlist ("briefing") entries — coin symbols, dates, your notes and status — plus your trading journal entries (morning/evening check-ins, mood ratings, free-text notes, trade counts) and any price levels, alerts or trend lines you draw on charts.</li>
+          <li><strong>Session data:</strong> a secure session cookie, and your IP address/browser user agent at sign-in, kept for security purposes for the life of the session (30 days).</li>
+          <li><strong>Basic usage analytics:</strong> aggregated, cookie-less page performance data via Vercel Analytics/Speed Insights — we don't use this to identify you individually.</li>
+        </ul>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">How we use it</div>
+        <ul>
+          <li>To run the product: sync your watchlist, levels, alerts and journal across your devices, and show you your own trading data.</li>
+          <li>To generate AI analysis: when you request a coin analysis, a weekly briefing report, or a journal summary, the relevant text (coin/market data, your briefing notes, your journal entries) is sent to Google's Gemini API to produce that analysis. We do not send your email, password, or Binance/Telegram credentials to Gemini.</li>
+          <li>To deliver notifications you've opted into (price alerts, weekly report, journal reminders) via Telegram and in-app notifications.</li>
+        </ul>
+        <p>We do not sell your data, and we do not use it for advertising.</p>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Who we share it with</div>
+        <p>We use the following service providers ("sub-processors") to run Questtick. Each only receives the minimum data needed for its purpose:</p>
+        <ul>
+          <li><strong>Google</strong> — Gemini API (text you submit, for AI analysis) and Google Sign-In (if you use it).</li>
+          <li><strong>Binance</strong> — only if you connect a read-only API key, to fetch your balances/fills.</li>
+          <li><strong>Telegram</strong> — only if you link our bot, to deliver messages to the chat you started with it.</li>
+          <li><strong>Upstash</strong> (Redis hosting) and our VPS provider — store your data as part of running the backend.</li>
+          <li><strong>Resend</strong> — sends transactional emails (password reset, email verification, email-change confirmation). No marketing emails.</li>
+          <li><strong>Vercel</strong> — hosts the frontend and provides the anonymized analytics described above.</li>
+        </ul>
+        <p>We do not sell or rent your data to third parties, and we don't share it for marketing purposes.</p>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Data retention</div>
+        <ul>
+          <li>Account data, journal entries, watchlist history, levels and alerts are kept until you delete them or delete your account.</li>
+          <li>In-app notifications expire automatically after 30 days.</li>
+          <li>Cached AI summaries are kept until the underlying data changes or you regenerate/delete them.</li>
+        </ul>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Your rights</div>
+        <ul>
+          <li><strong>Export:</strong> download your full journal history as a CSV file at any time.</li>
+          <li><strong>Disconnect:</strong> remove your Binance API key or Telegram link at any time without deleting your whole account.</li>
+          <li><strong>Delete:</strong> delete your account from Account settings → Security. This is immediate and permanent, and removes your watchlist history, journal entries, price levels/alerts/trend lines, AI summaries, trading limits, Telegram link, Binance API key, avatar and timezone setting from our servers.</li>
+          <li>If you're in the EU/UK or another jurisdiction with data protection law, you may also have rights to access, correct, restrict, or port your data — contact us below to exercise them.</li>
+        </ul>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Security</div>
+        <ul>
+          <li>Passwords are hashed with scrypt; we never store them in plain text.</li>
+          <li>Binance API keys are encrypted at rest (AES-256-GCM) and we only accept read-only keys.</li>
+          <li>Sign-in and sign-up are rate-limited to slow down brute-force and credential-stuffing attempts.</li>
+          <li>Every password change and email change requires identity confirmation and notifies you, with a one-click "this wasn't me" option that revokes all active sessions.</li>
+        </ul>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Cookies</div>
+        <p>We use one essential session cookie required to keep you signed in — it's not used for tracking or advertising. We don't use third-party advertising or cross-site tracking cookies.</p>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Age requirement</div>
+        <p>Questtick involves cryptocurrency trading information and is not intended for use by anyone under 18.</p>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Changes to this policy</div>
+        <p>We may update this policy as the product changes. The "last updated" date at the top will reflect the latest revision; material changes will be highlighted via an in-app notice.</p>
+      </div>
+
+      <div class="faq-section">
+        <div class="faq-section-title">Contact</div>
+        <p>Questions about this policy or your data — including deletion or access requests — can be sent to <a href="mailto:kohalovd@gmail.com">kohalovd@gmail.com</a>.</p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

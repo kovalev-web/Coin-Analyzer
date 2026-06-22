@@ -247,6 +247,16 @@ body {
 
 .auth-back:hover { color: var(--ink-deep); }
 
+/* ── Legal note (Terms/Privacy) ─────────────────────────────────── */
+.auth-legal-note {
+  text-align: center;
+  font-size: var(--text-2xs);
+  color: var(--graphite);
+  margin: 0 0 var(--space-12);
+}
+.auth-legal-note a { color: var(--graphite); text-decoration: underline; }
+.auth-legal-note a:hover { color: var(--ink-deep); }
+
 /* ── Demo link ───────────────────────────────────────────────── */
 .auth-demo-link {
   text-decoration: none;

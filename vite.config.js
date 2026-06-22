@@ -21,6 +21,8 @@ export default defineConfig({
         confirmEmailChange:  'confirm-email-change.html',
         design:              'design.html',
         faq:                 'faq.html',
+        privacy:             'privacy.html',
+        terms:               'terms.html',
       },
     },
   },

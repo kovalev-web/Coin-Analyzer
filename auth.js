@@ -62,21 +62,35 @@ function getAuth() {
     user: {
       deleteUser: {
         enabled: true,
+        // journal_entries.user_id has no ON DELETE CASCADE, and foreign_keys
+        // is ON (db/index.js) — without this, deleting a user who has ever
+        // filled in a journal entry fails on the FK constraint when better-auth
+        // tries to delete the user row.
+        beforeDelete: async function (user) {
+          try { getDb().sqlite.prepare('DELETE FROM journal_entries WHERE user_id = ?').run(user.id); } catch (e) {}
+        },
         afterDelete: async function (user) {
           try {
             var REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
             var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
             if (!REDIS_URL || !REDIS_TOKEN) return;
             var uid = user.id;
-            var keys = ['levels', 'briefing', 'briefing_ai', 'briefing_tz', 'tg_chat',
-                        'binance_keys', 'avatar', 'account_tz'].map(function (k) { return k + ':' + uid; });
-            await Promise.all(keys.map(function (k) {
+            function redisCall(args) {
               return fetch(REDIS_URL, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + REDIS_TOKEN, 'Content-Type': 'application/json' },
-                body: JSON.stringify(['DEL', k]),
-              });
-            }));
+                body: JSON.stringify(args),
+              }).then(function (r) { return r.json(); }).catch(function () { return null; });
+            }
+            var keys = ['levels', 'rays', 'alerts', 'briefing', 'briefing_ai', 'briefing_tz',
+                        'tg_chat', 'binance_keys', 'avatar', 'account_tz', 'account_trading_limits',
+                        'notifications'].map(function (k) { return k + ':' + uid; });
+            // journal_ai is cached per range, not a single key
+            ['1w', '2w', '1m'].forEach(function (range) { keys.push('journal_ai:' + uid + ':' + range); });
+            // tg_user is reverse-keyed by chatId, not userId — read tg_chat first to find it
+            var tgChatRes = await redisCall(['GET', 'tg_chat:' + uid]);
+            if (tgChatRes && tgChatRes.result) keys.push('tg_user:' + tgChatRes.result);
+            await Promise.all(keys.map(function (k) { return redisCall(['DEL', k]); }));
           } catch (e) {}
         },
       },
