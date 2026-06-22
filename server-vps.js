@@ -1388,21 +1388,92 @@ var httpServer = http.createServer(async function (req, res) {
 
             var jByDate = {};
             jAiStats.entries.forEach(function (e) { if (!jByDate[e.date]) jByDate[e.date] = []; jByDate[e.date].push(e); });
-            var jBriefingText = Object.keys(jByDate).sort().reverse().map(function (date) {
-              return date + ':\n' + jByDate[date].map(function (e) {
-                var fills = jAiStats.dayCache[e.sym + ':' + e.date] || [];
-                var pnlStr;
-                if (fills.length) {
-                  var dayPnl = 0;
-                  fills.forEach(function (f) { dayPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
-                  pnlStr = ' | PnL: $' + dayPnl.toFixed(2) + ' (' + fills.length + ' fills)';
-                } else {
-                  pnlStr = ' | нет сделок';
-                }
-                var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
-                var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
-                return '  - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr;
-              }).join('\n');
+
+            // Full morning/evening journal rows for the same range — gives Gemini
+            // the day's plan, mood, discipline checks and free-text notes, not just
+            // the briefing coin list, so it can compare days against each other.
+            var jEntryRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date ASC').all(jUserId, jAiStats.from, jAiStats.to);
+            var jEntriesByDate = {};
+            jEntryRows.forEach(function (r) { jEntriesByDate[r.date] = journalRowToEntry(r); });
+
+            var jLimitsRes = await redis(['GET', 'account_trading_limits:' + jUserId]);
+            var jLimits = null;
+            if (jLimitsRes && jLimitsRes.result) {
+              try { jLimits = JSON.parse(jLimitsRes.result); } catch (e) {}
+            }
+            var jLimitsText = jLimits
+              ? 'Текущие лимиты риска (Account settings): дневной рабочий объём $' + jLimits.maxVolume
+                + ', допустимая просадка ' + jLimits.maxDrawdownPct + '% на сделку, не более ' + jLimits.maxTrades + ' сделок в день.\n\n'
+              : '';
+
+            var JOURNAL_YES_NO_RU = { yes: 'да', no: 'нет', na: 'н/д' };
+            function jYesNoRu(v) { return v == null || v === '' ? null : (JOURNAL_YES_NO_RU[v] || v); }
+            var WEEKDAYS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            function jDayLabel(dateStr) { return dateStr + ' (' + WEEKDAYS_RU[new Date(dateStr + 'T00:00:00Z').getUTCDay()] + ')'; }
+
+            var jAllDates = {};
+            Object.keys(jByDate).forEach(function (d) { jAllDates[d] = true; });
+            Object.keys(jEntriesByDate).forEach(function (d) { jAllDates[d] = true; });
+
+            var jBriefingText = Object.keys(jAllDates).sort().reverse().map(function (date) {
+              var je = jEntriesByDate[date];
+              var lines = [jDayLabel(date) + ':'];
+
+              if (je && je.skipped) {
+                lines.push('  День помечен как "не торговал".');
+              } else if (je) {
+                var mParts = [];
+                if (je.morningState) mParts.push('настрой утром ' + je.morningState + '/5');
+                if (je.volume) mParts.push('объём $' + je.volume);
+                if (je.stopLevel) mParts.push('допустимая просадка ' + je.stopLevel);
+                if (je.channelsClosed) mParts.push('другие каналы: ' + (je.channelsClosed === 'closed' ? 'закрыты' : 'открыты'));
+                if (je.dayPlan) mParts.push('план: "' + je.dayPlan + '"');
+                if (je.triggerWatch) mParts.push('возможный триггер: "' + je.triggerWatch + '"');
+                if (mParts.length) lines.push('  Утро — ' + mParts.join('; ') + '.');
+              }
+
+              var coinEntries = jByDate[date] || [];
+              if (coinEntries.length) {
+                lines.push('  Монеты:');
+                coinEntries.forEach(function (e) {
+                  var fills = jAiStats.dayCache[e.sym + ':' + e.date] || [];
+                  var pnlStr;
+                  if (fills.length) {
+                    var dayPnl = 0;
+                    fills.forEach(function (f) { dayPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
+                    pnlStr = ' | PnL: $' + dayPnl.toFixed(2) + ' (' + fills.length + ' fills)';
+                  } else {
+                    pnlStr = ' | нет сделок';
+                  }
+                  var statusLabels = { watching: 'наблюдение', traded: 'отработка', skip: 'отмена', missed: 'упущено' };
+                  var statusStr = e.status && e.status !== 'watching' ? ' [' + (statusLabels[e.status] || e.status) + ']' : '';
+                  lines.push('    - ' + e.sym.toUpperCase() + statusStr + (e.note ? ': ' + e.note : '') + pnlStr);
+                });
+              }
+
+              if (je && je.eveningAt) {
+                var eParts = [];
+                if (jYesNoRu(je.tradedPlanned)) eParts.push('торговал по плану: ' + jYesNoRu(je.tradedPlanned));
+                if (je.tradeCount != null) eParts.push('сделок (по словам трейдера): ' + je.tradeCount);
+                if (je.pnl != null) eParts.push('PnL за день (вручную): $' + je.pnl.toFixed(2));
+                if (jYesNoRu(je.stopCraneKept)) eParts.push('стоп-кран соблюдён: ' + jYesNoRu(je.stopCraneKept));
+                if (jYesNoRu(je.volumeOk)) eParts.push('объём в рамках лимита: ' + jYesNoRu(je.volumeOk));
+                var firedTriggers = [];
+                if (je.triggerRevenge) firedTriggers.push('реванш после стопа');
+                if (je.triggerSizeUp) firedTriggers.push('увеличение размера после серии');
+                if (je.triggerFomo) firedTriggers.push('FOMO' + (je.triggerFomoActive ? ' (по активной монете)' : '') + (je.triggerFomoOther ? ' (чужая сделка)' : ''));
+                if (je.triggerAddFunds) firedTriggers.push('довнесение средств');
+                if (je.triggerReplan) firedTriggers.push('перепланирование на ходу');
+                if (je.triggerOther) firedTriggers.push(je.triggerOther);
+                if (firedTriggers.length) eParts.push('сработавшие триггеры: ' + firedTriggers.join(', '));
+                if (je.missedScreening) eParts.push('упущено в скрининге: "' + je.missedScreening + '"');
+                if (je.eveningState) eParts.push('настрой вечером ' + je.eveningState + '/5');
+                if (jYesNoRu(je.feltWorthless)) eParts.push('чувствовал бесполезность: ' + jYesNoRu(je.feltWorthless));
+                if (je.freeConclusion) eParts.push('заметка трейдера: "' + je.freeConclusion + '"');
+                if (eParts.length) lines.push('  Вечер — ' + eParts.join('; ') + '.');
+              }
+
+              return lines.join('\n');
             }).join('\n\n');
 
             var jStatsText = 'Итого за период: PnL $' + jAiStats.pnl.toFixed(2) + ', сделок ' + jAiStats.tradeCount
@@ -1411,7 +1482,7 @@ var httpServer = http.createServer(async function (req, res) {
             // Fingerprint of everything that feeds the prompt — if this is unchanged
             // since the last generation for this (user, range), the trade data hasn't
             // moved and we can return the cached text without spending Gemini tokens.
-            var jAiFingerprint = crypto.createHash('sha256').update(jBriefingText + '\n' + jStatsText).digest('hex');
+            var jAiFingerprint = crypto.createHash('sha256').update(jLimitsText + jBriefingText + '\n' + jStatsText).digest('hex');
             var jAiCachedRes = await redis(['GET', jAiCacheKey]);
             var jAiCached = jAiCachedRes.result ? JSON.parse(jAiCachedRes.result) : null;
             if (jAiCached && jAiCached.fingerprint === jAiFingerprint && !jParsedA.force) {
@@ -1422,9 +1493,11 @@ var httpServer = http.createServer(async function (req, res) {
 
             var jWordLimit = jParsedA.range === '1m' ? 450 : 300;
             var jAiPrompt = 'Ты торговый аналитик. Разбери мою торговую активность за ' + jAiLabel + '.\n\n'
-              + 'Брифинги (монеты + заметки с уровнями + реальный PnL по каждой):\n'
+              + jLimitsText
+              + 'По дням — утренний план (настрой, объём, просадка, план, триггер-наблюдение), монеты из брифинга с заметками и реальным PnL, и вечерний разбор (соблюдение лимитов, сработавшие триггеры, настрой, заметки):\n'
               + jBriefingText + '\n\n' + jStatsText
-              + '\n\nНапиши краткий разбор: что сработало, что нет, паттерны в заметках vs реальных сделках. '
+              + '\n\nСравни дни между собой и сделай выводы: в какие дни план и дисциплина расходились с результатом, какие триггеры повторяются, '
+              + 'соблюдались ли лимиты объёма/просадки/количества сделок, какие паттерны в заметках предсказывают плохой или хороший день. '
               + 'До ' + jWordLimit + ' слов. На русском.';
 
             var GEM_KEY_J = process.env.GEMINI_API_KEY;
