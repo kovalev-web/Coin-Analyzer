@@ -11,6 +11,7 @@ export const ANALYZE_DELAY_MS = 400;
 export const state = {
   userId: null,
   timezone: null, // IANA string from Account settings; null = use browser's detected timezone
+  tradingLimits: { maxVolume: null, maxDrawdownPct: null, maxTrades: null }, // from Account settings → shown in morning journal
   coins: [],
   analysisCache: {},
   chartData: {},

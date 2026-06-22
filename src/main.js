@@ -476,8 +476,8 @@ document.body.addEventListener('click', function (e) {
         .join(', ');
       saveJournalMorning({
         morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
-        volume:       '50',
-        stopLevel:    '0.5%',
+        volume:       state.tradingLimits.maxVolume != null ? String(state.tradingLimits.maxVolume) : '',
+        stopLevel:    state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : '',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         plannedCoins: mPlannedCoins,
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
@@ -1014,7 +1014,7 @@ async function _revalidateSession() {
     _sessionVerified = true;
     fetch(_API_BASE + '/api/account', { credentials: 'include' })
       .then(function (ar) { return ar.json(); })
-      .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); state.timezone = d.timezone || null; })
+      .then(function (d) { if (d.avatar) setUserAvatar(d.avatar); state.timezone = d.timezone || null; if (d.tradingLimits) state.tradingLimits = d.tradingLimits; })
       .catch(function () {});
     fetchJournalToday();
     fetchJournalRecent();

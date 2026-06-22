@@ -1498,6 +1498,11 @@ var httpServer = http.createServer(async function (req, res) {
       }
       var tzIanaRes = await redis(['GET', 'account_tz:' + userId]);
       var timezone = tzIanaRes && tzIanaRes.result ? tzIanaRes.result : null;
+      var limitsRes = await redis(['GET', 'account_trading_limits:' + userId]);
+      var tradingLimits = null;
+      if (limitsRes && limitsRes.result) {
+        try { tradingLimits = JSON.parse(limitsRes.result); } catch (e) {}
+      }
       var credRow = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(userId, 'credential');
       var hasPassword = !!(credRow && credRow.password);
       var pendingChgRes = await redis(['GET', 'email_chg_code:' + userId]);
@@ -1506,7 +1511,7 @@ var httpServer = http.createServer(async function (req, res) {
         try { pendingEmailChange = JSON.parse(pendingChgRes.result).newEmail; } catch (e) {}
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone, hasPassword: hasPassword, pendingEmailChange: pendingEmailChange }));
+      res.end(JSON.stringify({ avatar: avatar, tgConnected: tgConnected, binanceConnected: binanceConnected, binanceKey: binanceKey, timezone: timezone, tradingLimits: tradingLimits, hasPassword: hasPassword, pendingEmailChange: pendingEmailChange }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
@@ -1819,6 +1824,19 @@ var httpServer = http.createServer(async function (req, res) {
             return;
           }
           await redis(['SET', 'account_tz:' + userId, tz]);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } else if (parsed.action === 'save-trading-limits') {
+          var maxVolume = Number(parsed.maxVolume);
+          var maxDrawdownPct = Number(parsed.maxDrawdownPct);
+          var maxTrades = Number(parsed.maxTrades);
+          if (!(maxVolume > 0) || !(maxDrawdownPct > 0) || !(maxTrades > 0)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid trading limits' }));
+            return;
+          }
+          var tradingLimitsToSave = { maxVolume: maxVolume, maxDrawdownPct: maxDrawdownPct, maxTrades: maxTrades };
+          await redis(['SET', 'account_trading_limits:' + userId, JSON.stringify(tradingLimitsToSave)]);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } else if (parsed.action === 'tg-link-start') {

@@ -404,6 +404,31 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
 
+        + '<div class="acc-row" id="acc-limits-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">Trading limits</div>'
+            + '<div class="acc-row-val" id="acc-limits-current">Not set</div>'
+          + '</div>'
+          + '<button id="acc-limits-change-btn" class="acc-row-edit">Change</button>'
+        + '</div>'
+        + '<div id="acc-limits-editor" class="acc-editor">'
+          + '<div style="margin-bottom:var(--v-sm);">'
+            + '<div class="acc-row-label">Daily working volume ($)</div>'
+            + '<input type="number" id="acc-limits-volume" min="0" step="1" placeholder="50" class="ds-input">'
+          + '</div>'
+          + '<div style="margin-bottom:var(--v-sm);">'
+            + '<div class="acc-row-label">Allowed drawdown per trade (%)</div>'
+            + '<input type="number" id="acc-limits-drawdown" min="0" step="0.1" placeholder="0.5" class="ds-input">'
+          + '</div>'
+          + '<div>'
+            + '<div class="acc-row-label">Max trades per day</div>'
+            + '<input type="number" id="acc-limits-trades" min="0" step="1" placeholder="3" class="ds-input">'
+          + '</div>'
+          + '<div class="acc-field-err" id="acc-limits-msg"></div>'
+          + '<div class="acc-bin-actions">'
+            + '<button class="btn-cta" id="acc-limits-save">Save</button>'
+          + '</div>'
+        + '</div>'
 
         + '<div>'
           + '<div class="acc-row-label">Levels &amp; Alerts</div>'
@@ -1003,6 +1028,59 @@ export function showAccountModal() {
     });
   });
 
+  var _limitsCurrent = document.getElementById('acc-limits-current');
+  var _limitsEditor = document.getElementById('acc-limits-editor');
+  var _limitsVolumeInput = document.getElementById('acc-limits-volume');
+  var _limitsDrawdownInput = document.getElementById('acc-limits-drawdown');
+  var _limitsTradesInput = document.getElementById('acc-limits-trades');
+
+  function _limitsSetDisplay(limits) {
+    if (!limits) { _limitsCurrent.textContent = 'Not set'; return; }
+    _limitsCurrent.textContent = '$' + limits.maxVolume + ' · ' + limits.maxDrawdownPct + '% per trade · ' + limits.maxTrades + ' trades/day';
+  }
+
+  document.getElementById('acc-limits-change-btn').addEventListener('click', function () {
+    if (_limitsEditor.style.display === 'block') {
+      _limitsEditor.style.display = 'none';
+      document.getElementById('acc-limits-msg').textContent = '';
+      this.textContent = 'Change';
+    } else {
+      _limitsEditor.style.display = 'block';
+      this.textContent = 'Cancel';
+    }
+  });
+
+  document.getElementById('acc-limits-save').addEventListener('click', function () {
+    var btn = document.getElementById('acc-limits-save');
+    var msg = document.getElementById('acc-limits-msg');
+    var limitsBody = {
+      action: 'save-trading-limits',
+      maxVolume: Number(_limitsVolumeInput.value),
+      maxDrawdownPct: Number(_limitsDrawdownInput.value),
+      maxTrades: Number(_limitsTradesInput.value),
+    };
+    btn.disabled = true; btn.classList.add('btn-loading'); msg.textContent = '';
+    fetch(API_BASE + '/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(limitsBody),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) {
+        state.tradingLimits = { maxVolume: limitsBody.maxVolume, maxDrawdownPct: limitsBody.maxDrawdownPct, maxTrades: limitsBody.maxTrades };
+        _limitsSetDisplay(state.tradingLimits);
+        _limitsEditor.style.display = 'none';
+        document.getElementById('acc-limits-change-btn').textContent = 'Change';
+      } else {
+        msg.style.color = 'var(--danger)'; msg.textContent = d.error || 'Error';
+      }
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
+    }).catch(function () {
+      msg.style.color = 'var(--danger)'; msg.textContent = 'Network error';
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
+    });
+  });
+
   // Load saved avatar + tg status from server
   fetch(API_BASE + '/api/account', { credentials: 'include' })
     .then(function (r) { return r.json(); })
@@ -1018,6 +1096,13 @@ export function showAccountModal() {
         _tzSel.value = d.timezone;
         _tzSetDisplay(d.timezone, 'saved');
         state.timezone = d.timezone;
+      }
+      if (d.tradingLimits) {
+        state.tradingLimits = d.tradingLimits;
+        _limitsSetDisplay(d.tradingLimits);
+        _limitsVolumeInput.value = d.tradingLimits.maxVolume;
+        _limitsDrawdownInput.value = d.tradingLimits.maxDrawdownPct;
+        _limitsTradesInput.value = d.tradingLimits.maxTrades;
       }
       _emailHasPassword = !!d.hasPassword;
       _emailTgConnected = !!d.tgConnected;
@@ -1295,8 +1380,9 @@ export function showMorningModal() {
     '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
-    + '<div class="journal-field"><label>Max volume</label><div class="journal-static">$50</div></div>'
-    + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">0.5%</div></div>'
+    + '<div class="journal-field"><label>Max volume</label><div class="journal-static">' + (state.tradingLimits.maxVolume != null ? '$' + state.tradingLimits.maxVolume : 'Not set — configure in Account settings') + '</div></div>'
+    + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">' + (state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : 'Not set — configure in Account settings') + '</div></div>'
+    + '<div class="journal-field"><label>Max trades per day</label><div class="journal-static">' + (state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : 'Not set — configure in Account settings') + '</div></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="2"></textarea></div>'
     + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
