@@ -344,9 +344,12 @@ document.body.addEventListener('click', function (e) {
       var row = target.closest('.acc-levels-row');
       if (row) row.remove();
       var accList = document.getElementById('acc-levels-list');
-      if (accList && !accList.querySelector('.acc-levels-row')) {
+      var remaining = accList ? accList.querySelectorAll('.acc-levels-row').length : 0;
+      if (accList && !remaining) {
         accList.innerHTML = '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
       }
+      var accCount = document.getElementById('acc-levels-count');
+      if (accCount) accCount.textContent = remaining ? remaining + ' coin' + (remaining === 1 ? '' : 's') : 'No levels or alerts set';
       break;
     }
     case 'open-clear-popup':

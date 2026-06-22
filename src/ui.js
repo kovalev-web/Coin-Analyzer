@@ -335,12 +335,21 @@ export function loadLevels() {
 
 var _AVATAR_PRESETS = ['🐋','🚀','🎯','🦊','🌙','💎','🔥','⚡','🐂','🐻','🧠','👾'];
 
-function _accLevelsListHTML() {
+function _accLevelsSyms() {
   var syms = {};
   Object.keys(_levels).forEach(function (s) { if (_levels[s] && _levels[s].length) syms[s] = 1; });
   Object.keys(_alerts).forEach(function (s) { if (_alerts[s] && _alerts[s].length) syms[s] = 1; });
   Object.keys(_rays).forEach(function (s) { if (_rays[s] && _rays[s].length) syms[s] = 1; });
-  var list = Object.keys(syms).sort();
+  return Object.keys(syms).sort();
+}
+
+function _accLevelsCountText(list) {
+  if (!list.length) return 'No levels or alerts set';
+  return list.length + ' coin' + (list.length === 1 ? '' : 's');
+}
+
+function _accLevelsListHTML() {
+  var list = _accLevelsSyms();
   if (!list.length) return '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
   return list.map(function (s) {
     return '<div class="acc-row acc-levels-row">'
@@ -430,10 +439,14 @@ export function showAccountModal() {
           + '</div>'
         + '</div>'
 
-        + '<div>'
-          + '<div class="acc-row-label">Levels &amp; Alerts</div>'
-          + '<div id="acc-levels-list">' + _accLevelsListHTML() + '</div>'
+        + '<div class="acc-row" id="acc-levels-row">'
+          + '<div class="acc-row-left">'
+            + '<div class="acc-row-label">Levels &amp; Alerts</div>'
+            + '<div class="acc-row-val" id="acc-levels-count">' + _accLevelsCountText(_accLevelsSyms()) + '</div>'
+          + '</div>'
+          + '<button id="acc-levels-toggle-btn" class="acc-row-edit">Show</button>'
         + '</div>'
+        + '<div id="acc-levels-list" class="acc-editor">' + _accLevelsListHTML() + '</div>'
 
         + '<button class="btn-cta danger" id="acc-logout-btn">Sign out</button>'
 
@@ -1079,6 +1092,17 @@ export function showAccountModal() {
       msg.style.color = 'var(--danger)'; msg.textContent = 'Network error';
       btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Save';
     });
+  });
+
+  var _levelsList = document.getElementById('acc-levels-list');
+  document.getElementById('acc-levels-toggle-btn').addEventListener('click', function () {
+    if (_levelsList.style.display === 'block') {
+      _levelsList.style.display = 'none';
+      this.textContent = 'Show';
+    } else {
+      _levelsList.style.display = 'block';
+      this.textContent = 'Hide';
+    }
   });
 
   // Load saved avatar + tg status from server
