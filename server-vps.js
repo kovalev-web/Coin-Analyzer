@@ -798,6 +798,7 @@ function journalEntriesToCsv(entries) {
     ['morningState', 'Morning state'],
     ['volume', 'Volume'],
     ['stopLevel', 'Stop level'],
+    ['maxTrades', 'Max trades'],
     ['dayPlan', 'Day plan'],
     ['plannedCoins', 'Planned coins'],
     ['coinNotes', 'Coin notes'],
@@ -849,6 +850,7 @@ function journalRowToEntry(row) {
     morningState: row.morning_state,
     volume: row.volume,
     stopLevel: row.stop_level,
+    maxTrades: row.max_trades,
     dayPlan: row.day_plan,
     plannedCoins: row.planned_coins,
     triggerWatch: row.trigger_watch,
@@ -1301,9 +1303,9 @@ var httpServer = http.createServer(async function (req, res) {
           try {
             var jParsed = JSON.parse(jBodyM);
             jDb.prepare(
-              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, day_plan, planned_coins, trigger_watch, channels_closed, skipped, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
-              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, skipped = excluded.skipped, morning_at = excluded.morning_at'
-            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.dayPlan || null, jParsed.plannedCoins || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, jParsed.skip ? 1 : 0, Date.now());
+              'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, max_trades, day_plan, planned_coins, trigger_watch, channels_closed, skipped, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+              'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, max_trades = excluded.max_trades, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, skipped = excluded.skipped, morning_at = excluded.morning_at'
+            ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.maxTrades || null, jParsed.dayPlan || null, jParsed.plannedCoins || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, jParsed.skip ? 1 : 0, Date.now());
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {
@@ -1461,6 +1463,7 @@ var httpServer = http.createServer(async function (req, res) {
                   if (je.morningState) mParts.push('настрой утром ' + je.morningState + '/5');
                   if (je.volume) mParts.push('объём $' + je.volume);
                   if (je.stopLevel) mParts.push('допустимая просадка ' + je.stopLevel);
+                  if (je.maxTrades) mParts.push('лимит сделок ' + je.maxTrades);
                   if (je.channelsClosed) mParts.push('другие каналы: ' + (je.channelsClosed === 'closed' ? 'закрыты' : 'открыты'));
                   if (je.dayPlan) mParts.push('план: "' + je.dayPlan + '"');
                   if (je.triggerWatch) mParts.push('возможный триггер: "' + je.triggerWatch + '"');

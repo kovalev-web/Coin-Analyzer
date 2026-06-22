@@ -55,6 +55,7 @@ function ensureAuthTables() {
       morning_state    TEXT,
       volume           TEXT,
       stop_level       TEXT,
+      max_trades       INTEGER,
       day_plan         TEXT,
       planned_coins    TEXT,
       trigger_watch    TEXT,
@@ -107,6 +108,9 @@ function ensureAuthTables() {
   }
   if (journalCols.indexOf('skipped') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "skipped" INTEGER');
+  }
+  if (journalCols.indexOf('max_trades') === -1) {
+    sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }
 }
 

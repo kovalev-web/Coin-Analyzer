@@ -481,6 +481,7 @@ document.body.addEventListener('click', function (e) {
         morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
         volume:       state.tradingLimits.maxVolume != null ? String(state.tradingLimits.maxVolume) : '',
         stopLevel:    state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : '',
+        maxTrades:    state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : '',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         plannedCoins: mPlannedCoins,
         triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
