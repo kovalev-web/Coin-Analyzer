@@ -1359,6 +1359,11 @@ export function showAccountModal() {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
+function _journalDmyLabel(dateStr) {
+  var p = dateStr.split('-');
+  return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0].slice(2) : dateStr;
+}
+
 function _autoGrowTextareas(container) {
   container.querySelectorAll('textarea.ds-input').forEach(function (t) {
     var grow = function () {
@@ -1402,7 +1407,7 @@ export function showMorningModal() {
   el.className = 'journal-modal-overlay';
   el.innerHTML =
     '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
     + '<div class="journal-field"><label>Max volume</label><div class="journal-static">' + (state.tradingLimits.maxVolume != null ? '$' + state.tradingLimits.maxVolume : 'Not set — configure in Account settings') + '</div></div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">' + (state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : 'Not set — configure in Account settings') + '</div></div>'
@@ -1452,7 +1457,7 @@ export function showEveningModal() {
   el.className = 'journal-modal-overlay';
   el.innerHTML =
     '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + today + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field"><label>Followed process (1 = no, 5 = fully)</label>' + _journalRadioGroup('followedProcess', JOURNAL_SCALE_1_5, entry.followedProcess) + '</div>'
     + '<div class="journal-field"><label>Traded only planned setups</label>' + _journalRadioGroup('tradedPlanned', JOURNAL_YES_NO, entry.tradedPlanned) + '</div>'
     + '<div class="journal-field"><label>Trade count</label><input class="ds-input" type="number" name="tradeCount" value="' + tradeCount + '"></div>'
