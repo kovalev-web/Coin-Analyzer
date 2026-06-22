@@ -6,6 +6,13 @@ const { Resend } = require('resend');
 
 var _auth = null;
 
+// Temporary registration freeze while the product is in development — flip
+// to true (and the matching REGISTRATION_OPEN flag in src/login.js) to reopen
+// sign-ups. Existing users are unaffected: disableSignUp only blocks the
+// "no account found yet" branch, sign-in for already-registered users (email
+// or Google) keeps working either way.
+var REGISTRATION_OPEN = false;
+
 function getAuth() {
   if (_auth) return _auth;
   var { drizzle } = getDb();
@@ -22,6 +29,7 @@ function getAuth() {
     }),
     emailAndPassword: {
       enabled: true,
+      disableSignUp: !REGISTRATION_OPEN,
       requireEmailVerification: true,
       minPasswordLength: 8,
       sendResetPassword: async function ({ user, token }) {
@@ -40,6 +48,7 @@ function getAuth() {
       google: {
         clientId:     process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        disableSignUp: !REGISTRATION_OPEN,
       },
     },
     session: {

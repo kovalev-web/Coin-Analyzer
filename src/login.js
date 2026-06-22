@@ -9,6 +9,9 @@ fetch(API_BASE + '/auth/get-session', { credentials: 'include' })
 
 var isRegister = false;
 
+// Toggle this (and the matching disableSignUp flags in auth.js) to reopen sign-ups.
+var REGISTRATION_OPEN = false;
+
 var formEl   = document.getElementById('login-form');
 var emailEl  = document.getElementById('email');
 
@@ -70,7 +73,14 @@ googleEl.addEventListener('click', async function () {
   }
 });
 
-toggleEl.addEventListener('click', function () { setMode(!isRegister); });
+if (REGISTRATION_OPEN) {
+  toggleEl.addEventListener('click', function () { setMode(!isRegister); });
+} else {
+  toggleEl.textContent = "Sign-ups are closed while we're in development";
+  toggleEl.disabled = true;
+  toggleEl.style.opacity = '0.6';
+  toggleEl.style.cursor = 'default';
+}
 
 backBtnEl.addEventListener('click', function () { setMode(false); });
 
