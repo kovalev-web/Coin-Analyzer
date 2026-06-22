@@ -1750,11 +1750,15 @@ export function renderJournalSummarySection() {
   var statsContainer = document.getElementById('journal-stats-col');
   if (!container && !statsContainer) return;
   if (state.isDemoMode) {
+    var demoChartLoadingEl = document.getElementById('journal-chart-loading');
+    if (demoChartLoadingEl) demoChartLoadingEl.style.display = 'none';
     if (statsContainer) statsContainer.innerHTML = '';
     if (container) container.innerHTML = '<div class="bp-week"><div class="fvbd-empty"><a href="/login" class="bp-demo-link">Sign up</a> and connect Binance API to track your trades</div></div>';
     return;
   }
   var s = state.journalSummary;
+  var chartLoadingEl = document.getElementById('journal-chart-loading');
+  if (chartLoadingEl) chartLoadingEl.style.display = s ? 'none' : 'flex';
   var statsHTML = s
     ? (function () {
         var pnlSign = s.pnl >= 0 ? '+' : '';
@@ -1764,7 +1768,7 @@ export function renderJournalSummarySection() {
           + '<div class="bp-stat-card"><div class="bp-stat-label">Win rate</div><div class="bp-stat-val">' + s.winRate + '%</div></div>'
           + '<div class="bp-stat-card"><div class="bp-stat-label">Wins</div><div class="bp-stat-val">' + s.winCount + '/' + s.tradeCount + '</div></div>';
       })()
-    : '<div class="fvbd-empty">Loading...</div>';
+    : '';
   if (statsContainer) statsContainer.innerHTML = statsHTML;
 
   var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';

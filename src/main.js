@@ -942,6 +942,7 @@ registerRoute('/journal', function () {
     '</div>' +
     '</div>' +
     '<div class="journal-chart-row">' +
+    '<div id="journal-chart-loading" class="journal-chart-loading"><span class="big-spinner"></span></div>' +
     '<div id="journal-pnl-chart" style="border-radius:var(--radius-xl);overflow:hidden;"></div>' +
     '<div id="journal-stats-col" class="journal-stats-col"></div>' +
     '</div>' +
