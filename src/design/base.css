@@ -15,6 +15,10 @@
   scrollbar-color: var(--steel) transparent;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--steel); border-radius: 3px; }
