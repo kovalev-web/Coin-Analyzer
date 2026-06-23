@@ -1439,7 +1439,23 @@ var httpServer = http.createServer(async function (req, res) {
                 if (fills.length) {
                   var dayPnl = 0;
                   fills.forEach(function (f) { dayPnl += parseFloat(f.realizedPnl || 0) - parseFloat(f.commission || 0); });
-                  pnlStr = ' | PnL: $' + dayPnl.toFixed(2) + ' (' + fills.length + ' fills)';
+                  // Round-trips (0→X→0) per positionSide stream, not raw fill count —
+                  // adding/trimming to an open position must not inflate the trade count.
+                  var bySide = {};
+                  fills.forEach(function (f) {
+                    var sideKey = f.positionSide || 'BOTH';
+                    (bySide[sideKey] = bySide[sideKey] || []).push(f);
+                  });
+                  var roundTrips = 0;
+                  Object.values(bySide).forEach(function (sideFills) {
+                    sideFills.sort(function (a, b) { return a.time - b.time; });
+                    var position = 0;
+                    sideFills.forEach(function (f) {
+                      position += f.side === 'BUY' ? parseFloat(f.qty) : -parseFloat(f.qty);
+                      if (Math.abs(position) < 0.00001) roundTrips++;
+                    });
+                  });
+                  pnlStr = ' | PnL: $' + dayPnl.toFixed(2) + ' (' + roundTrips + ' сделок, ' + fills.length + ' fills)';
                 } else {
                   pnlStr = ' | нет сделок';
                 }
