@@ -3638,6 +3638,11 @@ function briefingForDate(date) {
   return (state.briefing || []).filter(function (e) { return e.date === date; });
 }
 
+export function briefingThisWeekEntries() {
+  var weekMonday = _dateStr(_currentWeekMonday());
+  return (state.briefing || []).filter(function (e) { return e.date >= weekMonday; });
+}
+
 function isInBriefing(sym) {
   var today = todayDate();
   return (state.briefing || []).some(function (e) { return e.sym === sym && e.date === today; });
@@ -4003,7 +4008,7 @@ export function renderBriefingPanel() {
     '</div>' +
     '<div class="popup-body bp-list">' + rowsHTML + '</div>' +
     '<div class="popup-footer">' +
-      (state.briefing && state.briefing.length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Watchlist mode</button>' : '') +
+      (briefingThisWeekEntries().length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Watchlist mode</button>' : '') +
       demoNotice +
     '</div>';
 

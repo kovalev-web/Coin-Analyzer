@@ -23,6 +23,7 @@ import {
   renderJournalSummarySection, showJournalAiModal, hideJournalAiModal, renderJournalAiModalContent,
   openHintsPopup, closeHintsPopup,
   updateSessionTimer, injectDemoBanner,
+  briefingThisWeekEntries,
 } from './ui.js';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
@@ -625,12 +626,13 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'go-briefing': {
       var today = tzDateStr();
-      var first = (state.briefing || []).find(function (e) { return e.date === today; });
+      var weekEntries = briefingThisWeekEntries();
+      var first = weekEntries.find(function (e) { return e.date === today; });
       if (!first) {
-        // Find the most recent past date and take its first entry
+        // Find the most recent past date this week and take its first entry
         var latestPastDate = '';
-        (state.briefing || []).forEach(function (e) { if (e.date < today && e.date > latestPastDate) latestPastDate = e.date; });
-        if (latestPastDate) first = (state.briefing || []).find(function (e) { return e.date === latestPastDate; });
+        weekEntries.forEach(function (e) { if (e.date < today && e.date > latestPastDate) latestPastDate = e.date; });
+        if (latestPastDate) first = weekEntries.find(function (e) { return e.date === latestPastDate; });
       }
       if (first) {
         closeBriefingPanel();
