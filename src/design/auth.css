@@ -250,7 +250,7 @@ body {
 /* ── Legal note (Terms/Privacy) ─────────────────────────────────── */
 .auth-legal-note {
   text-align: center;
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   color: var(--graphite);
   margin: 0 0 var(--space-12);
 }
@@ -281,4 +281,4 @@ body {
    below, inflating every visual gap by 8-16px beyond the intended value. */
 #login-card #toggle-mode { margin-top: 0; padding-top: 0; padding-bottom: 0; }
 #login-card .auth-demo-link { margin-top: 0; padding-top: 0; padding-bottom: 0; }
-#login-card .popup-footer { gap: 32px; padding-bottom: 24px; }
+#login-card .popup-footer { gap: 16px; padding-bottom: 32px; }
