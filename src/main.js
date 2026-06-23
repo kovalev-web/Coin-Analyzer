@@ -561,6 +561,7 @@ document.body.addEventListener('click', function (e) {
         triggerFomo:      _pill('triggerFomo'),
         triggerOther:     _pill('triggerOther') ? eModal.querySelector('[name="triggerOtherText"]').value.trim() : '',
         triggerFomoOther: _pill('triggerFomoOther'),
+        triggerFomoActive: _pill('triggerFomoActive'),
         triggerAddFunds:  _pill('triggerAddFunds'),
         triggerReplan:    _pill('triggerReplan'),
         missedScreening:  eModal.querySelector('[name="missedScreening"]').value.trim(),

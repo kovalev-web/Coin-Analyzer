@@ -1512,6 +1512,28 @@ export function showEveningModal() {
 export function hideEveningModal() {
   var el = document.getElementById('evening-journal-modal');
   if (!el) return;
+  // Capture the in-progress form as a local draft so closing without saving
+  // (e.g. the X button) doesn't lose selections — reopening re-reads this.
+  function pill(name) { return !!el.querySelector('.journal-trigger-pill[data-trigger="' + name + '"].active'); }
+  state.journalToday = Object.assign({}, state.journalToday || {}, {
+    followedProcess:   (el.querySelector('[name="followedProcess"]:checked') || {}).value || '',
+    tradedPlanned:      (el.querySelector('[name="tradedPlanned"]:checked') || {}).value || '',
+    tradeCount:         parseInt(el.querySelector('[name="tradeCount"]').value) || 0,
+    stopCraneKept:      (el.querySelector('[name="stopCraneKept"]:checked') || {}).value || '',
+    volumeOk:           (el.querySelector('[name="volumeOk"]:checked') || {}).value || '',
+    triggerRevenge:     pill('triggerRevenge'),
+    triggerSizeUp:      pill('triggerSizeUp'),
+    triggerFomo:        pill('triggerFomo'),
+    triggerOther:       pill('triggerOther') ? el.querySelector('[name="triggerOtherText"]').value.trim() : '',
+    triggerFomoOther:   pill('triggerFomoOther'),
+    triggerFomoActive:  pill('triggerFomoActive'),
+    triggerAddFunds:    pill('triggerAddFunds'),
+    triggerReplan:      pill('triggerReplan'),
+    missedScreening:    el.querySelector('[name="missedScreening"]').value.trim(),
+    eveningState:       (el.querySelector('[name="eveningState"]:checked') || {}).value || '',
+    feltWorthless:      (el.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
+    freeConclusion:     el.querySelector('[name="freeConclusion"]').value.trim(),
+  });
   unlockScroll();
   el.remove();
 }
