@@ -113,6 +113,24 @@ function ensureAuthTables() {
   if (journalCols.indexOf('facts_json') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "facts_json" TEXT');
   }
+  // Journal v2 (docs/TRADER_EDGE.md): morning state split into scales + if-then
+  // intention; evening asks only what the data can't know.
+  [['sleep_hours', 'REAL'], ['sleep_quality', 'INTEGER'], ['energy', 'INTEGER'], ['carryover', 'INTEGER'], ['focus', 'INTEGER'],
+   ['if_then', 'TEXT'], ['did_well', 'TEXT'], ['fix_tomorrow', 'TEXT'], ['why_breaks', 'TEXT'], ['self_talk', 'TEXT']].forEach(function (c) {
+    if (journalCols.indexOf(c[0]) === -1) sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "' + c[0] + '" ' + c[1]);
+  });
+  // One tag per closed trade, tapped right after it closes (setup quality + what drove it)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS "trade_tags" (
+      "user_id" TEXT NOT NULL,
+      "symbol" TEXT NOT NULL,
+      "close_time" INTEGER NOT NULL,
+      "setup" TEXT,
+      "emotion" TEXT,
+      "created_at" INTEGER NOT NULL,
+      PRIMARY KEY ("user_id", "symbol", "close_time")
+    )
+  `);
   if (journalCols.indexOf('max_trades') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }

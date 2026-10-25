@@ -908,8 +908,24 @@ export function fetchJournalFacts(dateStr) {
 export function fetchJournalToday() {
   return fetch(API_BASE + '/api/journal/today', { credentials: 'include' })
     .then(function (r) { return r.json(); })
-    .then(function (d) { state.journalToday = d.entry || null; })
+    .then(function (d) { state.journalToday = d.entry || null; state.journalLastFix = d.lastFix || null; })
     .catch(function () {});
+}
+
+// One tap after a trade closes: setup quality (A/B/C) and/or what drove it
+export function saveTradeTag(tag) {
+  return fetch(API_BASE + '/api/journal/trade-tag', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(tag),
+  }).then(function (r) { if (!r.ok) throw new Error('Tag not saved'); return r.json(); });
+}
+
+export function fetchJournalEdge(range) {
+  return fetch(API_BASE + '/api/journal/edge?range=' + (range || '3m'), { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
 }
 
 export function saveJournalMorning(data) {

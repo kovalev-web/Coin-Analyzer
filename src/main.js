@@ -26,6 +26,7 @@ import {
   briefingThisWeekEntries,
 } from './ui.js';
 import { toggleTerminal } from './terminal.js';
+import { renderEdgeSection } from './edge-view.js';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -495,14 +496,20 @@ document.body.addEventListener('click', function (e) {
         .filter(function (e) { return e.date === mToday; })
         .map(function (e) { return e.sym.toUpperCase(); })
         .join(', ');
+      function _mv(n) { return (mModal.querySelector('[name="' + n + '"]:checked') || {}).value || ''; }
       saveJournalMorning({
-        morningState: (mModal.querySelector('[name="morningState"]:checked') || {}).value || '',
+        sleepHours:   mModal.querySelector('[name="sleepHours"]').value,
+        sleepQuality: _mv('sleepQuality'),
+        energy:       _mv('energy'),
+        carryover:    _mv('carryover'),
+        focus:        _mv('focus'),
+        ifThen:       { if: mModal.querySelector('[name="ifWhen"]').value.trim(), then: mModal.querySelector('[name="ifThen"]').value.trim() },
         volume:       state.tradingLimits.maxVolume != null ? String(state.tradingLimits.maxVolume) : '',
         stopLevel:    state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : '',
         maxTrades:    state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : '',
         dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
         plannedCoins: mPlannedCoins,
-        triggerWatch: mModal.querySelector('[name="triggerWatch"]').value.trim(),
+        triggerWatch: '', // replaced by the if-then rule (v2)
         channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
       }).then(function () {
         hideMorningModal();
@@ -550,26 +557,18 @@ document.body.addEventListener('click', function (e) {
       var eBtn = target;
       eBtn.disabled = true;
       var eModal = document.getElementById('evening-journal-modal');
-      function _pill(name) { return !!eModal.querySelector('.journal-trigger-pill[data-trigger="' + name + '"].active'); }
+      function _ev(n) { var x = eModal.querySelector('[name="' + n + '"]'); return x ? x.value.trim() : ''; }
       saveJournalEvening({
-        followedProcess:  (eModal.querySelector('[name="followedProcess"]:checked') || {}).value || '',
-        tradedPlanned:    (eModal.querySelector('[name="tradedPlanned"]:checked') || {}).value || '',
-        tradeCount:       parseInt(eModal.querySelector('[name="tradeCount"]').value) || 0,
-        stopCraneKept:    (eModal.querySelector('[name="stopCraneKept"]:checked') || {}).value || '',
-        volumeOk:         (eModal.querySelector('[name="volumeOk"]:checked') || {}).value || '',
-        triggerRevenge:   _pill('triggerRevenge'),
-        triggerSizeUp:    _pill('triggerSizeUp'),
-        triggerFomo:      _pill('triggerFomo'),
-        triggerOther:     _pill('triggerOther') ? eModal.querySelector('[name="triggerOtherText"]').value.trim() : '',
-        triggerFomoOther: _pill('triggerFomoOther'),
-        triggerFomoActive: _pill('triggerFomoActive'),
-        triggerAddFunds:  _pill('triggerAddFunds'),
-        triggerReplan:    _pill('triggerReplan'),
-        missedScreening:  eModal.querySelector('[name="missedScreening"]').value.trim(),
-        eveningState:     (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
-        feltWorthless:    (eModal.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
-        freeConclusion:   eModal.querySelector('[name="freeConclusion"]').value.trim(),
-        pnl:              eModal.dataset.pnl != null ? parseFloat(eModal.dataset.pnl) : null,
+        // v2: trade count / PnL / rule checks come from facts on the server
+        tradeCount:      parseInt(eModal.dataset.tradeCount, 10) || 0,
+        whyBreaks:       _ev('whyBreaks'),
+        didWell:         _ev('didWell'),
+        fixTomorrow:     _ev('fixTomorrow'),
+        selfTalk:        (eModal.querySelector('[name="selfTalk"]:checked') || {}).value || '',
+        missedScreening: _ev('missedScreening'),
+        eveningState:    (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
+        freeConclusion:  _ev('freeConclusion'),
+        pnl:             eModal.dataset.pnl != null ? parseFloat(eModal.dataset.pnl) : null,
       }).then(function () {
         hideEveningModal();
         showToast('Review saved');
@@ -971,11 +970,13 @@ registerRoute('/journal', function () {
     '<div id="journal-stats-col" class="journal-stats-col"></div>' +
     '</div>' +
     '<div id="journal-summary-section"></div>' +
+    '<div id="journal-edge-section"></div>' +
     '<div id="profile-journal-section"></div>' +
     '</div>';
   if (state.journalEntries) {
     renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
   }
+  renderEdgeSection(document.getElementById('journal-edge-section'));
   renderJournalSummarySection();
   fetchJournalSummary(state.journalRange).then(function () {
     renderJournalSummarySection();

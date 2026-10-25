@@ -13,6 +13,7 @@ try {
 } catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart } = require('./journal/facts');
+const { computeEdge } = require('./journal/edge');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -1004,6 +1005,9 @@ function journalRowToEntry(row) {
     eveningAt: row.evening_at,
     skipped: !!row.skipped,
     facts: row.facts_json ? (function () { try { return JSON.parse(row.facts_json); } catch (e) { return null; } })() : null,
+    sleepHours: row.sleep_hours, sleepQuality: row.sleep_quality, energy: row.energy, carryover: row.carryover, focus: row.focus,
+    ifThen: row.if_then ? (function () { try { return JSON.parse(row.if_then); } catch (e) { return null; } })() : null,
+    didWell: row.did_well, fixTomorrow: row.fix_tomorrow, whyBreaks: row.why_breaks, selfTalk: row.self_talk,
   };
 }
 
@@ -1380,8 +1384,10 @@ var httpServer = http.createServer(async function (req, res) {
 
       if (req.method === 'GET' && req.url === '/api/journal/today') {
         var jRow = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date = ?').get(jUserId, jToday);
+        // Last evening's "fix tomorrow" becomes this morning's if-then prompt
+        var jPrevFix = jDb.prepare('SELECT date, fix_tomorrow FROM journal_entries WHERE user_id = ? AND date < ? AND fix_tomorrow IS NOT NULL ORDER BY date DESC LIMIT 1').get(jUserId, jToday);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ entry: jRow ? journalRowToEntry(jRow) : null }));
+        res.end(JSON.stringify({ entry: jRow ? journalRowToEntry(jRow) : null, lastFix: jPrevFix ? { date: jPrevFix.date, text: jPrevFix.fix_tomorrow } : null }));
         return;
       }
 
@@ -1394,8 +1400,57 @@ var httpServer = http.createServer(async function (req, res) {
         }
         var jFacts = null;
         try { jFacts = await buildDayFacts(jUserId, jFactsDate); } catch (e) { console.error('[Facts]', e.message); }
+        if (jFacts) {
+          var jTagRows = jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ? AND close_time >= ? AND close_time < ?')
+            .all(jUserId, jFacts.trades.length ? jFacts.trades[0].openTime : 0, Date.now() + 86400000);
+          jFacts.trades.forEach(function (t) {
+            if (!t.closeTime) return;
+            var tg = jTagRows.find(function (g) { return g.symbol === t.symbol && Math.abs(g.close_time - t.closeTime) <= 2000; });
+            if (tg) t.tag = { setup: tg.setup, emotion: tg.emotion };
+          });
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ facts: jFacts }));
+        return;
+      }
+
+      // Tag a closed trade: setup quality + what drove the entry (one tap each, right after the close)
+      if (req.method === 'POST' && req.url === '/api/journal/trade-tag') {
+        var jTagBody = await new Promise(function (resolve) { var b = ''; req.on('data', function (c) { b += c; if (b.length > 4096) req.destroy(); }); req.on('end', function () { resolve(b); }); });
+        var jTag;
+        try { jTag = JSON.parse(jTagBody || '{}'); } catch (e) { jTag = {}; }
+        var jTagSym = String(jTag.symbol || '').toUpperCase();
+        var jTagClose = Number(jTag.closeTime);
+        var jSetupOk = jTag.setup == null || ['A', 'B', 'C'].indexOf(jTag.setup) !== -1;
+        var jEmoOk = jTag.emotion == null || ['plan', 'fomo', 'revenge', 'boredom', 'fear'].indexOf(jTag.emotion) !== -1;
+        if (!/^[A-Z0-9]{2,30}$/.test(jTagSym) || !(jTagClose > 0) || !jSetupOk || !jEmoOk || (!jTag.setup && !jTag.emotion)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid tag' }));
+          return;
+        }
+        jDb.prepare('INSERT INTO trade_tags (user_id, symbol, close_time, setup, emotion, created_at) VALUES (?, ?, ?, ?, ?, ?) '
+          + 'ON CONFLICT(user_id, symbol, close_time) DO UPDATE SET setup = COALESCE(excluded.setup, trade_tags.setup), emotion = COALESCE(excluded.emotion, trade_tags.emotion)')
+          .run(jUserId, jTagSym, Math.floor(jTagClose), jTag.setup || null, jTag.emotion || null, Date.now());
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+
+      // "My edge": closed trades from saved facts × tags × morning state
+      if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/edge') {
+        var jEdgeRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || '3m';
+        var jEdgeDays = { '1m': 30, '3m': 90, '6m': 180, all: 3650 }[jEdgeRange] || 90;
+        var jEdgeFrom = new Date(Date.now() - jEdgeDays * 86400000).toISOString().slice(0, 10);
+        var jEdgeRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND facts_json IS NOT NULL ORDER BY date ASC').all(jUserId, jEdgeFrom);
+        var jEdgeTags = jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ?').all(jUserId);
+        var jEdge = computeEdge(jEdgeRows.map(function (r) {
+          var e = journalRowToEntry(r);
+          return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
+        }), jEdgeTags);
+        jEdge.range = jEdgeRange;
+        jEdge.days = jEdgeRows.length;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(jEdge));
         return;
       }
 
@@ -1453,6 +1508,13 @@ var httpServer = http.createServer(async function (req, res) {
               'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, max_trades, day_plan, planned_coins, trigger_watch, channels_closed, skipped, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
               'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, max_trades = excluded.max_trades, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, skipped = excluded.skipped, morning_at = excluded.morning_at'
             ).run(jUserId, jToday, jParsed.morningState || null, jParsed.volume || null, jParsed.stopLevel || null, jParsed.maxTrades || null, jParsed.dayPlan || null, jParsed.plannedCoins || null, jParsed.triggerWatch || null, jParsed.channelsClosed || null, jParsed.skip ? 1 : 0, Date.now());
+            // v2 scales + if-then (docs/TRADER_EDGE.md); old single morning_state kept for history
+            function jScale(v) { var n = parseInt(v, 10); return n >= 1 && n <= 5 ? n : null; }
+            var jSleepH = parseFloat(jParsed.sleepHours);
+            jDb.prepare('UPDATE journal_entries SET sleep_hours = ?, sleep_quality = ?, energy = ?, carryover = ?, focus = ?, if_then = ? WHERE user_id = ? AND date = ?').run(
+              jSleepH >= 0 && jSleepH <= 24 ? jSleepH : null, jScale(jParsed.sleepQuality), jScale(jParsed.energy), jScale(jParsed.carryover), jScale(jParsed.focus),
+              jParsed.ifThen && (jParsed.ifThen.if || jParsed.ifThen.then) ? JSON.stringify({ if: String(jParsed.ifThen.if || '').slice(0, 300), then: String(jParsed.ifThen.then || '').slice(0, 300) }) : null,
+              jUserId, jToday);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {
@@ -1488,6 +1550,12 @@ var httpServer = http.createServer(async function (req, res) {
               jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerRevenge ? 1 : 0, jParsed.triggerSizeUp ? 1 : 0, jParsed.triggerFomo ? 1 : 0, jParsed.triggerOther || null,
               jParsed.triggerFomoOther ? 1 : 0, jParsed.triggerFomoActive ? 1 : 0, jParsed.triggerAddFunds ? 1 : 0, jParsed.triggerReplan ? 1 : 0, jParsed.missedScreening || null, jParsed.pnl != null ? jParsed.pnl : null, jParsed.eveningState || null,
               jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
+            jDb.prepare('UPDATE journal_entries SET did_well = ?, fix_tomorrow = ?, why_breaks = ?, self_talk = ? WHERE user_id = ? AND date = ?').run(
+              jParsed.didWell ? String(jParsed.didWell).slice(0, 1000) : null,
+              jParsed.fixTomorrow ? String(jParsed.fixTomorrow).slice(0, 1000) : null,
+              jParsed.whyBreaks ? String(jParsed.whyBreaks).slice(0, 2000) : null,
+              ['harsh', 'neutral', 'kind'].indexOf(jParsed.selfTalk) !== -1 ? jParsed.selfTalk : null,
+              jUserId, jToday);
             // Snapshot the computed facts with the review; they, not the typed
             // numbers, feed trade count / PnL and the reports.
             try {
@@ -1647,6 +1715,12 @@ var httpServer = http.createServer(async function (req, res) {
                   if (je.channelsClosed) mParts.push('другие каналы: ' + (je.channelsClosed === 'closed' ? 'закрыты' : 'открыты'));
                   if (je.dayPlan) mParts.push('план: "' + je.dayPlan + '"');
                   if (je.triggerWatch) mParts.push('возможный триггер: "' + je.triggerWatch + '"');
+                  if (je.sleepHours != null) mParts.push('сон ' + je.sleepHours + ' ч');
+                  if (je.sleepQuality) mParts.push('качество сна ' + je.sleepQuality + '/5');
+                  if (je.energy) mParts.push('энергия ' + je.energy + '/5');
+                  if (je.carryover) mParts.push('несёт вчерашнее ' + je.carryover + '/5');
+                  if (je.focus) mParts.push('фокус ' + je.focus + '/5');
+                  if (je.ifThen && je.ifThen.if) mParts.push('правило дня: если "' + je.ifThen.if + '", то "' + je.ifThen.then + '"');
                   if (mParts.length) lines.push('  Утро — ' + mParts.join('; ') + '.');
                 }
 
@@ -1666,6 +1740,10 @@ var httpServer = http.createServer(async function (req, res) {
                   if (je.eveningState) eParts.push('настрой вечером ' + je.eveningState + '/5');
                   if (jYesNoRu(je.feltWorthless)) eParts.push('чувствовал бесполезность: ' + jYesNoRu(je.feltWorthless));
                   if (je.freeConclusion) eParts.push('заметка трейдера: "' + je.freeConclusion + '"');
+                  if (je.whyBreaks) eParts.push('почему были нарушения: "' + je.whyBreaks + '"');
+                  if (je.didWell) eParts.push('сделал хорошо: "' + je.didWell + '"');
+                  if (je.fixTomorrow) eParts.push('исправить завтра: "' + je.fixTomorrow + '"');
+                  if (je.selfTalk) eParts.push('разговор с собой после убытков: ' + ({ harsh: 'жёсткий', neutral: 'нейтральный', kind: 'поддерживающий' }[je.selfTalk] || je.selfTalk));
                   if (eParts.length) lines.push('  Вечер — ' + eParts.join('; ') + '.');
                 }
 
@@ -1749,6 +1827,22 @@ var httpServer = http.createServer(async function (req, res) {
             // Fingerprint of everything that feeds the prompt — if this is unchanged
             // since the last generation for this (user, range), the trade data hasn't
             // moved and we can return the cached text without spending Gemini tokens.
+            // Edge groups (journal/edge.js) for the same range: where results come from, with n
+            var jEdgeRowsA = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND date <= ? AND facts_json IS NOT NULL').all(jUserId, jAiStats.from, jAiStats.to);
+            if (jEdgeRowsA.length) {
+              var jEdgeA = computeEdge(jEdgeRowsA.map(function (r) {
+                var e = journalRowToEntry(r);
+                return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
+              }), jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ?').all(jUserId));
+              if (jEdgeA.total.n) {
+                var jEdgeLines = ['Разрезы по сделкам (посчитано системой; n — число сделок, выводы при n < ' + jEdgeA.minN + ' предварительные):'];
+                Object.keys(jEdgeA.groups).forEach(function (gk) {
+                  var rows = jEdgeA.groups[gk].filter(function (r) { return r.n; });
+                  if (rows.length) jEdgeLines.push('  ' + gk + ': ' + rows.map(function (r) { return r.key + ' n=' + r.n + ' win ' + r.winRate + '% PnL ' + r.pnl; }).join('; '));
+                });
+                jStatsText += '\n\n' + jEdgeLines.join('\n');
+              }
+            }
             var jAiFingerprint = crypto.createHash('sha256').update(jLimitsText + jBriefingText + '\n' + jStatsText).digest('hex');
             var jAiCachedRes = await redis(['GET', jAiCacheKey]);
             var jAiCached = jAiCachedRes.result ? JSON.parse(jAiCachedRes.result) : null;

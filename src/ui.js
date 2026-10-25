@@ -5,7 +5,7 @@ import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday, fetchJournalFacts } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 
@@ -1408,18 +1408,29 @@ export function showMorningModal() {
   if (document.getElementById('morning-journal-modal')) return;
 
   var today = tzDateStr();
+  var fix = state.journalLastFix;
   var el = document.createElement('div');
   el.id = 'morning-journal-modal';
   el.className = 'journal-modal-overlay';
+  // v2 (docs/TRADER_EDGE.md): separate state scales instead of one "mood" number,
+  // so the edge report can tell which of them actually moves results.
   el.innerHTML =
     '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><label>State right now (1 = carrying yesterday, 5 = calm and clear)</label>' + _journalRadioGroup('morningState', JOURNAL_SCALE_1_5, '') + '<div class="journal-hint" data-hint="morningState" hidden>Risk zone — trade minimally or just observe today.</div></div>'
+    + '<div class="journal-field"><label>Sleep last night, hours</label><input class="ds-input journal-num" type="number" name="sleepHours" min="0" max="16" step="0.5" inputmode="decimal" placeholder="7"></div>'
+    + '<div class="journal-field"><label>Sleep quality (1 = broken, 5 = deep)</label>' + _journalRadioGroup('sleepQuality', JOURNAL_SCALE_1_5, '') + '</div>'
+    + '<div class="journal-field"><label>Energy (1 = drained, 5 = fresh)</label>' + _journalRadioGroup('energy', JOURNAL_SCALE_1_5, '') + '</div>'
+    + '<div class="journal-field"><label>Carrying yesterday (1 = nothing, 5 = heavy)</label>' + _journalRadioGroup('carryover', JOURNAL_SCALE_1_5, '') + '</div>'
+    + '<div class="journal-field"><label>Focus (1 = scattered, 5 = sharp)</label>' + _journalRadioGroup('focus', JOURNAL_SCALE_1_5, '') + '</div>'
+    + '<div class="journal-hint" data-hint="state" hidden>Risk zone — trade minimally or just observe today.</div>'
     + '<div class="journal-field"><label>Max volume</label><div class="journal-static">' + (state.tradingLimits.maxVolume != null ? '$' + state.tradingLimits.maxVolume : 'Not set — configure in Account settings') + '</div></div>'
     + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">' + (state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : 'Not set — configure in Account settings') + '</div></div>'
     + '<div class="journal-field"><label>Max trades per day</label><div class="journal-static">' + (state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : 'Not set — configure in Account settings') + '</div></div>'
     + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="2"></textarea></div>'
-    + '<div class="journal-field"><label>What could trigger me today</label><input class="ds-input" type="text" name="triggerWatch"></div>'
+    + '<div class="journal-field"><label>Today\'s rule — if … then …</label>'
+      + (fix ? '<div class="journal-static">Yesterday you wanted to fix: “' + escHtml(fix.text) + '”</div>' : '')
+      + '<input class="ds-input" type="text" name="ifWhen" placeholder="If I take a stop and want to re-enter at once">'
+      + '<input class="ds-input journal-then" type="text" name="ifThen" placeholder="then I step away for 10 minutes"></div>'
     + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
     + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
     + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
@@ -1431,17 +1442,21 @@ export function showMorningModal() {
   _autoGrowTextareas(el);
 
   var btn = el.querySelector('[data-action="save-morning-journal"]');
-  var hint = el.querySelector('[data-hint="morningState"]');
+  var hint = el.querySelector('[data-hint="state"]');
+  function val(name) { return (el.querySelector('[name="' + name + '"]:checked') || {}).value || ''; }
   function _checkFilled() {
-    var morningState = (el.querySelector('[name="morningState"]:checked') || {}).value || '';
+    var sleep = el.querySelector('[name="sleepHours"]').value;
+    var scales = ['sleepQuality', 'energy', 'carryover', 'focus'].map(val);
     var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
-    var channelsClosed = (el.querySelector('[name="channelsClosed"]:checked') || {}).value || '';
+    var ifWhen = el.querySelector('[name="ifWhen"]').value.trim();
+    var ifThen = el.querySelector('[name="ifThen"]').value.trim();
     var hasBriefingCoins = (state.briefing || []).some(function (e) { return e.date === today; });
-    hint.hidden = !(morningState && Number(morningState) <= 2);
-    btn.disabled = !(morningState && dayPlan && channelsClosed && hasBriefingCoins);
+    var e = Number(val('energy')), c = Number(val('carryover')), q = Number(val('sleepQuality'));
+    hint.hidden = !((e && e <= 2) || (c && c >= 4) || (q && q <= 2));
+    btn.disabled = !(sleep !== '' && scales.every(Boolean) && dayPlan && ifWhen && ifThen && val('channelsClosed') && hasBriefingCoins);
   }
-  el.querySelectorAll('[name="morningState"], [name="channelsClosed"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
-  el.querySelector('[name="dayPlan"]').addEventListener('input', _checkFilled);
+  el.querySelectorAll('input[type="radio"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
+  ['sleepHours', 'dayPlan', 'ifWhen', 'ifThen'].forEach(function (n) { el.querySelector('[name="' + n + '"]').addEventListener('input', _checkFilled); });
 }
 
 export function hideMorningModal() {
@@ -1456,40 +1471,23 @@ export function showEveningModal() {
 
   var today = tzDateStr();
   var entry = state.journalToday || {};
-  var tradeCount = entry.tradeCount != null ? entry.tradeCount : 0;
 
   var el = document.createElement('div');
   el.id = 'evening-journal-modal';
   el.className = 'journal-modal-overlay';
+  // v2 (docs/TRADER_EDGE.md): numbers and rule checks come from the trades
+  // (facts block); the questions cover only what the data can't know.
   el.innerHTML =
     '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
     + '<div class="journal-field journal-facts" id="evening-facts"><label>Day facts — from your trades</label><div class="journal-static">Loading…</div></div>'
-    + '<div class="journal-field"><label>Followed process (1 = no, 5 = fully)</label>' + _journalRadioGroup('followedProcess', JOURNAL_SCALE_1_5, entry.followedProcess) + '</div>'
-    + '<div class="journal-field"><label>Traded only planned setups</label>' + _journalRadioGroup('tradedPlanned', JOURNAL_YES_NO, entry.tradedPlanned) + '</div>'
-    + '<div class="journal-field"><label>Trade count</label><input class="ds-input" type="number" name="tradeCount" value="' + tradeCount + '"></div>'
-    + '<div class="journal-field"><label>PnL today</label><div class="journal-static" id="evening-pnl-stats">Loading…</div></div>'
-    + '<div class="journal-field"><label>Stop-crane kept after 2 stops</label>' + _journalRadioGroup('stopCraneKept', JOURNAL_YES_NO_NA, entry.stopCraneKept) + '</div>'
-    + '<div class="journal-field"><label>Volume was appropriate</label>' + _journalRadioGroup('volumeOk', JOURNAL_YES_NO, entry.volumeOk) + '</div>'
-    + '<div class="journal-field"><label>Trigger fired today</label><div class="journal-trigger-pills">'
-        + [
-            ['triggerRevenge',   'Revenge after a stop',           entry.triggerRevenge],
-            ['triggerSizeUp',    'Sizing up after a streak',        entry.triggerSizeUp],
-            ['triggerFomo',       'FOMO',                            entry.triggerFomo],
-            ['triggerFomoOther',  'FOMO (someone else\'s trade)',    entry.triggerFomoOther],
-            ['triggerFomoActive', 'FOMO (active coin)',              entry.triggerFomoActive],
-            ['triggerAddFunds',  'Urge to add funds',               entry.triggerAddFunds],
-            ['triggerReplan',    'Urge to re-plan',                 entry.triggerReplan],
-            ['triggerOther',     'Other',                           !!entry.triggerOther],
-          ].map(function (t) {
-            return '<button type="button" class="pill journal-trigger-pill' + (t[2] ? ' active' : '') + '" data-action="journal-trigger-pill" data-trigger="' + t[0] + '">' + t[1] + '</button>';
-          }).join('')
-        + '</div>'
-        + '<textarea class="ds-input" name="triggerOtherText" placeholder="Describe what happened" rows="3" style="margin-top:var(--space-4);resize:none;height:auto;padding:var(--space-5) var(--space-6);"' + (entry.triggerOther ? '' : ' hidden') + '>' + escHtml(entry.triggerOther || '') + '</textarea></div>'
+    + '<div class="journal-field" id="evening-why" hidden><label>What was going on behind the rule breaks above?</label><textarea class="ds-input" name="whyBreaks" rows="2">' + escHtml(entry.whyBreaks || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>One thing I did well today</label><textarea class="ds-input" name="didWell" rows="2">' + escHtml(entry.didWell || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>One thing to fix tomorrow (becomes tomorrow\'s if-then)</label><textarea class="ds-input" name="fixTomorrow" rows="2">' + escHtml(entry.fixTomorrow || '') + '</textarea></div>'
+    + '<div class="journal-field" id="evening-selftalk" hidden><label>After losses, I talked to myself…</label>' + _journalRadioGroup('selfTalk', [{ value: 'harsh', label: 'Harshly' }, { value: 'neutral', label: 'Neutrally' }, { value: 'kind', label: 'Supportively' }], entry.selfTalk) + '</div>'
     + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="2">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
     + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
-    + '<div class="journal-field"><label>Felt worthless</label>' + _journalRadioGroup('feltWorthless', JOURNAL_YES_NO, entry.feltWorthless) + '</div>'
-    + '<div class="journal-field"><label>Free-form notes</label><textarea class="ds-input" name="freeConclusion" rows="2">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
+    + '<div class="journal-field"><label>Free-form notes — optional</label><textarea class="ds-input" name="freeConclusion" rows="2">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
     + '<button class="btn-cta" data-action="save-evening-journal" disabled>Save review</button>'
     + '</div>';
 
@@ -1497,36 +1495,48 @@ export function showEveningModal() {
   lockScroll();
   _autoGrowTextareas(el);
 
+  var saveBtn = el.querySelector('[data-action="save-evening-journal"]');
+  function _checkFilled() {
+    var need = ['didWell', 'fixTomorrow'].every(function (n) { return el.querySelector('[name="' + n + '"]').value.trim(); });
+    var why = el.querySelector('#evening-why');
+    if (!why.hidden && !el.querySelector('[name="whyBreaks"]').value.trim()) need = false;
+    var talk = el.querySelector('#evening-selftalk');
+    if (!talk.hidden && !el.querySelector('[name="selfTalk"]:checked')) need = false;
+    if (!el.querySelector('[name="eveningState"]:checked')) need = false;
+    saveBtn.disabled = !(need && el.dataset.factsLoaded);
+  }
+  el.addEventListener('input', _checkFilled);
+  el.addEventListener('change', _checkFilled);
 
-  // Facts from fills replace self-reported numbers when Binance access is set up
+  // Untagged trades can be tagged right in the facts list
+  el.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-jf-tag]');
+    if (!b) return;
+    var row = b.closest('.jf-trade');
+    var body = { symbol: row.dataset.sym, closeTime: Number(row.dataset.close) };
+    body[b.dataset.jfTag] = b.dataset.val;
+    saveTradeTag(body).then(function () {
+      row.querySelectorAll('[data-jf-tag="' + b.dataset.jfTag + '"]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    }).catch(function (err) { showToast(err.message); });
+  });
+
   fetchJournalFacts().then(function (facts) {
     var box = el.querySelector('#evening-facts');
-    if (!box) return facts;
-    if (!facts) { box.remove(); return null; }
-    box.innerHTML = '<label>Day facts — from your trades</label>' + _factsHTML(facts);
-    var tc = el.querySelector('[name="tradeCount"]');
-    if (tc) { tc.value = facts.summary.trades; tc.readOnly = true; tc.title = 'Counted from your trades'; }
-    el.dataset.pnl = facts.summary.pnlNet;
-    return facts;
-  });
-
-  fetchTodayTrades().then(function (stats) {
-    var statsEl = el.querySelector('#evening-pnl-stats');
-    if (!statsEl) return;
-    var tradeCountInput = el.querySelector('[name="tradeCount"]');
-    var factsShown = tradeCountInput && tradeCountInput.readOnly; // facts already filled these
-    if (!factsShown) {
-      el.dataset.pnl = stats ? stats.pnl : 0;
-      if (stats && tradeCountInput) tradeCountInput.value = stats.tradeCount;
+    if (!box) return;
+    if (facts) {
+      box.innerHTML = '<label>Day facts — from your trades</label>' + _factsHTML(facts, true);
+      el.dataset.pnl = facts.summary.pnlNet;
+      el.dataset.tradeCount = facts.summary.trades;
+      var v = facts.violations;
+      var anyBreak = v.craneBrokenAt || v.overMaxTrades || v.oversize || v.revenge || v.sizeUpAfterLosses || v.sizeUpAfterWins || v.offPlan;
+      el.querySelector('#evening-why').hidden = !anyBreak;
+      el.querySelector('#evening-selftalk').hidden = !facts.summary.losses;
+    } else {
+      box.innerHTML = '<label>Day facts</label><div class="journal-static">Connect Binance API (Account → Integrations) to get facts from your trades.</div>';
     }
-    if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
-    var sign = stats.pnl >= 0 ? '+' : '';
-    statsEl.innerHTML = '<span class="journal-pnl ' + (stats.pnl >= 0 ? 'up' : 'dn') + '">' + sign + '$' + stats.pnl.toFixed(2) + '</span> · win rate ' + stats.winRate + '%';
-  }).finally(function () {
-    var saveBtn = el.querySelector('[data-action="save-evening-journal"]');
-    if (saveBtn) saveBtn.disabled = false;
+    el.dataset.factsLoaded = '1';
+    _checkFilled();
   });
-
 }
 
 function _fmtHold(sec) {
@@ -1537,7 +1547,7 @@ function _fmtHold(sec) {
 }
 
 // Read-only facts block (journal/facts.js output). Only what the data shows.
-function _factsHTML(f) {
+function _factsHTML(f, taggable) {
   var s = f.summary, v = f.violations;
   var sign = s.pnlNet >= 0 ? '+' : '';
   var head = s.trades
@@ -1564,9 +1574,20 @@ function _factsHTML(f) {
     if (t.oversize) tags.push('oversize');
     if (t.afterCrane) tags.push('after crane');
     var res = t.result === 'open' ? 'open' : (t.pnlNet >= 0 ? '+' : '') + t.pnlNet.toFixed(2);
-    return '<div class="jf-trade"><span>' + tzTimeStr(new Date(t.openTime)) + '</span><span>' + t.symbol.replace(/USDT$/, '') + ' ' + t.side + '</span>'
+    if (t.tag && t.tag.setup) tags.unshift(t.tag.setup + ' setup');
+    if (t.tag && t.tag.emotion) tags.push(t.tag.emotion);
+    var tagger = '';
+    if (taggable && t.closeTime && !(t.tag && t.tag.setup && t.tag.emotion)) {
+      tagger = '<div class="jf-tagger">'
+        + ['A', 'B', 'C'].map(function (x) { return '<button type="button" data-jf-tag="setup" data-val="' + x + '" class="' + (t.tag && t.tag.setup === x ? 'on' : '') + '">' + x + '</button>'; }).join('')
+        + [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']].map(function (x) {
+            return '<button type="button" data-jf-tag="emotion" data-val="' + x[0] + '" class="' + (t.tag && t.tag.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+          }).join('')
+        + '</div>';
+    }
+    return '<div class="jf-trade" data-sym="' + t.symbol + '" data-close="' + (t.closeTime || '') + '"><span>' + tzTimeStr(new Date(t.openTime)) + '</span><span>' + t.symbol.replace(/USDT$/, '') + ' ' + t.side + '</span>'
       + '<span class="' + (t.result === 'win' ? 'up' : t.result === 'loss' ? 'dn' : '') + '">' + res + '</span>'
-      + '<span class="jf-tags">' + tags.join(' · ') + '</span></div>';
+      + '<span class="jf-tags">' + tags.join(' · ') + '</span>' + tagger + '</div>';
   }).join('');
   return '<div class="journal-static">' + head + '</div>'
     + (flags.length ? '<ul class="jf-flags">' + flags.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : (s.trades ? '<div class="jf-clean">No rule breaks found in the data</div>' : ''))
@@ -1576,27 +1597,14 @@ function _factsHTML(f) {
 export function hideEveningModal() {
   var el = document.getElementById('evening-journal-modal');
   if (!el) return;
-  // Capture the in-progress form as a local draft so closing without saving
-  // (e.g. the X button) doesn't lose selections — reopening re-reads this.
-  function pill(name) { return !!el.querySelector('.journal-trigger-pill[data-trigger="' + name + '"].active'); }
+  // Keep the in-progress answers as a local draft so closing (X) doesn't lose them
+  function v(name) { var x = el.querySelector('[name="' + name + '"]'); return x ? x.value.trim() : ''; }
   state.journalToday = Object.assign({}, state.journalToday || {}, {
-    followedProcess:   (el.querySelector('[name="followedProcess"]:checked') || {}).value || '',
-    tradedPlanned:      (el.querySelector('[name="tradedPlanned"]:checked') || {}).value || '',
-    tradeCount:         parseInt(el.querySelector('[name="tradeCount"]').value) || 0,
-    stopCraneKept:      (el.querySelector('[name="stopCraneKept"]:checked') || {}).value || '',
-    volumeOk:           (el.querySelector('[name="volumeOk"]:checked') || {}).value || '',
-    triggerRevenge:     pill('triggerRevenge'),
-    triggerSizeUp:      pill('triggerSizeUp'),
-    triggerFomo:        pill('triggerFomo'),
-    triggerOther:       pill('triggerOther') ? el.querySelector('[name="triggerOtherText"]').value.trim() : '',
-    triggerFomoOther:   pill('triggerFomoOther'),
-    triggerFomoActive:  pill('triggerFomoActive'),
-    triggerAddFunds:    pill('triggerAddFunds'),
-    triggerReplan:      pill('triggerReplan'),
-    missedScreening:    el.querySelector('[name="missedScreening"]').value.trim(),
-    eveningState:       (el.querySelector('[name="eveningState"]:checked') || {}).value || '',
-    feltWorthless:      (el.querySelector('[name="feltWorthless"]:checked') || {}).value || '',
-    freeConclusion:     el.querySelector('[name="freeConclusion"]').value.trim(),
+    whyBreaks: v('whyBreaks'), didWell: v('didWell'), fixTomorrow: v('fixTomorrow'),
+    selfTalk: (el.querySelector('[name="selfTalk"]:checked') || {}).value || '',
+    missedScreening: v('missedScreening'),
+    eveningState: (el.querySelector('[name="eveningState"]:checked') || {}).value || '',
+    freeConclusion: v('freeConclusion'),
   });
   unlockScroll();
   el.remove();

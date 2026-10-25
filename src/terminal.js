@@ -9,7 +9,7 @@
 // Ladder data comes from the trader's own environment (testnet or live), never
 // from the main chart feed: testnet prices differ from the real market.
 
-import { tradeRequest, refreshTradesAfterFill } from './api.js';
+import { tradeRequest, refreshTradesAfterFill, saveTradeTag } from './api.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar } from './ui.js';
@@ -32,7 +32,9 @@ var T = {
   lastTrade: null,       // {price, buy, at} from aggTrade
   pending: {},           // clientOrderId → {idx, kind, qty, at}: shown before the exchange confirms
   cancelling: {},
-  closedIds: {},         // orderId/algoId seen closed by the stream (beats a late placement reply)        // orderId/algoId → true while a cancel is in flight
+  closedIds: {},
+  lastFillAt: {},         // symbol → exchange time of its latest fill
+  tagQueue: [],           // closed trades waiting for a tag: {symbol, closeTime, setup, emotion}         // orderId/algoId seen closed by the stream (beats a late placement reply)        // orderId/algoId → true while a cancel is in flight
   bids: [], asks: [],    // [[price, qty], ...] best first
   scaleIdx: null, top: null, rows: 0,
   size: _savedSize(),
@@ -126,6 +128,7 @@ function _openPanel(sym) {
   panel.classList.toggle('view-only', _viewOnly());
   T.lockKey = null;
   _renderLock();
+  _renderTag();
   _refreshDay();
   clearInterval(T.dayTimer);
   T.dayTimer = setInterval(_refreshDay, 30000);
@@ -170,6 +173,7 @@ function _panelHTML() {
     + '</div>'
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-lock" id="dom-lock"></div>'
+    + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume</span><span>Price</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-foot">'
@@ -332,6 +336,8 @@ on('trade:event', function (ev) {
     else T.closedIds['a' + ev.algo.algoId] = Date.now();
   } else if (ev.type === 'position') {
     var p = ev.position;
+    var was = acc.positions.find(function (x) { return x.symbol === p.symbol && x.positionSide === p.positionSide; });
+    if (was && Number(was.amount) !== 0 && Number(p.amount) === 0) _queueTag(p.symbol, p.updateTime);
     acc.positions = acc.positions.filter(function (x) { return !(x.symbol === p.symbol && x.positionSide === p.positionSide); });
     if (Number(p.amount) !== 0) acc.positions.push(p);
   } else if (ev.type === 'balance') {
@@ -343,6 +349,7 @@ on('trade:event', function (ev) {
   } else if (ev.type === 'fill') {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.quantity + ' ' + f.symbol.replace(/USDT$/, '') + ' @ ' + f.price);
+    T.lastFillAt[f.symbol] = f.time;
     if (/USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
   }
   _queueRender();
@@ -787,6 +794,51 @@ function _viewOnlyBlocked() {
   return true;
 }
 
+// ── Trade tag bar (journal stage 3, docs/TRADER_EDGE.md) ───────────────────
+// Right after a position goes flat: setup quality and what drove the entry,
+// one tap each, skippable. Keyed by the exchange close time so the edge
+// report can join it to the computed trade.
+
+var TAG_SETUPS = ['A', 'B', 'C'];
+var TAG_EMOTIONS = [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']];
+
+function _queueTag(symbol, eventTime) {
+  // The fill time is what the facts use; the position event may arrive first,
+  // so fall back to its own time when the last known fill is stale.
+  var lf = T.lastFillAt[symbol];
+  var closeTime = lf && (!eventTime || Math.abs(eventTime - lf) < 3000) ? lf : (eventTime || Date.now());
+  if (T.tagQueue.some(function (q) { return q.symbol === symbol && q.closeTime === closeTime; })) return;
+  T.tagQueue.push({ symbol: symbol, closeTime: closeTime, setup: null, emotion: null });
+  if (T.tagQueue.length > 5) T.tagQueue.shift();
+  _renderTag();
+}
+
+function _renderTag() {
+  var el = document.getElementById('dom-tag');
+  if (!el) return;
+  var q = T.tagQueue[T.tagQueue.length - 1];
+  if (!q) { el.innerHTML = ''; return; }
+  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + ' closed</span>'
+    + '<span class="dom-tag-group">' + TAG_SETUPS.map(function (x) {
+        return '<button data-tag-setup="' + x + '" class="' + (q.setup === x ? 'on' : '') + '">' + x + '</button>';
+      }).join('') + '</span>'
+    + '<span class="dom-tag-group">' + TAG_EMOTIONS.map(function (x) {
+        return '<button data-tag-emotion="' + x[0] + '" class="' + (q.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+      }).join('') + '</span>'
+    + '<button class="dom-tag-skip" data-tag-skip="1" title="Skip">×</button>';
+}
+
+function _tagClick(kind, value) {
+  var q = T.tagQueue[T.tagQueue.length - 1];
+  if (!q) return;
+  q[kind] = value;
+  var body = { symbol: q.symbol, closeTime: q.closeTime };
+  body[kind] = value;
+  saveTradeTag(body).catch(function (e) { _setStatus(e.message, true); });
+  if (q.setup && q.emotion) T.tagQueue.pop();
+  _renderTag();
+}
+
 // ── 2FA lock bar ─────────────────────────────────────────────────────────────
 // Opening risk needs an unlock when 2FA is on (the trader enforces it; this
 // just tells you before you click). Reduce-only / close / cancel always work.
@@ -965,6 +1017,11 @@ function _bindPanel(panel) {
       panel.querySelectorAll('.dom-size').forEach(function (b) { b.classList.toggle('active', b === size); });
       return;
     }
+    var ts = e.target.closest('[data-tag-setup]');
+    if (ts) { _tagClick('setup', ts.dataset.tagSetup); return; }
+    var te = e.target.closest('[data-tag-emotion]');
+    if (te) { _tagClick('emotion', te.dataset.tagEmotion); return; }
+    if (e.target.closest('[data-tag-skip]')) { T.tagQueue.pop(); _renderTag(); return; }
     if (e.target.closest('[data-unlock]')) { _unlock(); return; }
     if (e.target.closest('[data-lock]')) { _lock(); return; }
     var lv = e.target.closest('[data-live]');
