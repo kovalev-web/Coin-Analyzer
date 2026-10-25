@@ -15,7 +15,7 @@ import { icon } from './utils.js';
 import { showToast, getCSSVar } from './ui.js';
 
 var ROW_H = 16;
-var SIZE_PRESETS = [50, 100, 250, 500, 1000];
+var SIZE_PRESETS = [10, 25, 50, 100, 250, 500]; // USDT per click
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
 var OPEN_ALGO = { NEW: true, TRIGGERING: true };
@@ -35,7 +35,7 @@ var T = {
   closedIds: {},         // orderId/algoId seen closed by the stream (beats a late placement reply)        // orderId/algoId → true while a cancel is in flight
   bids: [], asks: [],    // [[price, qty], ...] best first
   scaleIdx: null, top: null, rows: 0,
-  size: Number(_lsGet('qt_term_size')) || 100,
+  size: _savedSize(),
   hover: false,
   hoverRow: null,        // ladder row under the cursor (screen position), for the % ruler
   viewLive: _lsGet('qt_term_live') === '1', // testnet account, live-market book (view only)
@@ -45,6 +45,12 @@ var T = {
   zone: null, zoneSeries: null,
   lastClick: { key: '', at: 0 },
 };
+
+// A remembered size that is no longer a slot (e.g. 1000) falls back to the default
+function _savedSize() {
+  var v = Number(_lsGet('qt_term_size'));
+  return SIZE_PRESETS.indexOf(v) !== -1 ? v : 50;
+}
 
 function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
