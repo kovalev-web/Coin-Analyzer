@@ -137,6 +137,20 @@ test('hedge mode accounts are refused', async () => {
   await assert.rejects(t.placeOrder({ clientOrderId: 'h1', symbol: 'BTCUSDT', side: 'BUY', type: 'MARKET', quantity: '0.01' }), { status: 409 });
 });
 
+test('balance change from the stream triggers one available-balance refresh', async () => {
+  let balanceCalls = 0;
+  const { t } = await makeTrader({
+    'GET /fapi/v2/balance': () => { balanceCalls++; return [{ asset: 'USDT', balance: '5000', crossWalletBalance: '5000', availableBalance: '4880', updateTime: 9 }]; },
+  });
+  balanceCalls = 0;
+  const upd = { e: 'ACCOUNT_UPDATE', E: 1000, a: { B: [{ a: 'USDT', wb: '5000', cw: '5000' }], P: [] } };
+  t.handleStreamEvent(upd);
+  t.handleStreamEvent(Object.assign({}, upd, { E: 1001 }));
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.equal(balanceCalls, 1);
+  assert.equal(t.state.balances.USDT.availableBalance, '4880');
+});
+
 test('stream events during resync are buffered and applied after the snapshot', async () => {
   let release;
   const { t } = await makeTrader();

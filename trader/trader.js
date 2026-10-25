@@ -11,6 +11,7 @@ var st = require('./state');
 var { parseExchangeInfo, applyFilters } = require('./filters');
 
 var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
+var BALANCE_REFRESH_DEBOUNCE_MS = 1000;
 var CLIENT_ID_RE = /^[\.A-Za-z0-9:\/_-]{1,36}$/; // Binance's allowed newClientOrderId charset
 var SYMBOL_RE = /^[A-Z0-9]{2,30}$/;
 var REGULAR_TYPES = { MARKET: true, LIMIT: true };
@@ -114,7 +115,35 @@ class Trader extends EventEmitter {
       var ch = st.applyAccountUpdate(this.state, msg.a, msg.E);
       ch.positions.forEach(function (p) { self.emit('event', { type: 'position', position: p }); });
       ch.balances.forEach(function (b) { self.emit('event', { type: 'balance', balance: b }); });
+      if (ch.balances.length) this._scheduleBalanceRefresh();
     }
+  }
+
+  // ACCOUNT_UPDATE has wallet balance but not available balance — fetch it,
+  // debounced so a burst of fills costs one request.
+  _scheduleBalanceRefresh() {
+    if (this._balanceTimer) return;
+    var self = this;
+    this._balanceTimer = setTimeout(function () {
+      self._balanceTimer = null;
+      self.refreshBalances().catch(function (e) { console.error('[Trader] balance refresh failed:', e.message); });
+    }, BALANCE_REFRESH_DEBOUNCE_MS);
+    if (this._balanceTimer.unref) this._balanceTimer.unref();
+  }
+
+  async refreshBalances() {
+    var list = await this.client.request('GET', '/fapi/v2/balance');
+    var self = this;
+    list.forEach(function (b) {
+      var existing = self.state.balances[b.asset];
+      var n = Object.assign({}, existing, {
+        asset: b.asset, walletBalance: b.balance, crossWalletBalance: b.crossWalletBalance,
+        availableBalance: b.availableBalance, updateTime: b.updateTime || Date.now(),
+      });
+      var changed = !existing || existing.availableBalance !== n.availableBalance || existing.walletBalance !== n.walletBalance;
+      self.state.balances[b.asset] = n;
+      if (changed) self.emit('event', { type: 'balance', balance: n });
+    });
   }
 
   getAccount() { return st.toJSON(this.state); }

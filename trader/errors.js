@@ -15,6 +15,7 @@ var MESSAGES = {
   '-4120': 'Conditional orders must go through the algo order endpoint',
   '-1125': 'User data stream key expired',
   '-2011': 'Order not found or already closed',
+  '-4509': 'Close-position stop/take-profit needs an open position',
 };
 
 function describeError(e) {
