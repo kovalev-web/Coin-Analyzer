@@ -101,6 +101,14 @@ state.journalToday     // запись дневника за сегодня (д�
 - Vercel: `vercel.json` + `api/` (serverless functions) — только для dev/preview
 - `.env` содержит `ANTHROPIC_API_KEY`, `DATABASE_URL`, ключи Binance и др.
 
+## Торговля (`trader/`)
+Отдельный процесс (pm2 `trader`), только он держит ключи Binance. Слушает `127.0.0.1:3010`, каждый запрос — с заголовком `x-trader-secret`.
+- Конфиг: `/etc/questtick-trader/config.json` (ключи, `env: testnet|mainnet`, `internalSecret`). Mainnet только с `"allowMainnet": true`.
+- pump-ws проксирует `/api/trade/*` → trader, пускает только `TRADER_USER_ID`; события trader (SSE `/events`) уходят в WS этого пользователя как `trade_event`.
+- Стоп/тейк — через Algo API (`/fapi/v1/algoOrder`), обычные ордера — `/fapi/v1/order`.
+- Повтор `clientOrderId` в течение 10 минут не создаёт второй ордер. Kill switch хранится в `dataDir/trading.json`, журнал действий — `dataDir/audit.jsonl`.
+- Тесты: `npm run test:trader`. Сквозной сценарий на тестнете: `node trader/scripts/e2e-testnet.js`.
+
 ---
 
 # Правила работы с кодом

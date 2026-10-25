@@ -10,6 +10,8 @@
     "dev:all": "concurrently -n ws,api,web -c yellow,blue,green \"node server-vps.js\" \"node server.js\" \"vite\"",
     "dev:server": "node server.js",
     "dev:front": "vite",
+    "trader": "node trader/server.js",
+    "test:trader": "node --test trader/*.test.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server-vps.js"

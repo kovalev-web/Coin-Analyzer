@@ -1,0 +1,363 @@
+'use strict';
+
+// Trading core: symbol rules, account state, order placement with
+// idempotency, cancels, leverage and the kill switch. Transport-agnostic —
+// server.js exposes it over HTTP, userstream.js feeds it live events.
+
+var EventEmitter = require('events');
+var fs = require('fs');
+var path = require('path');
+var st = require('./state');
+var { parseExchangeInfo, applyFilters } = require('./filters');
+
+var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
+var CLIENT_ID_RE = /^[\.A-Za-z0-9:\/_-]{1,36}$/; // Binance's allowed newClientOrderId charset
+var SYMBOL_RE = /^[A-Z0-9]{2,30}$/;
+var REGULAR_TYPES = { MARKET: true, LIMIT: true };
+var ALGO_TYPES = { STOP_MARKET: true, TAKE_PROFIT_MARKET: true };
+var TIME_IN_FORCE = { GTC: true, IOC: true, FOK: true, GTX: true };
+
+class TraderError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = 'TraderError';
+    this.status = status;
+  }
+}
+
+function bool(v) { return v === true || v === 'true'; }
+
+class Trader extends EventEmitter {
+  constructor(opts) {
+    super();
+    this.client = opts.client;
+    this.audit = opts.audit || function () {};
+    this.dataDir = opts.dataDir;
+    this.state = st.createState();
+    this.rules = {};
+    this.positionMode = null;     // 'oneway' | 'hedge'
+    this.streamConnected = false;
+    this.lastSyncAt = null;
+    this._syncing = false;
+    this._buffered = [];
+    this._recent = new Map();     // clientOrderId → Promise of the placement result
+    this.tradingEnabled = this._readTradingFlag();
+  }
+
+  // ── Startup / sync ─────────────────────────────────────────────────────
+
+  async init() {
+    await this.client.syncTime();
+    await this.loadRules();
+    var mode = await this.client.request('GET', '/fapi/v1/positionSide/dual');
+    this.positionMode = mode.dualSidePosition ? 'hedge' : 'oneway';
+    await this.resync();
+  }
+
+  async loadRules() {
+    var info = await this.client.request('GET', '/fapi/v1/exchangeInfo', {}, false);
+    this.rules = parseExchangeInfo(info);
+  }
+
+  // Full REST snapshot. Stream events that arrive meanwhile are buffered and
+  // replayed on top, so nothing between "snapshot taken" and "now" is lost.
+  async resync() {
+    this._syncing = true;
+    this._buffered = [];
+    try {
+      var c = this.client;
+      var res = await Promise.all([
+        c.request('GET', '/fapi/v2/balance'),
+        c.request('GET', '/fapi/v2/positionRisk'),
+        c.request('GET', '/fapi/v1/openOrders'),
+        c.request('GET', '/fapi/v1/openAlgoOrders'),
+      ]);
+      st.loadSnapshot(this.state, {
+        balances: res[0], positions: res[1], openOrders: res[2],
+        openAlgoOrders: Array.isArray(res[3]) ? res[3] : (res[3] && res[3].orders) || [],
+      });
+    } finally {
+      this._syncing = false;
+    }
+    var buffered = this._buffered;
+    this._buffered = [];
+    buffered.forEach(this.handleStreamEvent, this);
+    this.lastSyncAt = Date.now();
+    this.emit('event', { type: 'snapshot', account: this.getAccount() });
+  }
+
+  setStreamStatus(connected) {
+    this.streamConnected = connected;
+    this.emit('event', { type: 'status', status: this.getStatus() });
+  }
+
+  handleStreamEvent(msg) {
+    if (this._syncing) { this._buffered.push(msg); return; }
+    var self = this;
+    if (msg.e === 'ORDER_TRADE_UPDATE') {
+      var o = st.applyOrderUpdate(this.state, msg.o, msg.E);
+      if (o) this.emit('event', { type: 'order', order: o });
+      if (msg.o.x === 'TRADE') {
+        this.emit('event', {
+          type: 'fill',
+          fill: {
+            symbol: msg.o.s, side: msg.o.S, orderId: msg.o.i, clientOrderId: msg.o.c,
+            price: msg.o.L, quantity: msg.o.l, realizedPnl: msg.o.rp,
+            commission: msg.o.n, commissionAsset: msg.o.N, time: msg.o.T,
+          },
+        });
+      }
+    } else if (msg.e === 'ALGO_UPDATE') {
+      var a = st.applyAlgoUpdate(this.state, msg.o, msg.E);
+      if (a) this.emit('event', { type: 'algo', algo: a });
+    } else if (msg.e === 'ACCOUNT_UPDATE') {
+      var ch = st.applyAccountUpdate(this.state, msg.a, msg.E);
+      ch.positions.forEach(function (p) { self.emit('event', { type: 'position', position: p }); });
+      ch.balances.forEach(function (b) { self.emit('event', { type: 'balance', balance: b }); });
+    }
+  }
+
+  getAccount() { return st.toJSON(this.state); }
+
+  getStatus() {
+    return {
+      tradingEnabled: this.tradingEnabled,
+      positionMode: this.positionMode,
+      streamConnected: this.streamConnected,
+      lastSyncAt: this.lastSyncAt,
+    };
+  }
+
+  // ── Orders ─────────────────────────────────────────────────────────────
+
+  // Same clientOrderId within 10 minutes → same result, no second order.
+  placeOrder(input) {
+    var id = input && input.clientOrderId;
+    if (!id || !CLIENT_ID_RE.test(id)) {
+      return Promise.reject(new TraderError(400, 'clientOrderId is required (1-36 chars: letters, digits, . : / _ -)'));
+    }
+    if (this._recent.has(id)) return this._recent.get(id);
+    var p = this._placeOrder(input);
+    this._recent.set(id, p);
+    var recent = this._recent;
+    var timer = setTimeout(function () { recent.delete(id); }, IDEMPOTENCY_TTL_MS);
+    if (timer.unref) timer.unref();
+    return p;
+  }
+
+  async _placeOrder(input) {
+    this._requireTrading();
+    var order = this._validateOrder(input);
+    var filtered = applyFilters(order, this.rules[order.symbol]);
+    if (filtered.error) throw new TraderError(400, filtered.error);
+    order = filtered.order;
+
+    var isAlgo = !!ALGO_TYPES[order.type];
+    try {
+      var res = isAlgo
+        ? await this.client.request('POST', '/fapi/v1/algoOrder', {
+            algoType: 'CONDITIONAL', symbol: order.symbol, side: order.side, type: order.type,
+            quantity: order.closePosition ? undefined : order.quantity,
+            closePosition: order.closePosition ? 'true' : undefined,
+            reduceOnly: order.reduceOnly && !order.closePosition ? 'true' : undefined,
+            triggerPrice: order.triggerPrice, workingType: order.workingType,
+            clientAlgoId: order.clientOrderId, newOrderRespType: 'RESULT',
+          })
+        : await this.client.request('POST', '/fapi/v1/order', {
+            symbol: order.symbol, side: order.side, type: order.type, quantity: order.quantity,
+            price: order.type === 'LIMIT' ? order.price : undefined,
+            timeInForce: order.type === 'LIMIT' ? order.timeInForce : undefined,
+            reduceOnly: order.reduceOnly ? 'true' : undefined,
+            newClientOrderId: order.clientOrderId, newOrderRespType: 'RESULT',
+          });
+      var result = isAlgo ? { algo: st.algoFromRest(res) } : { order: st.orderFromRest(res) };
+      this.audit('place', order, { result: result });
+      return result;
+    } catch (e) {
+      if (e.noResponse) {
+        // We don't know if Binance accepted it — ask by our own id.
+        var found = await this._findByClientId(order, isAlgo);
+        if (found) {
+          this.audit('place', order, { result: found, reconciled: true });
+          return Object.assign({ reconciled: true }, found);
+        }
+      }
+      this.audit('place', order, { error: { message: e.message, code: e.code, status: e.status } });
+      throw e;
+    }
+  }
+
+  async _findByClientId(order, isAlgo) {
+    try {
+      if (isAlgo) {
+        var a = await this.client.request('GET', '/fapi/v1/algoOrder', { clientAlgoId: order.clientOrderId });
+        return { algo: st.algoFromRest(a) };
+      }
+      var o = await this.client.request('GET', '/fapi/v1/order', { symbol: order.symbol, origClientOrderId: order.clientOrderId });
+      return { order: st.orderFromRest(o) };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _validateOrder(input) {
+    var symbol = String(input.symbol || '').toUpperCase();
+    if (!SYMBOL_RE.test(symbol)) throw new TraderError(400, 'Invalid symbol');
+    var side = String(input.side || '').toUpperCase();
+    if (side !== 'BUY' && side !== 'SELL') throw new TraderError(400, 'side must be BUY or SELL');
+    var type = String(input.type || '').toUpperCase();
+    if (!REGULAR_TYPES[type] && !ALGO_TYPES[type]) {
+      throw new TraderError(400, 'type must be one of MARKET, LIMIT, STOP_MARKET, TAKE_PROFIT_MARKET');
+    }
+    var order = {
+      clientOrderId: input.clientOrderId, symbol: symbol, side: side, type: type,
+      quantity: input.quantity, reduceOnly: bool(input.reduceOnly),
+    };
+    if (type === 'LIMIT') {
+      if (input.price == null) throw new TraderError(400, 'price is required for LIMIT');
+      order.price = input.price;
+      order.timeInForce = String(input.timeInForce || 'GTC').toUpperCase();
+      if (!TIME_IN_FORCE[order.timeInForce]) throw new TraderError(400, 'timeInForce must be GTC, IOC, FOK or GTX');
+    }
+    if (ALGO_TYPES[type]) {
+      if (input.triggerPrice == null) throw new TraderError(400, 'triggerPrice is required for ' + type);
+      order.triggerPrice = input.triggerPrice;
+      order.closePosition = bool(input.closePosition);
+      order.workingType = input.workingType === 'CONTRACT_PRICE' ? 'CONTRACT_PRICE' : 'MARK_PRICE';
+      if (order.closePosition) delete order.quantity;
+    } else if (bool(input.closePosition)) {
+      throw new TraderError(400, 'closePosition is only for STOP_MARKET / TAKE_PROFIT_MARKET');
+    }
+    return order;
+  }
+
+  // Cancels are always allowed, even with trading disabled.
+  async cancel(input) {
+    var symbol = String(input.symbol || '').toUpperCase();
+    var req, res;
+    if (input.algoId || input.clientAlgoId) {
+      req = { algoId: input.algoId, clientAlgoId: input.clientAlgoId };
+      res = await this._audited('cancel-algo', req, this.client.request('DELETE', '/fapi/v1/algoOrder', req));
+      return { algo: res };
+    }
+    if (!SYMBOL_RE.test(symbol)) throw new TraderError(400, 'Invalid symbol');
+    if (!input.orderId && !input.clientOrderId) throw new TraderError(400, 'orderId or clientOrderId is required');
+    req = { symbol: symbol, orderId: input.orderId, origClientOrderId: input.clientOrderId };
+    res = await this._audited('cancel', req, this.client.request('DELETE', '/fapi/v1/order', req));
+    return { order: st.orderFromRest(res) };
+  }
+
+  async cancelAll(input) {
+    var symbol = String(input.symbol || '').toUpperCase();
+    if (!SYMBOL_RE.test(symbol)) throw new TraderError(400, 'Invalid symbol');
+    var req = { symbol: symbol };
+    var c = this.client;
+    await this._audited('cancel-all', req, Promise.all([
+      c.request('DELETE', '/fapi/v1/allOpenOrders', req),
+      c.request('DELETE', '/fapi/v1/algoOpenOrders', req),
+    ]));
+    return { symbol: symbol };
+  }
+
+  async setLeverage(input) {
+    this._requireTrading();
+    var symbol = String(input.symbol || '').toUpperCase();
+    if (!SYMBOL_RE.test(symbol)) throw new TraderError(400, 'Invalid symbol');
+    var lev = parseInt(input.leverage, 10);
+    if (!(lev >= 1 && lev <= 125)) throw new TraderError(400, 'leverage must be 1-125');
+    var req = { symbol: symbol, leverage: lev };
+    var res = await this._audited('leverage', req, this.client.request('POST', '/fapi/v1/leverage', req));
+    var pos = this.state.positions[st.posKey(symbol, 'BOTH')];
+    if (pos) pos.leverage = String(res.leverage);
+    return res;
+  }
+
+  // ── Kill switch ────────────────────────────────────────────────────────
+
+  // Disables trading first, then cancels every open order (fresh from REST,
+  // not from local state). closePositions also market-closes every position.
+  async kill(input) {
+    this._writeTradingFlag(false);
+    var c = this.client;
+    var summary = { cancelledSymbols: [], closed: [], errors: [] };
+    var lists = await Promise.all([
+      c.request('GET', '/fapi/v1/openOrders'),
+      c.request('GET', '/fapi/v1/openAlgoOrders'),
+    ]);
+    var algos = Array.isArray(lists[1]) ? lists[1] : (lists[1] && lists[1].orders) || [];
+    var symbols = {};
+    lists[0].forEach(function (o) { symbols[o.symbol] = true; });
+    algos.forEach(function (a) { symbols[a.symbol] = true; });
+    for (var sym of Object.keys(symbols)) {
+      try {
+        await Promise.all([
+          c.request('DELETE', '/fapi/v1/allOpenOrders', { symbol: sym }),
+          c.request('DELETE', '/fapi/v1/algoOpenOrders', { symbol: sym }),
+        ]);
+        summary.cancelledSymbols.push(sym);
+      } catch (e) {
+        summary.errors.push({ symbol: sym, step: 'cancel', message: e.message });
+      }
+    }
+    if (input && bool(input.closePositions)) {
+      var positions = await c.request('GET', '/fapi/v2/positionRisk');
+      var stamp = Date.now();
+      for (var i = 0; i < positions.length; i++) {
+        var p = positions[i];
+        var amt = Number(p.positionAmt);
+        if (!amt) continue;
+        try {
+          await c.request('POST', '/fapi/v1/order', {
+            symbol: p.symbol, side: amt > 0 ? 'SELL' : 'BUY', type: 'MARKET',
+            quantity: String(p.positionAmt).replace('-', ''), reduceOnly: 'true',
+            newClientOrderId: 'kill-' + stamp + '-' + i, newOrderRespType: 'RESULT',
+          });
+          summary.closed.push(p.symbol);
+        } catch (e) {
+          summary.errors.push({ symbol: p.symbol, step: 'close', message: e.message });
+        }
+      }
+    }
+    this.audit('kill', input || {}, { result: summary });
+    return summary;
+  }
+
+  resume() {
+    this._writeTradingFlag(true);
+    this.audit('resume', {}, { result: { tradingEnabled: true } });
+    return this.getStatus();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+
+  _requireTrading() {
+    if (!this.tradingEnabled) throw new TraderError(423, 'Trading is disabled by the kill switch — resume to trade');
+    if (this.positionMode === 'hedge') throw new TraderError(409, 'Hedge mode is not supported — switch the account to one-way mode');
+  }
+
+  async _audited(action, req, promise) {
+    try {
+      var res = await promise;
+      this.audit(action, req, { result: res });
+      return res;
+    } catch (e) {
+      this.audit(action, req, { error: { message: e.message, code: e.code, status: e.status } });
+      throw e;
+    }
+  }
+
+  _flagFile() { return path.join(this.dataDir, 'trading.json'); }
+
+  _readTradingFlag() {
+    try { return JSON.parse(fs.readFileSync(this._flagFile(), 'utf8')).enabled !== false; }
+    catch (e) { return true; }
+  }
+
+  _writeTradingFlag(enabled) {
+    this.tradingEnabled = enabled;
+    fs.writeFileSync(this._flagFile(), JSON.stringify({ enabled: enabled, changedAt: new Date().toISOString() }), { mode: 0o600 });
+    this.emit('event', { type: 'status', status: this.getStatus() });
+  }
+}
+
+module.exports = { Trader, TraderError };

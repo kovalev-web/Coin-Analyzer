@@ -588,6 +588,99 @@ function startKlineWS() {
   });
 }
 
+// ── Trading (proxy to the local trader process) ─────────────────────────
+// Only TRADER_USER_ID may trade. pump-ws never sees Binance keys: it checks
+// the session and forwards to trader/server.js on 127.0.0.1 with a shared secret.
+
+var TRADER_URL             = process.env.TRADER_URL || 'http://127.0.0.1:3010';
+var TRADER_INTERNAL_SECRET = process.env.TRADER_INTERNAL_SECRET || '';
+var TRADER_USER_ID         = process.env.TRADER_USER_ID || '';
+var TRADE_ROUTES = {
+  'GET status': true, 'GET account': true,
+  'POST order': true, 'POST cancel': true, 'POST cancel-all': true,
+  'POST leverage': true, 'POST kill': true, 'POST resume': true,
+};
+
+async function handleTradeRequest(req, res, action) {
+  function json(status, body) {
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(body));
+  }
+  if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return json(503, { error: { message: 'Trading is not configured' } });
+  if (!TRADE_ROUTES[req.method + ' ' + action]) return json(404, { error: { message: 'Not found' } });
+  var session = await getSession(req);
+  if (!session || !session.user) return json(401, { error: { message: 'Unauthorized' } });
+  if (session.user.id !== TRADER_USER_ID) return json(403, { error: { message: 'Forbidden' } });
+  // JSON-only POSTs force a CORS preflight, so no other site can post with the session cookie
+  if (req.method === 'POST' && !/^application\/json/i.test(req.headers['content-type'] || '')) {
+    return json(415, { error: { message: 'Content-Type must be application/json' } });
+  }
+  var body = '';
+  if (req.method === 'POST') {
+    try {
+      body = await new Promise(function (resolve, reject) {
+        var b = '';
+        req.on('data', function (chunk) { b += chunk; if (b.length > 16384) { reject(new Error('Body too large')); req.destroy(); } });
+        req.on('end', function () { resolve(b); });
+      });
+    } catch (e) { return json(413, { error: { message: e.message } }); }
+  }
+  try {
+    var r = await fetch(TRADER_URL + '/' + action, {
+      method: req.method,
+      headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET, 'Content-Type': 'application/json' },
+      body: req.method === 'POST' ? (body || '{}') : undefined,
+      signal: AbortSignal.timeout(25000),
+    });
+    var text = await r.text();
+    res.writeHead(r.status, { 'Content-Type': 'application/json' });
+    res.end(text);
+  } catch (e) {
+    json(502, { error: { message: 'Trader is unavailable' } });
+  }
+}
+
+// Relay trader events (SSE) to the trading user's WebSocket tabs only.
+var _traderEventsRetry = null;
+
+function connectTraderEvents() {
+  if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return;
+  var treq = http.request(TRADER_URL + '/events', { headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET } }, function (tres) {
+    if (tres.statusCode !== 200) { tres.resume(); return retryTraderEvents(); }
+    console.log('[Trader] Event stream connected');
+    var buf = '';
+    tres.setEncoding('utf8');
+    tres.on('data', function (chunk) {
+      buf += chunk;
+      var blocks = buf.split('\n\n');
+      buf = blocks.pop();
+      blocks.forEach(function (block) {
+        block.split('\n').forEach(function (line) {
+          if (line.indexOf('data: ') === 0) broadcastTradeEvent(line.slice(6));
+        });
+      });
+    });
+    tres.on('end', retryTraderEvents);
+    tres.on('error', retryTraderEvents);
+  });
+  treq.on('error', retryTraderEvents);
+  treq.end();
+}
+
+function retryTraderEvents() {
+  if (_traderEventsRetry) return;
+  _traderEventsRetry = setTimeout(function () { _traderEventsRetry = null; connectTraderEvents(); }, 5000);
+}
+
+function broadcastTradeEvent(data) {
+  var ev;
+  try { ev = JSON.parse(data); } catch (e) { return; }
+  var msg = JSON.stringify({ type: 'trade_event', event: ev });
+  clients.forEach(function (c) {
+    if (c.readyState === WebSocket.OPEN && TRADER_USER_ID && c._sessionUserId === TRADER_USER_ID) c.send(msg);
+  });
+}
+
 // ── HTTP сервер (REST + WS upgrade) ──────────────────────────────────────
 
 var CORS_ORIGINS = ['https://questtick.com', 'https://www.questtick.com', 'http://localhost:5173'];
@@ -829,6 +922,10 @@ var httpServer = http.createServer(async function (req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+  if (req.url.startsWith('/api/trade/')) {
+    return handleTradeRequest(req, res, req.url.slice('/api/trade/'.length).split('?')[0]);
+  }
 
   // Better Auth routes
   if (req.url.startsWith('/auth')) {
@@ -2142,6 +2239,7 @@ bootstrapTicker().then(function() {
 });
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
+connectTraderEvents();  // события торговли от trader → WS вкладки владельца
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
