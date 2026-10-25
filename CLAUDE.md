@@ -103,7 +103,8 @@ state.journalToday     // запись дневника за сегодня (д�
 
 ## Торговля (`trader/`)
 Отдельный процесс (pm2 `trader`), только он держит ключи Binance. Слушает `127.0.0.1:3010`, каждый запрос — с заголовком `x-trader-secret`.
-- Конфиг: `/etc/questtick-trader/config.json` (ключи, `env: testnet|mainnet`, `internalSecret`). Mainnet только с `"allowMainnet": true`.
+- Конфиг: `/etc/questtick-trader/config.json` (`env: testnet|mainnet`, `internalSecret`, `masterKey`, `publicIp`). Mainnet только с `"allowMainnet": true`.
+- Торговые ключи сохраняются из личного кабинета (Integrations → Trading API) и лежат зашифрованными (AES-256-GCM, `masterKey`) в `dataDir/credentials.enc`, по слоту на testnet/mainnet. Секрет никогда не возвращается во фронт; сохранение/удаление требует пароль аккаунта, уведомление уходит в Telegram. Ключи активной среды подхватываются без перезапуска.
 - pump-ws проксирует `/api/trade/*` → trader, пускает только `TRADER_USER_ID`; события trader (SSE `/events`) уходят в WS этого пользователя как `trade_event`.
 - Стоп/тейк — через Algo API (`/fapi/v1/algoOrder`), обычные ордера — `/fapi/v1/order`.
 - Повтор `clientOrderId` в течение 10 минут не создаёт второй ордер. Kill switch хранится в `dataDir/trading.json`, журнал действий — `dataDir/audit.jsonl`.

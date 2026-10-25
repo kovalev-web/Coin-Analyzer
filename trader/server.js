@@ -13,6 +13,12 @@
 //   POST /leverage      → { symbol, leverage }
 //   POST /kill          → { closePositions? }  — disable trading + cancel everything
 //   POST /resume        → re-enable trading
+//   GET  /keys          → which environments have a key saved (masked, never the secret)
+//   POST /keys          → { env, apiKey, apiSecret } — validate with Binance, store encrypted
+//   POST /keys/delete   → { env }
+//
+// Keys for the active environment (config.env) are hot-swapped: saving or
+// deleting them restarts the Binance client and user data stream in place.
 
 var http = require('http');
 var fs = require('fs');
@@ -23,6 +29,10 @@ var { createAudit } = require('./audit');
 var { createUserStream } = require('./userstream');
 var { Trader } = require('./trader');
 var { describeError } = require('./errors');
+var { createStore } = require('./credentials');
+var { validateKeys } = require('./keys');
+var { ENDPOINTS } = require('./config');
+var path = require('path');
 
 var MAX_BODY = 16 * 1024;
 var RULES_REFRESH_MS = 60 * 60 * 1000;
@@ -31,8 +41,12 @@ var TIME_SYNC_MS = 10 * 60 * 1000;
 var config = loadConfig();
 fs.mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
 
-var client = createClient({ rest: config.rest, apiKey: config.apiKey, apiSecret: config.apiSecret });
-var trader = new Trader({ client: client, dataDir: config.dataDir, audit: createAudit(config.dataDir) });
+var audit = createAudit(config.dataDir);
+var store = config.masterKey ? createStore(path.join(config.dataDir, 'credentials.enc'), config.masterKey) : null;
+var client = null;   // Binance client for the active key (null = no key yet)
+var stream = null;   // user data stream for that client
+var generation = 0;  // bumps on every key change; stale retries stop themselves
+var trader = new Trader({ client: null, dataDir: config.dataDir, audit: audit });
 var secretBuf = Buffer.from(config.internalSecret);
 
 function authorized(req) {
@@ -75,17 +89,84 @@ setInterval(function () {
   sseClients.forEach(function (res) { res.write(': ping\n\n'); });
 }, 15000);
 
+function needKey(fn) {
+  return function (b, q) {
+    if (!client) throw Object.assign(new Error('No trading key saved for ' + config.env), { name: 'TraderError', status: 503 });
+    return fn(b, q);
+  };
+}
+
+function statusBody() {
+  return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest, publicIp: config.publicIp, configured: !!client }, trader.getStatus());
+}
+
 var routes = {
-  'GET /status': function () { return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest }, trader.getStatus()); },
+  'GET /status': statusBody,
   'GET /rules': function (b, q) { return trader.getRules(q.get('symbol')); },
   'GET /account': function () { return trader.getAccount(); },
-  'POST /order': function (b) { return trader.placeOrder(b); },
-  'POST /cancel': function (b) { return trader.cancel(b); },
-  'POST /cancel-all': function (b) { return trader.cancelAll(b); },
-  'POST /leverage': function (b) { return trader.setLeverage(b); },
-  'POST /kill': function (b) { return trader.kill(b); },
+  'POST /order': needKey(function (b) { return trader.placeOrder(b); }),
+  'POST /cancel': needKey(function (b) { return trader.cancel(b); }),
+  'POST /cancel-all': needKey(function (b) { return trader.cancelAll(b); }),
+  'POST /leverage': needKey(function (b) { return trader.setLeverage(b); }),
+  'POST /kill': needKey(function (b) { return trader.kill(b); }),
   'POST /resume': function () { return trader.resume(); },
+  'GET /keys': function () { return describeKeys(); },
+  'POST /keys': function (b) { return saveKeys(b); },
+  'POST /keys/delete': function (b) { return deleteKeys(b); },
 };
+
+// ── Keys ───────────────────────────────────────────────────────────────────
+
+function requireStore() {
+  if (!store) throw Object.assign(new Error('Key storage is not set up (masterKey missing in trader config)'), { name: 'TraderError', status: 503 });
+}
+
+function describeKeys() {
+  var keys = store ? store.describe() : { testnet: null, mainnet: null };
+  // Legacy: keys still written in the config file count for the active env
+  if (!keys[config.env] && config.apiKey) keys[config.env] = { apiKey: require('./credentials').mask(config.apiKey), savedAt: null, source: 'config' };
+  return { activeEnv: config.env, keys: keys };
+}
+
+async function saveKeys(b) {
+  requireStore();
+  var env = b.env, apiKey = String(b.apiKey || '').trim(), apiSecret = String(b.apiSecret || '').trim();
+  if (!ENDPOINTS[env]) throw Object.assign(new Error('env must be testnet or mainnet'), { name: 'TraderError', status: 400 });
+  if (!/^[A-Za-z0-9]{16,128}$/.test(apiKey) || !/^[A-Za-z0-9]{16,128}$/.test(apiSecret)) {
+    throw Object.assign(new Error('API key and secret look malformed'), { name: 'TraderError', status: 400 });
+  }
+  var v;
+  try {
+    v = await validateKeys({ env: env, rest: ENDPOINTS[env].rest, apiKey: apiKey, apiSecret: apiSecret });
+  } catch (e) {
+    audit('keys-save', { env: env }, { error: { message: e.message, code: e.code } });
+    throw Object.assign(new Error('Binance rejected the key: ' + describeError(e).message), { name: 'TraderError', status: 400 });
+  }
+  if (!v.ok) {
+    audit('keys-save', { env: env }, { error: { message: v.error } });
+    throw Object.assign(new Error(v.error), { name: 'TraderError', status: 400 });
+  }
+  store.set(env, { apiKey: apiKey, apiSecret: apiSecret, checks: v.checks });
+  audit('keys-save', { env: env, apiKey: require('./credentials').mask(apiKey) }, { result: v.checks });
+  if (env === config.env) activate();
+  return Object.assign(describeKeys(), { saved: env, checks: v.checks });
+}
+
+function deleteKeys(b) {
+  requireStore();
+  if (!ENDPOINTS[b.env]) throw Object.assign(new Error('env must be testnet or mainnet'), { name: 'TraderError', status: 400 });
+  store.remove(b.env);
+  audit('keys-delete', { env: b.env }, { result: { ok: true } });
+  if (b.env === config.env) activate();
+  return describeKeys();
+}
+
+function activeCreds() {
+  var c = store ? store.get(config.env) : null;
+  if (c) return c;
+  if (config.apiKey && config.apiSecret) return { apiKey: config.apiKey, apiSecret: config.apiSecret };
+  return null;
+}
 
 var server = http.createServer(async function (req, res) {
   if (!authorized(req)) return send(res, 401, { error: { message: 'Unauthorized' } });
@@ -94,7 +175,7 @@ var server = http.createServer(async function (req, res) {
 
   if (req.method === 'GET' && url === '/events') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-    res.write('data: ' + JSON.stringify({ type: 'status', status: Object.assign({ env: config.env }, trader.getStatus()) }) + '\n\n');
+    res.write('data: ' + JSON.stringify({ type: 'status', status: statusBody() }) + '\n\n');
     sseClients.add(res);
     req.on('close', function () { sseClients.delete(res); });
     return;
@@ -110,41 +191,68 @@ var server = http.createServer(async function (req, res) {
   }
 });
 
-var stream = createUserStream({
-  client: client,
-  urls: config.userStream,
-  events: config.userStreamEvents,
-  onMessage: function (msg) { trader.handleStreamEvent(msg); },
-  onStatus: function (connected) {
-    trader.setStreamStatus(connected);
-    if (connected) resyncWithRetry();
-  },
-});
+// (Re)build the Binance client and user data stream from the active key.
+function activate() {
+  var gen = ++generation;
+  if (stream) { stream.stop(); stream = null; }
+  trader.setStreamStatus(false);
+  var creds = activeCreds();
+  if (!creds) {
+    client = null;
+    trader.client = null;
+    console.log('[Trader] No trading key for', config.env, '— waiting for one');
+    trader.emit('event', { type: 'status', status: statusBody() });
+    return;
+  }
+  client = createClient({ rest: config.rest, apiKey: creds.apiKey, apiSecret: creds.apiSecret });
+  trader.client = client;
+  var s = createUserStream({
+    client: client,
+    urls: config.userStream,
+    events: config.userStreamEvents,
+    onMessage: function (msg) { if (gen === generation) trader.handleStreamEvent(msg); },
+    onStatus: function (connected) {
+      if (gen !== generation) return;
+      trader.setStreamStatus(connected);
+      if (connected) resyncWithRetry(gen);
+    },
+  });
+  stream = s;
+  start(gen);
+}
 
-function resyncWithRetry() {
+function resyncWithRetry(gen) {
+  if (gen !== generation) return;
   trader.resync().catch(function (e) {
     console.error('[Trader] resync failed:', e.message, '— retrying in 10s');
-    setTimeout(resyncWithRetry, 10000);
+    setTimeout(function () { resyncWithRetry(gen); }, 10000);
   });
 }
 
-async function start() {
+async function start(gen) {
+  if (gen !== generation) return;
   try {
     await trader.init();
   } catch (e) {
+    if (gen !== generation) return;
     console.error('[Trader] init failed:', describeError(e).message, '— retrying in 15s');
-    return setTimeout(start, 15000);
+    return setTimeout(function () { start(gen); }, 15000);
   }
+  if (gen !== generation) return;
   console.log('[Trader] Ready on', config.env, '| position mode:', trader.positionMode,
     '| trading', trader.tradingEnabled ? 'enabled' : 'DISABLED');
   stream.start();
-  setInterval(function () { trader.loadRules().catch(function (e) { console.error('[Trader] rules refresh failed:', e.message); }); }, RULES_REFRESH_MS);
-  setInterval(function () { client.syncTime().catch(function () {}); }, TIME_SYNC_MS);
 }
 
+setInterval(function () {
+  if (client) trader.loadRules().catch(function (e) { console.error('[Trader] rules refresh failed:', e.message); });
+}, RULES_REFRESH_MS);
+setInterval(function () { if (client) client.syncTime().catch(function () {}); }, TIME_SYNC_MS);
+
 server.listen(config.port, '127.0.0.1', function () {
-  console.log('[Trader] Listening on 127.0.0.1:' + config.port + ' (' + config.env + ')');
-  start();
+  console.log('[Trader] Listening on 127.0.0.1:' + config.port + ' (' + config.env + ')'
+    + (store ? '' : ' — key storage disabled (no masterKey)'));
+  activate();
 });
 
-process.on('SIGTERM', function () { stream.stop(); server.close(); process.exit(0); });
+process.on('SIGTERM', function () { if (stream) stream.stop(); server.close(); process.exit(0); });

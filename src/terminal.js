@@ -51,7 +51,7 @@ function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
 // ── Access ─────────────────────────────────────────────────────────────────
 
-function checkAccess() {
+export function checkAccess() {
   if (T.access) return Promise.resolve(T.access);
   if (T.accessPromise) return T.accessPromise;
   T.accessPromise = tradeRequest('GET', 'status').then(function (s) {

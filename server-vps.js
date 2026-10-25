@@ -599,7 +599,34 @@ var TRADE_ROUTES = {
   'GET status': true, 'GET account': true, 'GET rules': true,
   'POST order': true, 'POST cancel': true, 'POST cancel-all': true,
   'POST leverage': true, 'POST kill': true, 'POST resume': true,
+  'GET keys': true, 'POST keys': true, 'POST keys/delete': true,
 };
+// Commands allowed over the WebSocket shortcut — key management is HTTP-only (password-gated)
+var WS_TRADE_ACTIONS = { order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true };
+
+// Saving or deleting a trading key requires the account password, so a stolen
+// session alone can't swap the key. Wrong passwords are throttled.
+var _keyPwFails = [];
+async function checkTradingPassword(password) {
+  var now = Date.now();
+  _keyPwFails = _keyPwFails.filter(function (t) { return now - t < 15 * 60 * 1000; });
+  if (_keyPwFails.length >= 5) return { status: 429, message: 'Too many wrong passwords. Try again in 15 minutes.' };
+  if (!password) return { status: 400, message: 'Enter your account password' };
+  var row = getDb().sqlite.prepare('SELECT password FROM account WHERE user_id = ? AND provider_id = ?').get(TRADER_USER_ID, 'credential');
+  if (!row || !row.password) return { status: 400, message: 'Your account has no password set' };
+  if (!(await verifyBaPassword(row.password, String(password)))) {
+    _keyPwFails.push(now);
+    return { status: 403, message: 'Wrong password' };
+  }
+  return null;
+}
+
+function notifyKeyChange(action, env) {
+  var chatId = alertsMemory[TRADER_USER_ID] && alertsMemory[TRADER_USER_ID].chatId;
+  if (!chatId) return;
+  var what = action === 'keys' ? 'saved' : 'deleted';
+  sendTG(chatId, '🔐 Trading API key (' + env + ') was ' + what + ' in QuestTick.\nIf this wasn\'t you, change your password and revoke the key at the broker.');
+}
 
 async function handleTradeRequest(req, res, action, query) {
   function json(status, body) {
@@ -625,6 +652,17 @@ async function handleTradeRequest(req, res, action, query) {
       });
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
+  var keyChange = req.method === 'POST' && (action === 'keys' || action === 'keys/delete');
+  var keyEnv = null;
+  if (keyChange) {
+    var kb;
+    try { kb = JSON.parse(body || '{}'); } catch (e) { return json(400, { error: { message: 'Invalid JSON' } }); }
+    var pwErr = await checkTradingPassword(kb.password);
+    if (pwErr) return json(pwErr.status, { error: { message: pwErr.message } });
+    delete kb.password; // never forwarded or logged
+    keyEnv = kb.env;
+    body = JSON.stringify(kb);
+  }
   try {
     var r = await fetch(TRADER_URL + '/' + action + (req.method === 'GET' && query ? '?' + query : ''), {
       method: req.method,
@@ -633,6 +671,7 @@ async function handleTradeRequest(req, res, action, query) {
       signal: AbortSignal.timeout(25000),
     });
     var text = await r.text();
+    if (keyChange && r.ok) notifyKeyChange(action, keyEnv);
     res.writeHead(r.status, { 'Content-Type': 'application/json' });
     res.end(text);
   } catch (e) {
@@ -2195,7 +2234,7 @@ wss.on('connection', function (ws, upgradeReq) {
         };
         if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return tradeReply(503, { error: { message: 'Trading is not configured' } });
         if (!tradeUid || tradeUid !== TRADER_USER_ID || !CORS_ORIGINS.includes(ws._origin)) return tradeReply(403, { error: { message: 'Forbidden' } });
-        if (!TRADE_ROUTES['POST ' + msg.action]) return tradeReply(404, { error: { message: 'Not found' } });
+        if (!WS_TRADE_ACTIONS[msg.action]) return tradeReply(404, { error: { message: 'Not found' } });
         try {
           var tr = await fetch(TRADER_URL + '/' + msg.action, {
             method: 'POST',

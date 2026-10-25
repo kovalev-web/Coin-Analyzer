@@ -738,8 +738,10 @@ export async function fetchChartData(symbol, tf) {
 // Resolves with the JSON body; rejects with Error(message) carrying .status.
 export async function tradeRequest(method, action, body) {
   // Commands go over the open WebSocket when we have one (faster: no new
-  // HTTP request per click); reads and the no-socket case use HTTP.
-  if (method === 'POST' && ws && ws.readyState === WebSocket.OPEN) {
+  // HTTP request per click); reads, the no-socket case and 'POST_HTTP'
+  // (key management, which the server only accepts over HTTP) use HTTP.
+  if (method === 'POST_HTTP') method = 'POST';
+  else if (method === 'POST' && ws && ws.readyState === WebSocket.OPEN) {
     var reply = await wsRequest({ type: 'trade', action: action, body: body || {} });
     if (reply.status >= 400) {
       var wsErr = new Error((reply.body && reply.body.error && reply.body.error.message) || ('HTTP ' + reply.status));

@@ -7,8 +7,9 @@
 // {
 //   "env": "testnet",                 // "testnet" | "mainnet"
 //   "allowMainnet": false,            // must be true to run against real money
-//   "apiKey": "...",
-//   "apiSecret": "...",
+//   "masterKey": "64 hex chars",       // encrypts keys saved from the account page
+//   "apiKey": "...",                  // optional legacy key for the active env;
+//   "apiSecret": "...",               //   keys saved in the account page take precedence
 //   "internalSecret": "...",          // shared with pump-ws (TRADER_INTERNAL_SECRET)
 //   "port": 3010,
 //   "dataDir": "/var/lib/questtick-trader"
@@ -51,15 +52,17 @@ function buildConfig(raw) {
   if (env === 'mainnet' && raw.allowMainnet !== true) {
     throw new Error('Refusing to start on mainnet without "allowMainnet": true');
   }
-  if (!raw.apiKey || !raw.apiSecret) throw new Error('apiKey and apiSecret are required');
+  if (raw.masterKey && !/^[0-9a-f]{64}$/i.test(raw.masterKey)) throw new Error('masterKey must be 64 hex chars');
   if (!raw.internalSecret || String(raw.internalSecret).length < 32) {
     throw new Error('internalSecret must be at least 32 characters');
   }
   var ep = ENDPOINTS[env];
   return {
     env: env,
-    apiKey: raw.apiKey,
-    apiSecret: raw.apiSecret,
+    apiKey: raw.apiKey || null,
+    apiSecret: raw.apiSecret || null,
+    masterKey: raw.masterKey || null,
+    publicIp: raw.publicIp || null,     // shown in the account page for the key IP whitelist
     internalSecret: String(raw.internalSecret),
     port: raw.port || 3010,
     dataDir: raw.dataDir || '/var/lib/questtick-trader',
