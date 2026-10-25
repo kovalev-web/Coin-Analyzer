@@ -3291,7 +3291,7 @@ export { openTVMode, closeTVMode } from './tv.js';
 function updateMetricCards() {
   var coins = filteredCoins();
   var sortCount = document.querySelector('.sort-coin-count');
-  if (sortCount) sortCount.textContent = coins.length + ' coins';
+  if (sortCount) sortCount.textContent = (_screenerMode ? screenerCoins() : coins).length + ' coins';
   var c1 = document.querySelector('.metric-card:nth-child(1) .value');
   if (c1) c1.textContent = coins.length;
   if (!coins.length) return;
@@ -3513,8 +3513,10 @@ function _sortBarHTML(coins) {
       }).join('')
     + '</div>'
     + '</div>'
-    + '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="Sort by change">' + icon('percent', 16) + '</button>'
-    + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="Sort by volume">' + icon('bar-chart-2', 16) + '</button>'
+    // Gainers are always ranked by 24h change (screenerCoins), so sort buttons don't apply there
+    + (_screenerMode ? '' :
+        '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="Sort by change">' + icon('percent', 16) + '</button>'
+        + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="Sort by volume">' + icon('bar-chart-2', 16) + '</button>')
     + '</div>'
     + '</div>';
 }
@@ -3540,7 +3542,7 @@ export function render() {
     emptyHtml = '<div class="empty-state">No coins match the current filter.</div>';
   }
   var coinsHtml = coins.length
-    ? '<div class="cards-area' + (_screenerMode ? ' cards-area--scr' : '') + '">'
+    ? '<div class="cards-area">'
       + '<div class="cards-grid" id="cards-grid">'
       + coins.map(function (c) { return renderCard(c); }).join('')
       + '</div></div>'
@@ -3548,7 +3550,7 @@ export function render() {
 
   app.innerHTML =
     _topbarHTML()
-    + (_screenerMode ? '' : _sortBarHTML(coins))
+    + _sortBarHTML(coins)
     + coinsHtml;
   initCharts();
   updateNotifBadge();
