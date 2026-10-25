@@ -1,5 +1,6 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
+import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday } from './api.js';
@@ -4122,6 +4123,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + '</div>'
     + '</div>'
     + '<div class="fv-actions">'
+    + terminalButtonHTML()
     + '<button class="btn-icon warming" id="fv-liq-btn" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>'
     + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
@@ -4412,6 +4414,7 @@ export function openCoinFullView(sym) {
     renderLiquidityMetrics(msg.metrics);
     if (msg.type === 'trade') appendTapeRow(msg.trade);
   });
+  terminalOnFVOpen(sym);
 
   // Enable liq buttons after remaining warmup time (0 if already warm)
   var _liqBtns = document.querySelectorAll('[data-action="toggle-liq-panel"]');
@@ -4999,6 +5002,7 @@ export function openCoinFullView(sym) {
 
 export function closeCoinFullView() {
   softDisconnectOrderbook();
+  terminalOnFVClose();
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._resizeObserver) _fvRuler._resizeObserver.disconnect();

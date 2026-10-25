@@ -21,6 +21,7 @@ var fs = require('fs');
 var ENDPOINTS = {
   testnet: {
     rest: 'https://demo-fapi.binance.com',
+    marketWs: 'wss://demo-fstream.binance.com/public/ws',
     userStream: [
       'wss://demo-fstream.binance.com/private/ws?listenKey={listenKey}&events={events}',
       'wss://demo-fstream.binance.com/ws/{listenKey}',
@@ -29,6 +30,7 @@ var ENDPOINTS = {
   },
   mainnet: {
     rest: 'https://fapi.binance.com',
+    marketWs: 'wss://fstream.binance.com/public/ws',
     userStream: [
       'wss://fstream.binance.com/private/ws?listenKey={listenKey}&events={events}',
     ],
@@ -62,6 +64,7 @@ function buildConfig(raw) {
     port: raw.port || 3010,
     dataDir: raw.dataDir || '/var/lib/questtick-trader',
     rest: raw.rest || ep.rest,
+    marketWs: raw.marketWs || ep.marketWs,
     userStream: raw.userStream ? [].concat(raw.userStream) : ep.userStream,
     userStreamEvents: USER_STREAM_EVENTS,
   };

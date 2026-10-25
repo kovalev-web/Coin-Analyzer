@@ -596,12 +596,12 @@ var TRADER_URL             = process.env.TRADER_URL || 'http://127.0.0.1:3010';
 var TRADER_INTERNAL_SECRET = process.env.TRADER_INTERNAL_SECRET || '';
 var TRADER_USER_ID         = process.env.TRADER_USER_ID || '';
 var TRADE_ROUTES = {
-  'GET status': true, 'GET account': true,
+  'GET status': true, 'GET account': true, 'GET rules': true,
   'POST order': true, 'POST cancel': true, 'POST cancel-all': true,
   'POST leverage': true, 'POST kill': true, 'POST resume': true,
 };
 
-async function handleTradeRequest(req, res, action) {
+async function handleTradeRequest(req, res, action, query) {
   function json(status, body) {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
@@ -626,7 +626,7 @@ async function handleTradeRequest(req, res, action) {
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
   try {
-    var r = await fetch(TRADER_URL + '/' + action, {
+    var r = await fetch(TRADER_URL + '/' + action + (req.method === 'GET' && query ? '?' + query : ''), {
       method: req.method,
       headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET, 'Content-Type': 'application/json' },
       body: req.method === 'POST' ? (body || '{}') : undefined,
@@ -924,7 +924,8 @@ var httpServer = http.createServer(async function (req, res) {
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
   if (req.url.startsWith('/api/trade/')) {
-    return handleTradeRequest(req, res, req.url.slice('/api/trade/'.length).split('?')[0]);
+    var _tradePath = req.url.slice('/api/trade/'.length).split('?');
+    return handleTradeRequest(req, res, _tradePath[0], _tradePath[1] || '');
   }
 
   // Better Auth routes

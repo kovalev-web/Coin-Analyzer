@@ -25,6 +25,7 @@ import {
   updateSessionTimer, injectDemoBanner,
   briefingThisWeekEntries,
 } from './ui.js';
+import { toggleTerminal } from './terminal.js';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -589,6 +590,9 @@ document.body.addEventListener('click', function (e) {
     }
     case 'toggle-briefing':
       toggleBriefing(sym);
+      break;
+    case 'toggle-terminal':
+      toggleTerminal();
       break;
     case 'open-briefing':
       openBriefingPanel();

@@ -148,6 +148,15 @@ class Trader extends EventEmitter {
 
   getAccount() { return st.toJSON(this.state); }
 
+  getRules(symbol) {
+    var r = this.rules[String(symbol || '').toUpperCase()];
+    if (!r) throw new TraderError(404, 'Unknown symbol');
+    return {
+      symbol: r.symbol, status: r.status, tickSize: r.tickSize, stepSize: r.stepSize,
+      minQty: r.minQty, marketMinQty: r.marketMinQty, minNotional: r.minNotional,
+    };
+  }
+
   getStatus() {
     return {
       tradingEnabled: this.tradingEnabled,

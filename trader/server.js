@@ -5,6 +5,7 @@
 //
 //   GET  /status        → { env, tradingEnabled, positionMode, streamConnected, lastSyncAt }
 //   GET  /account       → { balances, positions, orders, algoOrders }
+//   GET  /rules?symbol= → tick/lot/notional rules for one symbol
 //   GET  /events        → Server-Sent Events stream of trader events
 //   POST /order         → place (MARKET | LIMIT | STOP_MARKET | TAKE_PROFIT_MARKET)
 //   POST /cancel        → { symbol, orderId | clientOrderId } or { algoId | clientAlgoId }
@@ -75,7 +76,8 @@ setInterval(function () {
 }, 15000);
 
 var routes = {
-  'GET /status': function () { return Object.assign({ env: config.env }, trader.getStatus()); },
+  'GET /status': function () { return Object.assign({ env: config.env, marketWs: config.marketWs }, trader.getStatus()); },
+  'GET /rules': function (b, q) { return trader.getRules(q.get('symbol')); },
   'GET /account': function () { return trader.getAccount(); },
   'POST /order': function (b) { return trader.placeOrder(b); },
   'POST /cancel': function (b) { return trader.cancel(b); },
@@ -87,7 +89,8 @@ var routes = {
 
 var server = http.createServer(async function (req, res) {
   if (!authorized(req)) return send(res, 401, { error: { message: 'Unauthorized' } });
-  var url = req.url.split('?')[0];
+  var parsed = new URL(req.url, 'http://local');
+  var url = parsed.pathname;
 
   if (req.method === 'GET' && url === '/events') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -101,7 +104,7 @@ var server = http.createServer(async function (req, res) {
   if (!handler) return send(res, 404, { error: { message: 'Not found' } });
   try {
     var body = req.method === 'POST' ? await readJson(req) : {};
-    send(res, 200, await handler(body));
+    send(res, 200, await handler(body, parsed.searchParams));
   } catch (e) {
     sendError(res, e);
   }

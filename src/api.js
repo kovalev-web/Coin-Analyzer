@@ -113,6 +113,9 @@ function connectWS() {
         state.notifUnread++;
         emit('notify:received', msg.entry);
         break;
+      case 'trade_event':
+        emit('trade:event', msg.event);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -729,6 +732,25 @@ export async function fetchChartData(symbol, tf) {
   } catch (e) {
     state.chartData[key] = { status: 'error' };
   }
+}
+
+// ── Trading (proxied by pump-ws to the trader process) ───────────────────
+// Resolves with the JSON body; rejects with Error(message) carrying .status.
+export async function tradeRequest(method, action, body) {
+  var res = await fetch(API_BASE + '/api/trade/' + action, {
+    method: method,
+    credentials: 'include',
+    headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+    body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
+  });
+  var data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    var err = new Error((data && data.error && data.error.message) || ('HTTP ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+  return data;
 }
 
 // ── Grid kline fetch ─────────────────────────────────────────────────────
