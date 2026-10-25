@@ -154,6 +154,31 @@ async function buildDayFacts(userId, dateStr) {
   });
 }
 
+// Trades opened in the last `hours` (rolling, not the user's calendar day) for
+// the main-screen card. Same trade logic as the journal facts. Cached per user
+// for 30 s so a refreshing tab doesn't hammer Binance.
+var _recentTradesCache = {};
+async function buildRecentTrades(userId, hours) {
+  var c = _recentTradesCache[userId];
+  if (c && Date.now() - c.at < 30000) return c.data;
+  var now = Date.now(), start = now - hours * 3600000, from = start - 86400000;
+  var income = await userBinance(userId, 'income', { incomeType: 'COMMISSION', startTime: from, endTime: now });
+  if (!income) return null;
+  var syms = {};
+  income.forEach(function (r) { if (r.symbol) syms[r.symbol] = true; });
+  var fills = [];
+  await Promise.all(Object.keys(syms).map(async function (s) {
+    var t = await userBinance(userId, 'trades', { symbol: s, startTime: from, endTime: now });
+    if (t) fills = fills.concat(t);
+  }));
+  var f = computeDayFacts({ fills: fills, dayStart: start, dayEnd: now + 1, date: null, tz: 'UTC' });
+  var data = { summary: f.summary, trades: f.trades.map(function (t) {
+    return { symbol: t.symbol, side: t.side, openTime: t.openTime, closeTime: t.closeTime, pnlNet: t.pnlNet, result: t.result };
+  }) };
+  _recentTradesCache[userId] = { at: Date.now(), data: data };
+  return data;
+}
+
 function sendPasswordChangedEmail(email, notMeUrl) {
   var resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
@@ -1451,6 +1476,14 @@ var httpServer = http.createServer(async function (req, res) {
         jEdge.days = jEdgeRows.length;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(jEdge));
+        return;
+      }
+
+      if (req.method === 'GET' && req.url === '/api/journal/last24h') {
+        var jRecent = null;
+        try { jRecent = await buildRecentTrades(jUserId, 24); } catch (e) { console.error('[Last24h]', e.message); }
+        res.writeHead(jRecent ? 200 : 403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(jRecent || { error: 'Connect Binance API to see trades' }));
         return;
       }
 

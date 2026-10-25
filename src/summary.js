@@ -8,7 +8,7 @@ import { state } from './state.js';
 import { API_BASE } from './api.js';
 
 var LEADERS = ['btc', 'eth', 'sol'];
-var REFRESH_MS = 60 * 1000;
+var REFRESH_MS = 60 * 1000; // server caches 30 s
 
 var KLINES_MS = 5 * 60 * 1000;   // re-fetch the hourly candles every 5 min
 var SPARK_HOURS = 48;
@@ -114,19 +114,35 @@ function _updateLastCandle(sym, c) {
   try { cur.series.update(last); } catch (e) {}
 }
 
+var MAX_BARS = 8; // up to 8 trades a day; older ones drop off the left
+
+// "Your 24h" card: total, W/L, and one bar per trade (height = size of the
+// result, color = sign), coin under each bar.
 function mineHTML() {
   if (state.isDemoMode) return '';
   var m = S.mine;
-  if (!m) return '<div class="ds-mine"><span class="ds-label">Your 24h</span><span class="ds-muted">' + (S.loading ? 'Loading…' : '—') + '</span></div>';
-  if (m.error) return '<div class="ds-mine"><span class="ds-label">Your 24h</span><span class="ds-muted">' + m.error + '</span></div>';
-  if (!m.coins.length) return '<div class="ds-mine"><span class="ds-label">Your 24h</span><span class="ds-muted">No trades</span></div>';
-  return '<div class="ds-mine"><span class="ds-label">Your 24h</span>'
-    + '<span class="ds-total ' + (m.total >= 0 ? 'up' : 'dn') + '">' + signed(m.total, 2) + ' USDT</span>'
-    + m.coins.map(function (c) {
-        return '<button class="ds-coin" data-action="expand" data-sym="' + c.sym + '">' + c.sym.toUpperCase()
-          + ' <b class="' + (c.net >= 0 ? 'up' : 'dn') + '">' + signed(c.net, 2) + '</b></button>';
-      }).join('')
-    + '</div>';
+  var head = '<span class="ds-leader-top"><span class="ds-sym">Your 24h</span>';
+  if (!m || m.error) {
+    return '<div class="ds-leader ds-mine-card">' + head + '</span><span class="ds-mine-empty">'
+      + (m && m.error ? m.error : S.loading ? 'Loading…' : '—') + '</span></div>';
+  }
+  var sm = m.summary;
+  head += '<span class="ds-ch ' + (sm.pnlNet > 0 ? 'up' : sm.pnlNet < 0 ? 'dn' : '') + '">' + signed(sm.pnlNet, 2) + ' USDT</span></span>';
+  var sub = '<span class="ds-mine-sub">' + (sm.trades ? sm.trades + ' trade' + (sm.trades === 1 ? '' : 's') + ' · ' + sm.wins + 'W / ' + sm.losses + 'L' : 'No trades')
+    + (sm.open ? ' · ' + sm.open + ' open' : '') + '</span>';
+  var trades = m.trades.slice(-MAX_BARS);
+  if (!trades.length) return '<div class="ds-leader ds-mine-card">' + head + sub + '<span class="ds-mine-empty">No trades in the last 24 hours</span></div>';
+  var maxAbs = Math.max.apply(null, trades.map(function (t) { return Math.abs(t.pnlNet) || 0; }).concat([1e-9]));
+  var bars = trades.map(function (t) {
+    var sym = t.symbol.replace(/USDT$/, '');
+    var h = t.result === 'open' ? 30 : Math.max(8, Math.round(Math.abs(t.pnlNet) / maxAbs * 100));
+    var cls = t.result === 'open' ? 'open' : t.pnlNet >= 0 ? 'up' : 'dn';
+    var tip = sym + ' ' + t.side + ' · ' + (t.result === 'open' ? 'open' : signed(t.pnlNet, 2) + ' USDT');
+    return '<span class="ds-bar" data-action="expand" data-sym="' + sym.toLowerCase() + '" title="' + tip + '">'
+      + '<span class="ds-bar-fill ' + cls + '" style="height:' + h + '%"></span>'
+      + '<span class="ds-bar-sym">' + sym + '</span></span>';
+  }).join('');
+  return '<div class="ds-leader ds-mine-card">' + head + sub + '<span class="ds-bars">' + bars + '</span></div>';
 }
 
 export function daySummaryHTML() {
@@ -134,8 +150,8 @@ export function daySummaryHTML() {
   // Charts attach after render() puts this HTML into the page
   setTimeout(function () { _paintLeaders(); _initCharts(); _loadKlines(); }, 0);
   return '<div class="day-summary" id="day-summary">'
-    + '<div class="ds-leaders">' + LEADERS.map(leaderHTML).join('') + '</div>'
-    + '<div id="ds-mine-wrap">' + mineHTML() + '</div>'
+    + '<div class="ds-leaders">' + LEADERS.map(leaderHTML).join('')
+    + '<div id="ds-mine-wrap">' + mineHTML() + '</div></div>'
     + '</div>';
 }
 
@@ -160,28 +176,9 @@ async function _loadMine() {
   if (state.isDemoMode || S.loading) return;
   S.loading = true;
   try {
-    var end = Date.now(), start = end - 24 * 3600 * 1000;
-    var res = await fetch(API_BASE + '/api/proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ service: 'binance-income', payload: { startTime: start, endTime: end, limit: 1000 } }),
-    });
+    var res = await fetch(API_BASE + '/api/journal/last24h', { credentials: 'include' });
     var data = await res.json().catch(function () { return {}; });
-    if (!res.ok) {
-      S.mine = { error: res.status === 403 ? 'Connect Binance API to see trades' : 'Unavailable' };
-    } else {
-      var by = {};
-      (data.income || []).forEach(function (r) {
-        if (!r.symbol || !/USDT$/.test(r.symbol)) return;
-        if (r.incomeType !== 'REALIZED_PNL' && r.incomeType !== 'COMMISSION' && r.incomeType !== 'FUNDING_FEE') return;
-        var sym = r.symbol.replace(/USDT$/, '').toLowerCase();
-        by[sym] = (by[sym] || 0) + Number(r.income);
-      });
-      var coins = Object.keys(by).map(function (sym) { return { sym: sym, net: by[sym] }; })
-        .sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net); });
-      S.mine = { coins: coins, total: coins.reduce(function (s, c) { return s + c.net; }, 0) };
-    }
+    S.mine = res.ok ? data : { error: res.status === 403 ? 'Connect Binance API to see trades' : 'Unavailable' };
     S.loadedAt = Date.now();
   } catch (e) {
     S.mine = { error: 'Unavailable' };

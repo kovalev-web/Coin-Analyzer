@@ -125,3 +125,16 @@
 .ds-coin b{font-weight:var(--font-medium);}
 .ds-muted{color:var(--graphite);}
 @media(max-width:768px){.day-summary{padding:var(--space-4) var(--space-6) 0;gap:var(--space-4);}.ds-leaders{flex-wrap:nowrap;width:100%;}.ds-leader{flex:1;width:auto;min-width:0;padding:var(--space-3) var(--space-4) var(--space-2);}.ds-spark{height:40px;}.ds-leader-top{flex-wrap:wrap;column-gap:var(--space-2);row-gap:0;font-size:var(--text-2xs);}.ds-leader-top .ds-ch{margin-left:0;flex-basis:100%;}}
+/* Your 24h card: one bar per trade */
+#ds-mine-wrap{display:contents;}
+.ds-mine-card{width:260px;cursor:default;}
+.ds-mine-sub{color:var(--graphite);font-size:var(--text-2xs);}
+.ds-mine-empty{display:flex;align-items:center;height:56px;color:var(--graphite);font-size:var(--text-2xs);}
+.ds-bars{display:flex;align-items:flex-end;gap:var(--space-2);height:56px;}
+.ds-bar{flex:1;max-width:28px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:var(--space-1);cursor:pointer;min-width:0;}
+.ds-bar-fill{width:100%;border-radius:2px 2px 0 0;min-height:3px;}
+.ds-bar-fill.up{background:var(--bullish);}
+.ds-bar-fill.dn{background:var(--danger);}
+.ds-bar-fill.open{background:var(--steel);}
+.ds-bar-sym{font-size:9px;line-height:10px;color:var(--graphite);max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap;}
+@media(max-width:768px){.ds-mine-card{flex-basis:100%;width:auto;}.ds-leaders{flex-wrap:wrap;}}
