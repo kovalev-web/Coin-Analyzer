@@ -737,6 +737,17 @@ export async function fetchChartData(symbol, tf) {
 // ── Trading (proxied by pump-ws to the trader process) ───────────────────
 // Resolves with the JSON body; rejects with Error(message) carrying .status.
 export async function tradeRequest(method, action, body) {
+  // Commands go over the open WebSocket when we have one (faster: no new
+  // HTTP request per click); reads and the no-socket case use HTTP.
+  if (method === 'POST' && ws && ws.readyState === WebSocket.OPEN) {
+    var reply = await wsRequest({ type: 'trade', action: action, body: body || {} });
+    if (reply.status >= 400) {
+      var wsErr = new Error((reply.body && reply.body.error && reply.body.error.message) || ('HTTP ' + reply.status));
+      wsErr.status = reply.status;
+      throw wsErr;
+    }
+    return reply.body;
+  }
   var res = await fetch(API_BASE + '/api/trade/' + action, {
     method: method,
     credentials: 'include',

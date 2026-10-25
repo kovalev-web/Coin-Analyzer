@@ -27,7 +27,13 @@ var T = {
   open: _lsGet('qt_term_open') === '1',
   sym: null,             // 'JCTUSDT'
   rules: null,
-  ws: null, wsTimer: null,
+  ws: null, wsTrades: null, wsTimer: null,
+  bbo: null,             // latest bookTicker {b, B, a, A, u}: top of book, real-time
+  depthU: 0,             // update id of the last depth20 snapshot
+  lastTrade: null,       // {price, buy, at} from aggTrade
+  pending: {},           // clientOrderId → {idx, kind, qty, at}: shown before the exchange confirms
+  cancelling: {},
+  closedIds: {},         // orderId/algoId seen closed by the stream (beats a late placement reply)        // orderId/algoId → true while a cancel is in flight
   bids: [], asks: [],    // [[price, qty], ...] best first
   scaleIdx: null, top: null, rows: 0,
   size: Number(_lsGet('qt_term_size')) || 100,
@@ -152,32 +158,68 @@ function _panelHTML() {
 
 // ── Depth stream (trader's environment) ─────────────────────────────────────
 
+// depth20@100ms gives the levels; bookTicker (unthrottled, up to hundreds of
+// updates/s) keeps the best bid/ask exact between depth snapshots; aggTrade
+// marks the last traded price.
 function _connectDepth() {
   _disconnectDepth();
   if (!T.access || !T.access.marketWs || !T.sym) return;
-  var sym = T.sym;
-  var ws = new WebSocket(T.access.marketWs + '/' + sym.toLowerCase() + '@depth20@100ms');
+  var sym = T.sym, s = sym.toLowerCase();
+  var root = T.access.marketWs.replace(/\/public\/ws$/, '');
+  var ws = new WebSocket(root + '/public/stream?streams=' + s + '@depth20@100ms/' + s + '@bookTicker');
   T.ws = ws;
   ws.onmessage = function (ev) {
     if (T.ws !== ws) return;
     var m;
     try { m = JSON.parse(ev.data); } catch (e) { return; }
-    var b = m.b || m.bids, a = m.a || m.asks;
-    if (!b || !a) return;
-    T.bids = b.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
-    T.asks = a.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
+    var d = m.data || m;
+    if (d.e === 'bookTicker') {
+      T.bbo = { b: Number(d.b), B: Number(d.B), a: Number(d.a), A: Number(d.A), u: d.u };
+      _applyBbo();
+    } else if (d.b && d.a) {
+      T.bids = d.b.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
+      T.asks = d.a.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
+      T.depthU = d.u || 0;
+      _applyBbo();
+    } else {
+      return;
+    }
     _queueRender();
   };
   ws.onclose = function () {
     if (T.ws !== ws) return;
     T.ws = null;
-    if (T.sym === sym) T.wsTimer = setTimeout(_connectDepth, 2000);
+    if (T.sym === sym) T.wsTimer = setTimeout(_connectDepth, 1000);
   };
+
+  var wt = new WebSocket(root + '/market/ws/' + s + '@aggTrade');
+  T.wsTrades = wt;
+  wt.onmessage = function (ev) {
+    if (T.wsTrades !== wt) return;
+    var d;
+    try { d = JSON.parse(ev.data); } catch (e) { return; }
+    if (d.e !== 'aggTrade') return;
+    T.lastTrade = { price: Number(d.p), buy: !d.m, at: Date.now() };
+    _queueRender();
+  };
+}
+
+// Overlay the newer bookTicker on the last depth snapshot: drop levels that
+// are now inside the spread and set the exact top-of-book quantity.
+function _applyBbo() {
+  var t = T.bbo;
+  if (!t || t.u < T.depthU || !T.bids.length || !T.asks.length) return;
+  T.bids = T.bids.filter(function (l) { return l[0] < t.b; });
+  T.bids.unshift([t.b, t.B]);
+  T.asks = T.asks.filter(function (l) { return l[0] > t.a; });
+  T.asks.unshift([t.a, t.A]);
 }
 
 function _disconnectDepth() {
   clearTimeout(T.wsTimer);
   if (T.ws) { var w = T.ws; T.ws = null; try { w.close(); } catch (e) {} }
+  if (T.wsTrades) { var t = T.wsTrades; T.wsTrades = null; try { t.close(); } catch (e) {} }
+  T.bbo = null; T.depthU = 0; T.lastTrade = null;
 }
 
 // ── Account events ──────────────────────────────────────────────────────────
@@ -190,9 +232,11 @@ on('trade:event', function (ev) {
   } else if (ev.type === 'order') {
     acc.orders = acc.orders.filter(function (o) { return o.orderId !== ev.order.orderId; });
     if (OPEN_ORDER[ev.order.status]) acc.orders.push(ev.order);
+    else T.closedIds['o' + ev.order.orderId] = Date.now();
   } else if (ev.type === 'algo') {
     acc.algoOrders = acc.algoOrders.filter(function (o) { return o.algoId !== ev.algo.algoId; });
     if (OPEN_ALGO[ev.algo.status]) acc.algoOrders.push(ev.algo);
+    else T.closedIds['a' + ev.algo.algoId] = Date.now();
   } else if (ev.type === 'position') {
     var p = ev.position;
     acc.positions = acc.positions.filter(function (x) { return !(x.symbol === p.symbol && x.positionSide === p.positionSide); });
@@ -262,11 +306,15 @@ function _myOrdersByIdx(step) {
   function add(idx, item) { (out[idx] = out[idx] || []).push(item); }
   T.account.orders.forEach(function (o) {
     if (o.symbol !== T.sym) return;
-    add(Math.round(Number(o.price) / step), { kind: o.side === 'BUY' ? 'B' : 'S', qty: Number(o.origQty) - Number(o.executedQty || 0), order: o });
+    add(Math.round(Number(o.price) / step), { kind: o.side === 'BUY' ? 'B' : 'S', qty: Number(o.origQty) - Number(o.executedQty || 0), order: o, cancelling: !!T.cancelling['o' + o.orderId] });
   });
   T.account.algoOrders.forEach(function (a) {
     if (a.symbol !== T.sym) return;
-    add(Math.round(Number(a.triggerPrice) / step), { kind: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', qty: null, algo: a });
+    add(Math.round(Number(a.triggerPrice) / step), { kind: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', qty: null, algo: a, cancelling: !!T.cancelling['a' + a.algoId] });
+  });
+  Object.keys(T.pending).forEach(function (id) {
+    var p = T.pending[id];
+    add(Math.round(p.price / step), { kind: p.kind, qty: p.qty, pending: true });
   });
   return out;
 }
@@ -276,8 +324,11 @@ function _myOrdersByIdx(step) {
 function _queueRender() {
   if (T.renderQueued) return;
   T.renderQueued = true;
-  // Timer, not rAF: rAF stops in background tabs and the ladder would freeze stale
-  setTimeout(function () { T.renderQueued = false; _render(); }, 66);
+  var done = false;
+  function run() { if (done) return; done = true; T.renderQueued = false; _render(); }
+  // Next frame normally; the timer covers hidden/occluded windows where rAF stalls
+  requestAnimationFrame(run);
+  setTimeout(run, 100);
 }
 
 function _render() {
@@ -316,6 +367,10 @@ function _render() {
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
   var pnlLo = pnl ? Math.min(entryIdx, exitIdx) : null, pnlHi = pnl ? Math.max(entryIdx, exitIdx) : null;
   var pnlCls = pnl ? (pnl.up ? ' pnl-up' : ' pnl-dn') : '';
+  var lt = T.lastTrade;
+  var tradeIdx = lt ? Math.round(lt.price / step) : null;
+  var tradeCls = lt ? (lt.buy ? ' last-buy' : ' last-sell') + (Date.now() - lt.at < 300 ? ' flash' : '') : '';
+  if (lt && Date.now() - lt.at < 300) setTimeout(_queueRender, 320); // let the flash fade
   var d = _decimals(T.rules.tickSize);
 
   // Rows are created once and updated in place: replacing them 10×/s would
@@ -330,11 +385,12 @@ function _render() {
     if (i >= askIdx) cls += ' ask'; else if (i <= bidIdx) cls += ' bid'; else cls += ' spread';
     if (i === entryIdx) cls += ' entry';
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
+    if (tradeIdx === i) cls += tradeCls;
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];
     var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? m.map(function (x) {
-      return '<span class="dom-mine ' + x.kind.toLowerCase() + '">' + x.kind + (x.qty != null ? ' ' + _fmtQty(x.qty) : '') + '</span>';
+      return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '">' + x.kind + (x.qty != null ? ' ' + _fmtQty(x.qty) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
@@ -564,6 +620,25 @@ function _send(action, body, okMsg) {
   });
 }
 
+// Show the order on its level right away; it is replaced by the real order
+// when the exchange confirms, or dropped on error.
+function _placeOptimistic(body, price, kind, okMsg) {
+  var id = body.clientOrderId;
+  T.pending[id] = { price: price, kind: kind, qty: body.quantity != null ? Number(body.quantity) : null, at: Date.now() };
+  _queueRender();
+  return _send('order', body, okMsg).then(function (r) {
+    if (r && r.order && OPEN_ORDER[r.order.status] && !T.closedIds['o' + r.order.orderId] && !T.account.orders.some(function (o) { return o.orderId === r.order.orderId; })) {
+      T.account.orders.push(r.order);
+    }
+    if (r && r.algo && OPEN_ALGO[r.algo.status] && !T.closedIds['a' + r.algo.algoId] && !T.account.algoOrders.some(function (a) { return a.algoId === r.algo.algoId; })) {
+      T.account.algoOrders.push(r.algo);
+    }
+  }).catch(function () {}).finally(function () {
+    delete T.pending[id];
+    _queueRender();
+  });
+}
+
 function _onLevelClick(idx, side, shift) {
   if (!T.rules || !T.bids.length || !T.asks.length) return;
   // Ignore an accidental double click on the same level within 300ms
@@ -579,10 +654,10 @@ function _onLevelClick(idx, side, shift) {
 
   var qty = T.size / price;
   var through = side === 'BUY' ? price >= bestAsk : price <= bestBid;
-  _send('order', {
+  _placeOptimistic({
     clientOrderId: _clientId(), symbol: T.sym, side: side, type: 'LIMIT',
     price: String(price), quantity: String(qty), timeInForce: through ? 'IOC' : 'GTC',
-  }, (side === 'BUY' ? 'Buy ' : 'Sell ') + (through ? 'now up to ' : 'limit at ') + price);
+  }, price, side === 'BUY' ? 'B' : 'S', (side === 'BUY' ? 'Buy ' : 'Sell ') + (through ? 'now up to ' : 'limit at ') + price);
 }
 
 function _placeProtective(price, bestBid, bestAsk) {
@@ -593,19 +668,27 @@ function _placeProtective(price, bestBid, bestAsk) {
   if (long) type = price < bestBid ? 'STOP_MARKET' : price > bestAsk ? 'TAKE_PROFIT_MARKET' : null;
   else type = price > bestAsk ? 'STOP_MARKET' : price < bestBid ? 'TAKE_PROFIT_MARKET' : null;
   if (!type) { _setStatus('SL/TP must be outside the spread', true); return; }
-  _send('order', {
+  _placeOptimistic({
     clientOrderId: _clientId(), symbol: T.sym, side: long ? 'SELL' : 'BUY', type: type,
     triggerPrice: String(price), closePosition: true,
-  }, (type === 'STOP_MARKET' ? 'Stop-loss at ' : 'Take-profit at ') + price);
+  }, price, type === 'STOP_MARKET' ? 'SL' : 'TP', (type === 'STOP_MARKET' ? 'Stop-loss at ' : 'Take-profit at ') + price);
 }
 
 function _cancelAtLevel(idx) {
   var step = _step();
   var items = _myOrdersByIdx(step)[idx] || [];
   items.forEach(function (x) {
-    if (x.order) _send('cancel', { symbol: T.sym, orderId: x.order.orderId }, 'Cancelled');
-    else if (x.algo) _send('cancel', { algoId: x.algo.algoId }, 'Cancelled');
+    var key = x.order ? 'o' + x.order.orderId : x.algo ? 'a' + x.algo.algoId : null;
+    if (!key || T.cancelling[key]) return;
+    T.cancelling[key] = true; // struck through until the exchange confirms
+    var req = x.order ? _send('cancel', { symbol: T.sym, orderId: x.order.orderId }, 'Cancelled')
+                      : _send('cancel', { algoId: x.algo.algoId }, 'Cancelled');
+    req.then(function () {
+      if (x.order) T.account.orders = T.account.orders.filter(function (o) { return o.orderId !== x.order.orderId; });
+      else T.account.algoOrders = T.account.algoOrders.filter(function (a) { return a.algoId !== x.algo.algoId; });
+    }).catch(function () {}).finally(function () { delete T.cancelling[key]; _queueRender(); });
   });
+  _queueRender();
 }
 
 function _closePosition() {

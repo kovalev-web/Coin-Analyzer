@@ -2124,6 +2124,7 @@ wss.on('connection', function (ws, upgradeReq) {
   console.log('[Server] Client connected (' + clients.size + ' total)');
   // Authenticate WS connection using session cookie from the HTTP upgrade request.
   // Store the promise so save_alerts can await it if it arrives before resolution.
+  ws._origin = upgradeReq.headers.origin || '';
   ws._sessionPromise = getSession(upgradeReq).then(function (sess) {
     ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
     if (ws._sessionUserId) ws._userId = ws._sessionUserId;
@@ -2183,6 +2184,31 @@ wss.on('connection', function (ws, upgradeReq) {
           if (d1Open) d1OpenCache[natrSym] = d1Open; // добавляем в кэш если пропустил bootstrap
         }
         ws.send(JSON.stringify({ type: 'natr', _id: msg._id, symbol: msg.symbol, data: natrKlines, d1Open: d1Open }));
+      }
+
+      else if (msg.type === 'trade') {
+        // Order commands over the already-open socket: no per-request HTTP/TLS
+        // overhead. Same gate as /api/trade/*: trading user only, our origins only.
+        var tradeUid = ws._sessionUserId !== undefined ? ws._sessionUserId : await ws._sessionPromise;
+        var tradeReply = function (status, body) {
+          ws.send(JSON.stringify({ type: 'trade_result', _id: msg._id, status: status, body: body }));
+        };
+        if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return tradeReply(503, { error: { message: 'Trading is not configured' } });
+        if (!tradeUid || tradeUid !== TRADER_USER_ID || !CORS_ORIGINS.includes(ws._origin)) return tradeReply(403, { error: { message: 'Forbidden' } });
+        if (!TRADE_ROUTES['POST ' + msg.action]) return tradeReply(404, { error: { message: 'Not found' } });
+        try {
+          var tr = await fetch(TRADER_URL + '/' + msg.action, {
+            method: 'POST',
+            headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET, 'Content-Type': 'application/json' },
+            body: JSON.stringify(msg.body || {}),
+            signal: AbortSignal.timeout(25000),
+          });
+          var trBody = null;
+          try { trBody = await tr.json(); } catch (e) {}
+          tradeReply(tr.status, trBody);
+        } catch (e) {
+          tradeReply(502, { error: { message: 'Trader is unavailable' } });
+        }
       }
 
       else if (msg.type === 'save_alerts') {

@@ -619,3 +619,9 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.pnl-up:hover,.dom-row.pnl-dn:hover{background:var(--fog);}
 .dom-mine.pos{background:var(--primary);color:var(--paper);}
 .dom-pnl{font-size:var(--text-sm);}
+.dom-mine.pending{opacity:0.5;}
+.dom-mine.cancelling{opacity:0.4;text-decoration:line-through;}
+.dom-row.last-buy .dom-c-price{box-shadow:inset 0 -2px 0 var(--bullish);}
+.dom-row.last-sell .dom-c-price{box-shadow:inset 0 -2px 0 var(--danger);}
+.dom-row.flash.last-buy .dom-c-price{background:color-mix(in srgb,var(--bullish) 35%,transparent);}
+.dom-row.flash.last-sell .dom-c-price{background:color-mix(in srgb,var(--danger) 35%,transparent);}
