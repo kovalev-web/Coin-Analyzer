@@ -14,7 +14,7 @@ import { on } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar } from './ui.js';
 
-var ROW_H = 18;
+var ROW_H = 16;
 var SIZE_PRESETS = [50, 100, 250, 500, 1000];
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
@@ -157,7 +157,7 @@ function _panelHTML() {
     + '<div class="dom-scale"><button data-scale="-1" title="Finer">−</button><button data-scale="1" title="Coarser">+</button></div>'
     + '</div>'
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
-    + '<div class="dom-cols"><span>Mine</span><span>Bid</span><span>Price</span><span>Ask</span></div>'
+    + '<div class="dom-cols"><span>Mine</span><span>Volume</span><span>Price</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-foot">'
     + '<div class="dom-pos" id="dom-pos"></div>'
@@ -405,25 +405,26 @@ function _render() {
     }).join('') : '');
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
-    _setVol(c[1], bidVol[i], maxVol);
+    // One volume column: asks above the spread, bids below, heat-filled by size
+    _setVol(c[1], i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0, maxVol);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
-    _setVol(c[3], askVol[i], maxVol);
   }
 }
 
 function _makeRow() {
   var row = document.createElement('div');
   row.className = 'dom-row';
-  row.innerHTML = '<span class="dom-c-mine"></span><span class="dom-c-bid"><i></i><b></b></span>'
-    + '<span class="dom-c-price"></span><span class="dom-c-ask"><i></i><b></b></span>';
+  row.innerHTML = '<span class="dom-c-mine"></span><span class="dom-c-vol"><i></i><b></b></span>'
+    + '<span class="dom-c-price"></span>';
   return row;
 }
 
+// Fill strength grows with size (sqrt, so mid-size levels stay visible)
 function _setVol(cell, v, maxVol) {
-  var w = v ? Math.round(v / maxVol * 100) + '%' : '0%';
+  var o = v ? (0.18 + 0.72 * Math.sqrt(v / maxVol)).toFixed(2) : '0';
   var t = v ? _fmtQty(v) : '';
-  if (cell.firstChild.style.width !== w) cell.firstChild.style.width = w;
+  if (cell.firstChild.style.opacity !== o) cell.firstChild.style.opacity = o;
   if (cell.lastChild.textContent !== t) cell.lastChild.textContent = t;
 }
 

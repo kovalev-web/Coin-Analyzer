@@ -579,24 +579,15 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-size.active{background:var(--ink-deep);color:var(--paper);}
 .dom-unit{color:var(--graphite);font-size:var(--text-2xs);margin-left:var(--space-1);}
 .dom-scale{display:flex;gap:var(--space-1);}
-.dom-cols,.dom-row{display:grid;grid-template-columns:56px 1fr 84px 1fr;align-items:center;}
 .dom-cols{padding:var(--space-2) var(--space-4);color:var(--graphite);font-size:var(--text-2xs);border-bottom:1px solid var(--steel);}
 .dom-cols span:nth-child(3){text-align:center;}
-.dom-cols span:nth-child(4){text-align:right;}
 .dom-ladder{flex:1;min-height:0;overflow:hidden;padding:0 var(--space-4);}
-.dom-row{height:18px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 40%,transparent);}
 .dom-row:hover{background:var(--fog);}
 .dom-row.spread .dom-c-price{color:var(--graphite);}
 .dom-row.bid .dom-c-price{color:var(--bullish);}
 .dom-row.ask .dom-c-price{color:var(--danger);}
 .dom-row.entry{box-shadow:inset 0 0 0 1px var(--primary);}
 .dom-c-price{text-align:center;font-weight:var(--font-medium);}
-.dom-c-bid,.dom-c-ask{position:relative;height:100%;display:flex;align-items:center;}
-.dom-c-ask{justify-content:flex-end;}
-.dom-c-bid i,.dom-c-ask i{position:absolute;top:2px;bottom:2px;}
-.dom-c-bid i{right:0;background:color-mix(in srgb,var(--bullish) 20%,transparent);}
-.dom-c-ask i{left:0;background:color-mix(in srgb,var(--danger) 20%,transparent);}
-.dom-c-bid b,.dom-c-ask b{position:relative;font-weight:var(--font-normal);padding:0 var(--space-2);}
 .dom-c-mine{display:flex;gap:var(--space-1);overflow:hidden;}
 .dom-c-mine.has{cursor:pointer;}
 .dom-mine{font-size:var(--text-2xs);font-weight:var(--font-bold);padding:0 var(--space-2);border-radius:var(--radius-md);white-space:nowrap;line-height:14px;}
@@ -631,3 +622,15 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .fv-dom.view-only .dom-row{cursor:default;}
 .dom-head{flex-wrap:wrap;row-gap:var(--space-2);}
 .dom-head .dom-sizes{flex:1 1 auto;min-width:auto;}
+
+/* compact ladder: Mine | Volume (heat-filled) | Price */
+.dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 92px;align-items:center;}
+.dom-cols span:nth-child(2){padding-left:var(--space-2);}
+.dom-row{height:16px;font-size:var(--text-2xs);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
+.dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
+.dom-c-vol i{position:absolute;inset:1px 0;opacity:0;}
+.dom-row.ask .dom-c-vol i{background:var(--danger);}
+.dom-row.bid .dom-c-vol i{background:var(--primary);}
+.dom-c-vol b{position:relative;font-weight:var(--font-medium);padding:0 var(--space-2);color:var(--ink-deep);}
+.dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price{font-weight:var(--font-medium);}
+.dom-c-price{text-align:right;padding-right:var(--space-3);}
