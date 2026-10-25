@@ -38,6 +38,7 @@ var T = {
   scaleIdx: null, top: null, rows: 0,
   size: Number(_lsGet('qt_term_size')) || 100,
   hover: false,
+  viewLive: _lsGet('qt_term_live') === '1', // testnet account, live-market book (view only)
   pinned: false,         // user scrolled the ladder: stop auto-centering until the mouse leaves
   renderQueued: false,
   lines: [], linesSeries: null, linesKey: '',
@@ -116,6 +117,7 @@ function _openPanel(sym) {
     _connectDepth();
   }
   panel.innerHTML = _panelHTML();
+  panel.classList.toggle('view-only', _viewOnly());
   _queueRender();
 }
 
@@ -136,10 +138,17 @@ function _closePanel(userAction) {
   if (body) body.classList.remove('has-dom');
 }
 
+function _isTestnet() { return !(T.access && T.access.env === 'mainnet'); }
+function _viewOnly() { return _isTestnet() && T.viewLive; }
+
 function _panelHTML() {
-  var env = T.access && T.access.env === 'mainnet' ? 'Live' : 'Testnet';
+  var env = _isTestnet() ? 'Testnet' : 'Live';
   return '<div class="dom-head">'
     + '<span class="dom-env ' + (env === 'Live' ? 'live' : '') + '">' + env + '</span>'
+    + (_isTestnet()
+        ? '<button class="dom-book' + (T.viewLive ? ' active' : '') + '" data-live="1" title="Show the live Binance order book (view only)">'
+          + (T.viewLive ? 'Live book' : 'Testnet book') + '</button>'
+        : '')
     + '<div class="dom-sizes">'
     + SIZE_PRESETS.map(function (v) {
         return '<button class="dom-size' + (v === T.size ? ' active' : '') + '" data-size="' + v + '">' + v + '</button>';
@@ -147,6 +156,7 @@ function _panelHTML() {
     + '<span class="dom-unit">USDT</span></div>'
     + '<div class="dom-scale"><button data-scale="-1" title="Finer">−</button><button data-scale="1" title="Coarser">+</button></div>'
     + '</div>'
+    + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-cols"><span>Mine</span><span>Bid</span><span>Price</span><span>Ask</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-foot">'
@@ -165,7 +175,7 @@ function _connectDepth() {
   _disconnectDepth();
   if (!T.access || !T.access.marketWs || !T.sym) return;
   var sym = T.sym, s = sym.toLowerCase();
-  var root = T.access.marketWs.replace(/\/public\/ws$/, '');
+  var root = _viewOnly() ? 'wss://fstream.binance.com' : T.access.marketWs.replace(/\/public\/ws$/, '');
   var ws = new WebSocket(root + '/public/stream?streams=' + s + '@depth20@100ms/' + s + '@bookTicker');
   T.ws = ws;
   ws.onmessage = function (ev) {
@@ -289,6 +299,7 @@ function _position() {
 
 // PnL marked to the price you could close at now: best bid for a long, best ask for a short.
 function _pnlInfo() {
+  if (_viewOnly()) return null; // testnet position vs live prices would be meaningless
   var pos = _position();
   if (!pos || !T.bids.length || !T.asks.length) return null;
   var amt = Number(pos.amount), entry = Number(pos.entryPrice);
@@ -639,7 +650,14 @@ function _placeOptimistic(body, price, kind, okMsg) {
   });
 }
 
+function _viewOnlyBlocked() {
+  if (!_viewOnly()) return false;
+  _setStatus('Live book is view only — switch to Testnet book to trade', true);
+  return true;
+}
+
 function _onLevelClick(idx, side, shift) {
+  if (_viewOnlyBlocked()) return;
   if (!T.rules || !T.bids.length || !T.asks.length) return;
   // Ignore an accidental double click on the same level within 300ms
   var key = idx + ':' + side + ':' + shift;
@@ -675,6 +693,7 @@ function _placeProtective(price, bestBid, bestAsk) {
 }
 
 function _cancelAtLevel(idx) {
+  if (_viewOnlyBlocked()) return;
   var step = _step();
   var items = _myOrdersByIdx(step)[idx] || [];
   items.forEach(function (x) {
@@ -719,6 +738,17 @@ function _bindPanel(panel) {
       panel.querySelectorAll('.dom-size').forEach(function (b) { b.classList.toggle('active', b === size); });
       return;
     }
+    var lv = e.target.closest('[data-live]');
+    if (lv) {
+      T.viewLive = !T.viewLive;
+      _lsSet('qt_term_live', T.viewLive ? '1' : '0');
+      T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
+      panel.innerHTML = _panelHTML();
+      panel.classList.toggle('view-only', _viewOnly());
+      _connectDepth();
+      _queueRender();
+      return;
+    }
     var sc = e.target.closest('[data-scale]');
     if (sc) {
       var i = (T.scaleIdx || 0) + Number(sc.dataset.scale);
@@ -757,6 +787,7 @@ function _bindPanel(panel) {
 
 document.addEventListener('keydown', function (e) {
   if (!T.sym || !T.hover) return;
+  if ((e.code === 'Space' || /^[xXчЧ]$/.test(e.key)) && _viewOnly()) { e.preventDefault(); _viewOnlyBlocked(); return; }
   var tag = (e.target && e.target.tagName) || '';
   if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
   if (e.code === 'Space') { e.preventDefault(); _closePosition(); }
