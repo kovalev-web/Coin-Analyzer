@@ -121,6 +121,7 @@ function _closePanel(userAction) {
   }
   _disconnectDepth();
   _clearLines();
+  _clearBand();
   T.sym = null;
   var panel = document.getElementById('fv-dom');
   if (panel) panel.remove();
@@ -241,6 +242,20 @@ function _position() {
   return T.account.positions.find(function (p) { return p.symbol === T.sym && Number(p.amount) !== 0; }) || null;
 }
 
+// PnL marked to the price you could close at now: best bid for a long, best ask for a short.
+function _pnlInfo() {
+  var pos = _position();
+  if (!pos || !T.bids.length || !T.asks.length) return null;
+  var amt = Number(pos.amount), entry = Number(pos.entryPrice);
+  var exit = amt > 0 ? T.bids[0][0] : T.asks[0][0];
+  var pnl = amt * (exit - entry);
+  return {
+    pos: pos, amt: amt, entry: entry, exit: exit, pnl: pnl,
+    pct: entry ? (exit - entry) / entry * 100 * (amt > 0 ? 1 : -1) : 0,
+    up: pnl >= 0,
+  };
+}
+
 function _myOrdersByIdx(step) {
   var out = {};
   function add(idx, item) { (out[idx] = out[idx] || []).push(item); }
@@ -269,6 +284,7 @@ function _render() {
   if (!ladder) return;
   _renderFoot();
   _syncLines();
+  _syncBand();
   if (!T.rules || !T.bids.length || !T.asks.length) {
     ladder.innerHTML = '<div class="dom-empty">' + (T.rules ? 'Waiting for order book…' : 'Loading…') + '</div>';
     return;
@@ -294,8 +310,11 @@ function _render() {
   Object.keys(askVol).forEach(function (k) { maxVol = Math.max(maxVol, askVol[k]); });
 
   var mine = _myOrdersByIdx(step);
-  var pos = _position();
-  var entryIdx = pos ? Math.round(Number(pos.entryPrice) / step) : null;
+  var pnl = _pnlInfo();
+  var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
+  var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
+  var pnlLo = pnl ? Math.min(entryIdx, exitIdx) : null, pnlHi = pnl ? Math.max(entryIdx, exitIdx) : null;
+  var pnlCls = pnl ? (pnl.up ? ' pnl-up' : ' pnl-dn') : '';
   var d = _decimals(T.rules.tickSize);
 
   // Rows are created once and updated in place: replacing them 10×/s would
@@ -309,12 +328,13 @@ function _render() {
     var cls = 'dom-row';
     if (i >= askIdx) cls += ' ask'; else if (i <= bidIdx) cls += ' bid'; else cls += ' spread';
     if (i === entryIdx) cls += ' entry';
+    if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];
-    var mineHtml = m ? m.map(function (x) {
+    var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? m.map(function (x) {
       return '<span class="dom-mine ' + x.kind.toLowerCase() + '">' + x.kind + (x.qty != null ? ' ' + _fmtQty(x.qty) : '') + '</span>';
-    }).join('') : '';
+    }).join('') : '');
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     _setVol(c[1], bidVol[i], maxVol);
@@ -349,12 +369,14 @@ function _renderFoot() {
     el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b>Flat</b></div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   } else {
-    var amt = Number(pos.amount), entry = Number(pos.entryPrice);
-    var mid = T.bids.length && T.asks.length ? (T.bids[0][0] + T.asks[0][0]) / 2 : entry;
-    var pnl = amt * (mid - entry);
+    var amt = Number(pos.amount);
+    var info = _pnlInfo();
+    var pnlHtml = info
+      ? '<b class="dom-pnl ' + (info.up ? 'up' : 'dn') + '">' + _fmtPnl(info) + '</b>'
+      : '<b>—</b>';
     el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + Math.abs(amt) + '</b></div>'
       + '<div class="dom-pos-row"><span>Entry</span><b>' + pos.entryPrice + '</b></div>'
-      + '<div class="dom-pos-row"><span>PnL</span><b class="' + (pnl >= 0 ? 'up' : 'dn') + '">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USDT</b></div>'
+      + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   }
   var st = document.getElementById('dom-status');
@@ -362,6 +384,47 @@ function _renderFoot() {
     st.textContent = 'Trading is disabled by the kill switch';
     st.className = 'dom-status err';
   }
+}
+
+function _fmtPnl(info) {
+  return (info.pnl >= 0 ? '+' : '') + info.pnl.toFixed(2) + ' USDT (' + (info.pct >= 0 ? '+' : '') + info.pct.toFixed(2) + '%)';
+}
+
+// ── PnL band on the chart: entry → current exit price, green/red ───────────
+
+function _clearBand() {
+  var b = document.getElementById('fv-pnl-band');
+  if (b) b.remove();
+}
+
+function _syncBand() {
+  var series = window.__fvSeries;
+  var wrap = document.querySelector('#fv-overlay .fv-chart-wrap');
+  var info = _pnlInfo();
+  if (!series || !wrap || !info) { _clearBand(); return; }
+  var yEntry = series.priceToCoordinate(info.entry);
+  var yExit = series.priceToCoordinate(info.exit);
+  if (yEntry == null || yExit == null) { _clearBand(); return; }
+  var band = document.getElementById('fv-pnl-band');
+  if (!band) {
+    band = document.createElement('div');
+    band.id = 'fv-pnl-band';
+    band.className = 'fv-pnl-band';
+    band.innerHTML = '<span class="fv-pnl-label"></span>';
+    wrap.appendChild(band);
+  }
+  var h = wrap.clientHeight;
+  var top = Math.max(0, Math.min(yEntry, yExit)), bottom = Math.min(h, Math.max(yEntry, yExit));
+  var scaleW = 0;
+  try { scaleW = series.priceScale().width(); } catch (e) {}
+  band.className = 'fv-pnl-band ' + (info.up ? 'up' : 'dn');
+  band.style.top = top + 'px';
+  band.style.height = Math.max(2, bottom - top) + 'px';
+  band.style.right = scaleW + 'px';
+  var label = band.firstChild;
+  label.textContent = _fmtPnl(info);
+  // Label sits at the current-price edge of the band
+  label.style.top = (yExit < yEntry ? 0 : Math.max(0, bottom - top - 18)) + 'px';
 }
 
 function _setStatus(msg, isErr) {
