@@ -38,6 +38,7 @@ var T = {
   scaleIdx: null, top: null, rows: 0,
   size: Number(_lsGet('qt_term_size')) || 100,
   hover: false,
+  hoverRow: null,        // ladder row under the cursor (screen position), for the % ruler
   viewLive: _lsGet('qt_term_live') === '1', // testnet account, live-market book (view only)
   pinned: false,         // user scrolled the ladder: stop auto-centering until the mouse leaves
   renderQueued: false,
@@ -410,6 +411,46 @@ function _render() {
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
+  _drawRuler();
+}
+
+// ── % ruler: frame from the current price to the hovered level ─────────────
+
+function _drawRuler() {
+  var panel = document.getElementById('fv-dom');
+  var ladder = document.getElementById('dom-ladder');
+  if (!panel || !ladder) return;
+  var box = document.getElementById('dom-ruler');
+  if (T.hoverRow == null || !T.rules || !T.bids.length || !T.asks.length || !ladder.children.length || ladder.querySelector('.dom-empty')) {
+    if (box) box.style.display = 'none';
+    return;
+  }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'dom-ruler';
+    box.className = 'dom-ruler';
+    box.innerHTML = '<span class="dom-ruler-tag"></span>';
+    panel.appendChild(box);
+  }
+  var step = _step();
+  var ref = T.lastTrade ? T.lastTrade.price : (T.bids[0][0] + T.asks[0][0]) / 2;
+  var refIdx = Math.round(ref / step);
+  // Row under the cursor, not a remembered price: the ladder may recenter under a still mouse
+  var rHover = T.hoverRow, hoverIdx = T.top - rHover, rRef = T.top - refIdx;
+  var last = ladder.children.length - 1;
+  rRef = Math.max(0, Math.min(last, rRef));
+  if (rHover < 0 || rHover > last) { box.style.display = 'none'; return; }
+  var r0 = Math.min(rHover, rRef), r1 = Math.max(rHover, rRef);
+  var pTop = panel.getBoundingClientRect().top;
+  var top = ladder.children[r0].getBoundingClientRect().top - pTop;
+  var bottom = ladder.children[r1].getBoundingClientRect().bottom - pTop;
+  var pct = (_priceOf(hoverIdx) - ref) / ref * 100;
+  box.style.display = 'block';
+  box.style.top = top + 'px';
+  box.style.height = (bottom - top) + 'px';
+  box.classList.toggle('below', rHover > rRef);
+  var tag = box.firstChild;
+  tag.textContent = (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(2) + '%';
 }
 
 function _makeRow() {
@@ -729,7 +770,12 @@ function _cancelAll() {
 
 function _bindPanel(panel) {
   panel.addEventListener('mouseenter', function () { T.hover = true; });
-  panel.addEventListener('mouseleave', function () { T.hover = false; T.pinned = false; _queueRender(); });
+  panel.addEventListener('mouseleave', function () { T.hover = false; T.pinned = false; T.hoverRow = null; _drawRuler(); _queueRender(); });
+  panel.addEventListener('mousemove', function (e) {
+    var row = e.target.closest('.dom-row');
+    var r = row ? Array.prototype.indexOf.call(row.parentNode.children, row) : null;
+    if (r !== T.hoverRow) { T.hoverRow = r; _drawRuler(); }
+  });
 
   panel.addEventListener('click', function (e) {
     var size = e.target.closest('[data-size]');
