@@ -416,12 +416,20 @@ PnlZone.prototype.setData = function (d) { this.d = d; if (this._req) this._req(
 PnlZone.prototype._geom = function (width) {
   var d = this.d, s = this._series, c = this._chart;
   if (!d || !s || !c) return null;
-  var y1 = s.priceToCoordinate(d.entry), y2 = s.priceToCoordinate(d.exit);
+  // Edge follows the last candle's close, read in the same frame the chart
+  // draws it, so the zone never trails the candle you see.
+  var exit = d.exit;
+  try {
+    var last = s.dataByIndex ? s.dataByIndex(1e9, -1) : null;
+    if (last && last.close != null) exit = last.close;
+  } catch (e) {}
+  var y1 = s.priceToCoordinate(d.entry), y2 = s.priceToCoordinate(exit);
   if (y1 == null || y2 == null) return null;
   var x = d.time != null ? c.timeScale().timeToCoordinate(d.time) : null;
   if (x == null || x < 0) x = 0; // entry candle not loaded / scrolled off to the left
   if (x > width) return null;
-  return { x: x, yEntry: y1, yExit: y2, top: Math.min(y1, y2), h: Math.max(1, Math.abs(y2 - y1)) };
+  var up = d.long ? exit >= d.entry : exit <= d.entry;
+  return { x: x, yEntry: y1, yExit: y2, top: Math.min(y1, y2), h: Math.max(1, Math.abs(y2 - y1)), color: up ? d.upColor : d.dnColor };
 };
 
 PnlZone.prototype._drawZone = function (target) {
@@ -431,11 +439,11 @@ PnlZone.prototype._drawZone = function (target) {
     if (!g) return;
     var ctx = scope.context, w = scope.mediaSize.width - g.x;
     ctx.save();
-    ctx.fillStyle = self.d.color;
+    ctx.fillStyle = g.color;
     ctx.globalAlpha = 0.12;
     ctx.fillRect(g.x, g.top, w, g.h);
     ctx.globalAlpha = 0.7;
-    ctx.strokeStyle = self.d.color;
+    ctx.strokeStyle = g.color;
     ctx.setLineDash([4, 3]);
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -490,7 +498,9 @@ function _syncBand() {
   var iv = TF_SEC[window.__fvTF] || 300;
   var openSec = info.pos.openTime ? Math.floor(info.pos.openTime / 1000 / iv) * iv : null;
   T.zone.setData({
-    entry: info.entry, exit: info.exit, time: openSec,
+    entry: info.entry, exit: info.exit, time: openSec, long: info.amt > 0,
+    upColor: getCSSVar('--bullish'), dnColor: getCSSVar('--danger'),
+    // The label is the real PnL at the price you can close at now
     color: getCSSVar(info.up ? '--bullish' : '--danger'),
     label: _fmtPnl(info),
   });
