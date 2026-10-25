@@ -69,6 +69,19 @@ function _getUserTimeInfo(ianaStr, utcOffset) {
   return { weekday: d.getUTCDay(), hour: d.getUTCHours(), minute: d.getUTCMinutes(), userNow: d };
 }
 
+// The user's current day (YYYY-MM-DD): Account-settings timezone, else the
+// browser offset captured with the briefing, else UTC. Same day boundary the
+// briefing and the journal use.
+async function userTodayStr(userId) {
+  var r = await Promise.all([
+    redis(['GET', 'account_tz:' + userId]),
+    redis(['GET', 'briefing_tz:' + userId]),
+  ]);
+  var off = (r[1] && r[1].result !== null) ? parseFloat(r[1].result) : 0;
+  if (!isFinite(off)) off = 0;
+  return _getUserTimeInfo(r[0] && r[0].result ? r[0].result : null, off).userNow.toISOString().slice(0, 10);
+}
+
 function sendPasswordChangedEmail(email, notMeUrl) {
   var resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
@@ -602,6 +615,7 @@ var TRADE_ROUTES = {
   'GET keys': true, 'POST keys': true, 'POST keys/delete': true,
   'GET 2fa': true, 'POST 2fa/setup': true, 'POST 2fa/confirm': true, 'POST 2fa/disable': true,
   'POST unlock': true, 'POST lock': true,
+  'GET day': true,
 };
 // Need the account password on top of the session (trader adds the 2FA code check)
 var PASSWORD_ACTIONS = { keys: true, 'keys/delete': true, '2fa/setup': true, '2fa/disable': true };
@@ -659,6 +673,13 @@ async function handleTradeRequest(req, res, action, query) {
       });
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
+  if (action === 'day') return json(200, await tradingDay());
+  if (req.method === 'POST' && (action === 'order' || action === 'leverage' || action === 'resume')) {
+    var gb;
+    try { gb = JSON.parse(body || '{}'); } catch (e) { gb = {}; }
+    var gateErr = await dayGateError(action, gb);
+    if (gateErr) return json(423, { error: { message: gateErr, gate: 'day' } });
+  }
   var keyChange = req.method === 'POST' && PASSWORD_ACTIONS[action];
   var keyEnv = null;
   if (keyChange) {
@@ -684,6 +705,81 @@ async function handleTradeRequest(req, res, action, query) {
   } catch (e) {
     json(502, { error: { message: 'Trader is unavailable' } });
   }
+}
+
+// ── Trading day gate ─────────────────────────────────────────────────────
+// The terminal opens for new entries after today's morning briefing is filled
+// in and closes once the evening one is. Closing, stops and cancels always pass.
+
+async function tradingDay() {
+  var date = await userTodayStr(TRADER_USER_ID);
+  var row = getDb().sqlite.prepare('SELECT morning_at, evening_at, skipped FROM journal_entries WHERE user_id = ? AND date = ?').get(TRADER_USER_ID, date);
+  var morning = !!(row && row.morning_at && !row.skipped);
+  var evening = !!(row && row.evening_at);
+  return {
+    date: date, morning: morning, evening: evening, open: morning && !evening,
+    reason: !morning ? 'Fill in the morning briefing to open the terminal'
+      : evening ? 'Day is closed — the terminal opens again after the briefing resets'
+      : null,
+  };
+}
+
+function opensRisk(action, body) {
+  if (action === 'leverage' || action === 'resume') return true;
+  if (action !== 'order') return false;
+  var b = body || {};
+  var reducing = b.reduceOnly === true || b.reduceOnly === 'true' || b.closePosition === true || b.closePosition === 'true';
+  return !reducing;
+}
+
+// Returns an error message when the day gate blocks this action, else null.
+// Before the evening briefing: what's still open on the trading account.
+// Returns a message to show, or null. Fails open if the trader is unreachable
+// (this is a discipline check, it must not trap the day).
+async function openExposureMessage() {
+  try {
+    var r = await fetch(TRADER_URL + '/account', { headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET }, signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    var acc = await r.json();
+    var pos = (acc.positions || []).filter(function (p) { return Number(p.amount) !== 0; });
+    var entries = (acc.orders || []).filter(function (o) { return !o.reduceOnly; });
+    if (pos.length) return 'Close your open position' + (pos.length > 1 ? 's' : '') + ' first: ' + pos.map(function (p) { return p.symbol.replace(/USDT$/, ''); }).join(', ');
+    if (entries.length) return 'Cancel your open entry orders first: ' + entries.map(function (o) { return o.symbol.replace(/USDT$/, ''); }).join(', ');
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// userTrades / income from the trader (live only — testnet fills aren't real
+// trades). Returns the proxy response body, or null to fall back.
+async function traderHistory(service, payload) {
+  try {
+    var h = { 'x-trader-secret': TRADER_INTERNAL_SECRET };
+    var st = await fetch(TRADER_URL + '/status', { headers: h, signal: AbortSignal.timeout(3000) }).then(function (r) { return r.json(); });
+    if (!st || st.env !== 'mainnet' || !st.configured) return null;
+    var q = new URLSearchParams();
+    if (payload.startTime) q.set('startTime', String(payload.startTime));
+    if (payload.endTime) q.set('endTime', String(payload.endTime));
+    if (payload.limit) q.set('limit', String(payload.limit));
+    if (service === 'binance') {
+      if (!payload.symbol) return null;
+      q.set('symbol', String(payload.symbol).toUpperCase());
+      var tr = await fetch(TRADER_URL + '/history/trades?' + q, { headers: h, signal: AbortSignal.timeout(15000) });
+      return tr.ok ? { trades: await tr.json() } : null;
+    }
+    if (payload.incomeType) q.set('incomeType', payload.incomeType);
+    var ir = await fetch(TRADER_URL + '/history/income?' + q, { headers: h, signal: AbortSignal.timeout(15000) });
+    return ir.ok ? { income: await ir.json() } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function dayGateError(action, body) {
+  if (!opensRisk(action, body)) return null;
+  var d = await tradingDay();
+  return d.open ? null : d.reason;
 }
 
 // Relay trader events (SSE) to the trading user's WebSocket tabs only.
@@ -1199,14 +1295,7 @@ var httpServer = http.createServer(async function (req, res) {
       // and only then to UTC — same fallback chain as the weekly report, so the
       // journal's day boundary matches what the client (which falls back to the
       // browser's own timezone, not UTC) shows.
-      var jTzResults = await Promise.all([
-        redis(['GET', 'account_tz:' + jUserId]),
-        redis(['GET', 'briefing_tz:' + jUserId]),
-      ]);
-      var jTzIanaRes = jTzResults[0], jTzNumRes = jTzResults[1];
-      var jUtcOffset = (jTzNumRes && jTzNumRes.result !== null) ? parseFloat(jTzNumRes.result) : 0;
-      if (!isFinite(jUtcOffset)) jUtcOffset = 0;
-      var jToday = _getUserTimeInfo(jTzIanaRes && jTzIanaRes.result ? jTzIanaRes.result : null, jUtcOffset).userNow.toISOString().slice(0, 10);
+      var jToday = await userTodayStr(jUserId);
       var jDb = getDb().sqlite;
 
       if (req.method === 'GET' && req.url === '/api/journal/today') {
@@ -1281,6 +1370,14 @@ var httpServer = http.createServer(async function (req, res) {
       }
 
       if (req.method === 'POST' && req.url === '/api/journal/evening') {
+        if (TRADER_INTERNAL_SECRET && TRADER_USER_ID && jUserId === TRADER_USER_ID) {
+          var exposure = await openExposureMessage();
+          if (exposure) {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: exposure }));
+            return;
+          }
+        }
         var jBodyE = '';
         req.on('data', function (chunk) { jBodyE += chunk; });
         req.on('end', function () {
@@ -2017,6 +2114,13 @@ var httpServer = http.createServer(async function (req, res) {
         var p = JSON.parse(proxyBody);
         var service = p.service, payload = p.payload || {};
 
+        // Trading account on live: journal/briefing read the account it trades on,
+        // through the trader's key. Falls back to the read-only key below.
+        if ((service === 'binance' || service === 'binance-income') && TRADER_INTERNAL_SECRET && TRADER_USER_ID && proxySession.user.id === TRADER_USER_ID) {
+          var viaTrader = await traderHistory(service, payload);
+          if (viaTrader) return proxyJson(200, viaTrader);
+        }
+
         if (service === 'binance') {
           var binRaw = await redis(['GET', 'binance_keys:' + proxySession.user.id]);
           if (!binRaw || !binRaw.result) return proxyJson(403, { error: 'Binance API keys not configured' });
@@ -2242,6 +2346,8 @@ wss.on('connection', function (ws, upgradeReq) {
         if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return tradeReply(503, { error: { message: 'Trading is not configured' } });
         if (!tradeUid || tradeUid !== TRADER_USER_ID || !CORS_ORIGINS.includes(ws._origin)) return tradeReply(403, { error: { message: 'Forbidden' } });
         if (!WS_TRADE_ACTIONS[msg.action]) return tradeReply(404, { error: { message: 'Not found' } });
+        var wsGateErr = await dayGateError(msg.action, msg.body);
+        if (wsGateErr) return tradeReply(423, { error: { message: wsGateErr, gate: 'day' } });
         try {
           var tr = await fetch(TRADER_URL + '/' + msg.action, {
             method: 'POST',

@@ -109,6 +109,8 @@ state.journalToday     // запись дневника за сегодня (д�
 - pump-ws проксирует `/api/trade/*` → trader, пускает только `TRADER_USER_ID`; события trader (SSE `/events`) уходят в WS этого пользователя как `trade_event`.
 - Стоп/тейк — через Algo API (`/fapi/v1/algoOrder`), обычные ордера — `/fapi/v1/order`.
 - Повтор `clientOrderId` в течение 10 минут не создаёт второй ордер. Kill switch хранится в `dataDir/trading.json`, журнал действий — `dataDir/audit.jsonl`.
+- Ворота дня (pump-ws): новые входы (`order` без reduceOnly/closePosition, `leverage`, `resume`) открыты только когда за сегодня заполнена утренняя карточка журнала (не skipped) и не заполнена вечерняя. «Сегодня» — `userTodayStr()` (тот же день, что у брифинга/журнала). Вечерняя карточка торгового аккаунта не сохраняется при открытой позиции или заявке на вход. Стакан показывает причину (`GET /api/trade/day`).
+- Журнал/брифинг для торгового аккаунта на mainnet берут сделки через trader (`/history/trades`, `/history/income`), иначе — read-only ключ.
 - Тесты: `npm run test:trader`. Сквозной сценарий на тестнете: `node trader/scripts/e2e-testnet.js`.
 
 ---

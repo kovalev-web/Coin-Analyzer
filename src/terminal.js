@@ -9,7 +9,7 @@
 // Ladder data comes from the trader's own environment (testnet or live), never
 // from the main chart feed: testnet prices differ from the real market.
 
-import { tradeRequest } from './api.js';
+import { tradeRequest, refreshTradesAfterFill } from './api.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar } from './ui.js';
@@ -126,6 +126,9 @@ function _openPanel(sym) {
   panel.classList.toggle('view-only', _viewOnly());
   T.lockKey = null;
   _renderLock();
+  _refreshDay();
+  clearInterval(T.dayTimer);
+  T.dayTimer = setInterval(_refreshDay, 30000);
   _queueRender();
 }
 
@@ -139,6 +142,7 @@ function _closePanel(userAction) {
   _disconnectDepth();
   _clearLines();
   _clearBand();
+  clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
   if (panel) panel.remove();
@@ -339,6 +343,7 @@ on('trade:event', function (ev) {
   } else if (ev.type === 'fill') {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.quantity + ' ' + f.symbol.replace(/USDT$/, '') + ' @ ' + f.price);
+    if (/USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
   }
   _queueRender();
 });
@@ -752,6 +757,7 @@ function _send(action, body, okMsg) {
   }).catch(function (e) {
     _setStatus(e.message, true);
     showToast(e.message);
+    if (e.status === 423) _refreshDay();
     throw e;
   });
 }
@@ -785,7 +791,19 @@ function _viewOnlyBlocked() {
 // Opening risk needs an unlock when 2FA is on (the trader enforces it; this
 // just tells you before you click). Reduce-only / close / cancel always work.
 
+// Day gate (morning briefing filled, evening not yet) comes first; the server
+// enforces it too. Polled while the ladder is open so the morning card unlocks
+// the terminal without a reload.
+function _refreshDay() {
+  tradeRequest('GET', 'day').then(function (d) {
+    var changed = !T.day || T.day.open !== d.open || T.day.reason !== d.reason;
+    T.day = d;
+    if (changed) _renderLock(true);
+  }).catch(function () {});
+}
+
 function _lockState() {
+  if (T.day && !T.day.open) return 'day';
   var f = T.access && T.access.twoFactor;
   if (!f) return 'none';
   if (!f.enabled) return f.required ? 'setup' : 'none';
@@ -802,6 +820,11 @@ function _renderLock(force) {
   T.lockKey = key;
   clearTimeout(T.lockTimer);
   if (st === 'none') { el.innerHTML = ''; el.className = 'dom-lock'; return; }
+  if (st === 'day') {
+    el.className = 'dom-lock warn';
+    el.textContent = T.day.reason;
+    return;
+  }
   if (st === 'setup') {
     el.className = 'dom-lock warn';
     el.innerHTML = 'Set up 2FA in Account → Integrations to trade live';
@@ -843,6 +866,7 @@ function _lock() {
 
 function _lockedBlocked() {
   var st = _lockState();
+  if (st === 'day') { _setStatus(T.day.reason, true); return true; }
   if (st === 'locked') {
     _setStatus('Trading is locked — enter your 2FA code above', true);
     var i = document.getElementById('dom-unlock-code');

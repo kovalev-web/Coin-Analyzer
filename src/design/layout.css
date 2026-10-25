@@ -106,3 +106,18 @@
   .desktop-nav-btn{display:inline-flex;}
 }
 
+
+/* Day summary strip (main screen): leaders + your last 24h */
+.day-summary{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap;padding:var(--space-4) var(--space-16) 0;font-size:var(--text-xs);}
+.ds-leaders{display:flex;gap:var(--space-3);}
+.ds-leader,.ds-coin{display:inline-flex;align-items:baseline;gap:var(--space-3);height:var(--h-btn-md);padding:0 var(--space-5);border:none;border-radius:var(--radius-full);background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);cursor:pointer;font-variant-numeric:tabular-nums;align-items:center;}
+.ds-leader:hover,.ds-coin:hover{background:var(--fog);}
+.ds-sym{font-weight:var(--font-bold);}
+.ds-ch.up,.ds-total.up,.ds-coin b.up{color:var(--bullish);}
+.ds-ch.dn,.ds-total.dn,.ds-coin b.dn{color:var(--danger);}
+.ds-mine{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;}
+.ds-label{color:var(--graphite);font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.04em;font-weight:var(--font-medium);}
+.ds-total{font-weight:var(--font-bold);}
+.ds-coin b{font-weight:var(--font-medium);}
+.ds-muted{color:var(--graphite);}
+@media(max-width:768px){.day-summary{padding:var(--space-4) var(--space-6) 0;gap:var(--space-4);}}

@@ -574,9 +574,9 @@ document.body.addEventListener('click', function (e) {
         hideEveningModal();
         showToast('Review saved');
         _refreshJournalHistory();
-      }).catch(function () {
+      }).catch(function (err) {
         eBtn.disabled = false;
-        showToast('Network error — please try again');
+        showToast(err && err.message && err.message !== 'Failed to fetch' ? err.message : 'Network error — please try again');
       });
       break;
     }

@@ -16,6 +16,8 @@
 //   GET  /keys          → which environments have a key saved (masked, never the secret)
 //   POST /keys          → { env, apiKey, apiSecret } — validate with Binance, store encrypted
 //   POST /keys/delete   → { env }
+//   GET  /history/trades?symbol=&startTime=&endTime=  → Binance userTrades (read-only)
+//   GET  /history/income?incomeType=&startTime=&endTime= → Binance income (read-only)
 //   GET  /2fa           → { enabled, unlockedUntil, required }
 //   POST /2fa/setup     → new pending seed { secret, uri }
 //   POST /2fa/confirm   → { code } enables 2FA with the pending seed
@@ -161,6 +163,14 @@ function locked(fn) {
   return function (b, q) { requireUnlocked(b); return fn(b, q); };
 }
 
+// Journal/briefing reads: time window and limit only, nothing else passes through
+function historyParams(q, extra) {
+  var p = Object.assign({}, extra);
+  ['startTime', 'endTime'].forEach(function (k) { var v = Number(q.get(k)); if (v > 0) p[k] = Math.floor(v); });
+  p.limit = Math.min(1000, Math.max(1, Number(q.get('limit')) || 1000));
+  return p;
+}
+
 function needKey(fn) {
   return function (b, q) {
     if (!client) throw Object.assign(new Error('No trading key saved for ' + config.env), { name: 'TraderError', status: 503 });
@@ -185,6 +195,16 @@ var routes = {
   'GET /keys': function () { return describeKeys(); },
   'POST /keys': function (b) { return saveKeys(b); },
   'POST /keys/delete': function (b) { return deleteKeys(b); },
+  'GET /history/trades': needKey(function (b, q) {
+    var symbol = String(q.get('symbol') || '').toUpperCase();
+    if (!/^[A-Z0-9]{2,30}$/.test(symbol)) throw terr(400, 'Invalid symbol');
+    return client.request('GET', '/fapi/v1/userTrades', historyParams(q, { symbol: symbol }));
+  }),
+  'GET /history/income': needKey(function (b, q) {
+    var type = q.get('incomeType');
+    if (type && !/^[A-Z_]{3,40}$/.test(type)) throw terr(400, 'Invalid incomeType');
+    return client.request('GET', '/fapi/v1/income', historyParams(q, { incomeType: type || undefined }));
+  }),
   'GET /2fa': function () { return twoFactorStatus(); },
   'POST /2fa/setup': function () {
     requireStore();

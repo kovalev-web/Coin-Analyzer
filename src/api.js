@@ -922,7 +922,12 @@ export function saveJournalEvening(data) {
     credentials: 'include',
     body: JSON.stringify(data),
   }).then(function (r) {
-    if (!r.ok) throw new Error('Save failed');
+    if (!r.ok) {
+      // Show the server's reason (e.g. an open position blocks closing the day)
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        throw new Error((d && d.error) || 'Save failed');
+      });
+    }
     return fetchJournalToday();
   });
 }
@@ -1009,6 +1014,36 @@ export async function fetchTrades(symbol, dateStr) {
   return p;
 }
 
+async function _tradedSymbolsOn(dateStr) {
+  try {
+    var res = await fetch(API_BASE + '/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ service: 'binance-income', payload: { incomeType: 'COMMISSION', startTime: _dateToMs(dateStr, false), endTime: _dateToMs(dateStr, true) } }),
+    });
+    if (!res.ok) return [];
+    var data = await res.json();
+    var out = {};
+    (data.income || []).forEach(function (r) { if (r.symbol && /USDT$/.test(r.symbol)) out[r.symbol.replace(/USDT$/, '').toLowerCase()] = true; });
+    return Object.keys(out);
+  } catch (e) {
+    return [];
+  }
+}
+
+// A fill just happened on `sym` (short, lowercase): refetch today's trades for
+// it so the briefing status and the journal update without waiting for a poll.
+var _fillRefreshTimers = {};
+export function refreshTradesAfterFill(sym) {
+  clearTimeout(_fillRefreshTimers[sym]);
+  _fillRefreshTimers[sym] = setTimeout(function () {
+    var today = tzDateStr();
+    delete state.trades[sym + ':' + today];
+    fetchTrades(sym, today).then(function () { emit('trades:updated', today); });
+  }, 1500); // a burst of partial fills → one refetch
+}
+
 // Fetch trades for all briefing entries on a given date, then notify UI.
 export async function fetchBriefingTrades(dateStr) {
   var entries = (state.briefing || []).filter(function (e) { return e.date === dateStr; });
@@ -1031,6 +1066,9 @@ export async function fetchTradesForDate(dateStr) {
   // on that date — a coin tracked on a previous day may still be traded later.
   var syms = {};
   (state.briefing || []).forEach(function (e) { if (!e.auto) syms[e.sym] = true; });
+  // Plus every coin actually traded that day, even if it wasn't in the briefing
+  // (commission income has one record per fill, across all symbols)
+  (await _tradedSymbolsOn(dateStr)).forEach(function (s) { syms[s] = true; });
   syms = Object.keys(syms);
   if (!syms.length) return null;
 

@@ -2,6 +2,7 @@ import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.
 import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
 import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
 import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
+import { daySummaryHTML } from './summary.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday } from './api.js';
@@ -3554,6 +3555,7 @@ export function render() {
 
   app.innerHTML =
     _topbarHTML()
+    + (_screenerMode ? '' : daySummaryHTML()) // day summary on the main (Tear) screen
     + _sortBarHTML(coins)
     + coinsHtml;
   initCharts();
