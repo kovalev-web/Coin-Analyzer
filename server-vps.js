@@ -12,12 +12,6 @@ try {
   });
 } catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
-const { getWatchlist, bootstrapBuffers, pushCandle, fillAllGaps } = require('./inplay/buffers');
-const { updateAllScores } = require('./inplay/score');
-const { updatePhases, defaultGetMicro, isInPhase } = require('./inplay/phase-detector');
-const { initTradeState, processTrade, getTradeState } = require('./inplay/trade-buffers');
-const { initOrderbookState, processDepthUpdate, updateEmaOBI, obi, getOrderbookMetrics } = require('./inplay/orderbook');
-const inplayCfg = require('./inplay/config.json');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -95,37 +89,10 @@ function sendPasswordChangedEmail(email, notMeUrl) {
 // Create DB tables and init auth at startup
 ensureAuthTables();
 
-var INPLAY_BETA_ENABLED = process.env.INPLAY_BETA_ENABLED === 'true';
-
-// File logger — only active when INPLAY_BETA_ENABLED
-var _inplayLog = INPLAY_BETA_ENABLED
-  ? fs.createWriteStream('./inplay.log', { flags: 'a' })
-  : null;
-
-function logInplay() {
-  var args = Array.prototype.slice.call(arguments);
-  var line = new Date().toISOString() + ' ' + args.join(' ') + '\n';
-  if (_inplayLog) _inplayLog.write(line);
-  console.log.apply(console, args);
-}
-
-// Returns CVD micro for a symbol, but signals cvd_skip=true during warmup window
-// so the phase detector bypasses CVD alignment for freshly-added coins whose
-// aggTrade history is too short to produce a reliable z-score.
-function getMicro(sym) {
-  var warmupMs = (inplayCfg.phase_detector.cvd_warmup_minutes || 60) * 60 * 1000;
-  var joinTime = _joinTimes[sym];
-  if (joinTime && (Date.now() - joinTime) < warmupMs) {
-    return { cvd_z: null, cvd_skip: true };
-  }
-  return defaultGetMicro(sym);
-}
-
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
 var BINANCE_WS_URL = 'wss://fstream.binance.com/ws';
 var BINANCE_KLINE_WS_URL     = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
-var BINANCE_AGGTRADE_WS_URL = 'wss://fstream.binance.com/market/ws'; // aggTrade also on /market
 
 // ── Redis (Upstash) helper ────────────────────────────────────────────────
 
@@ -146,7 +113,7 @@ async function redis(cmd) {
 
 var TELEGRAM_TOKEN        = process.env.TELEGRAM_BOT_TOKEN;
 var TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
-var INPLAY_ALERT_CHAT_ID  = process.env.INPLAY_ALERT_CHAT_ID || null; // beta-only phase alerts
+var LISTING_ALERT_CHAT_ID = process.env.LISTING_ALERT_CHAT_ID || null; // new futures listing alerts
 var APP_URL = (process.env.APP_URL || 'https://questtick.com').replace(/\/$/, '');
 var tgOffset = 0;
 
@@ -209,8 +176,6 @@ async function pollTelegram() {
         } else {
           sendTG(msg.chat.id, 'Используйте кнопку "Подключить Telegram" в Личном кабинете на questtick.com.');
         }
-      } else if (msg && msg.text && msg.text.startsWith('/test')) {
-        sendTG(msg.chat.id, '🚨 Inplay Phase\n<b>BTC</b> — 🟢 LONG ↑\nRVOL: 9.2x | Δp15m: +10.50% | CVD_z: 1.83\n24h Vol: $48.2B\n\n<i>Test alert — доставка работает ✓</i>');
       } else if (msg && msg.text && msg.text.startsWith('/briefing')) {
         sendWeeklyBriefingReport(msg.chat.id).catch(function (e) {
           sendTG(msg.chat.id, '❌ Ошибка: ' + e.message);
@@ -361,10 +326,6 @@ var d1OpenCache = {}; // symbol (BTCUSDT) → '65000.00' — open цена те�
 var klinesCache = new Map(); // 'BTCUSDT:5m:300' → { data, exp }
 var KLINES_TTL_SHORT = 5000;  // polling requests (limit ≤ 10): 5s
 var KLINES_TTL_LONG  = 25000; // initial / historical loads: 25s
-var inplaySymbols     = []; // symbols passing pre-filter, populated after bootstrapTicker
-var _joinTimes        = {}; // sym → ms when added to watchlist (for CVD warmup)
-var _bootstrapPending = new Set(); // syms currently being bootstrapped (throttle guard)
-var _klineFirstConnect = true; // gap-fill only on reconnect, not initial connect
 var knownFuturesSyms = null; // Set<string> — all USDT symbols known at startup, for listing detection
 
 // ── REST helper ──────────────────────────────────────────────────────────
@@ -586,13 +547,6 @@ function startKlineWS() {
     for (var i = 0; i < params.length; i += 200) {
       klineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 100 }));
     }
-    // Gap-fill only on reconnect — initial data comes from bootstrapBuffers
-    if (!_klineFirstConnect && inplaySymbols.length) {
-      fillAllGaps(inplaySymbols).catch(function (e) {
-        logInplay('[Inplay] Gap-fill error:', e.message);
-      });
-    }
-    _klineFirstConnect = false;
   });
 
   klineWS.on('message', function (raw) {
@@ -605,18 +559,6 @@ function startKlineWS() {
       var k = msg.k;
       var sym = k.s.replace('USDT', '').toLowerCase();
       checkAlertsForSym(k.s, parseFloat(k.c));
-      // Push closed candle into inplay rolling buffer
-      if (k.x) {
-        pushCandle(k.s, k.i, {
-          time:   k.t,
-          open:   parseFloat(k.o),
-          high:   parseFloat(k.h),
-          low:    parseFloat(k.l),
-          close:  parseFloat(k.c),
-          volume: parseFloat(k.v),
-          trades: k.n,
-        });
-      }
       // Буферизуем последнее состояние свечи — флашим раз в 200мс
       // Без этого активная монета шлёт 100+ событий/сек и WS захлёбывается
       klinePending[sym + '_' + k.i] = {
@@ -643,128 +585,6 @@ function startKlineWS() {
   klineWS.on('error', function (e) {
     console.error('[KlineWS] Error:', e.message);
     klineWS.close();
-  });
-}
-
-// ── aggTrade WebSocket: поток сделок для микроструктуры ──────────────────
-
-var aggTradeWS         = null;
-var aggTradeSubscribed = new Set();  // 'btcusdt@aggTrade'
-var _aggTradeFirstConnect = true;
-
-function subscribeAggTrade(streamName) {
-  if (aggTradeSubscribed.has(streamName)) return;
-  aggTradeSubscribed.add(streamName);
-  if (aggTradeWS && aggTradeWS.readyState === WebSocket.OPEN) {
-    aggTradeWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [streamName], id: Date.now() }));
-  }
-}
-
-async function fillAggTradeGap(symbol) {
-  var state = getTradeState(symbol);
-  if (!state || !state.lastTs) return;
-  try {
-    var url = BINANCE_REST + '/fapi/v1/aggTrades?symbol=' + symbol + '&startTime=' + (state.lastTs + 1) + '&limit=1000';
-    var trades = await fetchBinance(url);
-    if (!Array.isArray(trades)) return;
-    trades.forEach(function (t) {
-      processTrade(symbol, { time: t.T, qty: parseFloat(t.q), isBuyerMaker: t.m });
-    });
-    if (trades.length) logInplay('[AggTradeWS] Gap-filled', trades.length, 'trades for', symbol);
-  } catch (e) {
-    logInplay('[AggTradeWS] Gap-fill error for', symbol, ':', e.message);
-  }
-}
-
-function startAggTradeWS() {
-  aggTradeWS = new WebSocket(BINANCE_AGGTRADE_WS_URL);
-
-  aggTradeWS.on('open', function () {
-    logInplay('[AggTradeWS] Connected');
-    // Re-subscribe after reconnect
-    var params = Array.from(aggTradeSubscribed);
-    for (var i = 0; i < params.length; i += 200) {
-      aggTradeWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 200), id: i + 200 }));
-    }
-    // Gap-fill on reconnect (skip first connect — buffers start empty)
-    if (!_aggTradeFirstConnect && inplaySymbols.length) {
-      inplaySymbols.forEach(function (sym) {
-        fillAggTradeGap(sym).catch(function () {});
-      });
-    }
-    _aggTradeFirstConnect = false;
-  });
-
-  aggTradeWS.on('message', function (raw) {
-    try {
-      var msg = JSON.parse(raw.toString());
-      if (msg.id != null && msg.result === null) return;  // subscription ack
-      if (msg.e !== 'aggTrade') return;
-      processTrade(msg.s, {
-        time:         msg.T,
-        qty:          parseFloat(msg.q),
-        isBuyerMaker: msg.m,
-      });
-    } catch (e) {}
-  });
-
-  aggTradeWS.on('close', function () {
-    logInplay('[AggTradeWS] Disconnected, reconnecting in 5s...');
-    setTimeout(startAggTradeWS, 5000);
-  });
-
-  aggTradeWS.on('error', function (e) {
-    console.error('[AggTradeWS] Error:', e.message);
-    aggTradeWS.close();
-  });
-}
-
-// ── depth20 WebSocket: стакан для OBI и liquidity vacuum ─────────────────
-
-var depthWS         = null;
-var depthSubscribed = new Set();
-
-function subscribeDepth(streamName) {
-  if (depthSubscribed.has(streamName)) return;
-  if (depthSubscribed.size >= 50) return;  // cap at 50 streams
-  depthSubscribed.add(streamName);
-}
-
-// Called once after bootstrap — encodes all streams in the URL, no SUBSCRIBE messages needed.
-function startDepthWS() {
-  var streams = Array.from(depthSubscribed);
-  if (!streams.length) return;
-  var wsUrl = 'wss://fstream.binance.com/stream?streams=' + streams.join('/');
-  depthWS = new WebSocket(wsUrl);
-
-  depthWS.on('open', function () {
-    logInplay('[DepthWS] Connected,', streams.length, 'streams');
-  });
-
-  depthWS.on('message', function (raw) {
-    try {
-      var msg = JSON.parse(raw.toString());
-      // Combined stream format: { stream: 'sym@depth20@100ms', data: { e, s, b, a } }
-      var payload = msg.data || msg;
-      if (!payload.b && !payload.bids) return;
-      var sym = payload.s
-        ? payload.s.toUpperCase()
-        : (msg.stream ? msg.stream.split('@')[0].toUpperCase() : null);
-      if (!sym) return;
-      var bids = (payload.b || payload.bids || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
-      var asks = (payload.a || payload.asks || []).map(function (l) { return [parseFloat(l[0]), parseFloat(l[1])]; });
-      processDepthUpdate(sym, bids, asks);
-      updateEmaOBI(sym, obi(bids, asks, 5));
-    } catch (e) {}
-  });
-
-  depthWS.on('close', function () {
-    logInplay('[DepthWS] Disconnected, reconnecting in 5s...');
-    setTimeout(startDepthWS, 5000);
-  });
-
-  depthWS.on('error', function (e) {
-    console.error('[DepthWS] Error:', e.message);
   });
 }
 
@@ -2319,130 +2139,9 @@ wss.on('connection', function (ws, upgradeReq) {
 bootstrapTicker().then(function() {
   // 2с задержка: не конкурируем с тикер-бутстрапом за rate limit
   setTimeout(bootstrapD1Opens, 2000);
-
-  // Derive inplay watchlist and bootstrap rolling kline buffers
-  if (!INPLAY_BETA_ENABLED) return;
-
-  inplaySymbols = getWatchlist(tickerCache);
-  var _startTime = Date.now();
-  inplaySymbols.forEach(function (sym) { _joinTimes[sym] = _startTime; });
-  logInplay('[Inplay] Watchlist:', inplaySymbols.length, 'symbols (q > $10M)');
-  bootstrapBuffers(inplaySymbols).then(function () {
-    // Subscribe klineWS to 1m and 5m for all inplay symbols
-    inplaySymbols.forEach(function (sym) {
-      subscribeKline(sym.toLowerCase() + '@kline_1m');
-      subscribeKline(sym.toLowerCase() + '@kline_5m');
-    });
-    logInplay('[Inplay] Subscribed klineWS to', inplaySymbols.length * 2, 'streams');
-
-    // Initialise trade state + subscribe aggTrade for each inplay symbol
-    inplaySymbols.forEach(function (sym) {
-      initTradeState(sym);
-      subscribeAggTrade(sym.toLowerCase() + '@aggTrade');
-    });
-    logInplay('[Inplay] Subscribed aggTradeWS to', inplaySymbols.length, 'streams');
-
-    // Initialise orderbook state + subscribe depth20@100ms for each inplay symbol
-    inplaySymbols.forEach(function (sym) {
-      initOrderbookState(sym);
-      subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
-    });
-    logInplay('[Inplay] Depth streams queued:', depthSubscribed.size, '(cap 50, watchlist', inplaySymbols.length, ')');
-    startDepthWS();  // start after depthSubscribed is populated — streams encoded in URL
-
-    // Start score update loop
-    setInterval(function () {
-      try {
-        // Phase detector — independent of score, always broadcast
-        var phaseResult = updatePhases(inplaySymbols, null, getMicro, logInplay);
-        var phaseData = phaseResult.phases.map(function (p) {
-          var tc  = tickerCache[p.symbol];
-          var obm = getOrderbookMetrics(p.symbol);
-          return Object.assign({}, p, {
-            vol24h: tc  ? parseFloat(tc.q)    : null,
-            spr:    obm ? obm.spread           : null,
-            obi:    obm ? obm.emaOBI5          : null,
-            vacU:   obm ? obm.vacuumAbove      : null,
-            vacD:   obm ? obm.vacuumBelow      : null,
-          });
-        });
-        var phaseMsg = JSON.stringify({ type: 'inplay_phases', data: phaseData, ts: Date.now(), watchlist: inplaySymbols.length });
-        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(phaseMsg); });
-
-        // Telegram alerts for phase transitions (beta — only if INPLAY_ALERT_CHAT_ID is set)
-        if (INPLAY_ALERT_CHAT_ID) {
-          phaseResult.transitions.forEach(function (tr) {
-            if (tr.to !== 'active') return; // only alert on entry/revival
-            var p = phaseData.find(function (x) { return x.symbol === tr.symbol; });
-            var isRevival = tr.from === 'cooling';
-            var dirEmoji  = tr.direction > 0 ? '🟢 LONG ↑' : '🔴 SHORT ↓';
-            var sym       = tr.symbol.replace('USDT', '');
-            var vol       = p && p.vol24h ? (p.vol24h >= 1e9 ? '$' + (p.vol24h / 1e9).toFixed(1) + 'B' : '$' + (p.vol24h / 1e6).toFixed(0) + 'M') : '—';
-            var dp        = p ? (p.delta_price >= 0 ? '+' : '') + p.delta_price.toFixed(2) + '%' : '—';
-            var rvol      = p ? p.rvol_last.toFixed(1) + 'x' : '—';
-            var cvd       = p && p.cvd_z !== null ? p.cvd_z.toFixed(2) : '—';
-            var prefix    = isRevival ? '🔄 Revival' : '🚨 Inplay Phase';
-            var text = prefix + '\n' +
-              '<b>' + sym + '</b> — ' + dirEmoji + '\n' +
-              'RVOL: ' + rvol + ' | Δp15m: ' + dp + ' | CVD_z: ' + cvd + '\n' +
-              '24h Vol: ' + vol;
-            sendTG(INPLAY_ALERT_CHAT_ID, text);
-          });
-        }
-
-        // Legacy score ranking (kept for logging and comparison)
-        var top = updateAllScores(inplaySymbols);
-        if (!top.length) return;
-
-        // Log breakdown for top entries
-        top.forEach(function (r) {
-          var cvdPart = r._cvdZ !== null && r._cvdZ !== undefined
-            ? ' cvdZ=' + r._cvdZ.toFixed(2) + ' aggr=' + (r._aggrRatio !== null ? r._aggrRatio.toFixed(2) : 'n/a') + ' lts=' + (r._largeShare || 0).toFixed(2) + ' div=' + (r._cvdDiv || 0)
-            : ' [no microstructure]';
-          var bookPart = r._spread !== undefined
-            ? ' spr=' + (r._spread !== null ? r._spread.toFixed(1) : 'n/a') + 'bps' +
-              ' obi=' + (r._emaOBI5 !== null ? r._emaOBI5.toFixed(2) : 'n/a') +
-              ' obiC=' + (r._obiConfirmed !== undefined ? r._obiConfirmed.toFixed(2) : 'n/a') +
-              ' vacU=' + (r._vacuumAbove !== undefined ? r._vacuumAbove.toFixed(0) : '?') + 'bps' +
-              ' vacD=' + (r._vacuumBelow !== undefined ? r._vacuumBelow.toFixed(0) : '?') + 'bps'
-            : '';
-          logInplay('[Inplay]', r.symbol,
-            'score=' + r.inplay.toFixed(3),
-            'A=' + r.A.toFixed(2),
-            'M=' + r.M.toFixed(2),
-            'P=' + r.P.toFixed(2),
-            '| miatr=' + (r._miatr || 0).toFixed(2),
-            'dvwap=' + (r._dvwap || 0).toFixed(2),
-            'bbs=' + (r._bbs || 0).toFixed(2) + cvdPart + bookPart
-          );
-        });
-
-        // Push to all connected clients
-        var msg = JSON.stringify({
-          type: 'inplay_top',
-          data: top.map(function (r) {
-            return {
-              symbol: r.symbol, inplay: r.inplay,
-              A: r.A, M: r.M, P: r.P,
-              dp5m: r._dp5m, rvol5m: r._rvol5m,
-            };
-          }),
-          ts: Date.now(),
-        });
-        clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-      } catch (e) {
-        logInplay('[Inplay] Score error:', e.message);
-      }
-    }, inplayCfg.score_update_interval_ms);
-
-  }).catch(function (e) {
-    logInplay('[Inplay] Bootstrap error:', e.message);
-  });
 });
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
-startAggTradeWS();      // aggTrade WS для CVD и микроструктуры
-// startDepthWS() is called from within bootstrap after depthSubscribed is populated
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
@@ -2470,72 +2169,9 @@ setInterval(async function () {
   }
 }, 60000);
 
-// ── Dynamic watchlist refresh ─────────────────────────────────────────────
-// Every 60s:
-//   1. Remove symbols that dropped below $7M (hysteresis) and aren't in a phase
-//   2. Add new symbols that crossed the $10M threshold
-//   3. Skip symbols already being bootstrapped (_bootstrapPending guard)
-//   4. Tag new symbols with _joinTimes for CVD warmup grace period
-
-setInterval(function () {
-  if (!INPLAY_BETA_ENABLED) return;
-
-  var minVol    = inplayCfg.prefilter.min_quote_volume_24h;        // $10M add
-  var removeVol = inplayCfg.prefilter.watchlist_remove_vol || 7000000; // $7M remove
-
-  // ── 1. Remove coins that fell below removeVol and are not in an active phase
-  var toRemove = inplaySymbols.filter(function (sym) {
-    var t = tickerCache[sym];
-    if (!t || parseFloat(t.q) >= removeVol) return false; // still above threshold
-    if (isInPhase(sym)) return false;                     // keep — phase in progress
-    return true;
-  });
-  if (toRemove.length) {
-    var removeSet = new Set(toRemove);
-    inplaySymbols = inplaySymbols.filter(function (s) { return !removeSet.has(s); });
-    logInplay('[Inplay] Watchlist -' + toRemove.length + ':', toRemove.join(', '));
-  }
-
-  // ── 2. Add new symbols that crossed the $10M threshold
-  var currentSet = new Set(inplaySymbols);
-  var newSyms = Object.values(tickerCache)
-    .filter(function (t) {
-      return parseFloat(t.q) >= minVol &&
-             !currentSet.has(t.s) &&
-             !_bootstrapPending.has(t.s); // skip if already bootstrapping
-    })
-    .map(function (t) { return t.s; });
-
-  if (!newSyms.length) return;
-
-  logInplay('[Inplay] Watchlist +' + newSyms.length + ':', newSyms.join(', '));
-  var joinNow = Date.now();
-  newSyms.forEach(function (sym) {
-    inplaySymbols.push(sym);
-    _joinTimes[sym] = joinNow;     // CVD warmup starts now
-    _bootstrapPending.add(sym);    // guard against double-bootstrap
-  });
-
-  bootstrapBuffers(newSyms).then(function () {
-    newSyms.forEach(function (sym) {
-      subscribeKline(sym.toLowerCase() + '@kline_1m');
-      subscribeKline(sym.toLowerCase() + '@kline_5m');
-      initTradeState(sym);
-      subscribeAggTrade(sym.toLowerCase() + '@aggTrade');
-      initOrderbookState(sym);
-      subscribeDepth(sym.toLowerCase() + '@depth20@100ms');
-      _bootstrapPending.delete(sym);
-    });
-    logInplay('[Inplay] Watchlist now', inplaySymbols.length, 'symbols');
-  }).catch(function (e) {
-    newSyms.forEach(function (sym) { _bootstrapPending.delete(sym); });
-    logInplay('[Inplay] Refresh bootstrap error:', e.message);
-  });
-}, 60000);
-
 // ── New futures listing alerts ────────────────────────────────────────────
 async function checkNewListings() {
-  if (!INPLAY_ALERT_CHAT_ID || !knownFuturesSyms) return;
+  if (!LISTING_ALERT_CHAT_ID || !knownFuturesSyms) return;
   try {
     var info = await fetchBinance(BINANCE_REST + '/fapi/v1/exchangeInfo');
     var newOnes = info.symbols.filter(function (s) {
@@ -2549,7 +2185,7 @@ async function checkNewListings() {
         ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + coin }]] }
         : undefined;
       console.log('[Listing] New futures listing detected:', sym);
-      await sendTG(INPLAY_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
+      await sendTG(LISTING_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
       var users = getDb().sqlite.prepare('SELECT id FROM user').all();
       users.forEach(function (u) {
         pushNotification(u.id, {

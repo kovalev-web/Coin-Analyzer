@@ -14,11 +14,11 @@ try {
 } catch (e) {}
 
 var TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
-var CHAT_ID = process.env.INPLAY_ALERT_CHAT_ID;
+var CHAT_ID = process.env.LISTING_ALERT_CHAT_ID;
 var APP_URL = (process.env.APP_URL || 'https://coin-analyzer.vercel.app').replace(/\/$/, '');
 
 if (!TOKEN)   { console.error('❌  TELEGRAM_BOT_TOKEN not set'); process.exit(1); }
-if (!CHAT_ID) { console.error('❌  INPLAY_ALERT_CHAT_ID not set'); process.exit(1); }
+if (!CHAT_ID) { console.error('❌  LISTING_ALERT_CHAT_ID not set'); process.exit(1); }
 
 var sym  = (process.argv[2] || 'TESTCOINUSDT').toUpperCase();
 var coin = sym.replace(/USDT$/, '');

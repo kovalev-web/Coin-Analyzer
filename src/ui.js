@@ -3437,7 +3437,6 @@ function _topbarHTML() {
     + '</button>'
     + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
     + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Gainers</button>'
-    + (!_demo ? '<a class="nav-pill nav-pill-beta desktop-nav-btn" href="/inplay-phase">Phase <span class="nav-beta-tag">beta</span></a>' : '')
     + _sessionTimerHTML()
     + '<div class="topbar-actions">'
     + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'

@@ -104,6 +104,5 @@
 
 @media(min-width:769px){
   .desktop-nav-btn{display:inline-flex;}
-  .nav-pill.desktop-nav-btn{display:inline-flex;}
 }
 

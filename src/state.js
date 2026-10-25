@@ -41,7 +41,6 @@ export const state = {
   journalSummary: null, // { pnl, tradeCount, winCount, winRate, missed, from, to } за journalRange
   notifications: [],
   notifUnread: 0,
-  inplayTop: [],   // [{symbol, inplay, A, M, P, dp5m, rvol5m}] — from server inplay_top WS push
   isDemoMode: false,
 };
 

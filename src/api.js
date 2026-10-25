@@ -113,12 +113,6 @@ function connectWS() {
         state.notifUnread++;
         emit('notify:received', msg.entry);
         break;
-      case 'inplay_top':
-        state.inplayTop = msg.data || [];
-        emit('inplay:top', state.inplayTop);
-        break;
-      case 'inplay_phases':
-        break; // handled elsewhere (phase detector UI)
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
@@ -742,7 +736,7 @@ export async function fetchChartData(symbol, tf) {
 // Uses state.chartData cache (same key as FV) to avoid duplicate fetches.
 export async function fetchKlines5m(symbol) {
   // Normalize: server expects short symbol without USDT (e.g. 'aster'), appends USDT itself.
-  // state.inplayTop has full symbols like 'ASTERUSDT'; state.coins has 'aster'.
+  // Accepts both 'ASTERUSDT' and 'aster'.
   var short = symbol.replace(/USDT$/i, '').toLowerCase();
   var key = short + '_5m';
   if (state.chartData[key] && state.chartData[key].status === 'ok') {
