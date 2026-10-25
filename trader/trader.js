@@ -80,11 +80,25 @@ class Trader extends EventEmitter {
     } finally {
       this._syncing = false;
     }
+    await this._fillOpenTimes();
     var buffered = this._buffered;
     this._buffered = [];
     buffered.forEach(this.handleStreamEvent, this);
     this.lastSyncAt = Date.now();
     this.emit('event', { type: 'snapshot', account: this.getAccount() });
+  }
+
+  // Positions found in a snapshot (e.g. after restart) don't know when they
+  // were opened — recover it from recent fills. Best effort.
+  async _fillOpenTimes() {
+    var self = this;
+    var missing = Object.values(this.state.positions).filter(function (p) { return !p.openTime; });
+    for (var p of missing) {
+      try {
+        var trades = await self.client.request('GET', '/fapi/v1/userTrades', { symbol: p.symbol, limit: 100 });
+        p.openTime = st.openTimeFromTrades(trades, p.amount);
+      } catch (e) {}
+    }
   }
 
   setStreamStatus(connected) {

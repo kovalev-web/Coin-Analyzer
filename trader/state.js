@@ -64,6 +64,7 @@ function algoFromWs(o, eventTime) {
 
 function loadSnapshot(state, snap) {
   var t = snap.time || Date.now();
+  var prevPositions = state.positions;
   state.balances = {};
   (snap.balances || []).forEach(function (b) {
     state.balances[b.asset] = {
@@ -74,11 +75,15 @@ function loadSnapshot(state, snap) {
   state.positions = {};
   (snap.positions || []).forEach(function (p) {
     if (Number(p.positionAmt) === 0) return;
-    state.positions[posKey(p.symbol, p.positionSide)] = {
+    var key = posKey(p.symbol, p.positionSide);
+    var prev = prevPositions[key];
+    state.positions[key] = {
       symbol: p.symbol, positionSide: p.positionSide, amount: p.positionAmt,
       entryPrice: p.entryPrice, unrealizedPnl: p.unRealizedProfit,
       leverage: p.leverage, marginType: p.marginType, liquidationPrice: p.liquidationPrice,
       updateTime: p.updateTime || t,
+      // Same-direction position we already knew → keep when it was opened
+      openTime: prev && Math.sign(Number(prev.amount)) === Math.sign(Number(p.positionAmt)) ? prev.openTime : null,
     };
   });
   state.orders = {};
@@ -129,9 +134,12 @@ function applyAccountUpdate(state, a, eventTime) {
     var key = posKey(p.s, p.ps);
     var existing = state.positions[key];
     if (isStale(existing, eventTime)) return;
+    // Opened (from flat) or flipped side → a new position starts now
+    var reopened = !existing || Math.sign(Number(existing.amount)) !== Math.sign(Number(p.pa));
     var n = Object.assign({}, existing, {
       symbol: p.s, positionSide: p.ps, amount: p.pa, entryPrice: p.ep,
       unrealizedPnl: p.up, marginType: p.mt, updateTime: eventTime,
+      openTime: reopened ? eventTime : existing.openTime,
     });
     if (Number(p.pa) === 0) delete state.positions[key];
     else state.positions[key] = n;
@@ -149,7 +157,21 @@ function toJSON(state) {
   };
 }
 
+// From recent fills (newest last), find when the current position was opened:
+// walk back from the latest fill until the running size returns to zero.
+function openTimeFromTrades(trades, amount) {
+  var remaining = Number(amount);
+  for (var i = trades.length - 1; i >= 0; i--) {
+    var t = trades[i];
+    var signed = (t.side === 'BUY' ? 1 : -1) * Number(t.qty);
+    remaining -= signed;
+    if (Math.abs(remaining) < 1e-12 || Math.sign(remaining) !== Math.sign(Number(amount))) return t.time;
+  }
+  return trades.length ? trades[0].time : null;
+}
+
 module.exports = {
+  openTimeFromTrades,
   createState, loadSnapshot, applyOrderUpdate, applyAlgoUpdate, applyAccountUpdate,
   toJSON, posKey, orderFromRest, algoFromRest,
 };

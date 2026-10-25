@@ -35,6 +35,7 @@ var T = {
   pinned: false,         // user scrolled the ladder: stop auto-centering until the mouse leaves
   renderQueued: false,
   lines: [], linesSeries: null, linesKey: '',
+  zone: null, zoneSeries: null,
   lastClick: { key: '', at: 0 },
 };
 
@@ -390,41 +391,109 @@ function _fmtPnl(info) {
   return (info.pnl >= 0 ? '+' : '') + info.pnl.toFixed(2) + ' USDT (' + (info.pct >= 0 ? '+' : '') + info.pct.toFixed(2) + '%)';
 }
 
-// ── PnL band on the chart: entry → current exit price, green/red ───────────
+// ── PnL zone on the chart ───────────────────────────────────────────────────
+// Drawn by the chart itself (series primitive), so it moves with candles while
+// panning/zooming. Spans from the candle where the position was opened to the
+// right edge, between the entry price and the current close price.
+
+var TF_SEC = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '4h': 14400, '1d': 86400 };
+
+function PnlZone() {
+  var self = this;
+  this.d = null;
+  this._chart = null; this._series = null; this._req = null;
+  this._views = [
+    { zOrder: function () { return 'bottom'; }, renderer: function () { return { draw: function (t) { self._drawZone(t); } }; } },
+    { zOrder: function () { return 'top'; }, renderer: function () { return { draw: function (t) { self._drawLabel(t); } }; } },
+  ];
+}
+PnlZone.prototype.attached = function (p) { this._chart = p.chart; this._series = p.series; this._req = p.requestUpdate; };
+PnlZone.prototype.detached = function () { this._chart = null; this._series = null; this._req = null; };
+PnlZone.prototype.updateAllViews = function () {};
+PnlZone.prototype.paneViews = function () { return this._views; };
+PnlZone.prototype.setData = function (d) { this.d = d; if (this._req) this._req(); };
+
+PnlZone.prototype._geom = function (width) {
+  var d = this.d, s = this._series, c = this._chart;
+  if (!d || !s || !c) return null;
+  var y1 = s.priceToCoordinate(d.entry), y2 = s.priceToCoordinate(d.exit);
+  if (y1 == null || y2 == null) return null;
+  var x = d.time != null ? c.timeScale().timeToCoordinate(d.time) : null;
+  if (x == null || x < 0) x = 0; // entry candle not loaded / scrolled off to the left
+  if (x > width) return null;
+  return { x: x, yEntry: y1, yExit: y2, top: Math.min(y1, y2), h: Math.max(1, Math.abs(y2 - y1)) };
+};
+
+PnlZone.prototype._drawZone = function (target) {
+  var self = this;
+  target.useMediaCoordinateSpace(function (scope) {
+    var g = self._geom(scope.mediaSize.width);
+    if (!g) return;
+    var ctx = scope.context, w = scope.mediaSize.width - g.x;
+    ctx.save();
+    ctx.fillStyle = self.d.color;
+    ctx.globalAlpha = 0.12;
+    ctx.fillRect(g.x, g.top, w, g.h);
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = self.d.color;
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(g.x, Math.round(g.yExit) + 0.5); ctx.lineTo(g.x + w, Math.round(g.yExit) + 0.5);
+    ctx.moveTo(g.x + 0.5, g.top); ctx.lineTo(g.x + 0.5, g.top + g.h);
+    ctx.stroke();
+    ctx.restore();
+  });
+};
+
+PnlZone.prototype._drawLabel = function (target) {
+  var self = this;
+  target.useMediaCoordinateSpace(function (scope) {
+    var g = self._geom(scope.mediaSize.width);
+    if (!g) return;
+    var ctx = scope.context;
+    ctx.save();
+    ctx.font = '600 12px Manrope, Arial, sans-serif';
+    var text = self.d.label;
+    var tw = ctx.measureText(text).width, padX = 6, bh = 18;
+    var bx = scope.mediaSize.width - tw - padX * 2 - 8;
+    // Label on the current-price edge of the zone
+    var by = g.yExit < g.yEntry ? g.yExit - bh - 2 : g.yExit + 2;
+    by = Math.max(0, Math.min(scope.mediaSize.height - bh, by));
+    ctx.fillStyle = self.d.color;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx, by, tw + padX * 2, bh, 4); else ctx.rect(bx, by, tw + padX * 2, bh);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + padX, by + bh / 2 + 0.5);
+    ctx.restore();
+  });
+};
 
 function _clearBand() {
-  var b = document.getElementById('fv-pnl-band');
-  if (b) b.remove();
+  if (T.zone && T.zoneSeries) { try { T.zoneSeries.detachPrimitive(T.zone); } catch (e) {} }
+  T.zone = null; T.zoneSeries = null;
 }
 
 function _syncBand() {
   var series = window.__fvSeries;
-  var wrap = document.querySelector('#fv-overlay .fv-chart-wrap');
   var info = _pnlInfo();
-  if (!series || !wrap || !info) { _clearBand(); return; }
-  var yEntry = series.priceToCoordinate(info.entry);
-  var yExit = series.priceToCoordinate(info.exit);
-  if (yEntry == null || yExit == null) { _clearBand(); return; }
-  var band = document.getElementById('fv-pnl-band');
-  if (!band) {
-    band = document.createElement('div');
-    band.id = 'fv-pnl-band';
-    band.className = 'fv-pnl-band';
-    band.innerHTML = '<span class="fv-pnl-label"></span>';
-    wrap.appendChild(band);
+  if (!series || !series.attachPrimitive) { _clearBand(); return; }
+  if (T.zoneSeries !== series) {
+    _clearBand();
+    T.zone = new PnlZone();
+    T.zoneSeries = series;
+    series.attachPrimitive(T.zone);
   }
-  var h = wrap.clientHeight;
-  var top = Math.max(0, Math.min(yEntry, yExit)), bottom = Math.min(h, Math.max(yEntry, yExit));
-  var scaleW = 0;
-  try { scaleW = series.priceScale().width(); } catch (e) {}
-  band.className = 'fv-pnl-band ' + (info.up ? 'up' : 'dn');
-  band.style.top = top + 'px';
-  band.style.height = Math.max(2, bottom - top) + 'px';
-  band.style.right = scaleW + 'px';
-  var label = band.firstChild;
-  label.textContent = _fmtPnl(info);
-  // Label sits at the current-price edge of the band
-  label.style.top = (yExit < yEntry ? 0 : Math.max(0, bottom - top - 18)) + 'px';
+  if (!info) { T.zone.setData(null); return; }
+  var iv = TF_SEC[window.__fvTF] || 300;
+  var openSec = info.pos.openTime ? Math.floor(info.pos.openTime / 1000 / iv) * iv : null;
+  T.zone.setData({
+    entry: info.entry, exit: info.exit, time: openSec,
+    color: getCSSVar(info.up ? '--bullish' : '--danger'),
+    label: _fmtPnl(info),
+  });
 }
 
 function _setStatus(msg, isErr) {

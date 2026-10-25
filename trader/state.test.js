@@ -72,3 +72,25 @@ test('account update: position change keeps leverage, zero amount removes it', (
   assert.equal(s.positions['BTCUSDT:BOTH'], undefined);
   assert.equal(ch.positions[0].amount, '0');
 });
+
+test('openTime: set when opened or flipped, kept while adding', () => {
+  const s = st.createState();
+  st.applyAccountUpdate(s, { P: [{ s: 'BTCUSDT', pa: '0.01', ep: '1', ps: 'BOTH' }] }, 1000);
+  assert.equal(s.positions['BTCUSDT:BOTH'].openTime, 1000);
+  st.applyAccountUpdate(s, { P: [{ s: 'BTCUSDT', pa: '0.02', ep: '1', ps: 'BOTH' }] }, 2000);
+  assert.equal(s.positions['BTCUSDT:BOTH'].openTime, 1000);
+  st.applyAccountUpdate(s, { P: [{ s: 'BTCUSDT', pa: '-0.01', ep: '1', ps: 'BOTH' }] }, 3000);
+  assert.equal(s.positions['BTCUSDT:BOTH'].openTime, 3000);
+  // snapshot keeps a known same-side position's openTime
+  st.loadSnapshot(s, { positions: [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '-0.03', entryPrice: '1' }] });
+  assert.equal(s.positions['BTCUSDT:BOTH'].openTime, 3000);
+});
+
+test('openTimeFromTrades walks fills back to where the position started', () => {
+  const trades = [
+    { side: 'BUY', qty: '0.01', time: 1 }, { side: 'SELL', qty: '0.01', time: 2 }, // closed earlier
+    { side: 'BUY', qty: '0.02', time: 3 }, { side: 'BUY', qty: '0.01', time: 4 }, { side: 'SELL', qty: '0.01', time: 5 },
+  ];
+  assert.equal(st.openTimeFromTrades(trades, '0.02'), 3);
+  assert.equal(st.openTimeFromTrades([{ side: 'SELL', qty: '0.05', time: 7 }], '-0.05'), 7);
+});
