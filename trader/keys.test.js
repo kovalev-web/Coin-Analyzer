@@ -45,12 +45,12 @@ test('live key without IP whitelist is rejected', async () => {
   assert.match(r.error, /IP/);
 });
 
-test('live key: restricted, no withdrawals → ok; unreadable restrictions → ok with warning', async () => {
+test('live key: restricted, no withdrawals → ok; unreadable restrictions → rejected', async () => {
   const good = await validateKeys(opts('mainnet', Object.assign({}, base, { apiRestrictions: { enableWithdrawals: false, ipRestrict: true } })));
   assert.equal(good.ok, true);
   const unknown = await validateKeys(opts('mainnet', Object.assign({}, base, { apiRestrictions: { status: 401, body: { code: -2015 } } })));
-  assert.equal(unknown.ok, true);
-  assert.match(unknown.checks.warning, /not verified/);
+  assert.equal(unknown.ok, false);
+  assert.match(unknown.error, /Could not verify/);
 });
 
 test('a key Binance rejects throws (caller turns it into a 400)', async () => {

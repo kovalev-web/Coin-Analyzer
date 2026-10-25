@@ -4,7 +4,8 @@
 //   - futures access works and the account can trade (/fapi/v2/account)
 //   - one-way position mode (hedge mode isn't supported by the terminal)
 //   - live keys only: withdrawals must be off and the key must be IP-restricted
-//     (/sapi/v1/account/apiRestrictions on the spot API)
+//     (/sapi/v1/account/apiRestrictions on the spot API); if that can't be
+//     read, the key is rejected rather than saved unverified
 
 var { createClient, sign, buildQuery } = require('./binance');
 
@@ -27,7 +28,8 @@ async function validateKeys(opts) {
   if (opts.env === 'mainnet') {
     var r = await restrictions(opts, fetchImpl, client.getTimeOffset());
     if (!r) {
-      checks.warning = 'Could not read key restrictions from Binance; withdrawals and IP whitelist were not verified';
+      // Live keys are never saved unverified: an unrestricted trading key works from anywhere
+      return { ok: false, error: 'Could not verify the key restrictions with Binance (withdrawals, IP whitelist). Try again in a minute.', checks: checks };
     } else {
       checks.withdrawals = !!r.enableWithdrawals;
       checks.ipRestrict = !!r.ipRestrict;
