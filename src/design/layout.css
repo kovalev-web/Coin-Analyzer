@@ -109,8 +109,12 @@
 
 /* Day summary strip (main screen): leaders + your last 24h */
 .day-summary{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap;padding:var(--space-4) var(--space-16) 0;font-size:var(--text-xs);}
-.ds-leaders{display:flex;gap:var(--space-3);}
-.ds-leader,.ds-coin{display:inline-flex;align-items:baseline;gap:var(--space-3);height:var(--h-btn-md);padding:0 var(--space-5);border:none;border-radius:var(--radius-full);background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);cursor:pointer;font-variant-numeric:tabular-nums;align-items:center;}
+.ds-leaders{display:flex;gap:var(--space-4);flex-wrap:wrap;}
+.ds-coin{display:inline-flex;gap:var(--space-3);height:var(--h-btn-md);padding:0 var(--space-5);border:none;border-radius:var(--radius-full);background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);cursor:pointer;font-variant-numeric:tabular-nums;align-items:center;}
+.ds-leader{display:flex;flex-direction:column;gap:var(--space-2);width:210px;padding:var(--space-4) var(--space-5) var(--space-3);border:none;border-radius:var(--radius-xl);background:var(--paper);color:var(--ink-deep);font-size:var(--text-xs);cursor:pointer;font-variant-numeric:tabular-nums;text-align:left;}
+.ds-leader-top{display:flex;align-items:baseline;gap:var(--space-3);}
+.ds-leader-top .ds-ch{margin-left:auto;}
+.ds-spark{display:block;width:100%;height:56px;pointer-events:none;}
 .ds-leader:hover,.ds-coin:hover{background:var(--fog);}
 .ds-sym{font-weight:var(--font-bold);}
 .ds-ch.up,.ds-total.up,.ds-coin b.up{color:var(--bullish);}
@@ -120,4 +124,4 @@
 .ds-total{font-weight:var(--font-bold);}
 .ds-coin b{font-weight:var(--font-medium);}
 .ds-muted{color:var(--graphite);}
-@media(max-width:768px){.day-summary{padding:var(--space-4) var(--space-6) 0;gap:var(--space-4);}}
+@media(max-width:768px){.day-summary{padding:var(--space-4) var(--space-6) 0;gap:var(--space-4);}.ds-leaders{flex-wrap:nowrap;width:100%;}.ds-leader{flex:1;width:auto;min-width:0;padding:var(--space-3) var(--space-4) var(--space-2);}.ds-spark{height:40px;}.ds-leader-top{flex-wrap:wrap;column-gap:var(--space-2);row-gap:0;font-size:var(--text-2xs);}.ds-leader-top .ds-ch{margin-left:0;flex-basis:100%;}}
