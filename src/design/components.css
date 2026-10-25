@@ -628,7 +628,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-cols span:nth-child(2){padding-left:var(--space-2);}
 .dom-row{height:16px;font-size:var(--text-2xs);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
 .dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
-.dom-c-vol i{position:absolute;inset:1px 0;opacity:0;}
+.dom-c-vol i{position:absolute;top:1px;bottom:1px;left:0;width:0;opacity:0;border-radius:0 2px 2px 0;}
 .dom-row.ask .dom-c-vol i{background:var(--danger);}
 .dom-row.bid .dom-c-vol i{background:var(--primary);}
 .dom-c-vol b{position:relative;font-weight:var(--font-medium);padding:0 var(--space-2);color:var(--ink-deep);}

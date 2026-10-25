@@ -29,7 +29,6 @@ var T = {
   rules: null,
   ws: null, wsTrades: null, wsTimer: null,
   bbo: null,             // latest bookTicker {b, B, a, A, u}: top of book, real-time
-  depthU: 0,             // update id of the last depth20 snapshot
   lastTrade: null,       // {price, buy, at} from aggTrade
   pending: {},           // clientOrderId → {idx, kind, qty, at}: shown before the exchange confirms
   cancelling: {},
@@ -167,18 +166,32 @@ function _panelHTML() {
     + '</div>';
 }
 
-// ── Depth stream (trader's environment) ─────────────────────────────────────
+// ── Order book (trader's environment) ───────────────────────────────────────
+// Full local book, maintained the way Binance documents it: a REST snapshot
+// (up to 1000 levels per side) plus the @depth@100ms diff stream, checked for
+// gaps with pu → u. bookTicker (unthrottled) keeps the top of book exact
+// between diffs; aggTrade marks the last traded price.
 
-// depth20@100ms gives the levels; bookTicker (unthrottled, up to hundreds of
-// updates/s) keeps the best bid/ask exact between depth snapshots; aggTrade
-// marks the last traded price.
+function _marketRoots() {
+  if (_viewOnly() || (T.access && T.access.env === 'mainnet')) {
+    return { ws: 'wss://fstream.binance.com', rest: 'https://fapi.binance.com' };
+  }
+  return {
+    ws: T.access.marketWs.replace(/\/public\/ws$/, ''),
+    rest: T.access.marketRest || 'https://demo-fapi.binance.com',
+  };
+}
+
 function _connectDepth() {
   _disconnectDepth();
   if (!T.access || !T.access.marketWs || !T.sym) return;
   var sym = T.sym, s = sym.toLowerCase();
-  var root = _viewOnly() ? 'wss://fstream.binance.com' : T.access.marketWs.replace(/\/public\/ws$/, '');
-  var ws = new WebSocket(root + '/public/stream?streams=' + s + '@depth20@100ms/' + s + '@bookTicker');
+  var roots = _marketRoots();
+  var book = { bids: new Map(), asks: new Map(), lastU: 0, synced: false, started: false, syncing: false, buffer: [], rest: roots.rest, sym: sym };
+  T.book = book;
+  var ws = new WebSocket(roots.ws + '/public/stream?streams=' + s + '@depth@100ms/' + s + '@bookTicker');
   T.ws = ws;
+  ws.onopen = function () { _snapshot(book); };
   ws.onmessage = function (ev) {
     if (T.ws !== ws) return;
     var m;
@@ -186,12 +199,9 @@ function _connectDepth() {
     var d = m.data || m;
     if (d.e === 'bookTicker') {
       T.bbo = { b: Number(d.b), B: Number(d.B), a: Number(d.a), A: Number(d.A), u: d.u };
-      _applyBbo();
-    } else if (d.b && d.a) {
-      T.bids = d.b.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
-      T.asks = d.a.map(function (l) { return [Number(l[0]), Number(l[1])]; }).filter(function (l) { return l[1] > 0; });
-      T.depthU = d.u || 0;
-      _applyBbo();
+    } else if (d.e === 'depthUpdate') {
+      if (!book.synced) { book.buffer.push(d); return; }
+      if (!_applyEvent(book, d)) { _resync(book); return; }
     } else {
       return;
     }
@@ -203,7 +213,7 @@ function _connectDepth() {
     if (T.sym === sym) T.wsTimer = setTimeout(_connectDepth, 1000);
   };
 
-  var wt = new WebSocket(root + '/market/ws/' + s + '@aggTrade');
+  var wt = new WebSocket(roots.ws + '/market/ws/' + s + '@aggTrade');
   T.wsTrades = wt;
   wt.onmessage = function (ev) {
     if (T.wsTrades !== wt) return;
@@ -215,22 +225,81 @@ function _connectDepth() {
   };
 }
 
-// Overlay the newer bookTicker on the last depth snapshot: drop levels that
-// are now inside the spread and set the exact top-of-book quantity.
-function _applyBbo() {
+// Returns false on a sequence gap (caller resyncs).
+function _applyEvent(book, d) {
+  if (!book.started) {
+    if (d.u < book.lastU) return true;          // older than the snapshot
+    if (d.U > book.lastU) return false;         // missed events between snapshot and stream
+    book.started = true;
+  } else if (d.pu !== book.lastU) {
+    return false;
+  }
+  d.b.forEach(function (l) { if (Number(l[1]) === 0) book.bids.delete(l[0]); else book.bids.set(l[0], Number(l[1])); });
+  d.a.forEach(function (l) { if (Number(l[1]) === 0) book.asks.delete(l[0]); else book.asks.set(l[0], Number(l[1])); });
+  book.lastU = d.u;
+  T.bookDirty = true;
+  return true;
+}
+
+function _resync(book) {
+  book.synced = false; book.started = false; book.buffer = [];
+  _snapshot(book);
+}
+
+function _snapshot(book) {
+  if (book.syncing || T.book !== book) return;
+  book.syncing = true;
+  var wait = Math.max(0, (T.lastSnapAt || 0) + 2000 - Date.now()); // at most one snapshot per 2s
+  setTimeout(function () {
+    if (T.book !== book) return;
+    T.lastSnapAt = Date.now();
+    fetch(book.rest + '/fapi/v1/depth?symbol=' + book.sym + '&limit=1000').then(function (r) { return r.json(); }).then(function (snap) {
+      if (T.book !== book) return;
+      book.bids = new Map(snap.bids.map(function (l) { return [l[0], Number(l[1])]; }));
+      book.asks = new Map(snap.asks.map(function (l) { return [l[0], Number(l[1])]; }));
+      book.lastU = snap.lastUpdateId;
+      book.started = false;
+      var buf = book.buffer;
+      book.buffer = [];
+      book.syncing = false;
+      for (var k = 0; k < buf.length; k++) {
+        if (!_applyEvent(book, buf[k])) { _resync(book); return; }
+      }
+      book.synced = true;
+      T.bookDirty = true;
+      _queueRender();
+    }).catch(function () {
+      book.syncing = false;
+      setTimeout(function () { _snapshot(book); }, 2000);
+    });
+  }, wait);
+}
+
+// Sorted arrays for the ladder: rebuilt from the local book when it changed,
+// then the newer bookTicker trims anything now inside the spread.
+function _refreshLevels() {
+  var book = T.book;
+  if (!book || !book.synced) return;
+  if (T.bookDirty) {
+    T.baseBids = Array.from(book.bids, function (e) { return [Number(e[0]), e[1]]; }).sort(function (a, b) { return b[0] - a[0]; });
+    T.baseAsks = Array.from(book.asks, function (e) { return [Number(e[0]), e[1]]; }).sort(function (a, b) { return a[0] - b[0]; });
+    T.bookDirty = false;
+  }
+  var bids = T.baseBids || [], asks = T.baseAsks || [];
   var t = T.bbo;
-  if (!t || t.u < T.depthU || !T.bids.length || !T.asks.length) return;
-  T.bids = T.bids.filter(function (l) { return l[0] < t.b; });
-  T.bids.unshift([t.b, t.B]);
-  T.asks = T.asks.filter(function (l) { return l[0] > t.a; });
-  T.asks.unshift([t.a, t.A]);
+  if (t && t.u > book.lastU && bids.length && asks.length) {
+    bids = bids.filter(function (l) { return l[0] < t.b; }); bids.unshift([t.b, t.B]);
+    asks = asks.filter(function (l) { return l[0] > t.a; }); asks.unshift([t.a, t.A]);
+  }
+  T.bids = bids; T.asks = asks;
 }
 
 function _disconnectDepth() {
   clearTimeout(T.wsTimer);
   if (T.ws) { var w = T.ws; T.ws = null; try { w.close(); } catch (e) {} }
   if (T.wsTrades) { var t = T.wsTrades; T.wsTrades = null; try { t.close(); } catch (e) {} }
-  T.bbo = null; T.depthU = 0; T.lastTrade = null;
+  T.book = null; T.baseBids = null; T.baseAsks = null; T.bookDirty = false;
+  T.bbo = null; T.lastTrade = null;
 }
 
 // ── Account events ──────────────────────────────────────────────────────────
@@ -280,7 +349,8 @@ function _priceOf(idx) {
 
 function _autoScale() {
   if (T.scaleIdx != null || !T.bids.length || !T.asks.length) return;
-  var span = (T.asks[T.asks.length - 1][0] - T.bids[T.bids.length - 1][0]) / _tick();
+  // Fit roughly the 20 nearest levels per side into the window
+  var span = (T.asks[Math.min(19, T.asks.length - 1)][0] - T.bids[Math.min(19, T.bids.length - 1)][0]) / _tick();
   var want = span / Math.max(10, T.rows * 0.8);
   var i = 0;
   while (i < SCALES.length - 1 && SCALES[i] < want) i++;
@@ -346,6 +416,7 @@ function _queueRender() {
 function _render() {
   var ladder = document.getElementById('dom-ladder');
   if (!ladder) return;
+  _refreshLevels();
   _renderFoot();
   _syncLines();
   _syncBand();
@@ -368,8 +439,10 @@ function _render() {
   }
 
   var bidVol = {}, askVol = {}, maxVol = 0;
-  T.bids.forEach(function (l) { var i = Math.floor(l[0] / step + 1e-9); bidVol[i] = (bidVol[i] || 0) + l[1]; });
-  T.asks.forEach(function (l) { var i = Math.ceil(l[0] / step - 1e-9); askVol[i] = (askVol[i] || 0) + l[1]; });
+  var lo = T.top - T.rows + 1, hi = T.top;
+  T.bids.forEach(function (l) { var i = Math.floor(l[0] / step + 1e-9); if (i >= lo && i <= hi) bidVol[i] = (bidVol[i] || 0) + l[1]; });
+  T.asks.forEach(function (l) { var i = Math.ceil(l[0] / step - 1e-9); if (i >= lo && i <= hi) askVol[i] = (askVol[i] || 0) + l[1]; });
+  // Bar lengths are relative to the biggest level currently on screen
   Object.keys(bidVol).forEach(function (k) { maxVol = Math.max(maxVol, bidVol[k]); });
   Object.keys(askVol).forEach(function (k) { maxVol = Math.max(maxVol, askVol[k]); });
 
@@ -458,10 +531,13 @@ function _makeRow() {
   return row;
 }
 
-// Fill strength grows with size (sqrt, so mid-size levels stay visible)
+// Bar length ∝ size (relative to the biggest level on screen); bigger also brighter
 function _setVol(cell, v, maxVol) {
-  var o = v ? (0.18 + 0.72 * Math.sqrt(v / maxVol)).toFixed(2) : '0';
+  var r = v && maxVol ? v / maxVol : 0;
+  var w = v ? Math.max(2, Math.round(r * 100)) + '%' : '0%';
+  var o = v ? (0.35 + 0.5 * r).toFixed(2) : '0';
   var t = v ? _fmtQty(v) : '';
+  if (cell.firstChild.style.width !== w) cell.firstChild.style.width = w;
   if (cell.firstChild.style.opacity !== o) cell.firstChild.style.opacity = o;
   if (cell.lastChild.textContent !== t) cell.lastChild.textContent = t;
 }

@@ -76,7 +76,7 @@ setInterval(function () {
 }, 15000);
 
 var routes = {
-  'GET /status': function () { return Object.assign({ env: config.env, marketWs: config.marketWs }, trader.getStatus()); },
+  'GET /status': function () { return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest }, trader.getStatus()); },
   'GET /rules': function (b, q) { return trader.getRules(q.get('symbol')); },
   'GET /account': function () { return trader.getAccount(); },
   'POST /order': function (b) { return trader.placeOrder(b); },
