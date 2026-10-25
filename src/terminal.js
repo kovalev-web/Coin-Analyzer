@@ -414,7 +414,7 @@ function _render() {
   _drawRuler();
 }
 
-// ── % ruler: frame from the current price to the hovered level ─────────────
+// ── % ruler: distance from the current price to the hovered level ──────────
 
 function _drawRuler() {
   var panel = document.getElementById('fv-dom');
@@ -440,15 +440,12 @@ function _drawRuler() {
   var last = ladder.children.length - 1;
   rRef = Math.max(0, Math.min(last, rRef));
   if (rHover < 0 || rHover > last) { box.style.display = 'none'; return; }
-  var r0 = Math.min(rHover, rRef), r1 = Math.max(rHover, rRef);
-  var pTop = panel.getBoundingClientRect().top;
-  var top = ladder.children[r0].getBoundingClientRect().top - pTop;
-  var bottom = ladder.children[r1].getBoundingClientRect().bottom - pTop;
+  // Just the number, on the hovered row
+  var rect = ladder.children[rHover].getBoundingClientRect();
   var pct = (_priceOf(hoverIdx) - ref) / ref * 100;
   box.style.display = 'block';
-  box.style.top = top + 'px';
-  box.style.height = (bottom - top) + 'px';
-  box.classList.toggle('below', rHover > rRef);
+  box.style.top = (rect.top - panel.getBoundingClientRect().top) + 'px';
+  box.style.height = rect.height + 'px';
   var tag = box.firstChild;
   tag.textContent = (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(2) + '%';
 }
