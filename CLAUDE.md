@@ -113,6 +113,10 @@ state.journalToday     // запись дневника за сегодня (д�
 - Журнал/брифинг для торгового аккаунта на mainnet берут сделки через trader (`/history/trades`, `/history/income`), иначе — read-only ключ.
 - Тесты: `npm run test:trader`. Сквозной сценарий на тестнете: `node trader/scripts/e2e-testnet.js`.
 
+## Журнал и личный edge
+Принцип и определения — `docs/TRADER_EDGE.md` (читать перед любой работой с журналом, отчётами или анализом сделок).
+Факты дня считает `journal/facts.js` из сделок (`GET /api/journal/facts`), снимок — `journal_entries.facts_json`. Факты приоритетнее самооценки в карточках.
+
 ---
 
 # Правила работы с кодом

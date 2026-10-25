@@ -109,6 +109,10 @@ function ensureAuthTables() {
   if (journalCols.indexOf('skipped') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "skipped" INTEGER');
   }
+  // Day facts computed from fills at evening review (journal/facts.js)
+  if (journalCols.indexOf('facts_json') === -1) {
+    sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "facts_json" TEXT');
+  }
   if (journalCols.indexOf('max_trades') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }

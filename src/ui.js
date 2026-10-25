@@ -5,7 +5,7 @@ import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday, fetchJournalFacts } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 
@@ -1464,6 +1464,7 @@ export function showEveningModal() {
   el.innerHTML =
     '<div class="journal-modal">'
     + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
+    + '<div class="journal-field journal-facts" id="evening-facts"><label>Day facts — from your trades</label><div class="journal-static">Loading…</div></div>'
     + '<div class="journal-field"><label>Followed process (1 = no, 5 = fully)</label>' + _journalRadioGroup('followedProcess', JOURNAL_SCALE_1_5, entry.followedProcess) + '</div>'
     + '<div class="journal-field"><label>Traded only planned setups</label>' + _journalRadioGroup('tradedPlanned', JOURNAL_YES_NO, entry.tradedPlanned) + '</div>'
     + '<div class="journal-field"><label>Trade count</label><input class="ds-input" type="number" name="tradeCount" value="' + tradeCount + '"></div>'
@@ -1497,13 +1498,26 @@ export function showEveningModal() {
   _autoGrowTextareas(el);
 
 
+  // Facts from fills replace self-reported numbers when Binance access is set up
+  fetchJournalFacts().then(function (facts) {
+    var box = el.querySelector('#evening-facts');
+    if (!box) return facts;
+    if (!facts) { box.remove(); return null; }
+    box.innerHTML = '<label>Day facts — from your trades</label>' + _factsHTML(facts);
+    var tc = el.querySelector('[name="tradeCount"]');
+    if (tc) { tc.value = facts.summary.trades; tc.readOnly = true; tc.title = 'Counted from your trades'; }
+    el.dataset.pnl = facts.summary.pnlNet;
+    return facts;
+  });
+
   fetchTodayTrades().then(function (stats) {
     var statsEl = el.querySelector('#evening-pnl-stats');
     if (!statsEl) return;
-    el.dataset.pnl = stats ? stats.pnl : 0;
-    if (stats) {
-      var tradeCountInput = el.querySelector('[name="tradeCount"]');
-      if (tradeCountInput) tradeCountInput.value = stats.tradeCount;
+    var tradeCountInput = el.querySelector('[name="tradeCount"]');
+    var factsShown = tradeCountInput && tradeCountInput.readOnly; // facts already filled these
+    if (!factsShown) {
+      el.dataset.pnl = stats ? stats.pnl : 0;
+      if (stats && tradeCountInput) tradeCountInput.value = stats.tradeCount;
     }
     if (!stats || stats.tradeCount === 0) { statsEl.textContent = 'No trades today'; return; }
     var sign = stats.pnl >= 0 ? '+' : '';
@@ -1513,6 +1527,50 @@ export function showEveningModal() {
     if (saveBtn) saveBtn.disabled = false;
   });
 
+}
+
+function _fmtHold(sec) {
+  if (sec == null) return '—';
+  if (sec < 60) return sec + 's';
+  var m = Math.floor(sec / 60), r = sec % 60;
+  return m < 60 ? m + 'm' + (r ? ' ' + r + 's' : '') : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+}
+
+// Read-only facts block (journal/facts.js output). Only what the data shows.
+function _factsHTML(f) {
+  var s = f.summary, v = f.violations;
+  var sign = s.pnlNet >= 0 ? '+' : '';
+  var head = s.trades
+    ? s.trades + ' trade' + (s.trades === 1 ? '' : 's') + ' · ' + s.wins + 'W / ' + s.losses + 'L'
+      + (s.winRate != null ? ' · ' + s.winRate + '%' : '')
+      + ' · <span class="journal-pnl ' + (s.pnlNet >= 0 ? 'up' : 'dn') + '">' + sign + s.pnlNet.toFixed(2) + ' USDT</span>'
+      + ' · fees ' + s.fees.toFixed(2) + ' · avg hold ' + _fmtHold(s.avgHoldSec)
+    : 'No closed trades';
+  if (s.open) head += ' · <b>' + s.open + ' still open</b>';
+  var flags = [];
+  if (v.craneBrokenAt) flags.push('Stop-crane broken at ' + tzTimeStr(new Date(v.craneBrokenAt)) + ' — ' + v.tradesAfterCrane + ' trade' + (v.tradesAfterCrane === 1 ? '' : 's') + ' after 2 losses in a row');
+  if (v.overMaxTrades) flags.push('Over max trades per day (' + f.limits.maxTrades + ')');
+  if (v.oversize) flags.push(v.oversize + ' over the volume limit ($' + f.limits.maxVolume + ')');
+  if (v.revenge) flags.push(v.revenge + ' entr' + (v.revenge === 1 ? 'y' : 'ies') + ' within 5 min after a loss');
+  if (v.sizeUpAfterLosses) flags.push(v.sizeUpAfterLosses + ' size-up after losses');
+  if (v.sizeUpAfterWins) flags.push(v.sizeUpAfterWins + ' size-up after wins');
+  if (v.offPlan) flags.push(v.offPlan + ' trade' + (v.offPlan === 1 ? '' : 's') + ' on coins outside the briefing');
+  var rows = f.trades.map(function (t) {
+    var tags = [];
+    tags.push(t.planned ? 'plan' : 'off-plan');
+    if (t.atLevel === true) tags.push('at level');
+    if (t.revenge) tags.push('revenge');
+    if (t.sizeUp) tags.push('size-up');
+    if (t.oversize) tags.push('oversize');
+    if (t.afterCrane) tags.push('after crane');
+    var res = t.result === 'open' ? 'open' : (t.pnlNet >= 0 ? '+' : '') + t.pnlNet.toFixed(2);
+    return '<div class="jf-trade"><span>' + tzTimeStr(new Date(t.openTime)) + '</span><span>' + t.symbol.replace(/USDT$/, '') + ' ' + t.side + '</span>'
+      + '<span class="' + (t.result === 'win' ? 'up' : t.result === 'loss' ? 'dn' : '') + '">' + res + '</span>'
+      + '<span class="jf-tags">' + tags.join(' · ') + '</span></div>';
+  }).join('');
+  return '<div class="journal-static">' + head + '</div>'
+    + (flags.length ? '<ul class="jf-flags">' + flags.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : (s.trades ? '<div class="jf-clean">No rule breaks found in the data</div>' : ''))
+    + (rows ? '<div class="jf-trades">' + rows + '</div>' : '');
 }
 
 export function hideEveningModal() {

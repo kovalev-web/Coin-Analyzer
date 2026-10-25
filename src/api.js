@@ -896,6 +896,15 @@ export function markNotificationRead(id) {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
+// Day facts computed on the server from fills (journal/facts.js); null when
+// no Binance access is configured.
+export function fetchJournalFacts(dateStr) {
+  return fetch(API_BASE + '/api/journal/facts' + (dateStr ? '?date=' + dateStr : ''), { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : { facts: null }; })
+    .then(function (d) { return d.facts || null; })
+    .catch(function () { return null; });
+}
+
 export function fetchJournalToday() {
   return fetch(API_BASE + '/api/journal/today', { credentials: 'include' })
     .then(function (r) { return r.json(); })

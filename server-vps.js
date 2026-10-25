@@ -12,6 +12,7 @@ try {
   });
 } catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
+const { computeDayFacts, zonedDayStart } = require('./journal/facts');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -80,6 +81,76 @@ async function userTodayStr(userId) {
   var off = (r[1] && r[1].result !== null) ? parseFloat(r[1].result) : 0;
   if (!isFinite(off)) off = 0;
   return _getUserTimeInfo(r[0] && r[0].result ? r[0].result : null, off).userNow.toISOString().slice(0, 10);
+}
+
+// ── Journal day facts (computed from fills, see docs/TRADER_EDGE.md) ──────
+
+async function userTz(userId) {
+  var r = await Promise.all([redis(['GET', 'account_tz:' + userId]), redis(['GET', 'briefing_tz:' + userId])]);
+  var off = (r[1] && r[1].result !== null) ? parseFloat(r[1].result) : 0;
+  return { iana: r[0] && r[0].result ? r[0].result : null, offset: isFinite(off) ? off : 0 };
+}
+
+// Binance read for a user: the trading account on live goes through the
+// trader's key; everyone else (or a trader failure) through the read-only key.
+async function userBinance(userId, kind, payload) {
+  if (TRADER_INTERNAL_SECRET && TRADER_USER_ID && userId === TRADER_USER_ID) {
+    var viaTrader = await traderHistory(kind === 'trades' ? 'binance' : 'binance-income', payload);
+    if (viaTrader) return kind === 'trades' ? viaTrader.trades : viaTrader.income;
+  }
+  var binRaw = await redis(['GET', 'binance_keys:' + userId]);
+  if (!binRaw || !binRaw.result) return null;
+  var kp = JSON.parse(binRaw.result);
+  var key = decryptStr(kp.key), sec = decryptStr(kp.secret);
+  var params = new URLSearchParams({ timestamp: String(Date.now()), limit: String(payload.limit || 1000) });
+  if (payload.symbol) params.set('symbol', payload.symbol);
+  if (payload.incomeType) params.set('incomeType', payload.incomeType);
+  if (payload.startTime) params.set('startTime', String(payload.startTime));
+  if (payload.endTime) params.set('endTime', String(payload.endTime));
+  var qs = params.toString();
+  var url = 'https://fapi.binance.com/fapi/v1/' + (kind === 'trades' ? 'userTrades' : 'income') + '?' + qs
+    + '&signature=' + crypto.createHmac('sha256', sec).update(qs).digest('hex');
+  var res = await fetch(url, { headers: { 'X-MBX-APIKEY': key }, signal: AbortSignal.timeout(15000) });
+  var data = await res.json();
+  return res.ok && Array.isArray(data) ? data : null;
+}
+
+// Facts for one user day. Fills from the previous 24h are included so trades
+// that opened yesterday don't distort today's positions; only trades opened
+// today are counted. Returns null when no Binance access is configured.
+async function buildDayFacts(userId, dateStr) {
+  var tz = await userTz(userId);
+  var dayStart = zonedDayStart(dateStr, tz.iana, tz.offset);
+  var dayEnd = dayStart + 86400000;
+  var from = dayStart - 86400000, to = Math.min(dayEnd, Date.now());
+  var income = await userBinance(userId, 'income', { incomeType: 'COMMISSION', startTime: from, endTime: to });
+  if (!income) return null;
+  var syms = {};
+  income.forEach(function (r) { if (r.symbol) syms[r.symbol] = true; });
+  var fills = [];
+  await Promise.all(Object.keys(syms).map(async function (s) {
+    var t = await userBinance(userId, 'trades', { symbol: s, startTime: from, endTime: to });
+    if (t) fills = fills.concat(t);
+  }));
+  var lr = await redis(['GET', 'account_trading_limits:' + userId]);
+  var limits = {};
+  try { limits = lr && lr.result ? JSON.parse(lr.result) : {}; } catch (e) {}
+  var br = await redis(['GET', 'briefing:' + userId]);
+  var brief = [];
+  try { brief = br && br.result ? JSON.parse(br.result) : []; } catch (e) {}
+  var briefingSyms = brief.filter(function (e) { return !e.auto && e.date === dateStr; })
+    .map(function (e) { return String(e.sym).toUpperCase() + 'USDT'; });
+  var levelsBySym = {};
+  var al = alertsMemory[userId] && alertsMemory[userId].data;
+  if (al) Object.keys(al).forEach(function (s) {
+    var prices = (al[s] || []).map(function (a) { return Number(a.price); }).filter(function (p) { return p > 0; });
+    if (prices.length) levelsBySym[s.toUpperCase() + 'USDT'] = prices;
+  });
+  return computeDayFacts({
+    fills: fills, dayStart: dayStart, dayEnd: dayEnd, date: dateStr, tz: tz.iana || 'UTC',
+    limits: { maxVolume: Number(limits.maxVolume) || null, maxTrades: Number(limits.maxTrades) || null },
+    briefingSyms: briefingSyms, levelsBySym: levelsBySym,
+  });
 }
 
 function sendPasswordChangedEmail(email, notMeUrl) {
@@ -932,6 +1003,7 @@ function journalRowToEntry(row) {
     freeConclusion: row.free_conclusion,
     eveningAt: row.evening_at,
     skipped: !!row.skipped,
+    facts: row.facts_json ? (function () { try { return JSON.parse(row.facts_json); } catch (e) { return null; } })() : null,
   };
 }
 
@@ -964,8 +1036,16 @@ async function computeJournalRangeStats(userId, today, range) {
       var cachedRes = await redis(['GET', cacheKey]);
       if (cachedRes && cachedRes.result) return JSON.parse(cachedRes.result);
     }
-    if (!hasBinanceKeys || !BIN_KEY || !BIN_SEC) return [];
     var binSym = sym.toUpperCase() + 'USDT';
+    if (TRADER_INTERNAL_SECRET && TRADER_USER_ID && userId === TRADER_USER_ID) {
+      var tdParts = dateStr.split('-');
+      var viaT = await traderHistory('binance', { symbol: binSym, startTime: Date.UTC(+tdParts[0], +tdParts[1] - 1, +tdParts[2]), endTime: Date.UTC(+tdParts[0], +tdParts[1] - 1, +tdParts[2], 23, 59, 59, 999) });
+      if (viaT && Array.isArray(viaT.trades)) {
+        if (dateStr < today) await redis(['SET', cacheKey, JSON.stringify(viaT.trades)]);
+        return viaT.trades;
+      }
+    }
+    if (!hasBinanceKeys || !BIN_KEY || !BIN_SEC) return [];
     var dParts = dateStr.split('-');
     var startMs = Date.UTC(+dParts[0], +dParts[1] - 1, +dParts[2], 0, 0, 0, 0);
     var endMs = Date.UTC(+dParts[0], +dParts[1] - 1, +dParts[2], 23, 59, 59, 999);
@@ -1305,6 +1385,20 @@ var httpServer = http.createServer(async function (req, res) {
         return;
       }
 
+      if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/facts') {
+        var jFactsDate = new URL(req.url, 'https://questtick.com').searchParams.get('date') || jToday;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(jFactsDate) || jFactsDate > jToday) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid date' }));
+          return;
+        }
+        var jFacts = null;
+        try { jFacts = await buildDayFacts(jUserId, jFactsDate); } catch (e) { console.error('[Facts]', e.message); }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ facts: jFacts }));
+        return;
+      }
+
       if (req.method === 'GET' && req.url === '/api/journal/recent') {
         var jRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? ORDER BY date DESC LIMIT 30').all(jUserId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1380,7 +1474,7 @@ var httpServer = http.createServer(async function (req, res) {
         }
         var jBodyE = '';
         req.on('data', function (chunk) { jBodyE += chunk; });
-        req.on('end', function () {
+        req.on('end', async function () {
           try {
             var jParsed = JSON.parse(jBodyE);
             jDb.prepare(
@@ -1394,6 +1488,15 @@ var httpServer = http.createServer(async function (req, res) {
               jParsed.stopCraneKept || null, jParsed.volumeOk || null, jParsed.triggerRevenge ? 1 : 0, jParsed.triggerSizeUp ? 1 : 0, jParsed.triggerFomo ? 1 : 0, jParsed.triggerOther || null,
               jParsed.triggerFomoOther ? 1 : 0, jParsed.triggerFomoActive ? 1 : 0, jParsed.triggerAddFunds ? 1 : 0, jParsed.triggerReplan ? 1 : 0, jParsed.missedScreening || null, jParsed.pnl != null ? jParsed.pnl : null, jParsed.eveningState || null,
               jParsed.feltWorthless || null, jParsed.freeConclusion || null, Date.now());
+            // Snapshot the computed facts with the review; they, not the typed
+            // numbers, feed trade count / PnL and the reports.
+            try {
+              var eFacts = await buildDayFacts(jUserId, jToday);
+              if (eFacts) {
+                jDb.prepare('UPDATE journal_entries SET facts_json = ?, trade_count = ?, pnl = ? WHERE user_id = ? AND date = ?')
+                  .run(JSON.stringify(eFacts), eFacts.summary.trades, eFacts.summary.pnlNet, jUserId, jToday);
+              }
+            } catch (fe) { console.error('[Facts] evening snapshot failed:', fe.message); }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch (e) {
@@ -1564,6 +1667,22 @@ var httpServer = http.createServer(async function (req, res) {
                   if (jYesNoRu(je.feltWorthless)) eParts.push('чувствовал бесполезность: ' + jYesNoRu(je.feltWorthless));
                   if (je.freeConclusion) eParts.push('заметка трейдера: "' + je.freeConclusion + '"');
                   if (eParts.length) lines.push('  Вечер — ' + eParts.join('; ') + '.');
+                }
+
+                // Facts computed from fills (journal/facts.js): ground truth that
+                // overrides anything the trader typed above when they disagree.
+                if (je && je.facts) {
+                  var fs2 = je.facts.summary, fv = je.facts.violations;
+                  var fParts = ['сделок ' + fs2.trades + ' (' + fs2.wins + ' в плюс / ' + fs2.losses + ' в минус)', 'PnL нетто $' + fs2.pnlNet.toFixed(2), 'комиссии $' + fs2.fees.toFixed(2)];
+                  if (fs2.avgHoldSec != null) fParts.push('среднее удержание ' + fs2.avgHoldSec + 'с');
+                  if (fv.craneBrokenAt) fParts.push('стоп-кран нарушен (' + fv.tradesAfterCrane + ' входов после 2 убытков подряд)');
+                  if (fv.revenge) fParts.push('входов в течение 5 мин после убытка: ' + fv.revenge);
+                  if (fv.sizeUpAfterLosses) fParts.push('увеличение размера после убытков: ' + fv.sizeUpAfterLosses);
+                  if (fv.sizeUpAfterWins) fParts.push('увеличение размера после прибылей: ' + fv.sizeUpAfterWins);
+                  if (fv.oversize) fParts.push('сделок сверх лимита объёма: ' + fv.oversize);
+                  if (fv.overMaxTrades) fParts.push('превышен лимит сделок в день');
+                  if (fv.offPlan) fParts.push('сделок по монетам вне брифинга: ' + fv.offPlan);
+                  lines.push('  Факты по сделкам (посчитано системой, приоритетнее самооценки) — ' + fParts.join('; ') + '.');
                 }
 
                 return lines.join('\n');
