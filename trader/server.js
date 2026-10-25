@@ -16,6 +16,16 @@
 //   GET  /keys          → which environments have a key saved (masked, never the secret)
 //   POST /keys          → { env, apiKey, apiSecret } — validate with Binance, store encrypted
 //   POST /keys/delete   → { env }
+//   GET  /2fa           → { enabled, unlockedUntil, required }
+//   POST /2fa/setup     → new pending seed { secret, uri }
+//   POST /2fa/confirm   → { code } enables 2FA with the pending seed
+//   POST /2fa/disable   → { code }
+//   POST /unlock        → { code } opens trading for UNLOCK_MS
+//   POST /lock          → closes it now
+//
+// With 2FA on, opening risk (new orders, leverage, resume) needs an unlock;
+// cancels, kill and reduce-only / close-position orders always work. Live
+// trading refuses to run without 2FA.
 //
 // Keys for the active environment (config.env) are hot-swapped: saving or
 // deleting them restarts the Binance client and user data stream in place.
@@ -32,9 +42,11 @@ var { describeError } = require('./errors');
 var { createStore } = require('./credentials');
 var { validateKeys } = require('./keys');
 var { ENDPOINTS } = require('./config');
+var totp = require('./totp');
 var path = require('path');
 
 var MAX_BODY = 16 * 1024;
+var UNLOCK_MS = 12 * 60 * 60 * 1000;
 var RULES_REFRESH_MS = 60 * 60 * 1000;
 var TIME_SYNC_MS = 10 * 60 * 1000;
 
@@ -89,6 +101,66 @@ setInterval(function () {
   sseClients.forEach(function (res) { res.write(': ping\n\n'); });
 }, 15000);
 
+// ── 2FA ──────────────────────────────────────────────────────────────────
+
+var unlockedUntil = 0;
+var codeFails = [];
+
+function twoFactor() { return store ? store.getSecure('totp') : null; }
+function twoFactorEnabled() { var t = twoFactor(); return !!(t && t.enabled); }
+
+function terr(status, message) { return Object.assign(new Error(message), { name: 'TraderError', status: status }); }
+
+// Verifies a code against the enabled seed (or the pending one while
+// confirming), with replay protection and throttling of wrong codes.
+function checkCode(code, usePending) {
+  var now = Date.now();
+  codeFails = codeFails.filter(function (t) { return now - t < 15 * 60 * 1000; });
+  if (codeFails.length >= 5) throw terr(429, 'Too many wrong codes. Try again in 15 minutes.');
+  var t = twoFactor();
+  var seed = t && (usePending ? t.pending : (t.enabled && t.secret));
+  if (!seed) throw terr(400, usePending ? 'Start 2FA setup first' : '2FA is not set up');
+  var counter = totp.verify(seed, code, now);
+  if (counter == null || (!usePending && t.lastCounter != null && counter <= t.lastCounter)) {
+    codeFails.push(now);
+    throw terr(403, 'Wrong or already used code');
+  }
+  return counter;
+}
+
+// checkCode + remember the counter so the same code can't be reused
+function useCode(code) {
+  var counter = checkCode(code, false);
+  var t = twoFactor();
+  t.lastCounter = counter;
+  store.setSecure('totp', t);
+}
+
+function twoFactorStatus() {
+  return {
+    enabled: twoFactorEnabled(),
+    unlockedUntil: unlockedUntil > Date.now() ? unlockedUntil : 0,
+    required: config.env === 'mainnet',
+  };
+}
+
+function emitStatus() { trader.emit('event', { type: 'status', status: statusBody() }); }
+
+// Opening risk needs an unlock when 2FA is on; live needs 2FA at all.
+function requireUnlocked(b) {
+  var reducing = b && (b.reduceOnly === true || b.reduceOnly === 'true' || b.closePosition === true || b.closePosition === 'true');
+  if (reducing) return;
+  if (!twoFactorEnabled()) {
+    if (config.env === 'mainnet') throw terr(423, 'Set up 2FA in your account before live trading');
+    return;
+  }
+  if (unlockedUntil <= Date.now()) throw terr(423, 'Trading is locked — enter your 2FA code');
+}
+
+function locked(fn) {
+  return function (b, q) { requireUnlocked(b); return fn(b, q); };
+}
+
 function needKey(fn) {
   return function (b, q) {
     if (!client) throw Object.assign(new Error('No trading key saved for ' + config.env), { name: 'TraderError', status: 503 });
@@ -97,22 +169,62 @@ function needKey(fn) {
 }
 
 function statusBody() {
-  return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest, publicIp: config.publicIp, configured: !!client }, trader.getStatus());
+  return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest, publicIp: config.publicIp, configured: !!client, twoFactor: twoFactorStatus() }, trader.getStatus());
 }
 
 var routes = {
   'GET /status': statusBody,
   'GET /rules': function (b, q) { return trader.getRules(q.get('symbol')); },
   'GET /account': function () { return trader.getAccount(); },
-  'POST /order': needKey(function (b) { return trader.placeOrder(b); }),
+  'POST /order': needKey(locked(function (b) { return trader.placeOrder(b); })),
   'POST /cancel': needKey(function (b) { return trader.cancel(b); }),
   'POST /cancel-all': needKey(function (b) { return trader.cancelAll(b); }),
-  'POST /leverage': needKey(function (b) { return trader.setLeverage(b); }),
+  'POST /leverage': needKey(locked(function (b) { return trader.setLeverage(b); })),
   'POST /kill': needKey(function (b) { return trader.kill(b); }),
-  'POST /resume': function () { return trader.resume(); },
+  'POST /resume': locked(function () { return trader.resume(); }),
   'GET /keys': function () { return describeKeys(); },
   'POST /keys': function (b) { return saveKeys(b); },
   'POST /keys/delete': function (b) { return deleteKeys(b); },
+  'GET /2fa': function () { return twoFactorStatus(); },
+  'POST /2fa/setup': function () {
+    requireStore();
+    if (twoFactorEnabled()) throw terr(409, '2FA is already on — disable it first');
+    var secret = totp.generateSecret();
+    store.setSecure('totp', { pending: secret });
+    audit('2fa-setup', {}, { result: { started: true } });
+    return { secret: secret, uri: totp.otpauthUri(secret, 'trading', 'QuestTick') };
+  },
+  'POST /2fa/confirm': function (b) {
+    requireStore();
+    var counter = checkCode(b.code, true);
+    var t = twoFactor();
+    store.setSecure('totp', { secret: t.pending, enabled: true, lastCounter: counter, enabledAt: new Date().toISOString() });
+    audit('2fa-enable', {}, { result: { enabled: true } });
+    emitStatus();
+    return twoFactorStatus();
+  },
+  'POST /2fa/disable': function (b) {
+    requireStore();
+    checkCode(b.code, false);
+    store.setSecure('totp', null);
+    unlockedUntil = 0;
+    audit('2fa-disable', {}, { result: { enabled: false } });
+    emitStatus();
+    return twoFactorStatus();
+  },
+  'POST /unlock': function (b) {
+    useCode(b.code);
+    unlockedUntil = Date.now() + UNLOCK_MS;
+    audit('unlock', {}, { result: { until: new Date(unlockedUntil).toISOString() } });
+    emitStatus();
+    return twoFactorStatus();
+  },
+  'POST /lock': function () {
+    unlockedUntil = 0;
+    audit('lock', {}, { result: { locked: true } });
+    emitStatus();
+    return twoFactorStatus();
+  },
 };
 
 // ── Keys ───────────────────────────────────────────────────────────────────
@@ -130,6 +242,7 @@ function describeKeys() {
 
 async function saveKeys(b) {
   requireStore();
+  if (twoFactorEnabled()) useCode(b.code);
   var env = b.env, apiKey = String(b.apiKey || '').trim(), apiSecret = String(b.apiSecret || '').trim();
   if (!ENDPOINTS[env]) throw Object.assign(new Error('env must be testnet or mainnet'), { name: 'TraderError', status: 400 });
   if (!/^[A-Za-z0-9]{16,128}$/.test(apiKey) || !/^[A-Za-z0-9]{16,128}$/.test(apiSecret)) {
@@ -154,6 +267,7 @@ async function saveKeys(b) {
 
 function deleteKeys(b) {
   requireStore();
+  if (twoFactorEnabled()) useCode(b.code);
   if (!ENDPOINTS[b.env]) throw Object.assign(new Error('env must be testnet or mainnet'), { name: 'TraderError', status: 400 });
   store.remove(b.env);
   audit('keys-delete', { env: b.env }, { result: { ok: true } });

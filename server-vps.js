@@ -600,9 +600,13 @@ var TRADE_ROUTES = {
   'POST order': true, 'POST cancel': true, 'POST cancel-all': true,
   'POST leverage': true, 'POST kill': true, 'POST resume': true,
   'GET keys': true, 'POST keys': true, 'POST keys/delete': true,
+  'GET 2fa': true, 'POST 2fa/setup': true, 'POST 2fa/confirm': true, 'POST 2fa/disable': true,
+  'POST unlock': true, 'POST lock': true,
 };
+// Need the account password on top of the session (trader adds the 2FA code check)
+var PASSWORD_ACTIONS = { keys: true, 'keys/delete': true, '2fa/setup': true, '2fa/disable': true };
 // Commands allowed over the WebSocket shortcut — key management is HTTP-only (password-gated)
-var WS_TRADE_ACTIONS = { order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true };
+var WS_TRADE_ACTIONS = { order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true, unlock: true, lock: true };
 
 // Saving or deleting a trading key requires the account password, so a stolen
 // session alone can't swap the key. Wrong passwords are throttled.
@@ -624,8 +628,11 @@ async function checkTradingPassword(password) {
 function notifyKeyChange(action, env) {
   var chatId = alertsMemory[TRADER_USER_ID] && alertsMemory[TRADER_USER_ID].chatId;
   if (!chatId) return;
-  var what = action === 'keys' ? 'saved' : 'deleted';
-  sendTG(chatId, '🔐 Trading API key (' + env + ') was ' + what + ' in QuestTick.\nIf this wasn\'t you, change your password and revoke the key at the broker.');
+  var what = action === 'keys' ? 'Trading API key (' + env + ') was saved'
+    : action === 'keys/delete' ? 'Trading API key (' + env + ') was deleted'
+    : action === '2fa/setup' ? 'Trading 2FA setup was started'
+    : 'Trading 2FA was turned off';
+  sendTG(chatId, '🔐 ' + what + ' in QuestTick.\nIf this wasn\'t you, change your password and revoke the key at the broker.');
 }
 
 async function handleTradeRequest(req, res, action, query) {
@@ -652,7 +659,7 @@ async function handleTradeRequest(req, res, action, query) {
       });
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
-  var keyChange = req.method === 'POST' && (action === 'keys' || action === 'keys/delete');
+  var keyChange = req.method === 'POST' && PASSWORD_ACTIONS[action];
   var keyEnv = null;
   if (keyChange) {
     var kb;

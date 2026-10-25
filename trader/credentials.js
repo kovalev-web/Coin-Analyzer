@@ -63,6 +63,13 @@ function createStore(file, masterKeyHex) {
       delete all[env];
       save(all);
     },
+    // Other secrets kept in the same encrypted file (e.g. the 2FA seed)
+    getSecure: function (name) { return load()['_' + name] || null; },
+    setSecure: function (name, value) {
+      var all = load();
+      if (value == null) delete all['_' + name]; else all['_' + name] = value;
+      save(all);
+    },
     // Safe to show: no secret, key masked
     describe: function () {
       var all = load();

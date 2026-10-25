@@ -118,6 +118,8 @@ function _openPanel(sym) {
   }
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
+  T.lockKey = null;
+  _renderLock();
   _queueRender();
 }
 
@@ -157,6 +159,7 @@ function _panelHTML() {
     + '<div class="dom-scale"><button data-scale="-1" title="Finer">−</button><button data-scale="1" title="Coarser">+</button></div>'
     + '</div>'
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
+    + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume</span><span>Price</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-foot">'
@@ -326,6 +329,7 @@ on('trade:event', function (ev) {
     acc.balances.push(ev.balance);
   } else if (ev.type === 'status') {
     T.access = Object.assign({}, T.access, ev.status);
+    _renderLock(true);
   } else if (ev.type === 'fill') {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.quantity + ' ' + f.symbol.replace(/USDT$/, '') + ' @ ' + f.price);
@@ -771,8 +775,81 @@ function _viewOnlyBlocked() {
   return true;
 }
 
+// ── 2FA lock bar ─────────────────────────────────────────────────────────────
+// Opening risk needs an unlock when 2FA is on (the trader enforces it; this
+// just tells you before you click). Reduce-only / close / cancel always work.
+
+function _lockState() {
+  var f = T.access && T.access.twoFactor;
+  if (!f) return 'none';
+  if (!f.enabled) return f.required ? 'setup' : 'none';
+  return f.unlockedUntil > Date.now() ? 'open' : 'locked';
+}
+
+function _renderLock(force) {
+  var el = document.getElementById('dom-lock');
+  if (!el) return;
+  var st = _lockState();
+  var f = (T.access && T.access.twoFactor) || {};
+  var key = st + ':' + (f.unlockedUntil || 0);
+  if (!force && key === T.lockKey) return; // keep a half-typed code intact
+  T.lockKey = key;
+  clearTimeout(T.lockTimer);
+  if (st === 'none') { el.innerHTML = ''; el.className = 'dom-lock'; return; }
+  if (st === 'setup') {
+    el.className = 'dom-lock warn';
+    el.innerHTML = 'Set up 2FA in Account → Integrations to trade live';
+    return;
+  }
+  if (st === 'open') {
+    var t = new Date(f.unlockedUntil);
+    el.className = 'dom-lock open';
+    el.innerHTML = 'Unlocked until ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0')
+      + ' <button data-lock="1">Lock</button>';
+    T.lockTimer = setTimeout(function () { _renderLock(true); }, Math.max(1000, f.unlockedUntil - Date.now() + 500));
+    return;
+  }
+  el.className = 'dom-lock locked';
+  el.innerHTML = 'Locked · <input id="dom-unlock-code" inputmode="numeric" maxlength="6" placeholder="2FA code" autocomplete="one-time-code">'
+    + ' <button data-unlock="1">Unlock</button>';
+}
+
+function _unlock() {
+  var input = document.getElementById('dom-unlock-code');
+  var code = input ? input.value.trim() : '';
+  if (!/^\d{6}$/.test(code)) { _setStatus('Enter the 6-digit code from your authenticator', true); return; }
+  tradeRequest('POST', 'unlock', { code: code }).then(function (f) {
+    T.access = Object.assign({}, T.access, { twoFactor: f });
+    _renderLock(true);
+    _setStatus('Trading unlocked', false);
+  }).catch(function (e) {
+    if (input) input.value = '';
+    _setStatus(e.message, true);
+  });
+}
+
+function _lock() {
+  tradeRequest('POST', 'lock', {}).then(function (f) {
+    T.access = Object.assign({}, T.access, { twoFactor: f });
+    _renderLock(true);
+  }).catch(function (e) { _setStatus(e.message, true); });
+}
+
+function _lockedBlocked() {
+  var st = _lockState();
+  if (st === 'locked') {
+    _setStatus('Trading is locked — enter your 2FA code above', true);
+    var i = document.getElementById('dom-unlock-code');
+    if (i) i.focus();
+    return true;
+  }
+  if (st === 'setup') { _setStatus('Set up 2FA in your account before live trading', true); return true; }
+  return false;
+}
+
 function _onLevelClick(idx, side, shift) {
   if (_viewOnlyBlocked()) return;
+  if (!shift && _lockedBlocked()) return; // Shift = close-position SL/TP, always allowed
   if (!T.rules || !T.bids.length || !T.asks.length) return;
   // Ignore an accidental double click on the same level within 300ms
   var key = idx + ':' + side + ':' + shift;
@@ -858,6 +935,8 @@ function _bindPanel(panel) {
       panel.querySelectorAll('.dom-size').forEach(function (b) { b.classList.toggle('active', b === size); });
       return;
     }
+    if (e.target.closest('[data-unlock]')) { _unlock(); return; }
+    if (e.target.closest('[data-lock]')) { _lock(); return; }
     var lv = e.target.closest('[data-live]');
     if (lv) {
       T.viewLive = !T.viewLive;
@@ -889,6 +968,10 @@ function _bindPanel(panel) {
     var idx = Number(row.dataset.idx);
     if (e.target.closest('.dom-c-mine.has')) { if (e.button === 0) _cancelAtLevel(idx); return; }
     _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey);
+  });
+
+  panel.addEventListener('keydown', function (e) {
+    if (e.target.id === 'dom-unlock-code' && e.key === 'Enter') { e.preventDefault(); _unlock(); }
   });
 
   panel.addEventListener('contextmenu', function (e) {
