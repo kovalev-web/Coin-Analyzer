@@ -27,7 +27,7 @@ var HOTKEYS = [
   ['Shift + click', 'Stop-loss / take-profit'],
   ['Option + click', 'Stop order: buy above the market, sell below'],
   ['Click on Mine', 'Cancel your orders there'],
-  ['Space', 'Close the position'],
+  ['Space', 'Close the position and cancel all orders on the coin'],
   ['X', 'Cancel all orders on the coin'],
   ['+ / −', 'Coarser / finer price scale'],
   ['1 … 6', 'Order size slot 1 … 6'],
@@ -1366,14 +1366,21 @@ function _cancelAtLevel(idx) {
   _queueRender();
 }
 
+// Space: flat on this coin — cancel every resting order (limits, stop entries,
+// SL/TP) and market-close the position, both at once
 function _closePosition() {
   var pos = _position();
-  if (!pos) { _setStatus('No position to close', true); return; }
+  var hasOrders = T.account.orders.some(function (o) { return o.symbol === T.sym; })
+    || T.account.algoOrders.some(function (a) { return a.symbol === T.sym; });
+  if (!pos && !hasOrders) { _setStatus('No position or orders to close', true); return; }
+  var coin = T.sym.replace(/USDT$/, '');
+  if (hasOrders) _send('cancel-all', { symbol: T.sym }, pos ? null : 'All orders on ' + coin + ' cancelled').catch(function () {});
+  if (!pos) return;
   var amt = Number(pos.amount);
   _send('order', {
     clientOrderId: _clientId(), symbol: T.sym, side: amt > 0 ? 'SELL' : 'BUY', type: 'MARKET',
     quantity: String(Math.abs(amt)), reduceOnly: true,
-  }, 'Closing position');
+  }, hasOrders ? 'Closing position, orders cancelled' : 'Closing position').catch(function () {});
 }
 
 function _cancelAll() {
