@@ -838,8 +838,9 @@ function _renderFoot() {
   var pos = _position();
   var usdt = T.account.balances.find(function (b) { return b.asset === 'USDT'; });
   var avail = usdt && usdt.availableBalance != null ? Number(usdt.availableBalance).toFixed(2) : '—';
+  var html;
   if (!pos) {
-    el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b>Flat</b></div>'
+    html = '<div class="dom-pos-row"><span>Position</span><b>Flat</b></div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   } else {
     var amt = Number(pos.amount);
@@ -847,16 +848,71 @@ function _renderFoot() {
     var pnlHtml = info
       ? '<b class="dom-pnl ' + (info.up ? 'up' : 'dn') + '">' + _fmtPnl(info) + '</b>'
       : '<b>—</b>';
-    el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)) + ' USDT</b></div>'
+    html = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)) + ' USDT</b></div>'
       + '<div class="dom-pos-row"><span>Entry</span><b>' + pos.entryPrice + '</b></div>'
       + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   }
+  html += _ordersAroundHTML();
+  // Rebuilt only on change: the order rows are clickable and must not be replaced under the mouse
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
   var st = document.getElementById('dom-status');
   if (st && T.access && !T.access.tradingEnabled) {
     st.textContent = 'Trading is disabled by the kill switch';
     st.className = 'dom-status err';
   }
+}
+
+// Your orders on this coin above and below the current price, summed per kind,
+// so you know they're there even when the ladder doesn't show them.
+// Click → scroll the ladder to the nearest one.
+function _ordersAround() {
+  var ref = T.lastTrade ? T.lastTrade.price : T.bids.length && T.asks.length ? (T.bids[0][0] + T.asks[0][0]) / 2 : null;
+  if (!ref) return null;
+  var side = { up: { kinds: {}, order: [], nearest: null }, down: { kinds: {}, order: [], nearest: null } };
+  function add(price, kind, usd) {
+    var s = price > ref ? side.up : side.down;
+    if (!s.kinds[kind]) { s.kinds[kind] = { kind: kind, usd: null, n: 0 }; s.order.push(kind); }
+    var k = s.kinds[kind];
+    k.n++;
+    if (usd != null) k.usd = (k.usd || 0) + usd;
+    if (s.nearest == null || Math.abs(price - ref) < Math.abs(s.nearest - ref)) s.nearest = price;
+  }
+  T.account.orders.forEach(function (o) {
+    if (o.symbol !== T.sym) return;
+    add(Number(o.price), o.side === 'BUY' ? 'B' : 'S', (Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price));
+  });
+  T.account.algoOrders.forEach(function (a) {
+    if (a.symbol !== T.sym) return;
+    var entry = _isStopEntry(a);
+    add(Number(a.triggerPrice), entry ? (a.side === 'BUY' ? 'BS' : 'SS') : a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL',
+      entry ? Number(a.quantity) * Number(a.triggerPrice) : null);
+  });
+  return side;
+}
+
+function _ordersAroundHTML() {
+  var a = _ordersAround();
+  if (!a) return '';
+  function row(dir, label) {
+    var s = a[dir];
+    var body = s.order.length
+      ? s.order.map(function (k) {
+          var g = s.kinds[k];
+          return '<span class="dom-mine ' + k.toLowerCase() + '">' + k + (g.usd != null ? ' ' + _fmtQty(g.usd) : '') + (g.n > 1 && g.usd == null ? ' ×' + g.n : '') + '</span>';
+        }).join('')
+      : '<span class="dom-around-none">none</span>';
+    return '<div class="dom-pos-row dom-around' + (s.order.length ? ' has' : '') + '"' + (s.order.length ? ' data-jump="' + s.nearest + '" title="Show in the order book"' : '') + '>'
+      + '<span>' + label + '</span><span class="dom-around-list">' + body + '</span></div>';
+  }
+  return row('up', 'Orders above ↑') + row('down', 'Orders below ↓');
+}
+
+function _jumpTo(price) {
+  if (!T.rules || !T.rows) return;
+  T.top = Math.round(price / _step()) + Math.floor(T.rows / 2);
+  T.pinned = true; // stay there until the mouse leaves the panel
+  _queueRender();
 }
 
 function _fmtUsd(n) { return n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2); }
@@ -1308,6 +1364,8 @@ function _bindPanel(panel) {
   });
 
   panel.addEventListener('click', function (e) {
+    var jump = e.target.closest('[data-jump]');
+    if (jump) { _jumpTo(Number(jump.dataset.jump)); return; }
     var md = e.target.closest('[data-mode]');
     if (md) { _switchMode(md.dataset.mode); return; }
     if (e.target.closest('[data-settings]')) { _openSettings(); return; }
