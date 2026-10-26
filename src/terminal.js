@@ -1044,7 +1044,6 @@ function _render() {
     var row = ladder.children[r];
     var cls = 'dom-row';
     if (i >= askIdx) cls += ' ask'; else if (i <= bidIdx) cls += ' bid'; else cls += ' spread';
-    if (i === entryIdx) cls += ' entry';
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (tradeIdx === i) cls += tradeCls;
     if (T.drag && T.drag.moved && T.drag.toIdx === i) cls += ' drop-target';
@@ -1058,7 +1057,7 @@ function _render() {
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];
-    var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? _sumByKind(m).map(function (x) {
+    var mineHtml = (m ? _sumByKind(m).map(function (x) {
       return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '" data-kind="' + x.kind + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
@@ -1771,7 +1770,7 @@ document.addEventListener('mousemove', function (e) {
   var to = Number(row.dataset.idx);
   if (to === T.drag.toIdx) return;
   T.drag.toIdx = to;
-  if (to !== T.drag.fromIdx && T.drag.kind && T.drag.kind !== 'ENTRY') {
+  if (to !== T.drag.fromIdx && T.drag.kind) {
     T.drag.moved = true;
     document.body.classList.add('dom-dragging');
   }
