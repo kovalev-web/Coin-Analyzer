@@ -856,7 +856,9 @@ async function openExposureMessage() {
     if (!r.ok) return null;
     var acc = await r.json();
     var pos = (acc.positions || []).filter(function (p) { return Number(p.amount) !== 0; });
-    var entries = (acc.orders || []).filter(function (o) { return !o.reduceOnly; });
+    // Resting entries: limit orders and stop entries (algo STOP_MARKET with a quantity)
+    var entries = (acc.orders || []).filter(function (o) { return !o.reduceOnly; })
+      .concat((acc.algoOrders || []).filter(function (a) { return !a.reduceOnly && !a.closePosition; }));
     if (pos.length) return 'Close your open position' + (pos.length > 1 ? 's' : '') + ' first: ' + pos.map(function (p) { return p.symbol.replace(/USDT$/, ''); }).join(', ');
     if (entries.length) return 'Cancel your open entry orders first: ' + entries.map(function (o) { return o.symbol.replace(/USDT$/, ''); }).join(', ');
     return null;

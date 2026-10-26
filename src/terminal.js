@@ -4,6 +4,8 @@
 //   below the market a buy rests as a limit order; at/through it fills now
 //   (limit IOC at the clicked price, so a fast market can't fill worse)
 //   Shift+click → stop-loss / take-profit for the open position (close-position)
+//   Option(Alt)+click → stop entry (STOP_MARKET with quantity): above the ask a
+//   buy stop, below the bid a sell stop — direction by price, like Tiger
 //   click on "Mine" cell → cancel your orders on that level
 //   hotkeys while the mouse is over the ladder: Space = close position, X = cancel all
 // Ladder data comes from the trader's own environment (testnet or live), never
@@ -23,6 +25,7 @@ var HOTKEYS = [
   ['Left click', 'Buy at the level'],
   ['Right click', 'Sell at the level'],
   ['Shift + click', 'Stop-loss / take-profit'],
+  ['Option + click', 'Stop order: buy above the market, sell below'],
   ['Click on Mine', 'Cancel your orders there'],
   ['Space', 'Close the position'],
   ['X', 'Cancel all orders on the coin'],
@@ -584,7 +587,11 @@ function _myOrdersByIdx(step) {
   });
   T.account.algoOrders.forEach(function (a) {
     if (a.symbol !== T.sym) return;
-    add(Math.round(Number(a.triggerPrice) / step), { kind: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', qty: null, algo: a, cancelling: !!T.cancelling['a' + a.algoId] });
+    var entry = _isStopEntry(a);
+    add(Math.round(Number(a.triggerPrice) / step), {
+      kind: entry ? (a.side === 'BUY' ? 'BS' : 'SS') : a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL',
+      qty: entry ? Number(a.quantity) : null, algo: a, cancelling: !!T.cancelling['a' + a.algoId],
+    });
   });
   Object.keys(T.pending).forEach(function (id) {
     var p = T.pending[id];
@@ -929,7 +936,9 @@ function _syncLines() {
     if (o.symbol === T.sym) specs.push({ price: Number(o.price), color: o.side === 'BUY' ? '--bullish' : '--danger', title: (o.side === 'BUY' ? 'B ' : 'S ') + o.origQty, style: 2 });
   });
   T.account.algoOrders.forEach(function (a) {
-    if (a.symbol === T.sym) specs.push({ price: Number(a.triggerPrice), color: a.type === 'TAKE_PROFIT_MARKET' ? '--bullish' : '--danger', title: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', style: 1 });
+    if (a.symbol !== T.sym) return;
+    if (_isStopEntry(a)) specs.push({ price: Number(a.triggerPrice), color: a.side === 'BUY' ? '--bullish' : '--danger', title: a.side === 'BUY' ? 'Buy stop' : 'Sell stop', style: 2 });
+    else specs.push({ price: Number(a.triggerPrice), color: a.type === 'TAKE_PROFIT_MARKET' ? '--bullish' : '--danger', title: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', style: 1 });
   });
   var key = JSON.stringify(specs);
   if (series === T.linesSeries && key === T.linesKey) return;
@@ -1124,12 +1133,12 @@ function _lockedBlocked() {
   return false;
 }
 
-function _onLevelClick(idx, side, shift) {
+function _onLevelClick(idx, side, shift, alt) {
   if (_viewOnlyBlocked()) return;
   if (!shift && _lockedBlocked()) return; // Shift = close-position SL/TP, always allowed
   if (!T.rules || !T.bids.length || !T.asks.length) return;
   // Ignore an accidental double click on the same level within 300ms
-  var key = idx + ':' + side + ':' + shift;
+  var key = idx + ':' + side + ':' + shift + ':' + alt;
   var now = Date.now();
   if (T.lastClick.key === key && now - T.lastClick.at < 300) return;
   T.lastClick = { key: key, at: now };
@@ -1138,6 +1147,7 @@ function _onLevelClick(idx, side, shift) {
   var bestBid = T.bids[0][0], bestAsk = T.asks[0][0];
 
   if (shift) return _placeProtective(price, bestBid, bestAsk);
+  if (alt) return _placeStopEntry(price, bestBid, bestAsk);
 
   var qty = T.size / price;
   var through = side === 'BUY' ? price >= bestAsk : price <= bestBid;
@@ -1146,6 +1156,19 @@ function _onLevelClick(idx, side, shift) {
     price: String(price), quantity: String(qty), timeInForce: through ? 'IOC' : 'GTC',
   }, price, side === 'BUY' ? 'B' : 'S', (side === 'BUY' ? 'Buy ' : 'Sell ') + (through ? 'now up to ' : 'limit at ') + price);
 }
+
+// Pending entry: buy when the price rises to the level, sell when it falls to it.
+// Market on trigger (fills even in a fast move; may slip by the spread).
+function _placeStopEntry(price, bestBid, bestAsk) {
+  var side = price > bestAsk ? 'BUY' : price < bestBid ? 'SELL' : null;
+  if (!side) { _setStatus('Stop orders go above the ask (buy) or below the bid (sell)', true); return; }
+  _placeOptimistic({
+    clientOrderId: _clientId(), symbol: T.sym, side: side, type: 'STOP_MARKET',
+    triggerPrice: String(price), quantity: String(T.size / price),
+  }, price, side === 'BUY' ? 'BS' : 'SS', (side === 'BUY' ? 'Buy stop at ' : 'Sell stop at ') + price);
+}
+
+function _isStopEntry(a) { return a.type === 'STOP_MARKET' && !a.closePosition && !a.reduceOnly; }
 
 function _placeProtective(price, bestBid, bestAsk) {
   var pos = _position();
@@ -1244,7 +1267,7 @@ function _bindPanel(panel) {
     e.preventDefault();
     var idx = Number(row.dataset.idx);
     if (e.target.closest('.dom-c-mine.has')) { if (e.button === 0) _cancelAtLevel(idx); return; }
-    _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey);
+    _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey, e.altKey);
   });
 
   panel.addEventListener('keydown', function (e) {
