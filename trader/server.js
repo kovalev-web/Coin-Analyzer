@@ -10,6 +10,7 @@
 //   POST /order         → place (MARKET | LIMIT | STOP_MARKET | TAKE_PROFIT_MARKET)
 //   POST /cancel        → { symbol, orderId | clientOrderId } or { algoId | clientAlgoId }
 //   POST /cancel-all    → { symbol }
+//   POST /move          → { symbol, orderId | algoId, price } drag in the ladder
 //   POST /leverage      → { symbol, leverage }
 //   POST /kill          → { closePositions? }  — disable trading + cancel everything
 //   POST /resume        → re-enable trading
@@ -192,6 +193,8 @@ var routes = {
   'GET /account': function () { return trader.getAccount(); },
   'POST /order': needKey(locked(function (b) { return trader.placeOrder(b); })),
   'POST /cancel': needKey(function (b) { return trader.cancel(b); }),
+  // Opening-risk orders need the 2FA unlock (checked inside, after reading the order)
+  'POST /move': needKey(function (b) { return trader.move(b, { requireUnlocked: function () { requireUnlocked({}); } }); }),
   'POST /cancel-all': needKey(function (b) { return trader.cancelAll(b); }),
   'POST /leverage': needKey(locked(function (b) { return trader.setLeverage(b); })),
   'POST /kill': needKey(function (b) { return trader.kill(b); }),

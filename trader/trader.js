@@ -8,12 +8,13 @@ var EventEmitter = require('events');
 var fs = require('fs');
 var path = require('path');
 var st = require('./state');
-var { parseExchangeInfo, applyFilters } = require('./filters');
+var { parseExchangeInfo, applyFilters, toStep } = require('./filters');
 
 var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 var BALANCE_REFRESH_DEBOUNCE_MS = 1000;
 var CLIENT_ID_RE = /^[\.A-Za-z0-9:\/_-]{1,36}$/; // Binance's allowed newClientOrderId charset
 var SYMBOL_RE = /^[A-Z0-9]{2,30}$/;
+var MOVABLE_ORDER = { NEW: true, PARTIALLY_FILLED: true };
 var REGULAR_TYPES = { MARKET: true, LIMIT: true };
 var ALGO_TYPES = { STOP_MARKET: true, TAKE_PROFIT_MARKET: true };
 var TIME_IN_FORCE = { GTC: true, IOC: true, FOK: true, GTX: true };
@@ -281,6 +282,83 @@ class Trader extends EventEmitter {
       throw new TraderError(400, 'closePosition is only for STOP_MARKET / TAKE_PROFIT_MARKET');
     }
     return order;
+  }
+
+  // ── Move (drag in the ladder) ──────────────────────────────────────────
+  // LIMIT: modified in place (same id and quantity, new price).
+  // Algo (stop entry, SL/TP): Binance can't modify them, so after checking the
+  // new trigger won't fire at once, it is cancelled and placed again with the
+  // same parameters; if that fails, the old one is put back.
+  // opts.requireUnlocked() is called when the order opens risk (not reduce-only).
+  async move(input, opts) {
+    var symbol = String(input.symbol || '').toUpperCase();
+    if (!SYMBOL_RE.test(symbol)) throw new TraderError(400, 'Invalid symbol');
+    var rules = this.rules[symbol];
+    if (!rules) throw new TraderError(400, 'Unknown symbol ' + symbol);
+    var price = Number(input.price);
+    if (!(price > 0)) throw new TraderError(400, 'price must be greater than 0');
+    var to = toStep(price, rules.tickSize, 'round');
+    var c = this.client;
+    var guard = (opts && opts.requireUnlocked) || function () {};
+
+    if (input.orderId) {
+      var o = await c.request('GET', '/fapi/v1/order', { symbol: symbol, orderId: input.orderId });
+      if (o.type !== 'LIMIT' || !MOVABLE_ORDER[o.status]) throw new TraderError(400, 'Only open limit orders can be moved');
+      if (!o.reduceOnly) { this._requireTrading(); guard(); }
+      // A limit moved through the market would fill at once: refuse instead
+      var bt = await c.request('GET', '/fapi/v1/ticker/bookTicker', { symbol: symbol }, false);
+      if (o.side === 'BUY' ? Number(to) >= Number(bt.askPrice) : Number(to) <= Number(bt.bidPrice)) {
+        throw new TraderError(400, 'At ' + to + ' the ' + (o.side === 'BUY' ? 'buy' : 'sell') + ' limit would fill at once ('
+          + (o.side === 'BUY' ? 'ask ' + bt.askPrice : 'bid ' + bt.bidPrice) + ')');
+      }
+      var req = { symbol: symbol, orderId: o.orderId, side: o.side, quantity: o.origQty, price: to };
+      var res = await this._audited('move', req, c.request('PUT', '/fapi/v1/order', req));
+      return { order: st.orderFromRest(res) };
+    }
+
+    if (!input.algoId) throw new TraderError(400, 'orderId or algoId is required');
+    var a = st.algoFromRest(await c.request('GET', '/fapi/v1/algoOrder', { algoId: input.algoId }));
+    if (a.symbol !== symbol || a.status !== 'NEW') throw new TraderError(400, 'Only waiting stop orders can be moved');
+    if (!a.closePosition && !a.reduceOnly) { this._requireTrading(); guard(); }
+    var ref = await this._refPrice(symbol, a.workingType);
+    // Fires when the price rises to it: buy stop, sell take-profit; else when it falls
+    var firesUp = (a.type === 'STOP_MARKET') === (a.side === 'BUY');
+    if (firesUp ? !(Number(to) > ref) : !(Number(to) < ref)) {
+      throw new TraderError(400, 'At ' + to + ' the order would trigger at once (' + (a.workingType === 'CONTRACT_PRICE' ? 'last' : 'mark') + ' price ' + ref + ')');
+    }
+    await this._audited('cancel-algo', { algoId: a.algoId }, c.request('DELETE', '/fapi/v1/algoOrder', { algoId: a.algoId }));
+    var self = this;
+    function place(trigger, tag) {
+      var p = {
+        algoType: 'CONDITIONAL', symbol: symbol, side: a.side, type: a.type,
+        quantity: a.closePosition ? undefined : a.quantity,
+        closePosition: a.closePosition ? 'true' : undefined,
+        reduceOnly: a.reduceOnly && !a.closePosition ? 'true' : undefined,
+        triggerPrice: trigger, workingType: a.workingType || 'MARK_PRICE',
+        clientAlgoId: tag + '-' + Date.now(), newOrderRespType: 'RESULT',
+      };
+      return self._audited('move-algo', p, c.request('POST', '/fapi/v1/algoOrder', p)).then(function (r) { return { algo: st.algoFromRest(r) }; });
+    }
+    try {
+      return await place(to, 'mv');
+    } catch (e) {
+      try {
+        await place(a.triggerPrice, 'rb');
+        e.message += ' — the order is back at ' + a.triggerPrice;
+      } catch (e2) {
+        e.message += ' — and it could not be put back: the order is GONE, place it again';
+        e.lost = true;
+      }
+      throw e;
+    }
+  }
+
+  // Price the trigger is compared with on Binance
+  async _refPrice(symbol, workingType) {
+    if (workingType === 'CONTRACT_PRICE') {
+      return Number((await this.client.request('GET', '/fapi/v1/ticker/price', { symbol: symbol }, false)).price);
+    }
+    return Number((await this.client.request('GET', '/fapi/v1/premiumIndex', { symbol: symbol }, false)).markPrice);
   }
 
   // Cancels are always allowed, even with trading disabled.

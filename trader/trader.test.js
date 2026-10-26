@@ -169,3 +169,87 @@ test('stream events during resync are buffered and applied after the snapshot', 
   assert.ok(t.state.orders[9]);
   assert.deepEqual(events, ['order', 'snapshot']);
 });
+
+// ── move (drag in the ladder) ────────────────────────────────────────────────
+
+test('move: a limit order is modified in place, same quantity, price on the tick', async () => {
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/order': () => ({ orderId: 7, symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', status: 'NEW', origQty: '0.005', price: '79000.0', reduceOnly: false }),
+    'PUT /fapi/v1/order': (p) => ({ orderId: 7, symbol: p.symbol, side: p.side, type: 'LIMIT', status: 'NEW', origQty: p.quantity, price: p.price }),
+    'GET /fapi/v1/ticker/bookTicker': () => ({ bidPrice: '79990.0', askPrice: '80000.0' }),
+  });
+  let guarded = 0;
+  const r = await t.move({ symbol: 'BTCUSDT', orderId: 7, price: '78950.04' }, { requireUnlocked: () => { guarded++; } });
+  const put = callsTo(client, 'PUT', '/fapi/v1/order')[0].params;
+  assert.deepEqual([put.orderId, put.side, put.quantity, put.price], [7, 'BUY', '0.005', '78950.0']);
+  assert.equal(r.order.price, '78950.0');
+  assert.equal(guarded, 1); // an entry order needs the 2FA unlock
+});
+
+test('move: a reduce-only limit skips the unlock check', async () => {
+  const { t } = await makeTrader({
+    'GET /fapi/v1/order': () => ({ orderId: 8, symbol: 'BTCUSDT', side: 'SELL', type: 'LIMIT', status: 'NEW', origQty: '0.005', price: '81000.0', reduceOnly: true }),
+    'PUT /fapi/v1/order': (p) => ({ orderId: 8, symbol: p.symbol, side: p.side, type: 'LIMIT', status: 'NEW', origQty: p.quantity, price: p.price }),
+    'GET /fapi/v1/ticker/bookTicker': () => ({ bidPrice: '79990.0', askPrice: '80000.0' }),
+  });
+  await t.move({ symbol: 'BTCUSDT', orderId: 8, price: '81500' }, { requireUnlocked: () => { throw new Error('locked'); } });
+});
+
+const SL = { algoId: 5, symbol: 'BTCUSDT', side: 'SELL', orderType: 'STOP_MARKET', algoStatus: 'NEW', triggerPrice: '78000.0', closePosition: true, workingType: 'MARK_PRICE' };
+
+test('move: a stop-loss is cancelled and placed again at the new trigger', async () => {
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/algoOrder': () => SL,
+    'GET /fapi/v1/premiumIndex': () => ({ markPrice: '80000' }),
+    'DELETE /fapi/v1/algoOrder': () => ({ code: 200 }),
+  });
+  const r = await t.move({ symbol: 'BTCUSDT', algoId: 5, price: '78500.03' }, { requireUnlocked: () => { throw new Error('locked'); } });
+  assert.equal(callsTo(client, 'DELETE', '/fapi/v1/algoOrder').length, 1);
+  const post = callsTo(client, 'POST', '/fapi/v1/algoOrder')[0].params;
+  assert.deepEqual([post.type, post.side, post.closePosition, post.triggerPrice, post.quantity], ['STOP_MARKET', 'SELL', 'true', '78500.0', undefined]);
+  assert.equal(r.algo.triggerPrice, '78500.0');
+});
+
+test('move: a trigger that would fire at once is refused before anything is cancelled', async () => {
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/algoOrder': () => SL,
+    'GET /fapi/v1/premiumIndex': () => ({ markPrice: '80000' }),
+  });
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', algoId: 5, price: '80100' }), /trigger at once/);
+  assert.equal(callsTo(client, 'DELETE', '/fapi/v1/algoOrder').length, 0);
+});
+
+test('move: if the new stop is rejected, the old one is put back', async () => {
+  let n = 0;
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/algoOrder': () => SL,
+    'GET /fapi/v1/premiumIndex': () => ({ markPrice: '80000' }),
+    'DELETE /fapi/v1/algoOrder': () => ({ code: 200 }),
+    'POST /fapi/v1/algoOrder': (p) => {
+      if (++n === 1) throw new BinanceError('Order would immediately trigger.', { status: 400, code: -2021 });
+      return { algoId: 6, symbol: p.symbol, side: p.side, orderType: p.type, algoStatus: 'NEW', triggerPrice: p.triggerPrice, closePosition: true };
+    },
+  });
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', algoId: 5, price: '79000' }), /immediately trigger\. — the order is back at 78000\.0/);
+  const posts = callsTo(client, 'POST', '/fapi/v1/algoOrder').map((c) => c.params.triggerPrice);
+  assert.deepEqual(posts, ['79000.0', '78000.0']);
+});
+
+test('move: a buy stop entry needs the unlock and must stay above the price', async () => {
+  const BS = { algoId: 9, symbol: 'BTCUSDT', side: 'BUY', orderType: 'STOP_MARKET', algoStatus: 'NEW', triggerPrice: '81000.0', quantity: '0.002', closePosition: false, reduceOnly: false, workingType: 'MARK_PRICE' };
+  const { t } = await makeTrader({
+    'GET /fapi/v1/algoOrder': () => BS,
+    'GET /fapi/v1/premiumIndex': () => ({ markPrice: '80000' }),
+  });
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', algoId: 9, price: '81500' }, { requireUnlocked: () => { throw new Error('locked'); } }), /locked/);
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', algoId: 9, price: '79900' }), /trigger at once/);
+});
+
+test('move: a limit moved through the market is refused, nothing is modified', async () => {
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/order': () => ({ orderId: 7, symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', status: 'NEW', origQty: '0.005', price: '79000.0', reduceOnly: false }),
+    'GET /fapi/v1/ticker/bookTicker': () => ({ bidPrice: '79990.0', askPrice: '80000.0' }),
+  });
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', orderId: 7, price: '80000' }), /fill at once/);
+  assert.equal(callsTo(client, 'PUT', '/fapi/v1/order').length, 0);
+});

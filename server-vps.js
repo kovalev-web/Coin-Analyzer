@@ -724,13 +724,13 @@ var TRADER_URL             = process.env.TRADER_URL || 'http://127.0.0.1:3010';
 // Only trading commands and their reads switch to it; keys, 2FA and journal
 // history always go to the live trader. No day gate in test mode.
 var TRADER_TEST_URL        = process.env.TRADER_TEST_URL || 'http://127.0.0.1:3011';
-var TEST_ACTIONS = { status: true, account: true, rules: true, order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true, day: true };
+var TEST_ACTIONS = { status: true, account: true, rules: true, order: true, cancel: true, 'cancel-all': true, move: true, leverage: true, kill: true, resume: true, day: true };
 function traderUrlFor(action, env) { return env === 'test' && TEST_ACTIONS[action] ? TRADER_TEST_URL : TRADER_URL; }
 var TRADER_INTERNAL_SECRET = process.env.TRADER_INTERNAL_SECRET || '';
 var TRADER_USER_ID         = process.env.TRADER_USER_ID || '';
 var TRADE_ROUTES = {
   'GET status': true, 'GET account': true, 'GET rules': true,
-  'POST order': true, 'POST cancel': true, 'POST cancel-all': true,
+  'POST order': true, 'POST cancel': true, 'POST cancel-all': true, 'POST move': true,
   'POST leverage': true, 'POST kill': true, 'POST resume': true,
   'GET keys': true, 'POST keys': true, 'POST keys/delete': true,
   'GET 2fa': true, 'POST 2fa/setup': true, 'POST 2fa/confirm': true, 'POST 2fa/disable': true,
@@ -740,7 +740,7 @@ var TRADE_ROUTES = {
 // Need the account password on top of the session (trader adds the 2FA code check)
 var PASSWORD_ACTIONS = { keys: true, 'keys/delete': true, '2fa/setup': true, '2fa/disable': true };
 // Commands allowed over the WebSocket shortcut — key management is HTTP-only (password-gated)
-var WS_TRADE_ACTIONS = { order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true, unlock: true, lock: true };
+var WS_TRADE_ACTIONS = { order: true, cancel: true, 'cancel-all': true, move: true, leverage: true, kill: true, resume: true, unlock: true, lock: true };
 
 // Saving or deleting a trading key requires the account password, so a stolen
 // session alone can't swap the key. Wrong passwords are throttled.
@@ -798,7 +798,7 @@ async function handleTradeRequest(req, res, action, query) {
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
   if (action === 'day') return json(200, tenv === 'test' ? { open: true, reason: null, test: true } : await tradingDay());
-  if (tenv === 'live' && req.method === 'POST' && (action === 'order' || action === 'leverage' || action === 'resume')) {
+  if (tenv === 'live' && req.method === 'POST' && (action === 'order' || action === 'move' || action === 'leverage' || action === 'resume')) {
     var gb;
     try { gb = JSON.parse(body || '{}'); } catch (e) { gb = {}; }
     var gateErr = await dayGateError(action, gb);
@@ -850,6 +850,8 @@ async function tradingDay() {
 
 function opensRisk(action, body) {
   if (action === 'leverage' || action === 'resume') return true;
+  // Dragging an SL / TP / reduce-only order is allowed after hours; moving an entry is not
+  if (action === 'move') return !(body && body.reducing === true);
   if (action !== 'order') return false;
   var b = body || {};
   var reducing = b.reduceOnly === true || b.reduceOnly === 'true' || b.closePosition === true || b.closePosition === 'true';

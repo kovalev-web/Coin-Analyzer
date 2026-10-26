@@ -6,7 +6,7 @@
 //   Shift+click → stop-loss / take-profit for the open position (close-position)
 //   Option(Alt)+click → stop entry (STOP_MARKET with quantity): above the ask a
 //   buy stop, below the bid a sell stop — direction by price, like Tiger
-//   click on "Mine" cell → cancel your orders on that level
+//   click on "Mine" cell → cancel your orders on that level; drag it → move them
 //   hotkeys while the mouse is over the ladder: Space = close position, X = cancel all
 // Ladder data comes from the trader's own environment (testnet or live), never
 // from the main chart feed: testnet prices differ from the real market.
@@ -27,6 +27,7 @@ var HOTKEYS = [
   ['Shift + click', 'Stop-loss / take-profit'],
   ['Option + click', 'Stop order: buy above the market, sell below'],
   ['Click on Mine', 'Cancel your orders there'],
+  ['Drag on Mine', 'Move your orders to another price'],
   ['Space', 'Close the position and cancel all orders on the coin'],
   ['X', 'Cancel all orders on the coin'],
   ['+ / −', 'Coarser / finer price scale'],
@@ -786,6 +787,7 @@ function _render() {
     if (i === entryIdx) cls += ' entry';
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (tradeIdx === i) cls += tradeCls;
+    if (T.drag && T.drag.moved && T.drag.toIdx === i) cls += ' drop-target';
     if (marks[i]) cls += marks[i];
     // Faint row tint where your orders rest: green for buy-colored kinds, red for sell
     if (mine[i]) {
@@ -797,7 +799,7 @@ function _render() {
     row.dataset.idx = i;
     var m = mine[i];
     var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? _sumByKind(m).map(function (x) {
-      return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
+      return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '" data-kind="' + x.kind + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
@@ -1434,7 +1436,13 @@ function _bindPanel(panel) {
     if (!row) return;
     e.preventDefault();
     var idx = Number(row.dataset.idx);
-    if (e.target.closest('.dom-c-mine.has')) { if (e.button === 0) _cancelAtLevel(idx); return; }
+    if (e.target.closest('.dom-c-mine.has')) {
+      // Press on your order: a click cancels it, a drag moves it (see _dragMove / _dragEnd)
+      if (e.button !== 0) return;
+      var label = e.target.closest('.dom-mine[data-kind]');
+      T.drag = { fromIdx: idx, toIdx: idx, kind: label ? label.dataset.kind : null, moved: false };
+      return;
+    }
     // Orders only from the Volume and Price columns; the Mine column and the gaps do nothing
     if (!e.target.closest('.dom-c-vol, .dom-c-price')) return;
     _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey, e.altKey);
@@ -1474,7 +1482,97 @@ function _changeScale(dir) {
   _queueRender();
 }
 
+// ── Drag your order to another level ────────────────────────────────────────
+// A press on a Mine label starts it; moving to another row turns it into a drag
+// (the target row is outlined), releasing there moves the orders of that kind;
+// releasing on the same row is a click and cancels them. Esc aborts the drag.
+
+document.addEventListener('mousemove', function (e) {
+  if (!T.drag) return;
+  var row = document.elementFromPoint(e.clientX, e.clientY);
+  row = row && row.closest('#dom-ladder .dom-row');
+  if (!row) return;
+  var to = Number(row.dataset.idx);
+  if (to === T.drag.toIdx) return;
+  T.drag.toIdx = to;
+  if (to !== T.drag.fromIdx && T.drag.kind && T.drag.kind !== 'ENTRY') {
+    T.drag.moved = true;
+    document.body.classList.add('dom-dragging');
+  }
+  _queueRender();
+});
+
+document.addEventListener('mouseup', function (e) {
+  var d = T.drag;
+  if (!d || e.button !== 0) return;
+  T.drag = null;
+  document.body.classList.remove('dom-dragging');
+  if (!d.moved) { _cancelAtLevel(d.fromIdx); return; }
+  if (d.toIdx !== d.fromIdx) _moveLevel(d.fromIdx, d.kind, d.toIdx);
+  _queueRender();
+});
+
+function _moveLevel(fromIdx, kind, toIdx) {
+  if (_viewOnlyBlocked()) return;
+  var step = _step();
+  var items = (_myOrdersByIdx(step)[fromIdx] || []).filter(function (x) { return x.kind === kind && (x.order || x.algo) && !x.cancelling; });
+  if (!items.length) return;
+  var price = _priceOf(toIdx);
+  var bestBid = T.bids[0][0], bestAsk = T.asks[0][0];
+  // The exchange is the judge; this only stops the obvious mistakes early
+  var bad = kind === 'B' && price >= bestAsk ? 'A buy limit must stay below the ask'
+    : kind === 'S' && price <= bestBid ? 'A sell limit must stay above the bid'
+    : null;
+  if (!bad && items[0].algo) {
+    var a = items[0].algo;
+    var firesUp = (a.type === 'STOP_MARKET') === (a.side === 'BUY');
+    if (firesUp ? price <= bestAsk : price >= bestBid) bad = 'At ' + price + ' the ' + kind + ' would trigger at once';
+  }
+  if (bad) { _setStatus(bad, true); return; }
+  // Moving an entry is like placing one (2FA unlock, day open); SL / TP / reduce-only always move
+  var opening = items.some(function (x) { return x.order ? !x.order.reduceOnly : !(x.algo.closePosition || x.algo.reduceOnly); });
+  if (opening && _lockedBlocked()) return;
+
+  items.forEach(function (x) {
+    var key = x.order ? 'o' + x.order.orderId : 'a' + x.algo.algoId;
+    if (T.cancelling[key]) return;
+    T.cancelling[key] = true; // old place struck through until the exchange answers
+    var ghost = 'mv' + key;
+    var qty = x.order ? Number(x.order.origQty) - Number(x.order.executedQty || 0) : x.algo.closePosition ? null : Number(x.algo.quantity);
+    T.pending[ghost] = { price: price, kind: kind, qty: qty, at: Date.now() };
+    var reducing = x.order ? !!x.order.reduceOnly : !!(x.algo.closePosition || x.algo.reduceOnly);
+    var body = { symbol: T.sym, price: String(price), reducing: reducing };
+    if (x.order) body.orderId = x.order.orderId; else body.algoId = x.algo.algoId;
+    _send('move', body, kind + ' moved to ' + price).then(function (r) {
+      if (r && r.order) {
+        T.account.orders = T.account.orders.filter(function (o) { return o.orderId !== r.order.orderId; });
+        T.account.orders.push(r.order);
+      } else if (r && r.algo) {
+        T.closedIds[key] = Date.now();
+        T.account.algoOrders = T.account.algoOrders.filter(function (o) { return o.algoId !== x.algo.algoId && o.algoId !== r.algo.algoId; });
+        T.account.algoOrders.push(r.algo);
+      }
+    }).catch(function (e) {
+      if (/GONE/.test(e.message)) showToast(kind + ' at ' + x.algo.triggerPrice + ' is gone — place it again');
+    }).finally(function () {
+      delete T.cancelling[key];
+      delete T.pending[ghost];
+      _queueRender();
+    });
+  });
+  _queueRender();
+}
+
 document.addEventListener('keydown', function (e) {
+  if (T.drag && e.key === 'Escape') {
+    // Abort the drag only; don't let Esc close the coin view
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    T.drag = null;
+    document.body.classList.remove('dom-dragging');
+    _queueRender();
+    return;
+  }
   if (!T.sym) return;
   // + / − change the price scale whenever the terminal is open (same as the buttons).
   // By physical key, so it works on any layout; Cmd/Ctrl +/− stays browser zoom.
