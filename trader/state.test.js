@@ -94,3 +94,42 @@ test('openTimeFromTrades walks fills back to where the position started', () => 
   assert.equal(st.openTimeFromTrades(trades, '0.02'), 3);
   assert.equal(st.openTimeFromTrades([{ side: 'SELL', qty: '0.05', time: 7 }], '-0.05'), 7);
 });
+
+// ── Realized PnL of the current position → breakeven ─────────────────────────
+const { realizedFromTrades, breakEven } = require('./state');
+
+const fill = (side, qty, realizedPnl, commission, time, asset) =>
+  ({ side, qty: String(qty), realizedPnl: String(realizedPnl), commission: String(commission), commissionAsset: asset || 'USDT', time });
+
+test('realized: long 1 @100, half sold @110 → +5 minus fees; breakeven moves to ~90', () => {
+  const trades = [
+    fill('SELL', 2, 7, 0.1, 1),      // an older, closed position — not counted
+    fill('BUY', 2, 0, 0.1, 2),
+    fill('BUY', 1, 0, 0.04, 10),     // opens the current long
+    fill('SELL', 0.5, 5, 0.02, 20),  // closes half at +5
+  ];
+  const r = realizedFromTrades(trades, '0.5');
+  assert.equal(r.openTime, 10);
+  assert.ok(Math.abs(r.realized - (5 - 0.02 - 0.04)) < 1e-9);
+  assert.ok(Math.abs(breakEven('100', '0.5', r.realized) - (100 - 4.94 / 0.5)) < 1e-9); // 90.12
+});
+
+test('realized: a short gains from a partial cover → breakeven moves up', () => {
+  const trades = [fill('SELL', 2, 0, 0, 5), fill('BUY', 1, 10, 0, 6)];
+  const r = realizedFromTrades(trades, '-1');
+  assert.equal(r.realized, 10);
+  assert.equal(breakEven('100', '-1', r.realized), 110);
+});
+
+test('realized: a flip counts only its share of the fee, not the old position PnL', () => {
+  // long 1 → sell 3 (closes 1 with +4, opens short 2)
+  const trades = [fill('BUY', 1, 0, 0, 1), fill('SELL', 3, 4, 0.3, 2)];
+  const r = realizedFromTrades(trades, '-2');
+  assert.equal(r.openTime, 2);
+  assert.ok(Math.abs(r.realized - (-0.2)) < 1e-9);
+});
+
+test('realized: BNB commissions are not subtracted', () => {
+  const r = realizedFromTrades([fill('BUY', 1, 0, 0.001, 1, 'BNB')], '1');
+  assert.equal(r.realized, 0);
+});

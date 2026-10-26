@@ -904,17 +904,22 @@ function _position() {
   return T.account.positions.find(function (p) { return p.symbol === T.sym && Number(p.amount) !== 0; }) || null;
 }
 
-// PnL marked to the price you could close at now: best bid for a long, best ask for a short.
+// PnL of the whole trade marked to the price you could close at now (best bid
+// for a long, best ask for a short). Measured from the breakeven, not the
+// entry: after a partial close the realized part (net of fees, from the trader)
+// moves the zero, and the zone stretches like Tiger's. Falls back to the entry
+// until the trader has counted it.
 function _pnlInfo() {
   if (_viewOnly()) return null; // testnet position vs live prices would be meaningless
   var pos = _position();
   if (!pos || !T.bids.length || !T.asks.length) return null;
-  var amt = Number(pos.amount), entry = Number(pos.entryPrice);
+  var amt = Number(pos.amount), avg = Number(pos.entryPrice);
+  var be = pos.breakEven != null && isFinite(pos.breakEven) ? Number(pos.breakEven) : avg;
   var exit = amt > 0 ? T.bids[0][0] : T.asks[0][0];
-  var pnl = amt * (exit - entry);
+  var pnl = amt * (exit - be);
   return {
-    pos: pos, amt: amt, entry: entry, exit: exit, pnl: pnl,
-    pct: entry ? (exit - entry) / entry * 100 * (amt > 0 ? 1 : -1) : 0,
+    pos: pos, amt: amt, entry: be, avgEntry: avg, exit: exit, pnl: pnl,
+    pct: be ? (exit - be) / be * 100 * (amt > 0 ? 1 : -1) : 0,
     up: pnl >= 0,
   };
 }
@@ -1150,6 +1155,10 @@ function _renderFoot() {
       : '<b>—</b>';
     html = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)) + ' USDT</b></div>'
       + '<div class="dom-pos-row"><span>Entry</span><b>' + pos.entryPrice + '</b></div>'
+      + (info && Math.abs(info.entry - info.avgEntry) > 1e-12
+          ? '<div class="dom-pos-row" title="Where the whole trade, closed part and fees included, comes out at zero"><span>Breakeven</span><b>'
+            + Number(info.entry.toFixed(_decimals(T.rules ? T.rules.tickSize : 0.0001) + 1)) + '</b></div>'
+          : '')
       + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   }
@@ -1358,6 +1367,10 @@ function _syncLines() {
   var specs = [];
   var pos = _position();
   if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(Number(pos.amount)) * Number(pos.entryPrice)) + ' $', style: 0 });
+  // Breakeven moves away from the entry after a partial close (and by the fees)
+  if (pos && pos.breakEven != null && Math.abs(Number(pos.breakEven) - Number(pos.entryPrice)) / Number(pos.entryPrice) > 0.0002) {
+    specs.push({ price: Number(pos.breakEven), color: '--primary', title: 'BE', style: 2 });
+  }
   // One line per price and side, with the summed USDT of all orders there
   var sums = {};
   T.account.orders.forEach(function (o) {

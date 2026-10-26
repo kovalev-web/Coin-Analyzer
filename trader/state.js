@@ -141,6 +141,8 @@ function applyAccountUpdate(state, a, eventTime) {
       unrealizedPnl: p.up, marginType: p.mt, updateTime: eventTime,
       openTime: reopened ? eventTime : existing.openTime,
     });
+    if (reopened) { n.realizedPnl = 0; n.breakEven = null; } // a new position: nothing realized yet
+    else if (n.realizedPnl != null) n.breakEven = breakEven(n.entryPrice, n.amount, n.realizedPnl);
     if (Number(p.pa) === 0) delete state.positions[key];
     else state.positions[key] = n;
     changed.positions.push(n);
@@ -170,8 +172,40 @@ function openTimeFromTrades(trades, amount) {
   return trades.length ? trades[0].time : null;
 }
 
+// What the current position has already realized, net of USDT commissions:
+// walk back from the latest fill until the running size returns to zero (the
+// fill that opened it). A fill that flipped the side counts only its share of
+// the commission; its realized PnL belonged to the previous position.
+// trades: Binance userTrades (oldest first): side, qty, realizedPnl, commission, commissionAsset, time.
+function realizedFromTrades(trades, amount) {
+  var target = Number(amount), remaining = target, realized = 0;
+  for (var i = trades.length - 1; i >= 0; i--) {
+    var t = trades[i];
+    var q = Number(t.qty);
+    var signed = (t.side === 'BUY' ? 1 : -1) * q;
+    var fee = t.commissionAsset === 'USDT' ? Number(t.commission) || 0 : 0;
+    var before = remaining - signed; // position size before this fill
+    if (Math.abs(before) < 1e-12) { realized -= fee; return { realized: realized, openTime: t.time }; }
+    if (Math.sign(before) !== Math.sign(target)) {
+      // Flip: only the part that opened the current position is ours
+      realized -= q ? fee * Math.abs(remaining) / q : 0;
+      return { realized: realized, openTime: t.time };
+    }
+    realized += (Number(t.realizedPnl) || 0) - fee;
+    remaining = before;
+  }
+  return { realized: realized, openTime: trades.length ? trades[0].time : null, partial: true };
+}
+
+// Price where the whole trade (closed part included) comes out at zero
+function breakEven(entryPrice, amount, realized) {
+  var amt = Number(amount), entry = Number(entryPrice);
+  if (!amt || !entry) return null;
+  return entry - Number(realized || 0) / amt;
+}
+
 module.exports = {
-  openTimeFromTrades,
+  openTimeFromTrades, realizedFromTrades, breakEven,
   createState, loadSnapshot, applyOrderUpdate, applyAlgoUpdate, applyAccountUpdate,
   toJSON, posKey, orderFromRest, algoFromRest,
 };

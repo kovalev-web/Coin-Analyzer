@@ -12,6 +12,7 @@ var { parseExchangeInfo, applyFilters, toStep } = require('./filters');
 
 var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 var BALANCE_REFRESH_DEBOUNCE_MS = 1000;
+var REALIZED_REFRESH_DEBOUNCE_MS = 400; // after a fill, recount the position's realized PnL (breakeven)
 var CLIENT_ID_RE = /^[\.A-Za-z0-9:\/_-]{1,36}$/; // Binance's allowed newClientOrderId charset
 var SYMBOL_RE = /^[A-Z0-9]{2,30}$/;
 var MOVABLE_ORDER = { NEW: true, PARTIALLY_FILLED: true };
@@ -90,16 +91,37 @@ class Trader extends EventEmitter {
   }
 
   // Positions found in a snapshot (e.g. after restart) don't know when they
-  // were opened — recover it from recent fills. Best effort.
+  // were opened or what they already realized — recover both from recent
+  // fills. Best effort.
   async _fillOpenTimes() {
-    var self = this;
-    var missing = Object.values(this.state.positions).filter(function (p) { return !p.openTime; });
-    for (var p of missing) {
-      try {
-        var trades = await self.client.request('GET', '/fapi/v1/userTrades', { symbol: p.symbol, limit: 100 });
-        p.openTime = st.openTimeFromTrades(trades, p.amount);
-      } catch (e) {}
+    for (var p of Object.values(this.state.positions)) {
+      try { await this._loadRealized(p); } catch (e) {}
     }
+  }
+
+  // Realized PnL since the position opened (net of USDT fees) → breakeven
+  async _loadRealized(p) {
+    var trades = await this.client.request('GET', '/fapi/v1/userTrades', { symbol: p.symbol, limit: 200 });
+    var r = st.realizedFromTrades(trades, p.amount);
+    if (!p.openTime) p.openTime = r.openTime;
+    p.realizedPnl = Math.round(r.realized * 1e6) / 1e6;
+    p.breakEven = st.breakEven(p.entryPrice, p.amount, p.realizedPnl);
+  }
+
+  // After fills: recount the symbol's position, debounced so a burst costs one request
+  _scheduleRealized(symbol) {
+    this._realizedTimers = this._realizedTimers || {};
+    if (this._realizedTimers[symbol]) return;
+    var self = this;
+    var t = this._realizedTimers[symbol] = setTimeout(function () {
+      delete self._realizedTimers[symbol];
+      var p = Object.values(self.state.positions).find(function (x) { return x.symbol === symbol; });
+      if (!p) return;
+      self._loadRealized(p).then(function () {
+        self.emit('event', { type: 'position', position: p });
+      }).catch(function (e) { console.error('[Trader] realized PnL refresh failed:', e.message); });
+    }, REALIZED_REFRESH_DEBOUNCE_MS);
+    if (t.unref) t.unref();
   }
 
   setStreamStatus(connected) {
@@ -114,6 +136,7 @@ class Trader extends EventEmitter {
       var o = st.applyOrderUpdate(this.state, msg.o, msg.E);
       if (o) this.emit('event', { type: 'order', order: o });
       if (msg.o.x === 'TRADE') {
+        this._scheduleRealized(msg.o.s);
         this.emit('event', {
           type: 'fill',
           fill: {
