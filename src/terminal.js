@@ -12,7 +12,7 @@
 // from the main chart feed: testnet prices differ from the real market.
 
 import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv } from './api.js';
-import { on } from './events.js';
+import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
@@ -107,7 +107,7 @@ export function checkAccess() {
   if (T.accessPromise) return T.accessPromise;
   T.accessPromise = tradeRequest('GET', 'status').then(function (s) {
     T.access = s;
-    return tradeRequest('GET', 'account').then(function (a) { T.account = a; return s; });
+    return tradeRequest('GET', 'account').then(function (a) { T.account = a; emit('terminal:account'); return s; });
   }).catch(function () {
     // Test trader down or no testnet key: fall back to Live so the terminal stays reachable
     if (T.mode === 'test') {
@@ -564,7 +564,30 @@ on('trade:event', function (ev) {
     if (T.mode === 'live' && /USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
   }
   _queueRender();
+  emit('terminal:account');
 });
+
+// ── For the main screen widget (summary.js) ─────────────────────────────────
+
+// null when this account can't trade; else the live trader state for the current mode
+export function tradingSnapshot() {
+  if (!T.access) return null;
+  return { mode: T.mode, account: T.account };
+}
+
+// Market-close every open position (reduce-only, all coins at once). Allowed
+// even when the day or 2FA is locked: it only reduces risk.
+export function closeAllPositions() {
+  var list = T.account.positions.filter(function (p) { return Number(p.amount) !== 0; });
+  return Promise.all(list.map(function (p) {
+    var amt = Number(p.amount);
+    return tradeRequest('POST', 'order', {
+      clientOrderId: _clientId(), symbol: p.symbol, side: amt > 0 ? 'SELL' : 'BUY', type: 'MARKET',
+      quantity: String(Math.abs(amt)), reduceOnly: true,
+    }).then(function () { return { symbol: p.symbol, ok: true }; },
+            function (e) { return { symbol: p.symbol, ok: false, error: e.message }; });
+  }));
+}
 
 // ── Ladder model ────────────────────────────────────────────────────────────
 

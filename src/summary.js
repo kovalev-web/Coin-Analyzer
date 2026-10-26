@@ -6,6 +6,9 @@
 
 import { state } from './state.js';
 import { API_BASE } from './api.js';
+import { checkAccess, tradingSnapshot, closeAllPositions } from './terminal.js';
+import { on } from './events.js';
+import { showToast } from './ui.js';
 
 var LEADERS = ['btc', 'eth', 'sol'];
 var REFRESH_MS = 60 * 1000; // server caches 30 s
@@ -13,7 +16,8 @@ var REFRESH_MS = 60 * 1000; // server caches 30 s
 var KLINES_MS = 5 * 60 * 1000;   // re-fetch the hourly candles every 5 min
 var SPARK_HOURS = 48;
 
-var S = { mine: null, loadedAt: 0, loading: false, timer: null, kl: {}, klAt: 0, charts: {} };
+var S = { mine: null, loadedAt: 0, loading: false, timer: null, kl: {}, klAt: 0, charts: {}, confirmAt: 0, closing: false };
+var CONFIRM_MS = 5000; // "Close all" asks once more within this window
 
 function fmtPrice(p) {
   if (p == null) return '—';
@@ -145,13 +149,111 @@ function mineHTML() {
   return '<div class="ds-leader ds-mine-card">' + head + sub + '<span class="ds-bars">' + bars + '</span></div>';
 }
 
+// "Open now" card (trading account only): positions with live PnL from the
+// ticker, resting orders per coin, and one button to market-close everything.
+function _fmtK(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n >= 10 ? n.toFixed(0) : n.toFixed(1); }
+
+function _ordersByCoin(acc) {
+  var by = {};
+  function add(sym, kind, usd) {
+    var g = by[sym] = by[sym] || { kinds: {}, list: [] };
+    if (!g.kinds[kind]) { g.kinds[kind] = { kind: kind, usd: null, n: 0 }; g.list.push(kind); }
+    g.kinds[kind].n++;
+    if (usd != null) g.kinds[kind].usd = (g.kinds[kind].usd || 0) + usd;
+  }
+  acc.orders.forEach(function (o) {
+    add(o.symbol, o.side === 'BUY' ? 'B' : 'S', (Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price));
+  });
+  acc.algoOrders.forEach(function (a) {
+    var entry = a.type === 'STOP_MARKET' && !a.closePosition && !a.reduceOnly;
+    add(a.symbol, entry ? (a.side === 'BUY' ? 'BS' : 'SS') : a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL',
+      entry ? Number(a.quantity) * Number(a.triggerPrice) : null);
+  });
+  return by;
+}
+
+function openHTML() {
+  if (state.isDemoMode) return '';
+  var snap = tradingSnapshot();
+  if (!snap) return '';
+  var acc = snap.account;
+  var positions = acc.positions.filter(function (p) { return Number(p.amount) !== 0; });
+  var orders = _ordersByCoin(acc);
+  var syms = positions.map(function (p) { return p.symbol; });
+  Object.keys(orders).forEach(function (sym) { if (syms.indexOf(sym) === -1) syms.push(sym); });
+
+  var total = 0;
+  var rows = syms.map(function (sym) {
+    var coin = sym.replace(/USDT$/, '');
+    var p = positions.find(function (x) { return x.symbol === sym; });
+    var line = '<span class="ds-open-sym" data-action="expand" data-sym="' + coin.toLowerCase() + '">' + coin + '</span>';
+    if (p) {
+      var amt = Number(p.amount), entry = Number(p.entryPrice);
+      var c = coinOf(coin.toLowerCase());
+      var px = c && c.current_price > 0 ? c.current_price : null;
+      var pnl = px != null ? amt * (px - entry) : Number(p.unrealizedPnl || 0);
+      total += pnl;
+      line += '<span class="ds-open-side ' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtK(Math.abs(amt) * entry) + '</span>'
+        + '<span class="ds-open-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + signed(pnl, 2) + '</span>';
+    } else {
+      line += '<span class="ds-open-side">orders</span><span class="ds-open-pnl"></span>';
+    }
+    var g = orders[sym];
+    var ord = g ? '<span class="ds-open-orders">' + g.list.map(function (k) {
+      var x = g.kinds[k];
+      return '<span class="ds-open-ord ' + k.toLowerCase() + '">' + k + (x.usd != null ? ' ' + _fmtK(x.usd) : x.n > 1 ? ' ×' + x.n : '') + '</span>';
+    }).join('') + '</span>' : '';
+    return '<div class="ds-open-row">' + line + ord + '</div>';
+  }).join('');
+
+  var head = '<span class="ds-leader-top"><span class="ds-sym">Open now' + (snap.mode === 'test' ? ' <span class="ds-open-test">Test</span>' : '') + '</span>'
+    + (positions.length ? '<span class="ds-ch ' + (total >= 0 ? 'up' : 'dn') + '">' + signed(total, 2) + ' USDT</span>' : '') + '</span>';
+  if (!syms.length) return '<div class="ds-leader ds-open-card">' + head + '<span class="ds-mine-empty">No open positions or orders</span></div>';
+  var confirming = Date.now() - S.confirmAt < CONFIRM_MS;
+  var btn = positions.length
+    ? '<button class="ds-open-close' + (confirming ? ' confirm' : '') + '" data-ds-close-all="1"' + (S.closing ? ' disabled' : '') + '>'
+      + (S.closing ? 'Closing…' : confirming ? 'Confirm: close ' + positions.length + ' at market' : 'Close all positions') + '</button>'
+    : '';
+  return '<div class="ds-leader ds-open-card">' + head + '<div class="ds-open-list">' + rows + '</div>' + btn + '</div>';
+}
+
+function _paintOpen() {
+  var el = document.getElementById('ds-open-wrap');
+  if (!el) return;
+  var html = openHTML();
+  if (el._html !== html) { el.innerHTML = html; el._html = html; } // keep the button under the mouse
+}
+
+on('terminal:account', _paintOpen);
+
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-ds-close-all]');
+  if (!b || S.closing) return;
+  if (Date.now() - S.confirmAt >= CONFIRM_MS) {
+    S.confirmAt = Date.now();
+    _paintOpen();
+    setTimeout(_paintOpen, CONFIRM_MS + 50); // back to the normal label if not confirmed
+    return;
+  }
+  S.confirmAt = 0;
+  S.closing = true;
+  _paintOpen();
+  closeAllPositions().then(function (res) {
+    var bad = res.filter(function (r) { return !r.ok; });
+    showToast(bad.length
+      ? 'Not closed: ' + bad.map(function (r) { return r.symbol.replace(/USDT$/, '') + ' (' + r.error + ')'; }).join(', ')
+      : 'Closed ' + res.length + ' position' + (res.length === 1 ? '' : 's'));
+  }).finally(function () { S.closing = false; _paintOpen(); });
+});
+
 export function daySummaryHTML() {
   _ensureTimer();
   // Charts attach after render() puts this HTML into the page
   setTimeout(function () { _paintLeaders(); _initCharts(); _loadKlines(); }, 0);
   return '<div class="day-summary" id="day-summary">'
     + '<div class="ds-leaders">' + LEADERS.map(leaderHTML).join('')
-    + '<div id="ds-mine-wrap">' + mineHTML() + '</div></div>'
+    + '<div id="ds-mine-wrap">' + mineHTML() + '</div>'
+    + '<div id="ds-open-wrap">' + openHTML() + '</div></div>'
     + '</div>';
 }
 
@@ -160,6 +262,7 @@ function _paint() {
   _paintLeaders();
   var mine = document.getElementById('ds-mine-wrap');
   if (mine) mine.innerHTML = mineHTML();
+  _paintOpen();
 }
 
 function _ensureTimer() {
@@ -170,6 +273,7 @@ function _ensureTimer() {
     _loadKlines();
   }, 5000);
   _loadMine();
+  checkAccess().then(_paintOpen); // loads the trader account (trading account only)
 }
 
 async function _loadMine() {
