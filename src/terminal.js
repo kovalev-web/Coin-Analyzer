@@ -34,7 +34,12 @@ var HOTKEYS = [
   ['1 … 6', 'Order size slot 1 … 6'],
   ['Esc', 'Close this window'],
 ];
-var HIGHLIGHT_DEFAULT = 65; // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
+var HIGHLIGHT_DEFAULT = 65;
+// Clusters (Tiger-style): traded volume per price for each period, columns left of the ladder
+var CLUSTER_TFS = { off: 0, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600 };
+var CLUSTER_TF_DEFAULT = '5m';
+var CLUSTER_COLS = 4;          // newest on the right, next to Mine
+var CLUSTER_BACKFILL_PAGES = 8; // ≤ 8 000 recent trades from REST when opening; older periods may be partial // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
@@ -93,6 +98,7 @@ function _loadSettings(sym) {
     sizes: sizes.length ? sizes.slice(0, SIZE_DEFAULTS.length) : SIZE_DEFAULTS.slice(),
     fullScale: Number(s.fullScale) > 0 ? Number(s.fullScale) : 0,
     highlight: Number(s.highlight) > 0 && Number(s.highlight) <= 100 ? Number(s.highlight) : HIGHLIGHT_DEFAULT,
+    clusterTf: CLUSTER_TFS[s.clusterTf] != null ? s.clusterTf : CLUSTER_TF_DEFAULT,
   };
 }
 
@@ -256,7 +262,9 @@ function _panelHTML() {
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
-    + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span></div>'
+    + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
+    + '<span class="dom-cols-cl" id="dom-cols-cl" data-cl-tf="1" title="Clusters: traded volume per price for each period. Click to change the period">'
+    + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
     + '<div class="dom-foot">'
@@ -318,6 +326,9 @@ function _settingsHTML() {
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
+    + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
+    + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
+    + '</select></div>'
     + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
     + '<div class="dom-set-row"><span>Hotkeys · all coins</span><div class="dom-keys">'
     + HOTKEYS.map(function (k) { return '<kbd>' + k[0] + '</kbd><span>' + k[1] + '</span>'; }).join('')
@@ -326,7 +337,10 @@ function _settingsHTML() {
 }
 
 function _applySettingInput(inp) {
-  if (inp.dataset.setHighlight) {
+  if (inp.dataset.setCluster) {
+    _setClusterTf(inp.value);
+    return;
+  } else if (inp.dataset.setHighlight) {
     var h = Number(inp.value);
     S.highlight = h > 0 && h <= 100 ? h : HIGHLIGHT_DEFAULT;
     inp.value = S.highlight;
@@ -358,6 +372,129 @@ function _rulesErrorText(err) {
     return coin + ' is not listed on Binance Demo, so it can\'t be traded in Test mode.<br>Open another coin or switch to Live.';
   }
   return 'Could not load ' + coin + ' trading rules: ' + err;
+}
+
+// ── Clusters ────────────────────────────────────────────────────────────────
+// Every market trade (aggTrade) adds price × qty (USDT) to its price in the
+// column of its period. On open, recent trades come from REST (newest first,
+// up to CLUSTER_BACKFILL_PAGES × 1000); a column the backfill didn't fully
+// cover is marked partial. Live trades that arrive meanwhile wait in a buffer
+// and are added after it, skipping ids the backfill already counted.
+
+function _clusterTfSec() { return CLUSTER_TFS[S.clusterTf] || 0; }
+
+function _clusterStart(rest, sym) {
+  var tf = _clusterTfSec();
+  var cl = T.cl = { tf: tf, sym: sym, cols: {}, ready: false, buffer: [], topId: 0, coveredFrom: null, ver: 0, cache: {} };
+  _syncClusterLayout();
+  if (!tf) return;
+  var oldest = (Math.floor(Date.now() / 1000 / tf) - CLUSTER_COLS + 1) * tf * 1000;
+  var pages = 0;
+  function page(endId) {
+    var url = rest + '/fapi/v1/aggTrades?symbol=' + sym + '&limit=1000' + (endId != null ? '&fromId=' + Math.max(0, endId - 999) : '');
+    return fetch(url).then(function (r) { return r.json(); }).then(function (list) {
+      if (T.cl !== cl || !Array.isArray(list) || !list.length) return;
+      list.forEach(function (t) {
+        if (endId != null && t.a > endId) return;
+        if (t.a > cl.topId) cl.topId = t.a;
+        _clusterAdd(cl, t.p, Number(t.q), t.T);
+      });
+      cl.coveredFrom = list[0].T;
+      pages++;
+      if (list[0].T > oldest && pages < CLUSTER_BACKFILL_PAGES && list[0].a > 0) return page(list[0].a - 1);
+    });
+  }
+  page(null).catch(function () {}).then(function () {
+    if (T.cl !== cl) return;
+    cl.ready = true;
+    cl.buffer.forEach(function (t) { if (t.a > cl.topId) _clusterAdd(cl, t.p, t.q, t.T); });
+    cl.buffer = [];
+    _queueRender();
+  });
+}
+
+function _clusterTrade(a, p, q, time) {
+  var cl = T.cl;
+  if (!cl || !cl.tf) return;
+  if (!cl.ready) { cl.buffer.push({ a: a, p: p, q: q, T: time }); return; }
+  _clusterAdd(cl, p, q, time);
+}
+
+function _clusterAdd(cl, p, q, time) {
+  var start = Math.floor(time / 1000 / cl.tf) * cl.tf;
+  var col = cl.cols[start];
+  if (!col) {
+    col = cl.cols[start] = {};
+    var keys = Object.keys(cl.cols).map(Number).sort(function (x, y) { return x - y; });
+    while (keys.length > CLUSTER_COLS) delete cl.cols[keys.shift()];
+  }
+  col[p] = (col[p] || 0) + Number(p) * q;
+  cl.ver++;
+}
+
+// Columns for the current step, newest last: [{ start, partial, byIdx: {rowIdx: usd}, max }]
+function _clusterView(step) {
+  var cl = T.cl;
+  if (!cl || !cl.tf) return null;
+  var nowStart = Math.floor(Date.now() / 1000 / cl.tf) * cl.tf;
+  var key = cl.ver + ':' + step + ':' + nowStart; // a new period shifts the columns even before its first trade
+  if (cl.cache.key === key) return cl.cache.view;
+  var view = [];
+  for (var k = CLUSTER_COLS - 1; k >= 0; k--) {
+    var start = nowStart - k * cl.tf;
+    var col = cl.cols[start] || {};
+    var byIdx = {}, max = 0;
+    Object.keys(col).forEach(function (p) {
+      var i = Math.round(Number(p) / step);
+      byIdx[i] = (byIdx[i] || 0) + col[p];
+      if (byIdx[i] > max) max = byIdx[i];
+    });
+    view.push({ start: start, partial: cl.coveredFrom != null && cl.coveredFrom > start * 1000, byIdx: byIdx, max: max });
+  }
+  cl.cache = { key: key, view: view };
+  _renderClusterHead(view);
+  return view;
+}
+
+// Brighter cell = more traded at that price in that period (relative to the column's max)
+function _setClusterCells(box, i, view) {
+  for (var k = 0; k < view.length; k++) {
+    var cell = box.children[k], v = view[k].byIdx[i] || 0;
+    var t = v ? _fmtQty(v) : '';
+    var a = v && view[k].max ? Math.round(8 + 42 * v / view[k].max) : 0;
+    if (cell._t !== t) { cell.textContent = t; cell._t = t; }
+    if (cell._a !== a) {
+      cell.style.background = a ? 'color-mix(in srgb, var(--primary) ' + a + '%, transparent)' : '';
+      cell._a = a;
+      cell.classList.toggle('top', !!v && v === view[k].max);
+    }
+  }
+}
+
+function _renderClusterHead(view) {
+  var head = document.getElementById('dom-cols-cl');
+  if (!head) return;
+  view.forEach(function (c, k) {
+    var d = new Date(c.start * 1000);
+    var t = (k === 0 ? S.clusterTf + ' ' : '') + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + (c.partial ? '*' : '');
+    var cell = head.children[k];
+    if (cell && cell.textContent !== t) cell.textContent = t;
+    if (cell) cell.title = c.partial ? 'Partial: older trades of this period were not loaded' : '';
+  });
+}
+
+function _syncClusterLayout() {
+  var panel = document.getElementById('fv-dom');
+  if (panel) panel.classList.toggle('has-cl', !!_clusterTfSec());
+}
+
+function _setClusterTf(tf) {
+  if (CLUSTER_TFS[tf] == null) return;
+  S.clusterTf = tf;
+  _saveSettings();
+  if (T.book && T.sym) _clusterStart(T.book.rest, T.sym); else _syncClusterLayout();
+  window.dispatchEvent(new Event('resize')); // the chart takes back / gives up the width
+  _queueRender();
 }
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
@@ -440,6 +577,7 @@ function _connectDepth() {
     if (T.sym === sym) T.wsTimer = setTimeout(_connectDepth, 1000);
   };
 
+  _clusterStart(roots.rest, sym);
   var wt = new WebSocket(roots.ws + '/market/ws/' + s + '@aggTrade');
   T.wsTrades = wt;
   wt.onmessage = function (ev) {
@@ -448,6 +586,7 @@ function _connectDepth() {
     try { d = JSON.parse(ev.data); } catch (e) { return; }
     if (d.e !== 'aggTrade') return;
     T.lastTrade = { price: Number(d.p), buy: !d.m, at: Date.now() };
+    _clusterTrade(d.a, d.p, Number(d.q), d.T);
     _queueRender();
   };
 }
@@ -527,6 +666,7 @@ function _disconnectDepth() {
   if (T.wsTrades) { var t = T.wsTrades; T.wsTrades = null; try { t.close(); } catch (e) {} }
   T.book = null; T.baseBids = null; T.baseAsks = null; T.bookDirty = false;
   T.bbo = null; T.lastTrade = null;
+  T.cl = null;
 }
 
 // ── Account events ──────────────────────────────────────────────────────────
@@ -762,6 +902,7 @@ function _render() {
 
   var mine = _myOrdersByIdx(step);
   var marks = _chartMarksByIdx(step);
+  var cl = _clusterView(step);
   var pnl = _pnlInfo();
   var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
@@ -801,6 +942,7 @@ function _render() {
       return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '" data-kind="' + x.kind + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
+    if (cl) _setClusterCells(c[3], i, cl);
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
@@ -853,7 +995,7 @@ function _makeRow() {
   var row = document.createElement('div');
   row.className = 'dom-row';
   row.innerHTML = '<span class="dom-c-mine"></span><span class="dom-c-vol"><i></i><b></b></span>'
-    + '<span class="dom-c-price"></span>';
+    + '<span class="dom-c-price"></span><span class="dom-c-cl">' + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span>';
   return row;
 }
 
@@ -1409,6 +1551,11 @@ function _bindPanel(panel) {
   });
 
   panel.addEventListener('click', function (e) {
+    if (e.target.closest('[data-cl-tf]')) {
+      var tfs = Object.keys(CLUSTER_TFS).filter(function (k) { return k !== 'off'; });
+      _setClusterTf(tfs[(tfs.indexOf(S.clusterTf) + 1) % tfs.length]);
+      return;
+    }
     var jump = e.target.closest('[data-jump]');
     if (jump) { _jumpTo(Number(jump.dataset.jump)); return; }
     var md = e.target.closest('[data-mode]');

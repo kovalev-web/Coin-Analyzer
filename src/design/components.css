@@ -793,3 +793,19 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-c-mine.has .dom-mine[data-kind]{cursor:grab;}
 body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-row.drop-target{box-shadow:inset 0 0 0 1px var(--primary);}
+
+/* clusters: CLUSTER_COLS columns of traded volume per price, left of the ladder */
+.fv-dom{--cl-w:0px;}
+.fv-dom.has-cl{--cl-w:176px;width:506px;flex-basis:506px;}
+.dom-cols,.dom-row{grid-template-columns:var(--cl-w) 52px 1fr 92px;}
+.dom-c-mine,.dom-cols>span:nth-child(1){grid-column:2;grid-row:1;}
+.dom-c-vol,.dom-cols>span:nth-child(2){grid-column:3;grid-row:1;}
+.dom-c-price,.dom-cols>span:nth-child(3){grid-column:4;grid-row:1;}
+.dom-c-cl,.dom-cols-cl{grid-column:1;grid-row:1;display:none;grid-template-columns:repeat(4,1fr);height:100%;margin-right:var(--space-2);}
+.fv-dom.has-cl .dom-c-cl,.fv-dom.has-cl .dom-cols-cl{display:grid;}
+.dom-c-cl b{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--space-1);font-weight:var(--ladder-weight);color:var(--ink-deep);border-right:1px solid color-mix(in srgb,var(--steel) 35%,transparent);overflow:hidden;white-space:nowrap;}
+.dom-c-cl b.top{box-shadow:inset 0 0 0 1px var(--primary);}
+.dom-cols-cl{cursor:pointer;}
+.dom-cols-cl b{font-weight:var(--font-normal);text-align:right;padding-right:var(--space-1);white-space:nowrap;overflow:hidden;}
+.dom-cols-cl:hover b{color:var(--ink-deep);}
+.fv-dom.has-cl .dom-ruler{left:calc(var(--space-4) + var(--cl-w));}
