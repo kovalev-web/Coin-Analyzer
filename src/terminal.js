@@ -244,8 +244,8 @@ function _closeSettings() {
 }
 
 function _settingsKey(e) {
-  if (e.key === 'Escape') { e.preventDefault(); _closeSettings(); }
-  else if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); _closeSettings(); }
+  // Esc is handled globally in main.js (topmost modal first)
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); _closeSettings(); }
 }
 
 function _settingsHTML() {

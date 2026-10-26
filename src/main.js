@@ -47,6 +47,20 @@ document.body.addEventListener('touchstart', function (e) {
   }
 }, { passive: true });
 
+// Esc closes the topmost modal (journal cards, order book settings…) through
+// its own close button; the coin full view underneath closes only when no
+// modal is open. Capture phase so it runs before the full view's handler.
+window.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  var modals = document.querySelectorAll('.journal-modal-overlay, .dom-settings-overlay');
+  var top = modals[modals.length - 1];
+  if (!top) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var close = top.querySelector('[data-set-close], .popup-header [data-action^="close-"]');
+  if (close) close.click();
+}, true);
+
 document.body.addEventListener('click', function (e) {
   // Close burger dropdown on any click outside .burger-wrap
   var burgerDd = document.getElementById('burger-dd');
