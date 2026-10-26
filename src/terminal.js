@@ -18,7 +18,8 @@ import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
-import { booksStart, booksStop, bookRows, bookListed, BOOK_VENUES } from './venue-books.js';
+import { booksStart, booksStop, bookRows, bookListed, bookAt, BOOK_VENUES } from './venue-books.js';
+import { autoThreshold, hitStrength, HIT_WINDOW_MS, SIZE_HISTORY_MS, FRAME_PERCENTILE, TAPE_PERCENTILE } from './hit-stats.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -45,7 +46,8 @@ var CLUSTER_COLS = 2;          // newest on the right, next to Mine
 var TAPE_KEEP = 300;           // prints kept for the tape
 var VENUE_SHORT = {};          // tape letter per venue (Binance futures unlabeled)
 VENUES.forEach(function (v) { VENUE_SHORT[v.id] = v.short; });
-var TAPE_MIN_DEFAULT = 10;     // USD: smaller prints are dropped from the tape entirely (Tiger: "remove trades under")
+var TAPE_MIN_FLOOR = 10;       // USD: never show prints smaller than this, whatever the auto threshold says
+var TAPE_AUTO = -1;            // tapeMin value meaning "automatic" (hit-stats.js TAPE_PERCENTILE)
 var TAPE_BIG_USD = 500;        // USD: from here a print is a square with its size written in it
 var CLUSTER_BACKFILL_PAGES = 8; // ≤ 8 000 recent trades from REST when opening; older periods may be partial // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
@@ -59,6 +61,7 @@ var S = _loadSettings(null);
 
 var T = {
   mode: _lsGet('qt_term_mode') === 'test' ? 'test' : 'live', // Live / Test switch in the panel head
+  vHits: {}, vSizes: {}, vThr: {}, vAuto: {}, vAutoAt: {}, // other venues: recent hits, trade sizes, thresholds, book scales
   access: null,          // null = unknown, false = no access, object = /status
   accessPromise: null,
   account: { balances: [], positions: [], orders: [], algoOrders: [] },
@@ -110,7 +113,9 @@ function _loadSettings(sym) {
     tape: s.tape !== false,                                   // trades tape left of the clusters
     venues: s.venues !== false,                               // other venues: books next to the ladder + their trades on the tape
     venueFull: s.venueFull !== false,                         // those books as full ladders (bars) or compact numbers
-    tapeMin: s.tapeMin != null && Number(s.tapeMin) >= 0 ? Number(s.tapeMin) : TAPE_MIN_DEFAULT, // USD; smaller prints are only on the line
+    // USD; smaller prints are dropped. Automatic by default (the old default 10 counts as automatic)
+    tapeMin: s.tapeMin != null && Number(s.tapeMin) >= 0 && Number(s.tapeMin) !== 10 ? Number(s.tapeMin) : TAPE_AUTO,
+    hitMin: Number(s.hitMin) > 0 ? Number(s.hitMin) : 0,      // frames on other venues' books: USD, 0 = automatic
   };
 }
 
@@ -228,9 +233,19 @@ function _openPanel(sym) {
       if (venue !== 'BF' && !S.venues) return;
       _tapeAdd(price, usd, buy, time, venue);
       // A venue trading at a price flashes its column cell there (who is eating the level)
+      var now = Date.now();
       var hits = T.vHits[venue] || (T.vHits[venue] = []);
-      hits.push({ p: price, buy: buy, at: Date.now() });
-      if (hits.length > 60) hits.splice(0, hits.length - 60);
+      // What stood on that price when the trade came (buyers take asks, sellers bids)
+      hits.push({ p: price, buy: buy, at: now, usd: usd, before: bookAt(venue, price, buy ? 'ask' : 'bid') });
+      if (hits.length > 200) hits.splice(0, hits.length - 200);
+      // The venue's recent trade sizes → its automatic thresholds
+      var sz = T.vSizes[venue] || (T.vSizes[venue] = []);
+      sz.push({ t: now, usd: usd });
+      if (sz.length > 4000 || (sz.length > 50 && now - sz[0].t > SIZE_HISTORY_MS + 30000)) {
+        var cut = 0;
+        while (cut < sz.length && (now - sz[cut].t > SIZE_HISTORY_MS || sz.length - cut > 3000)) cut++;
+        sz.splice(0, cut);
+      }
     });
     booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
@@ -372,10 +387,15 @@ function _settingsHTML() {
     + '<span class="dom-set-note">Smaller levels stay grey.</span></div>'
     + _switchHTML('tape', 'Trades tape', S.tape)
     + '<div class="dom-set-row"><span>Tape: hide trades under, $</span>'
-    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-tape-min="1" placeholder="Show all" value="' + formatUsdShort(S.tapeMin) + '">'
-    + _chipsHTML('tmin', S.tapeMin, [[0, 'All'], [10, '10'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']]) + '</div>'
+    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-tape-min="1" placeholder="'
+      + (S.tapeMin === TAPE_AUTO ? 'Auto · now ≈ ' + (formatUsdShort(_tapeMinFor('BF')) || '10') : 'Show all') + '" value="' + (S.tapeMin > 0 ? formatUsdShort(S.tapeMin) : '') + '">'
+    + _chipsHTML('tmin', S.tapeMin, [[TAPE_AUTO, 'Auto'], [0, 'All'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']])
+    + '<span class="dom-set-note">Auto — bigger than most trades on that venue lately.</span></div>'
     + _switchHTML('venues', 'Other venues: books and their trades on the tape', S.venues)
     + _switchHTML('venue-full', 'Other venues as full books (bars like ours)', S.venueFull)
+    + '<div class="dom-set-row"><span>Frames on other venues from, $</span>'
+    + _chipsHTML('hitmin', S.hitMin, [[0, 'Auto'], [1e3, '1K'], [5e3, '5K'], [1e4, '10K'], [5e4, '50K']])
+    + '<span class="dom-set-note">Auto — a hit bigger than 90% of that venue\'s recent trades, or one that ate 20%+ of the level.</span></div>'
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
     + '</select></div>'
@@ -397,6 +417,7 @@ function _applyChip(btn) {
   if (btn.dataset.chip === 'full') S.fullScale = v;
   else if (btn.dataset.chip === 'hl') S.highlight = v;
   else if (btn.dataset.chip === 'tmin') S.tapeMin = v;
+  else if (btn.dataset.chip === 'hitmin') S.hitMin = v;
   _saveSettings();
   _refreshSettings();
   _queueRender();
@@ -585,10 +606,17 @@ function _setClusterTf(tf) {
 // edge (next to the clusters), older ones step left; blue = buy, red = sell,
 // size ∝ √USDT relative to the biggest print shown. Trades at the same
 // millisecond and side merge into one print (one aggressive order). Prints
-// under S.tapeMin (10 $ by default) are dropped; size grows with log(USDT) on a
+// under the tape minimum (automatic per venue by default) are dropped; size grows with log(USDT) on a
 // fixed scale (10 $ → 5 px radius … 100K $ → 17 px), so one huge trade doesn't
 // shrink the rest; from TAPE_BIG_USD a print is a square with its size in it.
 // A thin line joins the prints.
+
+// Smallest print the tape shows for a venue: the coin's own setting, or
+// automatic — the venue's usual trade size (TAPE_PERCENTILE), never under 10 $
+function _tapeMinFor(venue) {
+  if (S.tapeMin !== TAPE_AUTO) return S.tapeMin;
+  return Math.max(TAPE_MIN_FLOOR, _venueThreshold(venue || 'BF', TAPE_PERCENTILE) || 0);
+}
 
 function _tapeAdd(p, usd, buy, time, venue) {
   if (!T.tape) T.tape = [];
@@ -627,7 +655,7 @@ function _drawTape(step) {
   ctx.textBaseline = 'middle';
   // Lay out from the newest (right edge) back in time: each print takes its own
   // width, so squares sit side by side with readable numbers instead of piling up
-  var recent = tape.slice(-200).filter(function (x) { return !S.tapeMin || x.usd >= S.tapeMin; });
+  var recent = tape.slice(-200).filter(function (x) { return x.usd >= _tapeMinFor(x.v); });
   var items = [], right = w - 2;
   for (var j = recent.length - 1; j >= 0 && right > 0; j--) {
     var x = recent[j];
@@ -722,15 +750,42 @@ function _toggleVenueCol(id) {
   _queueRender();
 }
 
+// A venue's automatic size bar (percentile of its last 3 minutes of trades),
+// recomputed at most every 2 s
+function _venueThreshold(id, pct) {
+  var key = id + ':' + pct, now = Date.now(), c = T.vThr[key];
+  if (c && now - c.at < 2000) return c.v;
+  var sizes = (T.vSizes[id] || []).filter(function (x) { return now - x.t <= SIZE_HISTORY_MS; }).map(function (x) { return x.usd; });
+  var v = autoThreshold(sizes, pct);
+  T.vThr[key] = { v: v, at: now };
+  return v;
+}
+
 function _venueView(step, lo, hi) {
   if (!S.venues) return null;
   var folded = _venueFolded(), now = Date.now();
   return BOOK_VENUES.map(function (v) {
     if (folded[v.id] || bookListed(v.id) === false) return { folded: true };
     var rows = bookRows(v.id, step, lo, hi);
-    var hits = {};
+    // Trades on one row within HIT_WINDOW_MS add up; a frame only for a hit that's
+    // big for this venue right now, or that ate a good part of the level
+    var sums = {};
     (T.vHits[v.id] || []).forEach(function (h) {
-      if (now - h.at < 450) hits[Math.round(h.p / step)] = h.buy ? 'hit-buy' : 'hit-sell';
+      if (now - h.at >= HIT_WINDOW_MS) return;
+      var i = Math.round(h.p / step), g = sums[i] || (sums[i] = { buy: 0, sell: 0, buyBefore: 0, sellBefore: 0 });
+      g[h.buy ? 'buy' : 'sell'] += h.usd;
+      var bk = h.buy ? 'buyBefore' : 'sellBefore';
+      if (h.before > g[bk]) g[bk] = h.before;
+    });
+    var thr = S.hitMin || _venueThreshold(v.id, FRAME_PERCENTILE);
+    var hits = {};
+    Object.keys(sums).forEach(function (k) {
+      var g = sums[k], buy = g.buy >= g.sell, usd = buy ? g.buy : g.sell;
+      // The level before the hit: as captured with the trade, or what's left now plus what was eaten
+      var now_ = rows ? (buy ? rows.ask[k] : rows.bid[k]) || 0 : 0;
+      var before = Math.max(buy ? g.buyBefore : g.sellBefore, now_ + usd);
+      var st = thr ? hitStrength(usd, thr, before) : 0;
+      if (st) hits[k] = (buy ? 'hit-buy' : 'hit-sell') + ' s' + st;
     });
     if (!rows) return { rows: null, hits: hits };
     var vals = Object.values(rows.bid).concat(Object.values(rows.ask));
@@ -950,7 +1005,7 @@ function _disconnectDepth() {
   T.bbo = null; T.lastTrade = null;
   T.cl = null;
   T.tape = [];
-  T.vHits = {}; T.vAuto = {}; T.vAutoAt = {};
+  T.vHits = {}; T.vAuto = {}; T.vAutoAt = {}; T.vSizes = {}; T.vThr = {};
 }
 
 // ── Account events ──────────────────────────────────────────────────────────

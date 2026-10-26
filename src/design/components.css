@@ -839,8 +839,13 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-c-ven,.dom-cols-ven{grid-column:6;grid-row:1;display:none;grid-template-columns:var(--ven-cols);height:100%;margin-left:var(--space-2);}
 .fv-dom.has-ven .dom-c-ven,.fv-dom.has-ven .dom-cols-ven{display:grid;}
 .dom-c-ven b{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--space-1);font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 70%,transparent);border-left:1px solid color-mix(in srgb,var(--steel) 35%,transparent);overflow:hidden;white-space:nowrap;}
-.dom-c-ven b.hit-buy{box-shadow:inset 0 0 0 2px var(--primary);}
-.dom-c-ven b.hit-sell{box-shadow:inset 0 0 0 2px var(--danger);}
+/* frames: a hit that's big for that venue now (s1), 2× (s2), 4× or ate the level (s3) */
+.dom-c-ven b.hit-buy.s1{box-shadow:inset 0 0 0 1px var(--primary);}
+.dom-c-ven b.hit-sell.s1{box-shadow:inset 0 0 0 1px var(--danger);}
+.dom-c-ven b.hit-buy.s2{box-shadow:inset 0 0 0 2px var(--primary);}
+.dom-c-ven b.hit-sell.s2{box-shadow:inset 0 0 0 2px var(--danger);}
+.dom-c-ven b.hit-buy.s3{box-shadow:inset 0 0 0 3px var(--primary);background-color:color-mix(in srgb,var(--primary) 25%,transparent);}
+.dom-c-ven b.hit-sell.s3{box-shadow:inset 0 0 0 3px var(--danger);background-color:color-mix(in srgb,var(--danger) 25%,transparent);}
 .dom-cols-ven b{font-weight:var(--font-normal);text-align:right;padding-right:var(--space-1);cursor:pointer;white-space:nowrap;overflow:hidden;}
 .dom-cols-ven b:hover{color:var(--ink-deep);}
 .dom-cols-ven b.folded{text-align:center;padding:0;}

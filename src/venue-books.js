@@ -156,6 +156,13 @@ export function booksStop() {
   B.socks = []; B.timers = []; B.books = {}; B.listed = {}; B.onStatus = null;
 }
 
+// USDT resting at one exact ladder price on a side right now (0 if none / not ready)
+export function bookAt(id, ladderPx, side) {
+  var book = B.books[id];
+  if (!book || !book.ready) return 0;
+  return (side === 'ask' ? book.asks : book.bids).get(ladderPx) || 0;
+}
+
 // false when the venue doesn't list the coin; undefined while unknown / listed
 export function bookListed(id) { return B.listed[id]; }
 
