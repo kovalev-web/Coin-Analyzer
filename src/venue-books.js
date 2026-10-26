@@ -15,7 +15,15 @@ export var BOOK_VENUES = [
   { id: 'OK', name: 'OKX', title: 'OKX futures' },
 ];
 
-var B = { gen: 0, socks: [], timers: [], books: {} };
+var B = { gen: 0, socks: [], timers: [], books: {}, listed: {}, onStatus: null };
+
+// The venue doesn't list this coin (Binance -1121, Bybit 'handler not found',
+// OKX 51001): its column header turns red and stays folded
+function _notListed(id) {
+  if (B.listed[id] === false) return;
+  B.listed[id] = false;
+  if (B.onStatus) B.onStatus(id, false);
+}
 
 function _book(id) {
   return (B.books[id] = { bids: new Map(), asks: new Map(), ready: false, mult: 1 });
@@ -25,6 +33,9 @@ function _book(id) {
 function _set(map, ladderPx, usd) {
   if (usd > 0) map.set(ladderPx, usd); else map.delete(ladderPx);
 }
+
+// Close a socket for good (no reconnect): the venue doesn't list the coin
+function _stop(sock) { sock._done = true; try { sock.close(); } catch (e) {} }
 
 function _ws(url, onOpen, onMessage, ping, onDrop) {
   var gen = B.gen, sock, timer;
@@ -46,7 +57,7 @@ function _ws(url, onOpen, onMessage, ping, onDrop) {
     sock.onclose = function () {
       clearInterval(timer);
       if (onDrop) onDrop();
-      if (gen === B.gen) B.timers.push(setTimeout(connect, 3000));
+      if (gen === B.gen && !sock._done) B.timers.push(setTimeout(connect, 3000));
     };
   }
   connect();
@@ -55,7 +66,7 @@ function _ws(url, onOpen, onMessage, ping, onDrop) {
 function _binanceSpot(coin, mult) {
   var gen = B.gen, book = _book('BS'), sym = coin + 'USDT';
   book.mult = mult;
-  var buffer = [], lastU = 0, syncing = false;
+  var buffer = [], lastU = 0, syncing = false, spotSock = null;
   function apply(map, levels) {
     levels.forEach(function (l) { var p = Number(l[0]); _set(map, p * mult, p * Number(l[1])); });
   }
@@ -64,7 +75,9 @@ function _binanceSpot(coin, mult) {
     syncing = true; book.ready = false;
     fetch('https://api.binance.com/api/v3/depth?symbol=' + sym + '&limit=1000').then(function (r) { return r.json(); }).then(function (s) {
       syncing = false;
-      if (gen !== B.gen || !s || !s.lastUpdateId) return;
+      if (gen !== B.gen || !s) return;
+      if (s.code === -1121) { _notListed('BS'); if (spotSock) _stop(spotSock); return; }
+      if (!s.lastUpdateId) return;
       book.bids.clear(); book.asks.clear();
       apply(book.bids, s.bids); apply(book.asks, s.asks);
       lastU = s.lastUpdateId;
@@ -80,7 +93,7 @@ function _binanceSpot(coin, mult) {
     apply(book.bids, d.b); apply(book.asks, d.a);
     lastU = d.u;
   }
-  _ws('wss://stream.binance.com:9443/ws/' + sym.toLowerCase() + '@depth@100ms', snapshot, function (d) {
+  _ws('wss://stream.binance.com:9443/ws/' + sym.toLowerCase() + '@depth@100ms', function (sock) { spotSock = sock; snapshot(); }, function (d) {
     if (d.e === 'depthUpdate') onDiff(d);
   }, null, function () { book.ready = false; });
 }
@@ -89,7 +102,8 @@ function _bybit(symbol) {
   var book = _book('BB');
   _ws('wss://stream.bybit.com/v5/public/linear', function (sock) {
     sock.send(JSON.stringify({ op: 'subscribe', args: ['orderbook.200.' + symbol] }));
-  }, function (m) {
+  }, function (m, sock) {
+    if (m.op === 'subscribe' && m.success === false) { _notListed('BB'); _stop(sock); return; }
     if (!m.topic || !m.data) return;
     if (m.type === 'snapshot') { book.bids.clear(); book.asks.clear(); book.ready = true; }
     if (!book.ready) return;
@@ -102,7 +116,8 @@ function _okx(coin, mult) {
   var gen = B.gen, book = _book('OK'), instId = coin + '-USDT-SWAP';
   book.mult = mult;
   fetch('https://www.okx.com/api/v5/public/instruments?instType=SWAP&instId=' + instId).then(function (r) { return r.json(); }).then(function (j) {
-    if (gen !== B.gen || !j || !j.data || !j.data.length) return;
+    if (gen !== B.gen || !j) return;
+    if (!j.data || !j.data.length) { _notListed('OK'); return; }
     var ctVal = Number(j.data[0].ctVal) || 1, lastSeq = null;
     function apply(map, levels) {
       levels.forEach(function (l) { var p = Number(l[0]); _set(map, p * mult, p * Number(l[1]) * ctVal); });
@@ -125,8 +140,9 @@ function _okx(coin, mult) {
   }).catch(function () {});
 }
 
-export function booksStart(futuresSymbol) {
+export function booksStart(futuresSymbol, onStatus) {
   booksStop();
+  B.onStatus = onStatus || null;
   var sp = splitSymbol(futuresSymbol);
   _binanceSpot(sp.coin, sp.mult);
   _bybit(futuresSymbol);
@@ -137,8 +153,11 @@ export function booksStop() {
   B.gen++;
   B.socks.forEach(function (s) { try { s.close(); } catch (e) {} });
   B.timers.forEach(clearTimeout);
-  B.socks = []; B.timers = []; B.books = {};
+  B.socks = []; B.timers = []; B.books = {}; B.listed = {}; B.onStatus = null;
 }
+
+// false when the venue doesn't list the coin; undefined while unknown / listed
+export function bookListed(id) { return B.listed[id]; }
 
 // USDT per ladder row for one venue: { bid: {idx: usd}, ask: {idx: usd}, ready }
 // (same rounding as the Binance ladder: bids floor, asks ceil)

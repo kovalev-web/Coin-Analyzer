@@ -843,3 +843,4 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-cols-ven b{font-weight:var(--font-normal);text-align:right;padding-right:var(--space-1);cursor:pointer;white-space:nowrap;overflow:hidden;}
 .dom-cols-ven b:hover{color:var(--ink-deep);}
 .dom-cols-ven b.folded{text-align:center;padding:0;}
+.dom-cols-ven b.na{color:var(--danger);cursor:default;}

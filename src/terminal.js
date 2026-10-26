@@ -18,7 +18,7 @@ import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
-import { booksStart, booksStop, bookRows, BOOK_VENUES } from './venue-books.js';
+import { booksStart, booksStop, bookRows, bookListed, BOOK_VENUES } from './venue-books.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -231,7 +231,7 @@ function _openPanel(sym) {
       hits.push({ p: price, buy: buy, at: Date.now() });
       if (hits.length > 60) hits.splice(0, hits.length - 60);
     });
-    booksStart(sym);
+    booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
@@ -660,16 +660,20 @@ function _syncVenueCols() {
   var panel = document.getElementById('fv-dom');
   if (!panel) return;
   var folded = _venueFolded();
-  var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] ? VEN_FOLDED_W : VEN_W; });
+  // Not listed on that venue → always folded to its (red) letter
+  var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] || bookListed(v.id) === false ? VEN_FOLDED_W : VEN_W; });
   var total = widths.reduce(function (a, b) { return a + b; }, 0);
   panel.style.setProperty('--ven-w', total + 'px');
   panel.style.setProperty('--ven-cols', widths.map(function (w) { return w + 'px'; }).join(' '));
   panel.classList.toggle('has-ven', !!S.venues);
   panel.querySelectorAll('[data-vcol]').forEach(function (b) {
-    var f = !!folded[b.dataset.vcol];
-    b.classList.toggle('folded', f);
     var v = BOOK_VENUES.find(function (x) { return x.id === b.dataset.vcol; });
+    var na = bookListed(v.id) === false;
+    var f = na || !!folded[v.id];
+    b.classList.toggle('folded', f);
+    b.classList.toggle('na', na);
     b.textContent = f ? v.name.charAt(0) : v.name;
+    b.title = na ? (T.sym || '').replace(/USDT$/, '') + ' is not listed on ' + v.title : v.title + ' order book — click to fold / unfold';
   });
 }
 
@@ -686,7 +690,7 @@ function _venueView(step, lo, hi) {
   if (!S.venues) return null;
   var folded = _venueFolded(), now = Date.now();
   return BOOK_VENUES.map(function (v) {
-    if (folded[v.id]) return { folded: true };
+    if (folded[v.id] || bookListed(v.id) === false) return { folded: true };
     var rows = bookRows(v.id, step, lo, hi);
     var hits = {};
     (T.vHits[v.id] || []).forEach(function (h) {
@@ -1790,7 +1794,7 @@ function _bindPanel(panel) {
 
   panel.addEventListener('click', function (e) {
     var vc = e.target.closest('[data-vcol]');
-    if (vc) { _toggleVenueCol(vc.dataset.vcol); return; }
+    if (vc) { if (!vc.classList.contains('na')) _toggleVenueCol(vc.dataset.vcol); return; }
     if (e.target.closest('[data-cl-tf]')) {
       var tfs = Object.keys(CLUSTER_TFS).filter(function (k) { return k !== 'off'; });
       _setClusterTf(tfs[(tfs.indexOf(S.clusterTf) + 1) % tfs.length]);
