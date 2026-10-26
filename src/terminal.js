@@ -662,6 +662,24 @@ function _chartMarksByIdx(step) {
   return out;
 }
 
+// Several clicks on one level are separate exchange orders (each keeps its
+// queue place); the Mine column shows them as one sum per kind. A click on
+// it cancels them all (_cancelAtLevel).
+function _sumByKind(items) {
+  var out = [], byKind = {};
+  items.forEach(function (x) {
+    var g = byKind[x.kind];
+    if (!g) {
+      g = byKind[x.kind] = { kind: x.kind, usd: null, pending: true, cancelling: true };
+      out.push(g);
+    }
+    if (x.usd != null) g.usd = (g.usd || 0) + x.usd;
+    g.pending = g.pending && !!x.pending;          // dim only while nothing is confirmed yet
+    g.cancelling = g.cancelling && !!x.cancelling; // struck through when all are being cancelled
+  });
+  return out;
+}
+
 // ── Render ──────────────────────────────────────────────────────────────────
 
 function _queueRender() {
@@ -741,7 +759,7 @@ function _render() {
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];
-    var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? m.map(function (x) {
+    var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? _sumByKind(m).map(function (x) {
       return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
@@ -984,8 +1002,17 @@ function _syncLines() {
   var specs = [];
   var pos = _position();
   if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(Number(pos.amount)) * Number(pos.entryPrice)) + ' $', style: 0 });
+  // One line per price and side, with the summed USDT of all orders there
+  var sums = {};
   T.account.orders.forEach(function (o) {
-    if (o.symbol === T.sym) specs.push({ price: Number(o.price), color: o.side === 'BUY' ? '--bullish' : '--danger', title: (o.side === 'BUY' ? 'B ' : 'S ') + _fmtQty((Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price)) + ' $', style: 2 });
+    if (o.symbol !== T.sym) return;
+    var k = o.side + '@' + o.price;
+    sums[k] = sums[k] || { side: o.side, price: Number(o.price), usd: 0 };
+    sums[k].usd += (Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price);
+  });
+  Object.keys(sums).forEach(function (k) {
+    var g = sums[k];
+    specs.push({ price: g.price, color: g.side === 'BUY' ? '--bullish' : '--danger', title: (g.side === 'BUY' ? 'B ' : 'S ') + _fmtQty(g.usd) + ' $', style: 2 });
   });
   T.account.algoOrders.forEach(function (a) {
     if (a.symbol !== T.sym) return;
@@ -1190,10 +1217,10 @@ function _onLevelClick(idx, side, shift, alt) {
   if (_viewOnlyBlocked()) return;
   if (!shift && _lockedBlocked()) return; // Shift = close-position SL/TP, always allowed
   if (!T.rules || !T.bids.length || !T.asks.length) return;
-  // Ignore an accidental double click on the same level within 300ms
+  // Repeated clicks on a level add up (one order each); only a bounce within 120 ms is dropped
   var key = idx + ':' + side + ':' + shift + ':' + alt;
   var now = Date.now();
-  if (T.lastClick.key === key && now - T.lastClick.at < 300) return;
+  if (T.lastClick.key === key && now - T.lastClick.at < 120) return; // mouse bounce, not a deliberate repeat
   T.lastClick = { key: key, at: now };
 
   var price = _priceOf(idx);
