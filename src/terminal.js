@@ -1322,6 +1322,8 @@ function _bindPanel(panel) {
     e.preventDefault();
     var idx = Number(row.dataset.idx);
     if (e.target.closest('.dom-c-mine.has')) { if (e.button === 0) _cancelAtLevel(idx); return; }
+    // Orders only from the Volume and Price columns; the Mine column and the gaps do nothing
+    if (!e.target.closest('.dom-c-vol, .dom-c-price')) return;
     _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey, e.altKey);
   });
 

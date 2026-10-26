@@ -756,3 +756,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-mode button{height:20px;padding:0 var(--space-3);border:none;border-radius:var(--radius-full);background:transparent;color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
 .dom-mode button.active.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
 .dom-mode button.active.test{background:color-mix(in srgb,var(--level-deep) 22%,transparent);color:var(--ink-deep);}
+
+/* click area for orders: Volume and Price columns only */
+.dom-row{cursor:default;}
+.dom-row .dom-c-vol,.dom-row .dom-c-price{cursor:pointer;}
+.fv-dom.view-only .dom-row .dom-c-vol,.fv-dom.view-only .dom-row .dom-c-price{cursor:default;}
