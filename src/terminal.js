@@ -38,7 +38,7 @@ var HIGHLIGHT_DEFAULT = 65;
 // Clusters (Tiger-style): traded volume per price for each period, columns left of the ladder
 var CLUSTER_TFS = { off: 0, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600 };
 var CLUSTER_TF_DEFAULT = '5m';
-var CLUSTER_COLS = 4;          // newest on the right, next to Mine
+var CLUSTER_COLS = 2;          // newest on the right, next to Mine
 var TAPE_KEEP = 300;           // prints kept for the tape
 var TAPE_MIN_DEFAULT = 10;     // USD: smaller prints are dropped from the tape entirely (Tiger: "remove trades under")
 var TAPE_BIG_USD = 500;        // USD: from here a print is a square with its size written in it
