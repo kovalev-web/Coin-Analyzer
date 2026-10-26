@@ -17,6 +17,7 @@ import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE } from './ladder-scale.js';
+import { venuesStart, venuesStop, venuesStats, VENUES } from './venues.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -41,6 +42,8 @@ var CLUSTER_TFS = { off: 0, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 
 var CLUSTER_TF_DEFAULT = '5m';
 var CLUSTER_COLS = 2;          // newest on the right, next to Mine
 var TAPE_KEEP = 300;           // prints kept for the tape
+var VENUE_SHORT = {};          // tape letter per venue (Binance futures unlabeled)
+VENUES.forEach(function (v) { VENUE_SHORT[v.id] = v.short; });
 var TAPE_MIN_DEFAULT = 10;     // USD: smaller prints are dropped from the tape entirely (Tiger: "remove trades under")
 var TAPE_BIG_USD = 500;        // USD: from here a print is a square with its size written in it
 var CLUSTER_BACKFILL_PAGES = 8; // ≤ 8 000 recent trades from REST when opening; older periods may be partial // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
@@ -104,6 +107,7 @@ function _loadSettings(sym) {
     highlight: Number(s.highlight) > 0 && Number(s.highlight) <= 100 ? Number(s.highlight) : HIGHLIGHT_DEFAULT,
     clusterTf: CLUSTER_TFS[s.clusterTf] != null ? s.clusterTf : CLUSTER_TF_DEFAULT,
     tape: s.tape !== false,                                   // trades tape left of the clusters
+    venues: s.venues !== false,                               // other venues on the tape + the venue strip
     tapeMin: s.tapeMin != null && Number(s.tapeMin) >= 0 ? Number(s.tapeMin) : TAPE_MIN_DEFAULT, // USD; smaller prints are only on the line
   };
 }
@@ -218,6 +222,10 @@ function _openPanel(sym) {
       _queueRender();
     });
     _connectDepth();
+    venuesStart(sym, function (venue, price, usd, buy, time) {
+      if (venue !== 'BF' && !S.venues) return;
+      _tapeAdd(price, usd, buy, time, venue);
+    });
   }
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
@@ -229,6 +237,9 @@ function _openPanel(sym) {
   T.dayTimer = setInterval(_refreshDay, 30000);
   startLatency(_renderPing);
   _renderPing();
+  clearInterval(T.venuesTimer);
+  T.venuesTimer = setInterval(_renderVenues, 500);
+  _renderVenues();
   _queueRender();
 }
 
@@ -243,6 +254,8 @@ function _closePanel(userAction) {
   _clearLines();
   _clearBand();
   stopLatency();
+  venuesStop();
+  clearInterval(T.venuesTimer);
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
@@ -266,6 +279,7 @@ function _panelHTML() {
     + '<button class="dom-gear" data-settings="1" title="Order book settings">' + icon('settings', 14) + '</button>'
     + '</div>'
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
+    + '<div class="dom-venues" id="dom-venues"></div>'
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
@@ -332,6 +346,8 @@ function _settingsHTML() {
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' (now ≈ $' + _fmtQty(T.autoFull) + ')' : '') + '" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
+    + '<div class="dom-set-row"><span>Other venues (tape + strip)</span><select class="ds-input" data-set-venues="1">'
+    + '<option value="on"' + (S.venues ? ' selected' : '') + '>On</option><option value="off"' + (S.venues ? '' : ' selected') + '>Off</option></select></div>'
     + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
     + '<option value="on"' + (S.tape ? ' selected' : '') + '>On</option><option value="off"' + (S.tape ? '' : ' selected') + '>Off</option></select></div>'
     + '<div class="dom-set-row"><span>Tape: ignore trades under, USD</span>'
@@ -350,6 +366,9 @@ function _applySettingInput(inp) {
   if (inp.dataset.setCluster) {
     _setClusterTf(inp.value);
     return;
+  } else if (inp.dataset.setVenues) {
+    S.venues = inp.value === 'on';
+    _renderVenues();
   } else if (inp.dataset.setTape) {
     S.tape = inp.value === 'on';
     _syncClusterLayout();
@@ -413,7 +432,7 @@ function _clusterStart(rest, sym) {
     return fetch(url).then(function (r) { return r.json(); }).then(function (list) {
       if (T.cl !== cl || !Array.isArray(list) || !list.length) return;
       if (endId == null && !T.tape.length) {
-        list.slice(-TAPE_KEEP).forEach(function (t) { _tapeAdd(Number(t.p), Number(t.p) * Number(t.q), !t.m, t.T); });
+        list.slice(-TAPE_KEEP).forEach(function (t) { _tapeAdd(Number(t.p), Number(t.p) * Number(t.q), !t.m, t.T, 'BF'); });
       }
       list.forEach(function (t) {
         if (endId != null && t.a > endId) return;
@@ -530,11 +549,11 @@ function _setClusterTf(tf) {
 // shrink the rest; from TAPE_BIG_USD a print is a square with its size in it.
 // A thin line joins the prints.
 
-function _tapeAdd(p, usd, buy, time) {
+function _tapeAdd(p, usd, buy, time, venue) {
   if (!T.tape) T.tape = [];
   var last = T.tape[T.tape.length - 1];
-  if (last && last.t === time && last.buy === buy) { last.usd += usd; last.p = p; return; }
-  T.tape.push({ p: p, usd: usd, buy: buy, t: time });
+  if (last && last.t === time && last.buy === buy && last.v === venue) { last.usd += usd; last.p = p; return; }
+  T.tape.push({ p: p, usd: usd, buy: buy, t: time, v: venue || 'BF' });
   if (T.tape.length > TAPE_KEEP) T.tape.shift();
 }
 
@@ -573,9 +592,10 @@ function _drawTape(step) {
     var x = recent[j];
     var r = Math.max(5, Math.min(17, 5 + 3 * Math.log10(Math.max(x.usd, 10) / 10)));
     var it = { x: x, y: (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2, kind: 'bubble', r: r, bw: 2 * r, bh: 2 * r };
+    it.venue = VENUE_SHORT[x.v] || '';
     if (x.usd >= TAPE_BIG_USD) {
       it.kind = 'square';
-      it.label = _fmtQty(x.usd);
+      it.label = (it.venue ? it.venue + ' ' : '') + _fmtQty(x.usd);
       it.bw = Math.max(2 * r, ctx.measureText(it.label).width + 8);
       it.bh = Math.max(2 * r, 16);
     }
@@ -602,6 +622,7 @@ function _drawTape(step) {
       ctx.globalAlpha = 1;
       ctx.strokeStyle = getCSSVar('--paper'); // thin rim keeps overlapping bubbles apart
       ctx.stroke();
+      if (it.venue && it.r >= 6) { ctx.fillStyle = '#fff'; ctx.fillText(it.venue, it.cx, it.y + 0.5); } // other venue: its letter
       return;
     }
     ctx.globalAlpha = 0.95;
@@ -614,6 +635,26 @@ function _drawTape(step) {
     ctx.fillText(it.label, it.cx, it.y + 0.5);
   });
   ctx.globalAlpha = 1;
+}
+
+// ── Venue strip: volume and buy share per venue, last 30 s ─────────────────
+// Bar = buy share of the venue's volume (blue buys / red sells, as the tape);
+// a venue trading ≥ 3× its usual rate right now is highlighted.
+
+function _renderVenues() {
+  var el = document.getElementById('dom-venues');
+  if (!el) return;
+  if (!S.venues) { if (el._html !== '') { el.innerHTML = ''; el._html = ''; } el.style.display = 'none'; return; }
+  el.style.display = '';
+  var html = venuesStats().map(function (v) {
+    var share = v.buyShare == null ? null : Math.round(v.buyShare * 100);
+    var title = v.name + (v.live ? ' · 30 s: ' + _fmtUsd(v.vol) + ' USDT, buy ' + (share == null ? '—' : share + '%')
+      + ', delta ' + (v.delta >= 0 ? '+' : '−') + _fmtQty(Math.abs(v.delta)) : ' · no trades yet (not listed or quiet)');
+    return '<span class="dom-venue' + (v.spike ? ' spike' : '') + (v.live ? '' : ' off') + (share == null ? ' quiet' : '') + '" title="' + title + '">'
+      + '<b>' + v.name + '</b><span class="dom-venue-vol">' + (v.live ? _fmtQty(v.vol) : '—') + '</span>'
+      + '<i class="dom-venue-bar"><i style="width:' + (share == null ? 0 : share) + '%"></i></i></span>';
+  }).join('');
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
 }
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
@@ -706,7 +747,6 @@ function _connectDepth() {
     if (d.e !== 'aggTrade') return;
     T.lastTrade = { price: Number(d.p), buy: !d.m, at: Date.now() };
     _clusterTrade(d.a, d.p, Number(d.q), d.T);
-    _tapeAdd(Number(d.p), Number(d.p) * Number(d.q), !d.m, d.T);
     _queueRender();
   };
 }

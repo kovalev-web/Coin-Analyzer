@@ -15,6 +15,7 @@
     "test:journal": "node --test journal/*.test.js",
     "test:latency": "node --test src/latency-stats.test.mjs",
     "test:ladder": "node --test src/ladder-scale.test.mjs",
+    "test:venues": "node --test src/venues-stats.test.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server-vps.js"
