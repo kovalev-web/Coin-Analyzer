@@ -707,9 +707,8 @@ function _drawTape(step) {
 }
 
 // ── Other venues' books: columns right of Price ─────────────────────────────
-// Spot, Bybit, OKX in that order, each a narrow column of USDT resting at the
-// row's price (bids blue, asks red, brighter = bigger relative to that venue's
-// typical big level on screen). A cell flashes when that venue trades there.
+// Spot, Bybit, OKX in that order, each a column of USDT resting at the row's
+// price (bids blue, asks red), on the same dollar scale as our ladder. A cell flashes when that venue trades there.
 // Click a header to fold / unfold one column (remembered in this browser).
 
 // Compact: a number per row; full: a bar ladder like our Volume column
@@ -761,7 +760,7 @@ function _venueThreshold(id, pct) {
   return v;
 }
 
-function _venueView(step, lo, hi) {
+function _venueView(step, lo, hi, mainFull) {
   if (!S.venues) return null;
   var folded = _venueFolded(), now = Date.now();
   return BOOK_VENUES.map(function (v) {
@@ -791,7 +790,9 @@ function _venueView(step, lo, hi) {
     var vals = Object.values(rows.bid).concat(Object.values(rows.ask));
     T.vAuto[v.id] = smoothScale(T.vAuto[v.id], levelPercentile(vals, AUTO_PERCENTILE), now - (T.vAutoAt[v.id] || now));
     T.vAutoAt[v.id] = now;
-    return { rows: rows, hits: hits, full: T.vAuto[v.id] };
+    // One scale with our ladder: a wall is colored when it's big in dollars next to
+    // Binance's levels, not just big for a thin venue; own scale only until ours is known
+    return { rows: rows, hits: hits, full: mainFull || T.vAuto[v.id] };
   });
 }
 
@@ -813,8 +814,8 @@ function _setVenueCells(box, i, view, side) {
   }
 }
 
-// Full books: the same bar as our Volume column — length by size vs that
-// venue's full scale (its typical big level), grey under the color threshold
+// Full books: the same bar as our Volume column — length by size against our
+// ladder's full scale (same dollars as Binance), grey under the color threshold
 function _setVenueBars(box, i, view, side) {
   for (var k = 0; k < view.length; k++) {
     var cell = box.children[k], col = view[k];
@@ -1256,7 +1257,7 @@ function _render() {
   var mine = _myOrdersByIdx(step);
   var marks = _chartMarksByIdx(step);
   var cl = _clusterView(step);
-  var ven = _venueView(step, T.top - T.rows + 1, T.top);
+  var ven = _venueView(step, T.top - T.rows + 1, T.top, full);
   var pnl = _pnlInfo();
   var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
