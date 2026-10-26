@@ -812,7 +812,7 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 
 /* trades tape: canvas over the leftmost grid column, left of the clusters */
 .fv-dom{--tape-w:0px;}
-.fv-dom.has-tape{--tape-w:150px;}
+.fv-dom.has-tape{--tape-w:190px;}
 .fv-dom.has-tape{width:calc(330px + var(--tape-w) + var(--cl-w));flex-basis:calc(330px + var(--tape-w) + var(--cl-w));}
 .dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 92px;}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:3;}

@@ -40,8 +40,7 @@ var CLUSTER_TFS = { off: 0, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 
 var CLUSTER_TF_DEFAULT = '5m';
 var CLUSTER_COLS = 4;          // newest on the right, next to Mine
 var TAPE_KEEP = 300;           // prints kept for the tape
-var TAPE_STEP_PX = 7;          // horizontal distance between prints
-var TAPE_MIN_DEFAULT = 10;     // USD: smaller prints stay on the line, no bubble
+var TAPE_MIN_DEFAULT = 10;     // USD: smaller prints are dropped from the tape entirely (Tiger: "remove trades under")
 var TAPE_BIG_USD = 500;        // USD: from here a print is a square with its size written in it
 var CLUSTER_BACKFILL_PAGES = 8; // ≤ 8 000 recent trades from REST when opening; older periods may be partial // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
@@ -334,7 +333,7 @@ function _settingsHTML() {
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
     + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
     + '<option value="on"' + (S.tape ? ' selected' : '') + '>On</option><option value="off"' + (S.tape ? '' : ' selected') + '>Off</option></select></div>'
-    + '<div class="dom-set-row"><span>Tape: circles from, USD</span>'
+    + '<div class="dom-set-row"><span>Tape: ignore trades under, USD</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-tape-min="1" placeholder="All trades" value="' + (S.tapeMin || '') + '"></div>'
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
@@ -524,9 +523,11 @@ function _setClusterTf(tf) {
 // Each market trade is a circle on the row of its price, newest at the right
 // edge (next to the clusters), older ones step left; blue = buy, red = sell,
 // size ∝ √USDT relative to the biggest print shown. Trades at the same
-// millisecond and side merge into one print (one aggressive order). A thin line
-// joins all prints; ones under S.tapeMin (10 $ by default) stay on the line
-// without a bubble; from TAPE_BIG_USD a print is a square with its size in it.
+// millisecond and side merge into one print (one aggressive order). Prints
+// under S.tapeMin (10 $ by default) are dropped; size grows with log(USDT) on a
+// fixed scale (10 $ → 5 px radius … 100K $ → 17 px), so one huge trade doesn't
+// shrink the rest; from TAPE_BIG_USD a print is a square with its size in it.
+// A thin line joins the prints.
 
 function _tapeAdd(p, usd, buy, time) {
   if (!T.tape) T.tape = [];
@@ -560,33 +561,25 @@ function _drawTape(step) {
   ctx.clearRect(0, 0, w, h);
   var tape = T.tape || [];
   if (!tape.length || T.top == null) return;
-  ctx.font = getCSSVar('--font-bold') + ' 9px ' + getCSSVar('--font-family');
+  ctx.font = getCSSVar('--font-bold') + ' 10px ' + getCSSVar('--font-family');
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   // Lay out from the newest (right edge) back in time: each print takes its own
   // width, so squares sit side by side with readable numbers instead of piling up
-  var recent = tape.slice(-120);
-  var max = 0;
-  recent.forEach(function (x) { if (x.usd > max) max = x.usd; });
+  var recent = tape.slice(-200).filter(function (x) { return !S.tapeMin || x.usd >= S.tapeMin; });
   var items = [], right = w - 2;
   for (var j = recent.length - 1; j >= 0 && right > 0; j--) {
     var x = recent[j];
-    var it = { x: x, y: (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2, kind: 'dot', bw: TAPE_STEP_PX - 1, bh: 0 };
-    if (!S.tapeMin || x.usd >= S.tapeMin) {
-      var r = 2 + 9 * Math.sqrt(x.usd / max);
-      if (x.usd >= TAPE_BIG_USD) {
-        it.kind = 'square';
-        it.label = _fmtQty(x.usd);
-        it.bw = Math.max(2 * r, ctx.measureText(it.label).width + 6);
-        it.bh = Math.max(2 * r, 13);
-      } else {
-        it.kind = 'bubble';
-        it.r = r;
-        it.bw = Math.max(TAPE_STEP_PX - 1, 2 * r);
-      }
+    var r = Math.max(5, Math.min(17, 5 + 3 * Math.log10(Math.max(x.usd, 10) / 10)));
+    var it = { x: x, y: (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2, kind: 'bubble', r: r, bw: 2 * r, bh: 2 * r };
+    if (x.usd >= TAPE_BIG_USD) {
+      it.kind = 'square';
+      it.label = _fmtQty(x.usd);
+      it.bw = Math.max(2 * r, ctx.measureText(it.label).width + 8);
+      it.bh = Math.max(2 * r, 16);
     }
     it.cx = right - it.bw / 2;
-    right -= it.bw + 1;
+    right -= it.bw - Math.min(4, it.bw / 4); // slight overlap, like Tiger
     items.push(it);
   }
   items.reverse(); // oldest first: newer prints are drawn on top
@@ -598,17 +591,23 @@ function _drawTape(step) {
   ctx.stroke();
   var buyC = getCSSVar('--primary'), sellC = getCSSVar('--danger');
   items.forEach(function (it) {
-    if (it.kind === 'dot' || it.y < -14 || it.y > h + 14) return;
+    if (it.y < -20 || it.y > h + 20) return;
     ctx.fillStyle = it.x.buy ? buyC : sellC;
     if (it.kind === 'bubble') {
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.8;
       ctx.beginPath();
       ctx.arc(it.cx, it.y, it.r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = getCSSVar('--paper'); // thin rim keeps overlapping bubbles apart
+      ctx.stroke();
       return;
     }
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.95;
     ctx.fillRect(it.cx - it.bw / 2, it.y - it.bh / 2, it.bw, it.bh);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = getCSSVar('--paper');
+    ctx.strokeRect(it.cx - it.bw / 2, it.y - it.bh / 2, it.bw, it.bh);
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#fff'; // white on the blue / red square in both themes (as the chart labels)
     ctx.fillText(it.label, it.cx, it.y + 0.5);
