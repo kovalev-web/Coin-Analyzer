@@ -17,6 +17,16 @@ import { showToast, getCSSVar, chartMarks } from './ui.js';
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
 var SIZE_MIN = 5, SIZE_MAX = 500;
+// Shown in the settings modal; mouse keys work over the ladder, keys while the mouse is over it
+var HOTKEYS = [
+  ['Left click', 'Buy at the level'],
+  ['Right click', 'Sell at the level'],
+  ['Shift + click', 'Stop-loss / take-profit'],
+  ['Click on Mine', 'Cancel your orders there'],
+  ['Space', 'Close the position'],
+  ['X', 'Cancel all orders on the coin'],
+  ['Esc', 'Close this window'],
+];
 var HIGHLIGHT_DEFAULT = 65; // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
@@ -205,7 +215,6 @@ function _panelHTML() {
     + '<div class="dom-foot">'
     + '<div class="dom-pos" id="dom-pos"></div>'
     + '<div class="dom-status" id="dom-status"></div>'
-    + '<div class="dom-hint">LMB buy · RMB sell · Shift+click SL/TP · click Mine to cancel · Space close · X cancel all</div>'
     + '</div>';
 }
 
@@ -263,6 +272,9 @@ function _settingsHTML() {
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
     + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '<div class="dom-set-row"><span>Hotkeys · all coins</span><div class="dom-keys">'
+    + HOTKEYS.map(function (k) { return '<kbd>' + k[0] + '</kbd><span>' + k[1] + '</span>'; }).join('')
+    + '</div></div>'
     + '</div>';
 }
 
