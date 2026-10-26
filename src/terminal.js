@@ -627,7 +627,7 @@ function _autoScale() {
 function _renderScale() {
   var el = document.getElementById('dom-scale-val');
   if (!el || !T.rules || T.scaleIdx == null) return;
-  var t = '×' + SCALES[T.scaleIdx] + ' · ' + Number(_step().toFixed(_decimals(T.rules.tickSize)));
+  var t = '×' + SCALES[T.scaleIdx];
   if (el.textContent !== t) el.textContent = t;
 }
 
