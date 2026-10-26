@@ -22,8 +22,9 @@ var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
 var OPEN_ALGO = { NEW: true, TRIGGERING: true };
 
-// Ladder settings (gear in the panel head), kept in this browser
-var S = _loadSettings();
+// Ladder settings (gear in the panel head): per coin, kept in this browser.
+// Reloaded when the ladder switches to another coin.
+var S = _loadSettings(null);
 
 var T = {
   access: null,          // null = unknown, false = no access, object = /status
@@ -42,7 +43,7 @@ var T = {
   tagQueue: [],           // closed trades waiting for a tag: {symbol, closeTime, setup, emotion}         // orderId/algoId seen closed by the stream (beats a late placement reply)        // orderId/algoId → true while a cancel is in flight
   bids: [], asks: [],    // [[price, qty], ...] best first
   scaleIdx: null, top: null, rows: 0,
-  size: _savedSize(),
+  size: S.sizes[2],
   hover: false,
   hoverRow: null,        // ladder row under the cursor (screen position), for the % ruler
   viewLive: _lsGet('qt_term_live') === '1', // testnet account, live-market book (view only)
@@ -55,14 +56,15 @@ var T = {
 
 // A remembered size that is no longer a slot falls back to the middle one
 function _savedSize() {
-  var v = Number(_lsGet('qt_term_size'));
+  var v = Number(_lsGet('qt_term_size_' + T.sym));
   return S.sizes.indexOf(v) !== -1 ? v : S.sizes[Math.min(2, S.sizes.length - 1)];
 }
 
 // sizes: USDT per click; fullScale: USD at which a volume bar is full (0 = biggest level on screen)
-function _loadSettings() {
+// A coin without its own settings starts from the defaults
+function _loadSettings(sym) {
   var s = null;
-  try { s = JSON.parse(_lsGet('qt_term_settings') || 'null'); } catch (e) {}
+  try { s = sym ? JSON.parse(_lsGet('qt_term_settings_' + sym) || 'null') : null; } catch (e) {}
   s = s || {};
   var sizes = Array.isArray(s.sizes) ? s.sizes.map(Number).filter(_validSize) : [];
   return {
@@ -72,7 +74,7 @@ function _loadSettings() {
 }
 
 function _validSize(v) { return v >= SIZE_MIN && v <= SIZE_MAX; }
-function _saveSettings() { _lsSet('qt_term_settings', JSON.stringify(S)); }
+function _saveSettings() { _lsSet('qt_term_settings_' + T.sym, JSON.stringify(S)); }
 
 function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -136,6 +138,8 @@ function _openPanel(sym) {
   body.classList.add('has-dom');
   if (T.sym !== sym) {
     T.sym = sym;
+    S = _loadSettings(sym);
+    T.size = _savedSize();
     T.rules = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
     tradeRequest('GET', 'rules?symbol=' + sym).then(function (r) {
       if (T.sym !== sym) return;
@@ -215,7 +219,7 @@ function _openSettings() {
   ov.id = 'dom-settings-modal';
   ov.className = 'overlay dom-settings-overlay';
   ov.innerHTML = '<div class="popup dom-settings-popup" role="dialog" aria-label="Order book settings">'
-    + '<div class="popup-header"><span class="popup-title">Order book settings</span><button class="btn-topbar" data-set-close="1">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-header"><span class="popup-title">Order book settings · ' + T.sym.replace(/USDT$/, '') + '</span><button class="btn-topbar" data-set-close="1">' + icon('x', 14) + '</button></div>'
     + '<div class="popup-body">' + _settingsHTML() + '</div>'
     + '<div class="popup-footer"><button class="btn-cta" data-set-close="1">Done</button></div>'
     + '</div>';
@@ -271,7 +275,7 @@ function _applySettingInput(inp) {
       if (vals.indexOf(v) === -1) vals.push(v);
     });
     S.sizes = vals.length ? vals.sort(function (a, b) { return a - b; }) : SIZE_DEFAULTS.slice();
-    if (S.sizes.indexOf(T.size) === -1) { T.size = _savedSize(); _lsSet('qt_term_size', String(T.size)); }
+    if (S.sizes.indexOf(T.size) === -1) { T.size = _savedSize(); _lsSet('qt_term_size_' + T.sym, String(T.size)); }
     var box = document.getElementById('dom-sizes');
     if (box) box.innerHTML = _sizesHTML();
   }
@@ -1125,7 +1129,7 @@ function _bindPanel(panel) {
     var size = e.target.closest('[data-size]');
     if (size) {
       T.size = Number(size.dataset.size);
-      _lsSet('qt_term_size', String(T.size));
+      _lsSet('qt_term_size_' + T.sym, String(T.size));
       panel.querySelectorAll('.dom-size').forEach(function (b) { b.classList.toggle('active', b === size); });
       return;
     }
