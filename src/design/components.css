@@ -825,6 +825,6 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom.has-cl .dom-ruler,.fv-dom.has-tape .dom-ruler{left:calc(var(--space-4) + var(--tape-w) + var(--cl-w));}
 
 /* cluster numbers: regular weight, semi-transparent, so they don't compete with the ladder */
-.dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 60%,transparent);}
+.dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
 .dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));}
