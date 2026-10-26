@@ -570,7 +570,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 
 /* ── Order book terminal (DOM ladder) in full view ───────────────── */
 .fv-body.has-dom{flex-direction:row;}
-.fv-dom{width:330px;flex:0 0 330px;display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
+.fv-dom{width:270px;flex:0 0 270px;display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
 .dom-head{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--steel);}
 .dom-env{font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:color-mix(in srgb,var(--level-deep) 18%,transparent);color:var(--ink-deep);}
 .dom-env.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
@@ -624,7 +624,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-head .dom-sizes{flex:1 1 auto;min-width:auto;}
 
 /* compact ladder: Mine | Volume (heat-filled) | Price */
-.dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 92px;align-items:center;}
+.dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 72px;align-items:center;}
 .dom-cols span:nth-child(2){padding-left:var(--space-2);}
 .dom-row{height:16px;font-size:var(--text-ladder);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
 .dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
@@ -796,8 +796,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 
 /* clusters: CLUSTER_COLS columns of traded volume per price, left of the ladder */
 .fv-dom{--cl-w:0px;}
-.fv-dom.has-cl{--cl-w:100px;width:430px;flex-basis:430px;}
-.dom-cols,.dom-row{grid-template-columns:var(--cl-w) 52px 1fr 92px;}
+.fv-dom.has-cl{--cl-w:100px;width:370px;flex-basis:370px;}
+.dom-cols,.dom-row{grid-template-columns:var(--cl-w) 52px 1fr 72px;}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:2;grid-row:1;}
 .dom-c-vol,.dom-cols>span:nth-child(2){grid-column:3;grid-row:1;}
 .dom-c-price,.dom-cols>span:nth-child(3){grid-column:4;grid-row:1;}
@@ -813,8 +813,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* trades tape: canvas over the leftmost grid column, left of the clusters */
 .fv-dom{--tape-w:0px;}
 .fv-dom.has-tape{--tape-w:190px;}
-.fv-dom.has-tape{width:calc(330px + var(--tape-w) + var(--cl-w));flex-basis:calc(330px + var(--tape-w) + var(--cl-w));}
-.dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 92px;}
+.fv-dom.has-tape{width:calc(270px + var(--tape-w) + var(--cl-w));flex-basis:calc(270px + var(--tape-w) + var(--cl-w));}
+.dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 72px;}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:3;}
 .dom-c-vol,.dom-cols>span:nth-child(2){grid-column:4;}
 .dom-c-price,.dom-cols>span:nth-child(3){grid-column:5;}
