@@ -30,6 +30,7 @@ var HOTKEYS = [
   ['Space', 'Close the position'],
   ['X', 'Cancel all orders on the coin'],
   ['+ / −', 'Coarser / finer price scale'],
+  ['1 … 6', 'Order size slot 1 … 6'],
   ['Esc', 'Close this window'],
 ];
 var HIGHLIGHT_DEFAULT = 65; // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
@@ -1399,12 +1400,7 @@ function _bindPanel(panel) {
     if (md) { _switchMode(md.dataset.mode); return; }
     if (e.target.closest('[data-settings]')) { _openSettings(); return; }
     var size = e.target.closest('[data-size]');
-    if (size) {
-      T.size = Number(size.dataset.size);
-      _lsSet('qt_term_size_' + T.sym, String(T.size));
-      panel.querySelectorAll('.dom-size').forEach(function (b) { b.classList.toggle('active', b === size); });
-      return;
-    }
+    if (size) { _pickSize(Number(size.dataset.size)); return; }
     var ts = e.target.closest('[data-tag-setup]');
     if (ts) { _tagClick('setup', ts.dataset.tagSetup); return; }
     var te = e.target.closest('[data-tag-emotion]');
@@ -1459,6 +1455,13 @@ function _bindPanel(panel) {
   }, { passive: false });
 }
 
+// Order size slot (button or digit key); remembered per coin
+function _pickSize(v) {
+  T.size = v;
+  _lsSet('qt_term_size_' + T.sym, String(v));
+  document.querySelectorAll('#dom-sizes .dom-size').forEach(function (b) { b.classList.toggle('active', Number(b.dataset.size) === v); });
+}
+
 // −1 finer, +1 coarser; remembered per coin
 function _changeScale(dir) {
   var i = (T.scaleIdx || 0) + dir;
@@ -1475,7 +1478,11 @@ document.addEventListener('keydown', function (e) {
   if (!e.metaKey && !e.ctrlKey && !e.altKey && !document.getElementById('dom-settings-modal')) {
     var dir = e.code === 'Equal' || e.code === 'NumpadAdd' ? 1 : e.code === 'Minus' || e.code === 'NumpadSubtract' ? -1 : 0;
     var t = (e.target && e.target.tagName) || '';
-    if (dir && t !== 'INPUT' && t !== 'TEXTAREA' && !e.target.isContentEditable) { e.preventDefault(); _changeScale(dir); return; }
+    var typing = t === 'INPUT' || t === 'TEXTAREA' || e.target.isContentEditable;
+    if (dir && !typing) { e.preventDefault(); _changeScale(dir); return; }
+    // 1…6 pick the order size slot (top row or numpad)
+    var digit = /^(Digit|Numpad)([1-6])$/.exec(e.code);
+    if (digit && !typing && S.sizes[digit[2] - 1] != null) { e.preventDefault(); _pickSize(S.sizes[digit[2] - 1]); return; }
   }
   if (!T.hover) return;
   if ((e.code === 'Space' || /^[xXчЧ]$/.test(e.key)) && _viewOnly()) { e.preventDefault(); _viewOnlyBlocked(); return; }
