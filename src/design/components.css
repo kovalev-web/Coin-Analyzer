@@ -768,3 +768,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-around.has:hover>span:first-child{color:var(--ink-deep);}
 .dom-around-list{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-1);}
 .dom-around-none{color:var(--graphite);}
+
+/* one typeface for the whole ladder: volume, price, your orders and the % ruler
+   share size and weight (change --ladder-weight to restyle all of them) */
+.fv-dom{--ladder-weight:var(--font-bold);}
+.dom-row,.dom-c-price,.dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price,.dom-c-vol b,.dom-mine,.dom-ruler-tag{font-size:var(--text-ladder);font-weight:var(--ladder-weight);}
