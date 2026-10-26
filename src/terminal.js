@@ -1724,11 +1724,20 @@ function _bindPanel(panel) {
   });
 
   // Scroll the ladder by wheel instead of letting it auto-center
+  // Scroll by the real distance: a trackpad sends dozens of small events per
+  // second (plus momentum), a mouse wheel a few big ones. Pixels add up and
+  // every ROW_H of them moves the ladder one row; the remainder carries over.
+  var wheelAcc = 0;
   panel.addEventListener('wheel', function (e) {
     if (!e.target.closest('.dom-ladder') || T.top == null) return;
     e.preventDefault();
     T.pinned = true;
-    T.top += e.deltaY > 0 ? -3 : 3;
+    var px = e.deltaMode === 1 ? e.deltaY * ROW_H : e.deltaMode === 2 ? e.deltaY * T.rows * ROW_H : e.deltaY;
+    wheelAcc += px;
+    var rows = wheelAcc > 0 ? Math.floor(wheelAcc / ROW_H) : Math.ceil(wheelAcc / ROW_H);
+    if (!rows) return;
+    wheelAcc -= rows * ROW_H;
+    T.top -= rows;
     _render();
   }, { passive: false });
 }
