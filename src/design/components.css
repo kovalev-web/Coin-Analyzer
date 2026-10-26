@@ -631,6 +631,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-c-vol i{position:absolute;top:1px;bottom:1px;left:0;width:0;opacity:0;border-radius:0 2px 2px 0;}
 .dom-row.ask .dom-c-vol i{background:var(--danger);}
 .dom-row.bid .dom-c-vol i{background:var(--primary);}
+.dom-row .dom-c-vol.dim i{background:var(--graphite);}
 .dom-c-vol b{position:relative;font-weight:var(--font-medium);padding:0 var(--space-2);color:var(--ink-deep);}
 .dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price{font-weight:var(--font-medium);}
 .dom-c-price{text-align:right;padding-right:var(--space-3);}

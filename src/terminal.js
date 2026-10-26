@@ -16,7 +16,8 @@ import { showToast, getCSSVar } from './ui.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
-var SIZE_MIN = 5, SIZE_MAX = 500; // Binance minimum notional … the agreed per-click cap
+var SIZE_MIN = 5, SIZE_MAX = 500;
+var HIGHLIGHT_DEFAULT = 65; // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
@@ -60,7 +61,8 @@ function _savedSize() {
   return S.sizes.indexOf(v) !== -1 ? v : S.sizes[Math.min(2, S.sizes.length - 1)];
 }
 
-// sizes: USDT per click; fullScale: USD at which a volume bar is full (0 = biggest level on screen)
+// sizes: USDT per click; fullScale: USD at which a volume bar is full (0 = biggest level on screen);
+// highlight: % of the full scale from which a bar is colored
 // A coin without its own settings starts from the defaults
 function _loadSettings(sym) {
   var s = null;
@@ -70,6 +72,7 @@ function _loadSettings(sym) {
   return {
     sizes: sizes.length ? sizes.slice(0, SIZE_DEFAULTS.length) : SIZE_DEFAULTS.slice(),
     fullScale: Number(s.fullScale) > 0 ? Number(s.fullScale) : 0,
+    highlight: Number(s.highlight) > 0 && Number(s.highlight) <= 100 ? Number(s.highlight) : HIGHLIGHT_DEFAULT,
   };
 }
 
@@ -257,12 +260,18 @@ function _settingsHTML() {
     + '</div></div>'
     + '<div class="dom-set-row"><span>Full scale, thousand USD</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
-    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K). Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
+    + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
+    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
     + '</div>';
 }
 
 function _applySettingInput(inp) {
-  if (inp.dataset.setFull) {
+  if (inp.dataset.setHighlight) {
+    var h = Number(inp.value);
+    S.highlight = h > 0 && h <= 100 ? h : HIGHLIGHT_DEFAULT;
+    inp.value = S.highlight;
+  } else if (inp.dataset.setFull) {
     var f = Number(inp.value);
     S.fullScale = f > 0 ? f * 1000 : 0; // typed in thousands, kept in USD
     if (!S.fullScale) inp.value = '';
@@ -615,7 +624,8 @@ function _render() {
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
     var usd = v * i * step;
-    _setVol(c[1], usd, !v ? 0 : S.fullScale ? Math.min(1, usd / S.fullScale) : v / maxVol);
+    var ratio = !v ? 0 : S.fullScale ? Math.min(1, usd / S.fullScale) : v / maxVol;
+    _setVol(c[1], usd, ratio, S.fullScale > 0 && usd < S.fullScale * S.highlight / 100);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
@@ -668,9 +678,11 @@ function _makeRow() {
 
 // Bar length ∝ size: r = share of the full scale (set in USD, or the biggest
 // level on screen); bigger also brighter. v is the level's size in USD.
-function _setVol(cell, v, r) {
+// dim: under the highlight threshold — grey, to cut color noise.
+function _setVol(cell, v, r, dim) {
   var w = v ? Math.max(2, Math.round(r * 100)) + '%' : '0%';
-  var o = v ? (0.35 + 0.5 * r).toFixed(2) : '0';
+  var o = !v ? '0' : dim ? '0.3' : (0.35 + 0.5 * r).toFixed(2);
+  if (cell.classList.contains('dim') !== !!dim) cell.classList.toggle('dim', !!dim);
   var t = v ? _fmtQty(v) : '';
   if (cell.firstChild.style.width !== w) cell.firstChild.style.width = w;
   if (cell.firstChild.style.opacity !== o) cell.firstChild.style.opacity = o;
