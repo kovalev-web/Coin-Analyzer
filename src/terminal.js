@@ -16,6 +16,7 @@ import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
+import { levelPercentile, smoothScale, AUTO_PERCENTILE } from './ladder-scale.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -206,7 +207,7 @@ function _openPanel(sym) {
     T.sym = sym;
     S = _loadSettings(sym);
     T.size = _savedSize();
-    T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
+    T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null; T.autoFull = null;
     tradeRequest('GET', 'rules?symbol=' + sym).then(function (r) {
       if (T.sym !== sym) return;
       T.rules = r;
@@ -328,7 +329,7 @@ function _settingsHTML() {
       }).join('')
     + '</div></div>'
     + '<div class="dom-set-row"><span>Full scale, thousand USD</span>'
-    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
+    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' (now ≈ $' + _fmtQty(T.autoFull) + ')' : '') + '" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
     + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
@@ -338,7 +339,7 @@ function _settingsHTML() {
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
     + '</select></div>'
-    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — set automatically from the levels on screen (a typical big one is full). Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
     + '<div class="dom-set-row"><span>Hotkeys · all coins</span><div class="dom-keys">'
     + HOTKEYS.map(function (k) { return '<kbd>' + k[0] + '</kbd><span>' + k[1] + '</span>'; }).join('')
     + '</div></div>'
@@ -1024,6 +1025,15 @@ function _render() {
   // Bar lengths are relative to the biggest level currently on screen
   Object.keys(bidVol).forEach(function (k) { maxVol = Math.max(maxVol, bidVol[k]); });
   Object.keys(askVol).forEach(function (k) { maxVol = Math.max(maxVol, askVol[k]); });
+  // Full scale: the coin's own setting, else automatic — a "typical big" level
+  // on screen (ladder-scale.js), smoothed so the colors don't flicker
+  var usdLevels = [];
+  Object.keys(bidVol).forEach(function (k) { usdLevels.push(bidVol[k] * Number(k) * step); });
+  Object.keys(askVol).forEach(function (k) { usdLevels.push(askVol[k] * Number(k) * step); });
+  var nowMs = Date.now();
+  T.autoFull = smoothScale(T.autoFull, levelPercentile(usdLevels, AUTO_PERCENTILE), nowMs - (T.autoAt || nowMs));
+  T.autoAt = nowMs;
+  var full = S.fullScale || T.autoFull || 0;
 
   var mine = _myOrdersByIdx(step);
   var marks = _chartMarksByIdx(step);
@@ -1071,8 +1081,8 @@ function _render() {
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
     var usd = v * i * step;
-    var ratio = !v ? 0 : S.fullScale ? Math.min(1, usd / S.fullScale) : v / maxVol;
-    _setVol(c[1], usd, ratio, S.fullScale > 0 && usd < S.fullScale * S.highlight / 100);
+    var ratio = !v ? 0 : full ? Math.min(1, usd / full) : v / maxVol;
+    _setVol(c[1], usd, ratio, full > 0 && usd < full * S.highlight / 100);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
@@ -1757,6 +1767,7 @@ function _pickSize(v) {
 function _changeScale(dir) {
   var i = (T.scaleIdx || 0) + dir;
   T.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, i));
+  T.autoFull = null; // a row now holds more (or less): measure the scale afresh
   _lsSet('qt_term_scale_' + T.sym, String(SCALES[T.scaleIdx]));
   T.top = null;
   _queueRender();
