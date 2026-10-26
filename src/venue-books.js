@@ -17,8 +17,9 @@ export var BOOK_VENUES = [
 
 var B = { gen: 0, socks: [], timers: [], books: {}, listed: {}, onStatus: null };
 
-// The venue doesn't list this coin (Binance -1121, Bybit 'handler not found',
-// OKX 51001): its column header turns red and stays folded
+// The venue doesn't trade this coin (Binance -1121; Bybit not in the list or not
+// 'Trading', e.g. delisted; OKX no instrument or not 'live'): its column header
+// turns red and stays folded
 function _notListed(id) {
   if (B.listed[id] === false) return;
   B.listed[id] = false;
@@ -99,7 +100,18 @@ function _binanceSpot(coin, mult) {
 }
 
 function _bybit(symbol) {
-  var book = _book('BB');
+  var gen = B.gen, book = _book('BB');
+  // Bybit accepts a subscription to a closed (delisted) symbol and then stays
+  // silent, so ask the instrument list first: listed means status Trading
+  fetch('https://api.bybit.com/v5/market/instruments-info?category=linear&symbol=' + symbol).then(function (r) { return r.json(); }).then(function (j) {
+    if (gen !== B.gen) return;
+    var it = j && j.result && j.result.list && j.result.list[0];
+    if (!it || it.status !== 'Trading') { _notListed('BB'); return; }
+    _bybitStream(symbol, book);
+  }).catch(function () { if (gen === B.gen) _bybitStream(symbol, book); }); // REST unreachable → just try the stream
+}
+
+function _bybitStream(symbol, book) {
   _ws('wss://stream.bybit.com/v5/public/linear', function (sock) {
     sock.send(JSON.stringify({ op: 'subscribe', args: ['orderbook.200.' + symbol] }));
   }, function (m, sock) {
@@ -117,7 +129,7 @@ function _okx(coin, mult) {
   book.mult = mult;
   fetch('https://www.okx.com/api/v5/public/instruments?instType=SWAP&instId=' + instId).then(function (r) { return r.json(); }).then(function (j) {
     if (gen !== B.gen || !j) return;
-    if (!j.data || !j.data.length) { _notListed('OK'); return; }
+    if (!j.data || !j.data.length || (j.data[0].state && j.data[0].state !== 'live')) { _notListed('OK'); return; }
     var ctVal = Number(j.data[0].ctVal) || 1, lastSeq = null;
     function apply(map, levels) {
       levels.forEach(function (l) { var p = Number(l[0]); _set(map, p * mult, p * Number(l[1]) * ctVal); });
