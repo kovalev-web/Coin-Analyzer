@@ -64,7 +64,9 @@ var T = {
   size: S.sizes[2],
   hover: false,
   hoverRow: null,        // ladder row under the cursor (screen position), for the % ruler
-  viewLive: _lsGet('qt_term_live') === '1', // testnet account, live-market book (view only)
+  // Live-market book on the testnet account (view only). The Testnet/Live book
+  // button is gone since the Live/Test switch; kept off so old saved state can't lock trading.
+  viewLive: false,
   pinned: false,         // user scrolled the ladder: stop auto-centering until the mouse leaves
   renderQueued: false,
   lines: [], linesSeries: null, linesKey: '',
@@ -245,10 +247,6 @@ function _panelHTML() {
     + '<button data-mode="live" class="' + (T.mode === 'live' ? 'active live' : '') + '">Live</button>'
     + '<button data-mode="test" class="' + (T.mode === 'test' ? 'active test' : '') + '">Test</button></span>'
     + '<span class="dom-ping" id="dom-ping" tabindex="0"><i></i><b>— ms</b><span class="dom-ping-pop" id="dom-ping-pop"></span></span>'
-    + (_isTestnet()
-        ? '<button class="dom-book' + (T.viewLive ? ' active' : '') + '" data-live="1" title="Show the live Binance order book (view only)">'
-          + (T.viewLive ? 'Live book' : 'Testnet book') + '</button>'
-        : '')
     + '<div class="dom-scale" title="Price scale: one row = exchange tick × multiplier">'
     + '<button data-scale="-1" title="Finer">−</button><span class="dom-scale-val" id="dom-scale-val"></span>'
     + '<button data-scale="1" title="Coarser">+</button></div>'
@@ -1408,17 +1406,6 @@ function _bindPanel(panel) {
     if (e.target.closest('[data-tag-skip]')) { T.tagQueue.pop(); _renderTag(); return; }
     if (e.target.closest('[data-unlock]')) { _unlock(); return; }
     if (e.target.closest('[data-lock]')) { _lock(); return; }
-    var lv = e.target.closest('[data-live]');
-    if (lv) {
-      T.viewLive = !T.viewLive;
-      _lsSet('qt_term_live', T.viewLive ? '1' : '0');
-      T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
-      panel.innerHTML = _panelHTML();
-      panel.classList.toggle('view-only', _viewOnly());
-      _connectDepth();
-      _queueRender();
-      return;
-    }
     var sc = e.target.closest('[data-scale]');
     if (sc) { _changeScale(Number(sc.dataset.scale)); return; }
   });
