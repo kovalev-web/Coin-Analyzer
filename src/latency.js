@@ -45,6 +45,7 @@ function _tick() {
     }
     L.offsetRtt *= 1.01; // let an old "best" age out
     L.binance = r.binanceMs;
+    L.route = r.route || null;
     L.edge = r.edge || null;
     L.country = r.country || null;
     L.last = { ok: true, rtt: r.rtt, at: Date.now() };
@@ -101,8 +102,9 @@ export function stats() {
     bookP95: percentile(L.book, 95),
     order: L.order,
     reconnects: wsReconnects - L.reconnectsAtStart,
+    route: L.route,                   // 'direct' (straight to the Tokyo server) or 'cloudflare'
     edge: L.edge,                     // Cloudflare edge code, e.g. 'NRT'
-    edgeCity: edgeCity(L.edge),
+    edgeCity: L.route === 'direct' ? 'Tokyo' : edgeCity(L.edge),
     country: countryName(L.country),  // where your traffic exits (VPN / provider)
   };
 }

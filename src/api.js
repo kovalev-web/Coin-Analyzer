@@ -44,16 +44,33 @@ var _reqId = 0;
 var _pending = {};
 export var wsReconnects = 0; // closes since page load (latency indicator)
 
+// Direct route to the Tokyo server (trade.questtick.com, DNS only): skips the
+// Cloudflare hop, ~45 ms less per round trip. If it can't connect, the socket
+// falls back to the Cloudflare URL and tries direct again 5 minutes later.
+var WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+var WS_DIRECT_URL = import.meta.env.VITE_WS_DIRECT_URL
+  || (/(^|\.)questtick\.com$/.test(location.hostname) ? 'wss://trade.questtick.com/ws' : null);
+var DIRECT_RETRY_MS = 5 * 60 * 1000;
+var DIRECT_OPEN_TIMEOUT_MS = 3000;
+var _directFailedAt = 0;
+
 function connectWS() {
   if (_wsReady === null) {
     _wsReady = new Promise(function (resolve) { _wsReadyResolve = resolve; });
   }
 
-  var url = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+  var direct = !!WS_DIRECT_URL && Date.now() - _directFailedAt > DIRECT_RETRY_MS;
+  var url = direct ? WS_DIRECT_URL : WS_URL;
 
-  ws = new WebSocket(url);
+  var sock = ws = new WebSocket(url);
+  var opened = false;
+  var openTimer = direct ? setTimeout(function () {
+    if (!opened) { _directFailedAt = Date.now(); try { sock.close(); } catch (e) {} }
+  }, DIRECT_OPEN_TIMEOUT_MS) : null;
 
   ws.onopen = function () {
+    opened = true;
+    clearTimeout(openTimer);
     wsConnected = true;
     console.log('[WS] Connected to', url);
     if (_wsReadyResolve) { _wsReadyResolve(); _wsReadyResolve = null; }
@@ -124,6 +141,14 @@ function connectWS() {
   };
 
   ws.onclose = function () {
+    clearTimeout(openTimer);
+    if (direct && !opened) {
+      // Direct route unreachable: switch to Cloudflare right away, no error banner
+      _directFailedAt = Date.now();
+      console.log('[WS] Direct route failed, using', WS_URL);
+      connectWS();
+      return;
+    }
     wsConnected = false;
     wsReconnects++;
     console.log('[WS] Disconnected, reconnecting in 3s...');
@@ -138,6 +163,7 @@ function connectWS() {
   };
 
   ws.onerror = function () {
+    if (direct && !opened) return; // onclose falls back to Cloudflare
     if (!wsConnected && _wsReadyResolve) {
       _wsReadyResolve(); // resolve anyway so app doesn't hang
       _wsReadyResolve = null;
@@ -192,7 +218,7 @@ export function wsPing(timeoutMs) {
     new Promise(function (_, reject) { setTimeout(function () { reject(new Error('ping timeout')); }, timeoutMs || 3000); }),
   ]).then(function (m) {
     var rtt = performance.now() - t0;
-    return { rtt: rtt, sent: sent, serverTime: m.t, binanceMs: m.binanceMs, edge: m.edge, country: m.country };
+    return { rtt: rtt, sent: sent, serverTime: m.t, binanceMs: m.binanceMs, route: m.route, edge: m.edge, country: m.country };
   });
 }
 

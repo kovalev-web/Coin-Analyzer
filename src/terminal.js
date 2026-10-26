@@ -326,7 +326,8 @@ function _renderPing(s) {
   if (!pop || !s) return;
   var ago = s.order ? Math.round((Date.now() - s.order.at) / 1000) : null;
   pop.innerHTML = '<span class="dom-ping-title">Connection</span>'
-    + _pingRow('Entry point', s.edgeCity ? s.edgeCity + ' (Cloudflare ' + s.edge + ')' : '—')
+    + _pingRow('Entry point', s.route === 'direct' ? 'Tokyo server, direct'
+        : s.edgeCity ? s.edgeCity + ' (Cloudflare ' + s.edge + ')' : '—')
     + _pingRow('Your traffic exits in', s.country || '—')
     + _pingRow('You ↔ server', _ms(s.last) + ' · p50 ' + _ms(s.p50) + ' · p95 ' + _ms(s.p95))
     + _pingRow('Jitter', _ms(s.jitter))

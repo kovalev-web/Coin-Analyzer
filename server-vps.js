@@ -1182,7 +1182,19 @@ async function computeJournalRangeStats(userId, today, range) {
   };
 }
 
+// Client IP → country, learned from Cloudflare headers on HTTP requests. The
+// direct trading socket (trade.questtick.com, no Cloudflare) has no country
+// header, so the latency indicator borrows it from the same IP's HTTP traffic.
+var _ipCountry = new Map();
+function rememberIpCountry(req) {
+  var ip = req.headers['cf-connecting-ip'], c = req.headers['cf-ipcountry'];
+  if (!ip || !c) return;
+  _ipCountry.set(ip, c);
+  if (_ipCountry.size > 5000) _ipCountry.delete(_ipCountry.keys().next().value);
+}
+
 var httpServer = http.createServer(async function (req, res) {
+  rememberIpCountry(req);
   var origin = req.headers.origin;
   res.setHeader('Access-Control-Allow-Origin', CORS_ORIGINS.includes(origin) ? origin : 'https://questtick.com');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -2540,7 +2552,10 @@ wss.on('connection', function (ws, upgradeReq) {
   ws._origin = upgradeReq.headers.origin || '';
   // Where the client reached us (latency indicator): Cloudflare edge from the
   // cf-ray suffix (e.g. "...-NRT") and the country of the client's exit IP
+  // Direct route (trade.questtick.com → nginx, no Cloudflare): no cf-ray; nginx passes the client IP
+  ws._route = upgradeReq.headers['cf-ray'] ? 'cloudflare' : 'direct';
   ws._edge = String(upgradeReq.headers['cf-ray'] || '').split('-')[1] || null;
+  ws._ip = upgradeReq.headers['cf-connecting-ip'] || upgradeReq.headers['x-real-ip'] || null;
   ws._country = upgradeReq.headers['cf-ipcountry'] || null;
   ws._sessionPromise = getSession(upgradeReq).then(function (sess) {
     ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
@@ -2565,7 +2580,7 @@ wss.on('connection', function (ws, upgradeReq) {
     try {
       // Latency indicator: answer at once; t lets the client estimate the clock offset
       if (msg.type === 'ping') {
-        ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs(), edge: ws._edge, country: ws._country }));
+        ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs(), route: ws._route, edge: ws._edge, country: ws._country || _ipCountry.get(ws._ip) || null }));
       }
 
       else if (msg.type === 'get_ticker') {
