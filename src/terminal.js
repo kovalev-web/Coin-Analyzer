@@ -15,10 +15,15 @@ import { icon } from './utils.js';
 import { showToast, getCSSVar } from './ui.js';
 
 var ROW_H = 16;
-var SIZE_PRESETS = [10, 25, 50, 100, 250, 500]; // USDT per click
-var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
+var SIZE_MIN = 5, SIZE_MAX = 500; // Binance minimum notional … the agreed per-click cap
+// Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
+var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
 var OPEN_ORDER = { NEW: true, PARTIALLY_FILLED: true };
 var OPEN_ALGO = { NEW: true, TRIGGERING: true };
+
+// Ladder settings (gear in the panel head), kept in this browser
+var S = _loadSettings();
 
 var T = {
   access: null,          // null = unknown, false = no access, object = /status
@@ -48,11 +53,26 @@ var T = {
   lastClick: { key: '', at: 0 },
 };
 
-// A remembered size that is no longer a slot (e.g. 1000) falls back to the default
+// A remembered size that is no longer a slot falls back to the middle one
 function _savedSize() {
   var v = Number(_lsGet('qt_term_size'));
-  return SIZE_PRESETS.indexOf(v) !== -1 ? v : 50;
+  return S.sizes.indexOf(v) !== -1 ? v : S.sizes[Math.min(2, S.sizes.length - 1)];
 }
+
+// sizes: USDT per click; fullScale: USD at which a volume bar is full (0 = biggest level on screen)
+function _loadSettings() {
+  var s = null;
+  try { s = JSON.parse(_lsGet('qt_term_settings') || 'null'); } catch (e) {}
+  s = s || {};
+  var sizes = Array.isArray(s.sizes) ? s.sizes.map(Number).filter(_validSize) : [];
+  return {
+    sizes: sizes.length ? sizes.slice(0, SIZE_DEFAULTS.length) : SIZE_DEFAULTS.slice(),
+    fullScale: Number(s.fullScale) > 0 ? Number(s.fullScale) : 0,
+  };
+}
+
+function _validSize(v) { return v >= SIZE_MIN && v <= SIZE_MAX; }
+function _saveSettings() { _lsSet('qt_term_settings', JSON.stringify(S)); }
 
 function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -164,23 +184,64 @@ function _panelHTML() {
         ? '<button class="dom-book' + (T.viewLive ? ' active' : '') + '" data-live="1" title="Show the live Binance order book (view only)">'
           + (T.viewLive ? 'Live book' : 'Testnet book') + '</button>'
         : '')
-    + '<div class="dom-sizes">'
-    + SIZE_PRESETS.map(function (v) {
-        return '<button class="dom-size' + (v === T.size ? ' active' : '') + '" data-size="' + v + '">' + v + '</button>';
-      }).join('')
-    + '<span class="dom-unit">USDT</span></div>'
-    + '<div class="dom-scale"><button data-scale="-1" title="Finer">−</button><button data-scale="1" title="Coarser">+</button></div>'
+    + '<div class="dom-scale" title="Price scale: one row = exchange tick × multiplier">'
+    + '<button data-scale="-1" title="Finer">−</button><span class="dom-scale-val" id="dom-scale-val"></span>'
+    + '<button data-scale="1" title="Coarser">+</button></div>'
+    + '<button class="dom-gear' + (T.settingsOpen ? ' active' : '') + '" data-settings="1" title="Ladder settings">' + icon('settings', 14) + '</button>'
     + '</div>'
+    + (T.settingsOpen ? _settingsHTML() : '')
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume</span><span>Price</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
+    + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
     + '<div class="dom-foot">'
     + '<div class="dom-pos" id="dom-pos"></div>'
     + '<div class="dom-status" id="dom-status"></div>'
     + '<div class="dom-hint">LMB buy · RMB sell · Shift+click SL/TP · click Mine to cancel · Space close · X cancel all</div>'
     + '</div>';
+}
+
+function _sizesHTML() {
+  return S.sizes.map(function (v) {
+    return '<button class="dom-size' + (v === T.size ? ' active' : '') + '" data-size="' + v + '">' + v + '</button>';
+  }).join('') + '<span class="dom-unit">USDT</span>';
+}
+
+function _settingsHTML() {
+  return '<div class="dom-settings" id="dom-settings">'
+    + '<div class="dom-set-row"><span>Order sizes, USDT</span><div class="dom-set-sizes">'
+    + SIZE_DEFAULTS.map(function (_, i) {
+        return '<input class="ds-input" type="number" inputmode="decimal" min="' + SIZE_MIN + '" max="' + SIZE_MAX + '" data-set-size="' + i + '" value="' + (S.sizes[i] != null ? S.sizes[i] : '') + '">';
+      }).join('')
+    + '</div></div>'
+    + '<div class="dom-set-row"><span>Full scale, USD</span>'
+    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="1000" data-set-full="1" placeholder="Auto" value="' + (S.fullScale || '') + '"></div>'
+    + '<div class="dom-set-hint">A volume bar is full when the level holds this much in USD. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '</div>';
+}
+
+function _applySettingInput(inp) {
+  if (inp.dataset.setFull) {
+    var f = Number(inp.value);
+    S.fullScale = f > 0 ? f : 0;
+    if (!S.fullScale) inp.value = '';
+  } else {
+    var vals = [];
+    document.querySelectorAll('#dom-settings [data-set-size]').forEach(function (el) {
+      if (el.value === '') return;
+      var v = Number(el.value);
+      if (!_validSize(v)) { el.value = ''; showToast('Order size must be ' + SIZE_MIN + '–' + SIZE_MAX + ' USDT'); return; }
+      if (vals.indexOf(v) === -1) vals.push(v);
+    });
+    S.sizes = vals.length ? vals.sort(function (a, b) { return a - b; }) : SIZE_DEFAULTS.slice();
+    if (S.sizes.indexOf(T.size) === -1) { T.size = _savedSize(); _lsSet('qt_term_size', String(T.size)); }
+    var box = document.getElementById('dom-sizes');
+    if (box) box.innerHTML = _sizesHTML();
+  }
+  _saveSettings();
+  _queueRender();
 }
 
 // ── Order book (trader's environment) ───────────────────────────────────────
@@ -371,12 +432,22 @@ function _priceOf(idx) {
 
 function _autoScale() {
   if (T.scaleIdx != null || !T.bids.length || !T.asks.length) return;
+  // The multiplier you picked for this coin last time wins over the auto fit
+  var saved = SCALES.indexOf(Number(_lsGet('qt_term_scale_' + T.sym)));
+  if (saved !== -1) { T.scaleIdx = saved; return; }
   // Fit roughly the 20 nearest levels per side into the window
   var span = (T.asks[Math.min(19, T.asks.length - 1)][0] - T.bids[Math.min(19, T.bids.length - 1)][0]) / _tick();
   var want = span / Math.max(10, T.rows * 0.8);
   var i = 0;
   while (i < SCALES.length - 1 && SCALES[i] < want) i++;
   T.scaleIdx = i;
+}
+
+function _renderScale() {
+  var el = document.getElementById('dom-scale-val');
+  if (!el || !T.rules || T.scaleIdx == null) return;
+  var t = '×' + SCALES[T.scaleIdx] + ' · ' + Number(_step().toFixed(_decimals(T.rules.tickSize)));
+  if (el.textContent !== t) el.textContent = t;
 }
 
 function _fmtQty(q) {
@@ -450,6 +521,7 @@ function _render() {
   if (empty) empty.remove();
   T.rows = Math.max(10, Math.floor(ladder.clientHeight / ROW_H));
   _autoScale();
+  _renderScale();
   var step = _step();
   var bestBid = T.bids[0][0], bestAsk = T.asks[0][0];
   var bidIdx = Math.floor(bestBid / step + 1e-9), askIdx = Math.ceil(bestAsk / step - 1e-9);
@@ -502,7 +574,8 @@ function _render() {
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     // One volume column: asks above the spread, bids below, heat-filled by size
-    _setVol(c[1], i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0, maxVol);
+    var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
+    _setVol(c[1], v, !v ? 0 : S.fullScale ? Math.min(1, v * i * step / S.fullScale) : v / maxVol);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
@@ -553,9 +626,9 @@ function _makeRow() {
   return row;
 }
 
-// Bar length ∝ size (relative to the biggest level on screen); bigger also brighter
-function _setVol(cell, v, maxVol) {
-  var r = v && maxVol ? v / maxVol : 0;
+// Bar length ∝ size: r = share of the full scale (set in USD, or the biggest
+// level on screen); bigger also brighter
+function _setVol(cell, v, r) {
   var w = v ? Math.max(2, Math.round(r * 100)) + '%' : '0%';
   var o = v ? (0.35 + 0.5 * r).toFixed(2) : '0';
   var t = v ? _fmtQty(v) : '';
@@ -579,7 +652,7 @@ function _renderFoot() {
     var pnlHtml = info
       ? '<b class="dom-pnl ' + (info.up ? 'up' : 'dn') + '">' + _fmtPnl(info) + '</b>'
       : '<b>—</b>';
-    el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + Math.abs(amt) + '</b></div>'
+    el.innerHTML = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)) + ' USDT</b></div>'
       + '<div class="dom-pos-row"><span>Entry</span><b>' + pos.entryPrice + '</b></div>'
       + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
@@ -590,6 +663,8 @@ function _renderFoot() {
     st.className = 'dom-status err';
   }
 }
+
+function _fmtUsd(n) { return n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2); }
 
 function _fmtPnl(info) {
   return (info.pnl >= 0 ? '+' : '') + info.pnl.toFixed(2) + ' USDT (' + (info.pct >= 0 ? '+' : '') + info.pct.toFixed(2) + '%)';
@@ -731,7 +806,7 @@ function _syncLines() {
   if (!series || !T.sym) { _clearLines(); return; }
   var specs = [];
   var pos = _position();
-  if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + Math.abs(Number(pos.amount)), style: 0 });
+  if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(Number(pos.amount)) * Number(pos.entryPrice)) + ' $', style: 0 });
   T.account.orders.forEach(function (o) {
     if (o.symbol === T.sym) specs.push({ price: Number(o.price), color: o.side === 'BUY' ? '--bullish' : '--danger', title: (o.side === 'BUY' ? 'B ' : 'S ') + o.origQty, style: 2 });
   });
@@ -1009,7 +1084,21 @@ function _bindPanel(panel) {
     if (r !== T.hoverRow) { T.hoverRow = r; _drawRuler(); }
   });
 
+  panel.addEventListener('change', function (e) {
+    if (e.target.closest('#dom-settings')) _applySettingInput(e.target);
+  });
+
   panel.addEventListener('click', function (e) {
+    if (e.target.closest('[data-settings]')) {
+      T.settingsOpen = !T.settingsOpen;
+      var old = document.getElementById('dom-settings');
+      if (old) old.remove();
+      else panel.querySelector('.dom-head').insertAdjacentHTML('afterend', _settingsHTML());
+      e.target.closest('[data-settings]').classList.toggle('active', T.settingsOpen);
+      T.top = null;
+      _queueRender();
+      return;
+    }
     var size = e.target.closest('[data-size]');
     if (size) {
       T.size = Number(size.dataset.size);
@@ -1039,6 +1128,7 @@ function _bindPanel(panel) {
     if (sc) {
       var i = (T.scaleIdx || 0) + Number(sc.dataset.scale);
       T.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, i));
+      _lsSet('qt_term_scale_' + T.sym, String(SCALES[T.scaleIdx]));
       T.top = null;
       _queueRender();
       return;

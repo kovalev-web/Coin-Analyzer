@@ -698,3 +698,17 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .edge-table td.up{color:var(--bullish);}
 .edge-table td.dn{color:var(--danger);}
 .edge-table tr.thin td{opacity:0.45;}
+
+/* ladder settings: price scale label, gear, sizes under the ladder */
+.dom-scale{align-items:center;margin-left:auto;}
+.dom-scale-val{min-width:64px;text-align:center;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--ink-deep);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.dom-gear{flex:0 0 auto;display:flex;align-items:center;justify-content:center;height:var(--h-btn-sm);width:var(--h-btn-sm);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);cursor:pointer;}
+.dom-gear.active{background:var(--ink-deep);color:var(--paper);}
+.fv-dom .dom-sizes{flex:0 0 auto;padding:var(--space-3) var(--space-4);border-top:1px solid var(--steel);flex-wrap:wrap;}
+.dom-settings{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);border-bottom:1px solid var(--steel);background:var(--cloud);user-select:text;}
+.dom-set-row{display:flex;flex-direction:column;gap:var(--space-2);}
+.dom-set-row span{color:var(--graphite);font-size:var(--text-2xs);}
+.dom-set-sizes{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--space-2);}
+.dom-settings .ds-input{height:var(--h-btn-md);padding:0 var(--space-2);font-size:var(--text-xs);min-width:0;}
+.dom-set-hint{color:var(--graphite);font-size:var(--text-2xs);line-height:var(--leading-relaxed);}
+.dom-gear svg{flex:0 0 auto;}
