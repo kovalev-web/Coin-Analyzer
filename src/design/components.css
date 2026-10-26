@@ -570,7 +570,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 
 /* ── Order book terminal (DOM ladder) in full view ───────────────── */
 .fv-body.has-dom{flex-direction:row;}
-.fv-dom{width:270px;flex:0 0 270px;display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
+.fv-dom{width:calc(270px + var(--ven-w, 0px));flex:0 0 calc(270px + var(--ven-w, 0px));display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
 .dom-head{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--steel);}
 .dom-env{font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:color-mix(in srgb,var(--level-deep) 18%,transparent);color:var(--ink-deep);}
 .dom-env.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
@@ -624,7 +624,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-head .dom-sizes{flex:1 1 auto;min-width:auto;}
 
 /* compact ladder: Mine | Volume (heat-filled) | Price */
-.dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 72px;align-items:center;}
+.dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 72px var(--ven-w, 0px);align-items:center;}
 .dom-cols span:nth-child(2){padding-left:var(--space-2);}
 .dom-row{height:16px;font-size:var(--text-ladder);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
 .dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
@@ -794,8 +794,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 
 /* clusters: CLUSTER_COLS columns of traded volume per price, left of the ladder */
 .fv-dom{--cl-w:0px;}
-.fv-dom.has-cl{--cl-w:100px;width:370px;flex-basis:370px;}
-.dom-cols,.dom-row{grid-template-columns:var(--cl-w) 52px 1fr 72px;}
+.fv-dom.has-cl{--cl-w:100px;width:calc(370px + var(--ven-w, 0px));flex-basis:calc(370px + var(--ven-w, 0px));}
+.dom-cols,.dom-row{grid-template-columns:var(--cl-w) 52px 1fr 72px var(--ven-w, 0px);}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:2;grid-row:1;}
 .dom-c-vol,.dom-cols>span:nth-child(2){grid-column:3;grid-row:1;}
 .dom-c-price,.dom-cols>span:nth-child(3){grid-column:4;grid-row:1;}
@@ -811,8 +811,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* trades tape: canvas over the leftmost grid column, left of the clusters */
 .fv-dom{--tape-w:0px;}
 .fv-dom.has-tape{--tape-w:190px;}
-.fv-dom.has-tape{width:calc(270px + var(--tape-w) + var(--cl-w));flex-basis:calc(270px + var(--tape-w) + var(--cl-w));}
-.dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 72px;}
+.fv-dom.has-tape{width:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));flex-basis:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));}
+.dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 72px var(--ven-w, 0px);}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:3;}
 .dom-c-vol,.dom-cols>span:nth-child(2){grid-column:4;}
 .dom-c-price,.dom-cols>span:nth-child(3){grid-column:5;}
@@ -825,7 +825,7 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* cluster numbers: regular weight, semi-transparent, so they don't compete with the ladder */
 .dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
-.dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));}
+.dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));right:var(--ven-w, 0px);}
 
 /* Mine | Volume | Price on a slightly darker surface than the tape and clusters
    (painted under the rows, so order / PnL tints still show on top) */
@@ -833,14 +833,13 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
   background:linear-gradient(to right,var(--paper) calc(var(--space-4) + var(--tape-w) + var(--cl-w)),var(--cloud) 0);
 }
 
-/* venue strip under the head: volume and buy share per venue, last 30 s */
-.dom-venues{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--steel);}
-.dom-venue{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:var(--space-2);row-gap:2px;padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);background:var(--fog);font-size:var(--text-2xs);font-variant-numeric:tabular-nums;}
-.dom-venue b{font-weight:var(--font-medium);color:var(--graphite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dom-venue-vol{font-weight:var(--font-bold);color:var(--ink-deep);}
-.dom-venue-bar{grid-column:1 / -1;display:block;height:3px;border-radius:2px;background:var(--danger);overflow:hidden;}
-.dom-venue-bar>i{display:block;height:100%;background:var(--primary);}
-.dom-venue.off{opacity:0.5;}
-.dom-venue.off .dom-venue-bar{background:var(--steel);}
-.dom-venue.spike{box-shadow:inset 0 0 0 1px var(--level-deep);background:color-mix(in srgb,var(--level-deep) 14%,var(--fog));}
-.dom-venue.quiet .dom-venue-bar{background:var(--steel);}
+
+/* other venues' books: columns right of Price (Spot, Bybit, OKX), foldable */
+.dom-c-ven,.dom-cols-ven{grid-column:6;grid-row:1;display:none;grid-template-columns:var(--ven-cols);height:100%;margin-left:var(--space-2);}
+.fv-dom.has-ven .dom-c-ven,.fv-dom.has-ven .dom-cols-ven{display:grid;}
+.dom-c-ven b{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--space-1);font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 70%,transparent);border-left:1px solid color-mix(in srgb,var(--steel) 35%,transparent);overflow:hidden;white-space:nowrap;}
+.dom-c-ven b.hit-buy{box-shadow:inset 0 0 0 2px var(--primary);}
+.dom-c-ven b.hit-sell{box-shadow:inset 0 0 0 2px var(--danger);}
+.dom-cols-ven b{font-weight:var(--font-normal);text-align:right;padding-right:var(--space-1);cursor:pointer;white-space:nowrap;overflow:hidden;}
+.dom-cols-ven b:hover{color:var(--ink-deep);}
+.dom-cols-ven b.folded{text-align:center;padding:0;}

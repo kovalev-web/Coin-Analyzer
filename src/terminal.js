@@ -17,7 +17,8 @@ import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE } from './ladder-scale.js';
-import { venuesStart, venuesStop, venuesStats, VENUES } from './venues.js';
+import { venuesStart, venuesStop, VENUES } from './venues.js';
+import { booksStart, booksStop, bookRows, BOOK_VENUES } from './venue-books.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -225,7 +226,12 @@ function _openPanel(sym) {
     venuesStart(sym, function (venue, price, usd, buy, time) {
       if (venue !== 'BF' && !S.venues) return;
       _tapeAdd(price, usd, buy, time, venue);
+      // A venue trading at a price flashes its column cell there (who is eating the level)
+      var hits = T.vHits[venue] || (T.vHits[venue] = []);
+      hits.push({ p: price, buy: buy, at: Date.now() });
+      if (hits.length > 60) hits.splice(0, hits.length - 60);
     });
+    booksStart(sym);
   }
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
@@ -237,9 +243,7 @@ function _openPanel(sym) {
   T.dayTimer = setInterval(_refreshDay, 30000);
   startLatency(_renderPing);
   _renderPing();
-  clearInterval(T.venuesTimer);
-  T.venuesTimer = setInterval(_renderVenues, 500);
-  _renderVenues();
+  _syncVenueCols();
   _queueRender();
 }
 
@@ -255,7 +259,7 @@ function _closePanel(userAction) {
   _clearBand();
   stopLatency();
   venuesStop();
-  clearInterval(T.venuesTimer);
+  booksStop();
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
@@ -279,12 +283,14 @@ function _panelHTML() {
     + '<button class="dom-gear" data-settings="1" title="Order book settings">' + icon('settings', 14) + '</button>'
     + '</div>'
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
-    + '<div class="dom-venues" id="dom-venues"></div>'
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
     + '<span class="dom-cols-cl" id="dom-cols-cl" data-cl-tf="1" title="Clusters: traded volume per price for each period. Click to change the period">'
-    + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span><span class="dom-cols-tape">Tape</span></div>'
+    + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span><span class="dom-cols-tape">Tape</span>'
+    + '<span class="dom-cols-ven">' + BOOK_VENUES.map(function (v) {
+        return '<b data-vcol="' + v.id + '" title="' + v.title + ' order book — click to fold / unfold">' + v.name + '</b>';
+      }).join('') + '</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
     + '<div class="dom-foot">'
@@ -346,7 +352,7 @@ function _settingsHTML() {
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' (now ≈ $' + _fmtQty(T.autoFull) + ')' : '') + '" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
-    + '<div class="dom-set-row"><span>Other venues (tape + strip)</span><select class="ds-input" data-set-venues="1">'
+    + '<div class="dom-set-row"><span>Other venues (tape + books)</span><select class="ds-input" data-set-venues="1">'
     + '<option value="on"' + (S.venues ? ' selected' : '') + '>On</option><option value="off"' + (S.venues ? '' : ' selected') + '>Off</option></select></div>'
     + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
     + '<option value="on"' + (S.tape ? ' selected' : '') + '>On</option><option value="off"' + (S.tape ? '' : ' selected') + '>Off</option></select></div>'
@@ -368,7 +374,8 @@ function _applySettingInput(inp) {
     return;
   } else if (inp.dataset.setVenues) {
     S.venues = inp.value === 'on';
-    _renderVenues();
+    _syncVenueCols();
+    window.dispatchEvent(new Event('resize'));
   } else if (inp.dataset.setTape) {
     S.tape = inp.value === 'on';
     _syncClusterLayout();
@@ -637,24 +644,76 @@ function _drawTape(step) {
   ctx.globalAlpha = 1;
 }
 
-// ── Venue strip: volume and buy share per venue, last 30 s ─────────────────
-// Bar = buy share of the venue's volume (blue buys / red sells, as the tape);
-// a venue trading ≥ 3× its usual rate right now is highlighted.
+// ── Other venues' books: columns right of Price ─────────────────────────────
+// Spot, Bybit, OKX in that order, each a narrow column of USDT resting at the
+// row's price (bids blue, asks red, brighter = bigger relative to that venue's
+// typical big level on screen). A cell flashes when that venue trades there.
+// Click a header to fold / unfold one column (remembered in this browser).
 
-function _renderVenues() {
-  var el = document.getElementById('dom-venues');
-  if (!el) return;
-  if (!S.venues) { if (el._html !== '') { el.innerHTML = ''; el._html = ''; } el.style.display = 'none'; return; }
-  el.style.display = '';
-  var html = venuesStats().map(function (v) {
-    var share = v.buyShare == null ? null : Math.round(v.buyShare * 100);
-    var title = v.name + (v.live ? ' · 30 s: ' + _fmtUsd(v.vol) + ' USDT, buy ' + (share == null ? '—' : share + '%')
-      + ', delta ' + (v.delta >= 0 ? '+' : '−') + _fmtQty(Math.abs(v.delta)) : ' · no trades yet (not listed or quiet)');
-    return '<span class="dom-venue' + (v.spike ? ' spike' : '') + (v.live ? '' : ' off') + (share == null ? ' quiet' : '') + '" title="' + title + '">'
-      + '<b>' + v.name + '</b><span class="dom-venue-vol">' + (v.live ? _fmtQty(v.vol) : '—') + '</span>'
-      + '<i class="dom-venue-bar"><i style="width:' + (share == null ? 0 : share) + '%"></i></i></span>';
-  }).join('');
-  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+var VEN_W = 46, VEN_FOLDED_W = 18;
+
+function _venueFolded() {
+  try { return JSON.parse(_lsGet('qt_term_vcols') || '{}') || {}; } catch (e) { return {}; }
+}
+
+function _syncVenueCols() {
+  var panel = document.getElementById('fv-dom');
+  if (!panel) return;
+  var folded = _venueFolded();
+  var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] ? VEN_FOLDED_W : VEN_W; });
+  var total = widths.reduce(function (a, b) { return a + b; }, 0);
+  panel.style.setProperty('--ven-w', total + 'px');
+  panel.style.setProperty('--ven-cols', widths.map(function (w) { return w + 'px'; }).join(' '));
+  panel.classList.toggle('has-ven', !!S.venues);
+  panel.querySelectorAll('[data-vcol]').forEach(function (b) {
+    var f = !!folded[b.dataset.vcol];
+    b.classList.toggle('folded', f);
+    var v = BOOK_VENUES.find(function (x) { return x.id === b.dataset.vcol; });
+    b.textContent = f ? v.name.charAt(0) : v.name;
+  });
+}
+
+function _toggleVenueCol(id) {
+  var folded = _venueFolded();
+  folded[id] = !folded[id];
+  _lsSet('qt_term_vcols', JSON.stringify(folded));
+  _syncVenueCols();
+  window.dispatchEvent(new Event('resize'));
+  _queueRender();
+}
+
+function _venueView(step, lo, hi) {
+  if (!S.venues) return null;
+  var folded = _venueFolded(), now = Date.now();
+  return BOOK_VENUES.map(function (v) {
+    if (folded[v.id]) return { folded: true };
+    var rows = bookRows(v.id, step, lo, hi);
+    var hits = {};
+    (T.vHits[v.id] || []).forEach(function (h) {
+      if (now - h.at < 450) hits[Math.round(h.p / step)] = h.buy ? 'hit-buy' : 'hit-sell';
+    });
+    if (!rows) return { rows: null, hits: hits };
+    var vals = Object.values(rows.bid).concat(Object.values(rows.ask));
+    T.vAuto[v.id] = smoothScale(T.vAuto[v.id], levelPercentile(vals, AUTO_PERCENTILE), now - (T.vAutoAt[v.id] || now));
+    T.vAutoAt[v.id] = now;
+    return { rows: rows, hits: hits, full: T.vAuto[v.id] };
+  });
+}
+
+function _setVenueCells(box, i, view, side) {
+  for (var k = 0; k < view.length; k++) {
+    var cell = box.children[k], col = view[k];
+    var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
+    var t = col.folded || !usd ? '' : _fmtQty(usd);
+    var a = usd && col.full ? Math.round(6 + 44 * Math.min(1, usd / col.full)) : 0;
+    var cls = (side || '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    if (cell._t !== t) { cell.textContent = t; cell._t = t; }
+    if (cell._a !== a || cell._side !== side) {
+      cell.style.background = a ? 'color-mix(in srgb, var(' + (side === 'ask' ? '--danger' : '--primary') + ') ' + a + '%, transparent)' : '';
+      cell._a = a; cell._side = side;
+    }
+    if (cell._cls !== cls) { cell.className = cls; cell._cls = cls; }
+  }
 }
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
@@ -828,6 +887,7 @@ function _disconnectDepth() {
   T.bbo = null; T.lastTrade = null;
   T.cl = null;
   T.tape = [];
+  T.vHits = {}; T.vAuto = {}; T.vAutoAt = {};
 }
 
 // ── Account events ──────────────────────────────────────────────────────────
@@ -1078,6 +1138,7 @@ function _render() {
   var mine = _myOrdersByIdx(step);
   var marks = _chartMarksByIdx(step);
   var cl = _clusterView(step);
+  var ven = _venueView(step, T.top - T.rows + 1, T.top);
   var pnl = _pnlInfo();
   var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
@@ -1117,6 +1178,7 @@ function _render() {
     }).join('') : '');
     var c = row.children;
     if (cl) _setClusterCells(c[3], i, cl);
+    if (ven) _setVenueCells(c[4], i, ven, i >= askIdx ? 'ask' : i <= bidIdx ? 'bid' : null);
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
@@ -1171,7 +1233,8 @@ function _makeRow() {
   var row = document.createElement('div');
   row.className = 'dom-row';
   row.innerHTML = '<span class="dom-c-mine"></span><span class="dom-c-vol"><i></i><b></b></span>'
-    + '<span class="dom-c-price"></span><span class="dom-c-cl">' + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span>';
+    + '<span class="dom-c-price"></span><span class="dom-c-cl">' + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span>'
+    + '<span class="dom-c-ven">' + new Array(BOOK_VENUES.length + 1).join('<b></b>') + '</span>';
   return row;
 }
 
@@ -1726,6 +1789,8 @@ function _bindPanel(panel) {
   });
 
   panel.addEventListener('click', function (e) {
+    var vc = e.target.closest('[data-vcol]');
+    if (vc) { _toggleVenueCol(vc.dataset.vcol); return; }
     if (e.target.closest('[data-cl-tf]')) {
       var tfs = Object.keys(CLUSTER_TFS).filter(function (k) { return k !== 'off'; });
       _setClusterTf(tfs[(tfs.indexOf(S.clusterTf) + 1) % tfs.length]);
