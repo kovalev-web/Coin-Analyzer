@@ -26,6 +26,7 @@ var HOTKEYS = [
   ['Click on Mine', 'Cancel your orders there'],
   ['Space', 'Close the position'],
   ['X', 'Cancel all orders on the coin'],
+  ['+ / −', 'Coarser / finer price scale'],
   ['Esc', 'Close this window'],
 ];
 var HIGHLIGHT_DEFAULT = 65; // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
@@ -1231,14 +1232,7 @@ function _bindPanel(panel) {
       return;
     }
     var sc = e.target.closest('[data-scale]');
-    if (sc) {
-      var i = (T.scaleIdx || 0) + Number(sc.dataset.scale);
-      T.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, i));
-      _lsSet('qt_term_scale_' + T.sym, String(SCALES[T.scaleIdx]));
-      T.top = null;
-      _queueRender();
-      return;
-    }
+    if (sc) { _changeScale(Number(sc.dataset.scale)); return; }
   });
 
   // Orders go on mousedown (like trading terminals): instant, and immune to
@@ -1271,8 +1265,25 @@ function _bindPanel(panel) {
   }, { passive: false });
 }
 
+// −1 finer, +1 coarser; remembered per coin
+function _changeScale(dir) {
+  var i = (T.scaleIdx || 0) + dir;
+  T.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, i));
+  _lsSet('qt_term_scale_' + T.sym, String(SCALES[T.scaleIdx]));
+  T.top = null;
+  _queueRender();
+}
+
 document.addEventListener('keydown', function (e) {
-  if (!T.sym || !T.hover) return;
+  if (!T.sym) return;
+  // + / − change the price scale whenever the terminal is open (same as the buttons).
+  // By physical key, so it works on any layout; Cmd/Ctrl +/− stays browser zoom.
+  if (!e.metaKey && !e.ctrlKey && !e.altKey && !document.getElementById('dom-settings-modal')) {
+    var dir = e.code === 'Equal' || e.code === 'NumpadAdd' ? 1 : e.code === 'Minus' || e.code === 'NumpadSubtract' ? -1 : 0;
+    var t = (e.target && e.target.tagName) || '';
+    if (dir && t !== 'INPUT' && t !== 'TEXTAREA' && !e.target.isContentEditable) { e.preventDefault(); _changeScale(dir); return; }
+  }
+  if (!T.hover) return;
   if ((e.code === 'Space' || /^[xXчЧ]$/.test(e.key)) && _viewOnly()) { e.preventDefault(); _viewOnlyBlocked(); return; }
   var tag = (e.target && e.target.tagName) || '';
   if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
