@@ -187,9 +187,8 @@ function _panelHTML() {
     + '<div class="dom-scale" title="Price scale: one row = exchange tick × multiplier">'
     + '<button data-scale="-1" title="Finer">−</button><span class="dom-scale-val" id="dom-scale-val"></span>'
     + '<button data-scale="1" title="Coarser">+</button></div>'
-    + '<button class="dom-gear' + (T.settingsOpen ? ' active' : '') + '" data-settings="1" title="Ladder settings">' + icon('settings', 14) + '</button>'
+    + '<button class="dom-gear" data-settings="1" title="Order book settings">' + icon('settings', 14) + '</button>'
     + '</div>'
-    + (T.settingsOpen ? _settingsHTML() : '')
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
@@ -207,6 +206,42 @@ function _sizesHTML() {
   return S.sizes.map(function (v) {
     return '<button class="dom-size' + (v === T.size ? ' active' : '') + '" data-size="' + v + '">' + v + '</button>';
   }).join('') + '<span class="dom-unit">USDT</span>';
+}
+
+// Settings modal: changes apply as you type (on change), Done just closes it
+function _openSettings() {
+  if (document.getElementById('dom-settings-modal')) return;
+  var ov = document.createElement('div');
+  ov.id = 'dom-settings-modal';
+  ov.className = 'overlay dom-settings-overlay';
+  ov.innerHTML = '<div class="popup dom-settings-popup" role="dialog" aria-label="Order book settings">'
+    + '<div class="popup-header"><span class="popup-title">Order book settings</span><button class="btn-topbar" data-set-close="1">' + icon('x', 14) + '</button></div>'
+    + '<div class="popup-body">' + _settingsHTML() + '</div>'
+    + '<div class="popup-footer"><button class="btn-cta" data-set-close="1">Done</button></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('change', function (e) { if (e.target.closest('#dom-settings')) _applySettingInput(e.target); });
+  ov.addEventListener('click', function (e) {
+    if (e.target === ov || e.target.closest('[data-set-close]')) _closeSettings();
+  });
+  document.addEventListener('keydown', _settingsKey);
+  var first = ov.querySelector('input');
+  if (first) first.focus();
+}
+
+function _closeSettings() {
+  var ov = document.getElementById('dom-settings-modal');
+  if (!ov) return;
+  // Apply a value typed but not yet committed (no blur before Done/Esc)
+  var a = document.activeElement;
+  if (a && ov.contains(a) && a.tagName === 'INPUT') _applySettingInput(a);
+  ov.remove();
+  document.removeEventListener('keydown', _settingsKey);
+}
+
+function _settingsKey(e) {
+  if (e.key === 'Escape') { e.preventDefault(); _closeSettings(); }
+  else if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); _closeSettings(); }
 }
 
 function _settingsHTML() {
@@ -1085,21 +1120,8 @@ function _bindPanel(panel) {
     if (r !== T.hoverRow) { T.hoverRow = r; _drawRuler(); }
   });
 
-  panel.addEventListener('change', function (e) {
-    if (e.target.closest('#dom-settings')) _applySettingInput(e.target);
-  });
-
   panel.addEventListener('click', function (e) {
-    if (e.target.closest('[data-settings]')) {
-      T.settingsOpen = !T.settingsOpen;
-      var old = document.getElementById('dom-settings');
-      if (old) old.remove();
-      else panel.querySelector('.dom-head').insertAdjacentHTML('afterend', _settingsHTML());
-      e.target.closest('[data-settings]').classList.toggle('active', T.settingsOpen);
-      T.top = null;
-      _queueRender();
-      return;
-    }
+    if (e.target.closest('[data-settings]')) { _openSettings(); return; }
     var size = e.target.closest('[data-size]');
     if (size) {
       T.size = Number(size.dataset.size);
