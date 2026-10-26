@@ -183,7 +183,7 @@ function wsRequest(msg) {
 }
 
 // Round trip over the open socket (the same path orders take). Resolves to
-// { rtt, serverTime, binanceMs } or rejects when the socket is down / no answer.
+// { rtt, serverTime, binanceMs, edge, country } or rejects when the socket is down / no answer.
 export function wsPing(timeoutMs) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.reject(new Error('WS down'));
   var t0 = performance.now(), sent = Date.now();
@@ -192,7 +192,7 @@ export function wsPing(timeoutMs) {
     new Promise(function (_, reject) { setTimeout(function () { reject(new Error('ping timeout')); }, timeoutMs || 3000); }),
   ]).then(function (m) {
     var rtt = performance.now() - t0;
-    return { rtt: rtt, sent: sent, serverTime: m.t, binanceMs: m.binanceMs };
+    return { rtt: rtt, sent: sent, serverTime: m.t, binanceMs: m.binanceMs, edge: m.edge, country: m.country };
   });
 }
 

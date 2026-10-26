@@ -8,7 +8,7 @@
 // Pings run every 2 s only while the terminal is open.
 
 import { wsPing, wsReconnects } from './api.js';
-import { percentile, jitter, clockOffset } from './latency-stats.js';
+import { percentile, jitter, clockOffset, edgeCity, countryName } from './latency-stats.js';
 
 export { grade } from './latency-stats.js';
 
@@ -45,6 +45,8 @@ function _tick() {
     }
     L.offsetRtt *= 1.01; // let an old "best" age out
     L.binance = r.binanceMs;
+    L.edge = r.edge || null;
+    L.country = r.country || null;
     L.last = { ok: true, rtt: r.rtt, at: Date.now() };
   }).catch(function () {
     _push(L.lost, 1, KEEP);
@@ -99,5 +101,8 @@ export function stats() {
     bookP95: percentile(L.book, 95),
     order: L.order,
     reconnects: wsReconnects - L.reconnectsAtStart,
+    edge: L.edge,                     // Cloudflare edge code, e.g. 'NRT'
+    edgeCity: edgeCity(L.edge),
+    country: countryName(L.country),  // where your traffic exits (VPN / provider)
   };
 }

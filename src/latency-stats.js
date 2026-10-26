@@ -28,3 +28,29 @@ export function grade(s) {
   if (s.loss > 0 || s.p95 > 250 || s.p50 > 150) return 'warn';
   return 'ok';
 }
+
+// Cloudflare edge (airport code from cf-ray) → city. Unknown codes are shown as is.
+var EDGE_CITIES = {
+  NRT: 'Tokyo', HND: 'Tokyo', KIX: 'Osaka', FUK: 'Fukuoka', ICN: 'Seoul', TPE: 'Taipei',
+  HKG: 'Hong Kong', SIN: 'Singapore', SGN: 'Ho Chi Minh City', HAN: 'Hanoi', DAD: 'Da Nang',
+  BKK: 'Bangkok', KUL: 'Kuala Lumpur', MNL: 'Manila', CGK: 'Jakarta', BOM: 'Mumbai', DEL: 'Delhi',
+  SYD: 'Sydney', DXB: 'Dubai', IST: 'Istanbul',
+  FRA: 'Frankfurt', DUS: 'Düsseldorf', MUC: 'Munich', HAM: 'Hamburg', BER: 'Berlin', TXL: 'Berlin',
+  AMS: 'Amsterdam', LHR: 'London', CDG: 'Paris', WAW: 'Warsaw', VIE: 'Vienna', ZRH: 'Zurich',
+  ARN: 'Stockholm', HEL: 'Helsinki', MAD: 'Madrid', MXP: 'Milan', DME: 'Moscow', SVO: 'Moscow',
+  LED: 'St Petersburg', KBP: 'Kyiv', TLL: 'Tallinn', RIX: 'Riga',
+  IAD: 'Washington', EWR: 'New York', JFK: 'New York', ORD: 'Chicago', DFW: 'Dallas',
+  LAX: 'Los Angeles', SJC: 'San Jose', SEA: 'Seattle', MIA: 'Miami', YYZ: 'Toronto',
+};
+
+export function edgeCity(code) {
+  if (!code) return null;
+  return EDGE_CITIES[code] || code;
+}
+
+// ISO country code → English name (built into the browser and Node); falls back to the code
+export function countryName(code) {
+  if (!code || code === 'XX') return null;
+  if (code === 'T1') return 'Tor';
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) || code; } catch (e) { return code; }
+}

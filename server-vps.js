@@ -2538,6 +2538,10 @@ wss.on('connection', function (ws, upgradeReq) {
   // Authenticate WS connection using session cookie from the HTTP upgrade request.
   // Store the promise so save_alerts can await it if it arrives before resolution.
   ws._origin = upgradeReq.headers.origin || '';
+  // Where the client reached us (latency indicator): Cloudflare edge from the
+  // cf-ray suffix (e.g. "...-NRT") and the country of the client's exit IP
+  ws._edge = String(upgradeReq.headers['cf-ray'] || '').split('-')[1] || null;
+  ws._country = upgradeReq.headers['cf-ipcountry'] || null;
   ws._sessionPromise = getSession(upgradeReq).then(function (sess) {
     ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
     if (ws._sessionUserId) ws._userId = ws._sessionUserId;
@@ -2561,7 +2565,7 @@ wss.on('connection', function (ws, upgradeReq) {
     try {
       // Latency indicator: answer at once; t lets the client estimate the clock offset
       if (msg.type === 'ping') {
-        ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs() }));
+        ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs(), edge: ws._edge, country: ws._country }));
       }
 
       else if (msg.type === 'get_ticker') {

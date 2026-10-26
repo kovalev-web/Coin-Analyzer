@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { percentile, jitter, clockOffset, grade } from './latency-stats.js';
+import { percentile, jitter, clockOffset, grade, edgeCity, countryName } from './latency-stats.js';
+
+test('edge city and exit country', () => {
+  assert.equal(edgeCity('NRT'), 'Tokyo');
+  assert.equal(edgeCity('FRA'), 'Frankfurt');
+  assert.equal(edgeCity('ZZZ'), 'ZZZ');
+  assert.equal(edgeCity(null), null);
+  assert.equal(countryName('DE'), 'Germany');
+  assert.equal(countryName('JP'), 'Japan');
+  assert.equal(countryName(null), null);
+});
 
 test('percentile picks the nearest-rank value', () => {
   const v = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];

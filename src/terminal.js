@@ -319,13 +319,15 @@ function _renderPing(s) {
   s = s || null;
   var g = s ? grade(s) : 'unknown';
   if (el.dataset.grade !== g) { el.dataset.grade = g; }
-  var main = !s ? '— ms' : s.down ? 'offline' : _ms(s.last);
+  var main = !s ? '— ms' : s.down ? 'offline' : _ms(s.last) + (s.edgeCity ? ' · ' + s.edgeCity : '');
   var b = el.querySelector('b');
   if (b.textContent !== main) b.textContent = main;
   var pop = document.getElementById('dom-ping-pop');
   if (!pop || !s) return;
   var ago = s.order ? Math.round((Date.now() - s.order.at) / 1000) : null;
   pop.innerHTML = '<span class="dom-ping-title">Connection</span>'
+    + _pingRow('Entry point', s.edgeCity ? s.edgeCity + ' (Cloudflare ' + s.edge + ')' : '—')
+    + _pingRow('Your traffic exits in', s.country || '—')
     + _pingRow('You ↔ server', _ms(s.last) + ' · p50 ' + _ms(s.p50) + ' · p95 ' + _ms(s.p95))
     + _pingRow('Jitter', _ms(s.jitter))
     + _pingRow('Lost pings', s.samples || s.loss ? Math.round(s.loss * 100) + '%' : '—')
