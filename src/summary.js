@@ -172,6 +172,15 @@ function _ordersByCoin(acc) {
   return by;
 }
 
+var MAX_POSITIONS = 4; // the card is laid out for up to 4 positions, one line each
+
+function _chips(g) {
+  return g ? g.list.map(function (k) {
+    var x = g.kinds[k];
+    return '<span class="ds-open-ord ' + k.toLowerCase() + '">' + k + (x.usd != null ? ' ' + _fmtK(x.usd) : x.n > 1 ? ' ×' + x.n : '') + '</span>';
+  }).join('') : '';
+}
+
 function openHTML() {
   if (state.isDemoMode) return '';
   var snap = tradingSnapshot();
@@ -179,42 +188,45 @@ function openHTML() {
   var acc = snap.account;
   var positions = acc.positions.filter(function (p) { return Number(p.amount) !== 0; });
   var orders = _ordersByCoin(acc);
-  var syms = positions.map(function (p) { return p.symbol; });
-  Object.keys(orders).forEach(function (sym) { if (syms.indexOf(sym) === -1) syms.push(sym); });
 
+  // One line per position: coin · side and size · its orders · PnL
   var total = 0;
-  var rows = syms.map(function (sym) {
-    var coin = sym.replace(/USDT$/, '');
-    var p = positions.find(function (x) { return x.symbol === sym; });
-    var line = '<span class="ds-open-sym" data-action="expand" data-sym="' + coin.toLowerCase() + '">' + coin + '</span>';
-    if (p) {
-      var amt = Number(p.amount), entry = Number(p.entryPrice);
-      var c = coinOf(coin.toLowerCase());
-      var px = c && c.current_price > 0 ? c.current_price : null;
-      var pnl = px != null ? amt * (px - entry) : Number(p.unrealizedPnl || 0);
-      total += pnl;
-      line += '<span class="ds-open-side ' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtK(Math.abs(amt) * entry) + '</span>'
-        + '<span class="ds-open-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + signed(pnl, 2) + '</span>';
-    } else {
-      line += '<span class="ds-open-side">orders</span><span class="ds-open-pnl"></span>';
-    }
-    var g = orders[sym];
-    var ord = g ? '<span class="ds-open-orders">' + g.list.map(function (k) {
-      var x = g.kinds[k];
-      return '<span class="ds-open-ord ' + k.toLowerCase() + '">' + k + (x.usd != null ? ' ' + _fmtK(x.usd) : x.n > 1 ? ' ×' + x.n : '') + '</span>';
-    }).join('') + '</span>' : '';
-    return '<div class="ds-open-row">' + line + ord + '</div>';
-  }).join('');
+  var rows = positions.map(function (p) {
+    var coin = p.symbol.replace(/USDT$/, '');
+    var amt = Number(p.amount), entry = Number(p.entryPrice);
+    var c = coinOf(coin.toLowerCase());
+    var pnl = c && c.current_price > 0 ? amt * (c.current_price - entry) : Number(p.unrealizedPnl || 0);
+    total += pnl;
+    return '<div class="ds-open-row" data-action="expand" data-sym="' + coin.toLowerCase() + '" title="Open ' + coin + '">'
+      + '<span class="ds-open-sym">' + coin + '</span>'
+      + '<span class="ds-open-side ' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtK(Math.abs(amt) * entry) + '</span>'
+      + '<span class="ds-open-orders">' + _chips(orders[p.symbol]) + '</span>'
+      + '<span class="ds-open-pnl ' + (pnl >= 0 ? 'up' : 'dn') + '">' + signed(pnl, 2) + '</span></div>';
+  });
+  var shown = rows.slice(0, MAX_POSITIONS).join('')
+    + (rows.length > MAX_POSITIONS ? '<div class="ds-open-more">+' + (rows.length - MAX_POSITIONS) + ' more</div>' : '');
 
-  var head = '<span class="ds-leader-top"><span class="ds-sym">Open now' + (snap.mode === 'test' ? ' <span class="ds-open-test">Test</span>' : '') + '</span>'
+  // Coins with orders but no position: one compact line
+  var orderOnly = Object.keys(orders).filter(function (sym) { return !positions.some(function (p) { return p.symbol === sym; }); });
+  var ordersLine = orderOnly.length
+    ? '<div class="ds-open-pending"><span>Orders</span>' + orderOnly.map(function (sym) {
+        var coin = sym.replace(/USDT$/, '');
+        return '<span class="ds-open-pcoin" data-action="expand" data-sym="' + coin.toLowerCase() + '">' + coin + '</span>' + _chips(orders[sym]);
+      }).join('') + '</div>'
+    : '';
+
+  var head = '<span class="ds-leader-top"><span class="ds-sym">Open now' + (snap.mode === 'test' ? ' <span class="ds-open-test">Test</span>' : '')
+    + (positions.length ? ' <span class="ds-open-count">' + positions.length + '</span>' : '') + '</span>'
     + (positions.length ? '<span class="ds-ch ' + (total >= 0 ? 'up' : 'dn') + '">' + signed(total, 2) + ' USDT</span>' : '') + '</span>';
-  if (!syms.length) return '<div class="ds-leader ds-open-card">' + head + '<span class="ds-mine-empty">No open positions or orders</span></div>';
+  if (!positions.length && !orderOnly.length) return '<div class="ds-leader ds-open-card">' + head + '<span class="ds-mine-empty">No open positions or orders</span></div>';
   var confirming = Date.now() - S.confirmAt < CONFIRM_MS;
   var btn = positions.length
     ? '<button class="ds-open-close' + (confirming ? ' confirm' : '') + '" data-ds-close-all="1"' + (S.closing ? ' disabled' : '') + '>'
       + (S.closing ? 'Closing…' : confirming ? 'Confirm: close ' + positions.length + ' at market' : 'Close all positions') + '</button>'
     : '';
-  return '<div class="ds-leader ds-open-card">' + head + '<div class="ds-open-list">' + rows + '</div>' + btn + '</div>';
+  return '<div class="ds-leader ds-open-card">' + head
+    + (positions.length ? '<div class="ds-open-list">' + shown + '</div>' : '')
+    + ordersLine + btn + '</div>';
 }
 
 function _paintOpen() {
