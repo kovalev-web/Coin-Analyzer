@@ -559,7 +559,7 @@ on('trade:event', function (ev) {
     _renderLock(true);
   } else if (ev.type === 'fill') {
     var f = ev.fill;
-    if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.quantity + ' ' + f.symbol.replace(/USDT$/, '') + ' @ ' + f.price);
+    if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.symbol.replace(/USDT$/, '') + ' ' + _fmtUsd(Number(f.quantity) * Number(f.price)) + ' USDT @ ' + f.price);
     T.lastFillAt[f.symbol] = f.time;
     if (T.mode === 'live' && /USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
   }
@@ -600,6 +600,7 @@ function _renderScale() {
   if (el.textContent !== t) el.textContent = t;
 }
 
+// Compact number for the ladder: sizes are in USDT everywhere (volume, orders)
 function _fmtQty(q) {
   if (q >= 1e6) return (q / 1e6).toFixed(1) + 'M';
   if (q >= 1e3) return (q / 1e3).toFixed(1) + 'K';
@@ -631,19 +632,19 @@ function _myOrdersByIdx(step) {
   function add(idx, item) { (out[idx] = out[idx] || []).push(item); }
   T.account.orders.forEach(function (o) {
     if (o.symbol !== T.sym) return;
-    add(Math.round(Number(o.price) / step), { kind: o.side === 'BUY' ? 'B' : 'S', qty: Number(o.origQty) - Number(o.executedQty || 0), order: o, cancelling: !!T.cancelling['o' + o.orderId] });
+    add(Math.round(Number(o.price) / step), { kind: o.side === 'BUY' ? 'B' : 'S', usd: (Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price), order: o, cancelling: !!T.cancelling['o' + o.orderId] });
   });
   T.account.algoOrders.forEach(function (a) {
     if (a.symbol !== T.sym) return;
     var entry = _isStopEntry(a);
     add(Math.round(Number(a.triggerPrice) / step), {
       kind: entry ? (a.side === 'BUY' ? 'BS' : 'SS') : a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL',
-      qty: entry ? Number(a.quantity) : null, algo: a, cancelling: !!T.cancelling['a' + a.algoId],
+      usd: entry ? Number(a.quantity) * Number(a.triggerPrice) : null, algo: a, cancelling: !!T.cancelling['a' + a.algoId],
     });
   });
   Object.keys(T.pending).forEach(function (id) {
     var p = T.pending[id];
-    add(Math.round(p.price / step), { kind: p.kind, qty: p.qty, pending: true });
+    add(Math.round(p.price / step), { kind: p.kind, usd: p.qty != null ? p.qty * p.price : null, pending: true });
   });
   return out;
 }
@@ -741,7 +742,7 @@ function _render() {
     row.dataset.idx = i;
     var m = mine[i];
     var mineHtml = (i === entryIdx ? '<span class="dom-mine pos">ENTRY</span>' : '') + (m ? m.map(function (x) {
-      return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '">' + x.kind + (x.qty != null ? ' ' + _fmtQty(x.qty) : '') + '</span>';
+      return '<span class="dom-mine ' + x.kind.toLowerCase() + (x.pending ? ' pending' : '') + (x.cancelling ? ' cancelling' : '') + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
     }).join('') : '');
     var c = row.children;
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
@@ -984,11 +985,11 @@ function _syncLines() {
   var pos = _position();
   if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(Number(pos.amount)) * Number(pos.entryPrice)) + ' $', style: 0 });
   T.account.orders.forEach(function (o) {
-    if (o.symbol === T.sym) specs.push({ price: Number(o.price), color: o.side === 'BUY' ? '--bullish' : '--danger', title: (o.side === 'BUY' ? 'B ' : 'S ') + o.origQty, style: 2 });
+    if (o.symbol === T.sym) specs.push({ price: Number(o.price), color: o.side === 'BUY' ? '--bullish' : '--danger', title: (o.side === 'BUY' ? 'B ' : 'S ') + _fmtQty((Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price)) + ' $', style: 2 });
   });
   T.account.algoOrders.forEach(function (a) {
     if (a.symbol !== T.sym) return;
-    if (_isStopEntry(a)) specs.push({ price: Number(a.triggerPrice), color: a.side === 'BUY' ? '--bullish' : '--danger', title: a.side === 'BUY' ? 'Buy stop' : 'Sell stop', style: 2 });
+    if (_isStopEntry(a)) specs.push({ price: Number(a.triggerPrice), color: a.side === 'BUY' ? '--bullish' : '--danger', title: (a.side === 'BUY' ? 'Buy stop ' : 'Sell stop ') + _fmtQty(Number(a.quantity) * Number(a.triggerPrice)) + ' $', style: 2 });
     else specs.push({ price: Number(a.triggerPrice), color: a.type === 'TAKE_PROFIT_MARKET' ? '--bullish' : '--danger', title: a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL', style: 1 });
   });
   var key = JSON.stringify(specs);
