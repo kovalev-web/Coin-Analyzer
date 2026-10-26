@@ -862,3 +862,12 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-chip:hover{background:var(--fog);}
 .dom-chip.active{background:var(--ink-deep);border-color:var(--ink-deep);color:var(--paper);}
 .dom-set-note{color:var(--graphite);font-size:var(--text-2xs);}
+
+/* other venues as full books: bars like our Volume column */
+.fv-dom.ven-full .dom-c-ven b{position:relative;justify-content:flex-start;padding:0;}
+.fv-dom.ven-full .dom-c-ven b i{position:absolute;top:1px;bottom:1px;left:0;width:0;opacity:0;border-radius:0 2px 2px 0;background:var(--primary);}
+.fv-dom.ven-full .dom-c-ven b.ask i{background:var(--danger);}
+.fv-dom.ven-full .dom-c-ven b.dim i{background:var(--graphite);}
+.fv-dom.ven-full .dom-c-ven b em{position:relative;font-style:normal;font-weight:var(--ladder-weight);padding:0 var(--space-2);color:var(--ink-deep);}
+.fv-dom.ven-full .dom-cols-ven b{text-align:left;padding-left:var(--space-2);}
+.fv-dom.ven-full .dom-cols-ven b.folded{text-align:center;padding:0;}

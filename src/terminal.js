@@ -108,7 +108,8 @@ function _loadSettings(sym) {
     highlight: Number(s.highlight) > 0 && Number(s.highlight) <= 100 ? Number(s.highlight) : HIGHLIGHT_DEFAULT,
     clusterTf: CLUSTER_TFS[s.clusterTf] != null ? s.clusterTf : CLUSTER_TF_DEFAULT,
     tape: s.tape !== false,                                   // trades tape left of the clusters
-    venues: s.venues !== false,                               // other venues on the tape + the venue strip
+    venues: s.venues !== false,                               // other venues: books next to the ladder + their trades on the tape
+    venueFull: s.venueFull !== false,                         // those books as full ladders (bars) or compact numbers
     tapeMin: s.tapeMin != null && Number(s.tapeMin) >= 0 ? Number(s.tapeMin) : TAPE_MIN_DEFAULT, // USD; smaller prints are only on the line
   };
 }
@@ -374,6 +375,7 @@ function _settingsHTML() {
     + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-tape-min="1" placeholder="Show all" value="' + formatUsdShort(S.tapeMin) + '">'
     + _chipsHTML('tmin', S.tapeMin, [[0, 'All'], [10, '10'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']]) + '</div>'
     + _switchHTML('venues', 'Other venues: books and their trades on the tape', S.venues)
+    + _switchHTML('venue-full', 'Other venues as full books (bars like ours)', S.venueFull)
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
     + '</select></div>'
@@ -404,6 +406,10 @@ function _applySettingInput(inp) {
   if (inp.dataset.setCluster) {
     _setClusterTf(inp.value);
     return;
+  } else if (inp.dataset.setVenueFull) {
+    S.venueFull = inp.checked;
+    _syncVenueCols();
+    window.dispatchEvent(new Event('resize'));
   } else if (inp.dataset.setVenues) {
     S.venues = inp.checked;
     _syncVenueCols();
@@ -678,7 +684,8 @@ function _drawTape(step) {
 // typical big level on screen). A cell flashes when that venue trades there.
 // Click a header to fold / unfold one column (remembered in this browser).
 
-var VEN_W = 46, VEN_FOLDED_W = 18;
+// Compact: a number per row; full: a bar ladder like our Volume column
+var VEN_W = 46, VEN_FULL_W = 112, VEN_FOLDED_W = 18;
 
 function _venueFolded() {
   try { return JSON.parse(_lsGet('qt_term_vcols') || '{}') || {}; } catch (e) { return {}; }
@@ -689,11 +696,12 @@ function _syncVenueCols() {
   if (!panel) return;
   var folded = _venueFolded();
   // Not listed on that venue → always folded to its (red) letter
-  var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] || bookListed(v.id) === false ? VEN_FOLDED_W : VEN_W; });
+  var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] || bookListed(v.id) === false ? VEN_FOLDED_W : S.venueFull ? VEN_FULL_W : VEN_W; });
   var total = widths.reduce(function (a, b) { return a + b; }, 0);
   panel.style.setProperty('--ven-w', total + 'px');
   panel.style.setProperty('--ven-cols', widths.map(function (w) { return w + 'px'; }).join(' '));
   panel.classList.toggle('has-ven', !!S.venues);
+  panel.classList.toggle('ven-full', !!S.venueFull);
   panel.querySelectorAll('[data-vcol]').forEach(function (b) {
     var v = BOOK_VENUES.find(function (x) { return x.id === b.dataset.vcol; });
     var na = bookListed(v.id) === false;
@@ -733,17 +741,40 @@ function _venueView(step, lo, hi) {
 }
 
 function _setVenueCells(box, i, view, side) {
+  if (S.venueFull) return _setVenueBars(box, i, view, side);
   for (var k = 0; k < view.length; k++) {
     var cell = box.children[k], col = view[k];
     var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
     var t = col.folded || !usd ? '' : _fmtQty(usd);
     var a = usd && col.full ? Math.round(6 + 44 * Math.min(1, usd / col.full)) : 0;
     var cls = (side || '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    if (cell.firstChild && cell.firstChild.nodeType === 1) { cell.textContent = ''; cell._t = null; }
     if (cell._t !== t) { cell.textContent = t; cell._t = t; }
     if (cell._a !== a || cell._side !== side) {
       cell.style.background = a ? 'color-mix(in srgb, var(' + (side === 'ask' ? '--danger' : '--primary') + ') ' + a + '%, transparent)' : '';
       cell._a = a; cell._side = side;
     }
+    if (cell._cls !== cls) { cell.className = cls; cell._cls = cls; }
+  }
+}
+
+// Full books: the same bar as our Volume column — length by size vs that
+// venue's full scale (its typical big level), grey under the color threshold
+function _setVenueBars(box, i, view, side) {
+  for (var k = 0; k < view.length; k++) {
+    var cell = box.children[k], col = view[k];
+    if (!cell.firstChild || cell.firstChild.nodeType !== 1) { cell.innerHTML = '<i></i><em></em>'; cell._t = null; cell._w = null; cell.style.background = ''; cell._a = null; }
+    var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
+    var ratio = usd && col.full ? Math.min(1, usd / col.full) : 0;
+    var dim = usd && col.full && usd < col.full * S.highlight / 100;
+    var t = col.folded || !usd ? '' : _fmtQty(usd);
+    var w = usd ? Math.max(2, Math.round(ratio * 100)) + '%' : '0%';
+    var o = !usd ? '0' : dim ? '0.3' : (0.35 + 0.5 * ratio).toFixed(2);
+    var cls = (side || '') + (dim ? ' dim' : '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    var bar = cell.firstChild, txt = cell.lastChild;
+    if (cell._w !== w) { bar.style.width = w; cell._w = w; }
+    if (bar.style.opacity !== o) bar.style.opacity = o;
+    if (cell._t !== t) { txt.textContent = t; cell._t = t; }
     if (cell._cls !== cls) { cell.className = cls; cell._cls = cls; }
   }
 }
