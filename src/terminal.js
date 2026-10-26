@@ -39,6 +39,8 @@ var HIGHLIGHT_DEFAULT = 65;
 var CLUSTER_TFS = { off: 0, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600 };
 var CLUSTER_TF_DEFAULT = '5m';
 var CLUSTER_COLS = 4;          // newest on the right, next to Mine
+var TAPE_KEEP = 300;           // prints kept for the tape
+var TAPE_STEP_PX = 7;          // horizontal distance between prints
 var CLUSTER_BACKFILL_PAGES = 8; // ≤ 8 000 recent trades from REST when opening; older periods may be partial // with a full scale set, levels under this % of it are grey // Binance minimum notional … the agreed per-click cap
 // Price step multipliers (Tiger "price scale"): one ladder row = tick × multiplier
 var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
@@ -99,6 +101,8 @@ function _loadSettings(sym) {
     fullScale: Number(s.fullScale) > 0 ? Number(s.fullScale) : 0,
     highlight: Number(s.highlight) > 0 && Number(s.highlight) <= 100 ? Number(s.highlight) : HIGHLIGHT_DEFAULT,
     clusterTf: CLUSTER_TFS[s.clusterTf] != null ? s.clusterTf : CLUSTER_TF_DEFAULT,
+    tape: s.tape !== false,                                   // trades tape left of the clusters
+    tapeMin: Number(s.tapeMin) > 0 ? Number(s.tapeMin) : 0,   // USD; smaller prints are only on the line
   };
 }
 
@@ -264,7 +268,7 @@ function _panelHTML() {
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
     + '<span class="dom-cols-cl" id="dom-cols-cl" data-cl-tf="1" title="Clusters: traded volume per price for each period. Click to change the period">'
-    + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span></div>'
+    + new Array(CLUSTER_COLS + 1).join('<b></b>') + '</span><span class="dom-cols-tape">Tape</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
     + '<div class="dom-foot">'
@@ -326,6 +330,10 @@ function _settingsHTML() {
     + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
     + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
     + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
+    + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
+    + '<option value="on"' + (S.tape ? ' selected' : '') + '>On</option><option value="off"' + (S.tape ? '' : ' selected') + '>Off</option></select></div>'
+    + '<div class="dom-set-row"><span>Tape: circles from, USD</span>'
+    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="100" data-set-tape-min="1" placeholder="All trades" value="' + (S.tapeMin || '') + '"></div>'
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
     + '</select></div>'
@@ -340,6 +348,14 @@ function _applySettingInput(inp) {
   if (inp.dataset.setCluster) {
     _setClusterTf(inp.value);
     return;
+  } else if (inp.dataset.setTape) {
+    S.tape = inp.value === 'on';
+    _syncClusterLayout();
+    window.dispatchEvent(new Event('resize'));
+  } else if (inp.dataset.setTapeMin) {
+    var tm = Number(inp.value);
+    S.tapeMin = tm > 0 ? tm : 0;
+    if (!S.tapeMin) inp.value = '';
   } else if (inp.dataset.setHighlight) {
     var h = Number(inp.value);
     S.highlight = h > 0 && h <= 100 ? h : HIGHLIGHT_DEFAULT;
@@ -394,6 +410,9 @@ function _clusterStart(rest, sym) {
     var url = rest + '/fapi/v1/aggTrades?symbol=' + sym + '&limit=1000' + (endId != null ? '&fromId=' + Math.max(0, endId - 999) : '');
     return fetch(url).then(function (r) { return r.json(); }).then(function (list) {
       if (T.cl !== cl || !Array.isArray(list) || !list.length) return;
+      if (endId == null && !T.tape.length) {
+        list.slice(-TAPE_KEEP).forEach(function (t) { _tapeAdd(Number(t.p), Number(t.p) * Number(t.q), !t.m, t.T); });
+      }
       list.forEach(function (t) {
         if (endId != null && t.a > endId) return;
         if (t.a > cl.topId) cl.topId = t.a;
@@ -485,7 +504,9 @@ function _renderClusterHead(view) {
 
 function _syncClusterLayout() {
   var panel = document.getElementById('fv-dom');
-  if (panel) panel.classList.toggle('has-cl', !!_clusterTfSec());
+  if (!panel) return;
+  panel.classList.toggle('has-cl', !!_clusterTfSec());
+  panel.classList.toggle('has-tape', !!S.tape);
 }
 
 function _setClusterTf(tf) {
@@ -495,6 +516,71 @@ function _setClusterTf(tf) {
   if (T.book && T.sym) _clusterStart(T.book.rest, T.sym); else _syncClusterLayout();
   window.dispatchEvent(new Event('resize')); // the chart takes back / gives up the width
   _queueRender();
+}
+
+// ── Trades tape (Tiger-style) ───────────────────────────────────────────────
+// Each market trade is a circle on the row of its price, newest at the right
+// edge (next to the clusters), older ones step left; blue = buy, red = sell,
+// size ∝ √USDT relative to the biggest print shown. Trades at the same
+// millisecond and side merge into one print (one aggressive order). A thin line
+// joins all prints; ones under S.tapeMin stay on the line without a circle.
+
+function _tapeAdd(p, usd, buy, time) {
+  if (!T.tape) T.tape = [];
+  var last = T.tape[T.tape.length - 1];
+  if (last && last.t === time && last.buy === buy) { last.usd += usd; last.p = p; return; }
+  T.tape.push({ p: p, usd: usd, buy: buy, t: time });
+  if (T.tape.length > TAPE_KEEP) T.tape.shift();
+}
+
+function _drawTape(step) {
+  var ladder = document.getElementById('dom-ladder');
+  var panel = document.getElementById('fv-dom');
+  if (!ladder || !panel) return;
+  var cv = document.getElementById('dom-tape');
+  if (!S.tape) { if (cv) cv.style.display = 'none'; return; }
+  if (!cv) {
+    // On the panel, not inside the ladder: the ladder's children are its rows
+    cv = document.createElement('canvas');
+    cv.id = 'dom-tape';
+    cv.className = 'dom-tape';
+    panel.appendChild(cv);
+  }
+  var w = cv.offsetWidth, h = ladder.clientHeight, dpr = window.devicePixelRatio || 1;
+  cv.style.display = '';
+  cv.style.top = ladder.offsetTop + 'px';
+  cv.style.height = h + 'px';
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  var tape = T.tape || [];
+  var n = Math.min(tape.length, Math.floor((w - 8) / TAPE_STEP_PX) + 1);
+  if (!n || T.top == null) return;
+  var shown = tape.slice(-n);
+  var max = 0;
+  shown.forEach(function (x) { if (x.usd > max) max = x.usd; });
+  function xy(x, j) { return [w - 6 - (n - 1 - j) * TAPE_STEP_PX, (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2]; }
+  ctx.strokeStyle = getCSSVar('--graphite');
+  ctx.globalAlpha = 0.6;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  shown.forEach(function (x, j) { var c = xy(x, j); if (j) ctx.lineTo(c[0], c[1]); else ctx.moveTo(c[0], c[1]); });
+  ctx.stroke();
+  var buyC = getCSSVar('--primary'), sellC = getCSSVar('--danger');
+  shown.forEach(function (x, j) {
+    if (S.tapeMin && x.usd < S.tapeMin) return;
+    var c = xy(x, j);
+    if (c[1] < -12 || c[1] > h + 12) return;
+    var r = 2 + 9 * Math.sqrt(x.usd / max);
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = x.buy ? buyC : sellC;
+    ctx.beginPath();
+    ctx.arc(c[0], c[1], r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 }
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
@@ -587,6 +673,7 @@ function _connectDepth() {
     if (d.e !== 'aggTrade') return;
     T.lastTrade = { price: Number(d.p), buy: !d.m, at: Date.now() };
     _clusterTrade(d.a, d.p, Number(d.q), d.T);
+    _tapeAdd(Number(d.p), Number(d.p) * Number(d.q), !d.m, d.T);
     _queueRender();
   };
 }
@@ -667,6 +754,7 @@ function _disconnectDepth() {
   T.book = null; T.baseBids = null; T.baseAsks = null; T.bookDirty = false;
   T.bbo = null; T.lastTrade = null;
   T.cl = null;
+  T.tape = [];
 }
 
 // ── Account events ──────────────────────────────────────────────────────────
@@ -953,6 +1041,7 @@ function _render() {
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
   _drawRuler();
+  _drawTape(step);
 }
 
 // ── % ruler: distance from the current price to the hovered level ──────────
