@@ -38,3 +38,15 @@ test('typed amounts: suffixes, spaces, comma, Cyrillic', async () => {
   assert.equal(formatUsdShort(800), '800');
   assert.equal(formatUsdShort(0), '');
 });
+
+test('auto color: only levels well above the typical one', async () => {
+  const { colorThreshold, levelPercentile } = await import('./ladder-scale.js');
+  // flat book: levels 2–5K, median ~3K → threshold ~9K → none of them colored
+  const flat = [2000, 2500, 3000, 3200, 3500, 4000, 4500, 5000, 2800, 3100];
+  const thr = colorThreshold(levelPercentile(flat, 50), levelPercentile(flat, 90), 65);
+  assert.ok(flat.every((v) => v < thr));
+  // a real wall of 14K in that book is colored
+  assert.ok(14000 >= colorThreshold(levelPercentile(flat.concat([14000]), 50), levelPercentile(flat.concat([14000]), 90), 65));
+  // no median yet → falls back to the % of the full bar
+  assert.equal(colorThreshold(0, 10000, 65), 6500);
+});

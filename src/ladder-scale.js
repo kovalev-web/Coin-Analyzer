@@ -39,3 +39,15 @@ export function formatUsdShort(n) {
   if (n >= 1e3) return trim(n / 1e3) + 'K';
   return trim(n);
 }
+
+// Auto mode colors only densities: levels that stand out from the typical one.
+// A level is colored when it's ≥ DENSITY_K × the median visible level (and
+// above the % threshold of the full bar). A flat book (all levels alike) stays
+// grey — nothing there is a density.
+export var DENSITY_K = 3;
+
+export function colorThreshold(medianUsd, fullUsd, highlightPct, k) {
+  var byPct = fullUsd > 0 ? fullUsd * (highlightPct || 65) / 100 : 0;
+  var byDensity = medianUsd > 0 ? medianUsd * (k || DENSITY_K) : 0;
+  return Math.max(byPct, byDensity);
+}
