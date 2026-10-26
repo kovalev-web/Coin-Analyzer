@@ -828,3 +828,10 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
 .dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));}
+
+/* divider between the tape / clusters and Mine | Volume | Price */
+.fv-dom.has-cl .dom-c-mine,.fv-dom.has-tape .dom-c-mine,
+.fv-dom.has-cl .dom-cols>span:nth-child(1),.fv-dom.has-tape .dom-cols>span:nth-child(1){border-left:1px solid var(--steel);padding-left:var(--space-2);height:100%;align-items:center;}
+.fv-dom.has-cl .dom-cols>span:nth-child(1),.fv-dom.has-tape .dom-cols>span:nth-child(1){display:flex;}
+.fv-dom.has-cl .dom-cols,.fv-dom.has-cl .dom-row,.fv-dom.has-tape .dom-cols,.fv-dom.has-tape .dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 58px 1fr 92px;}
+.fv-dom.has-cl,.fv-dom.has-tape{width:calc(336px + var(--tape-w) + var(--cl-w));flex-basis:calc(336px + var(--tape-w) + var(--cl-w));}
