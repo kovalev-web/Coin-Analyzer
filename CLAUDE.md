@@ -100,6 +100,8 @@ state.journalToday     // запись дневника за сегодня (д�
 - VPS: `server-vps.js` запускает HTTP + WebSocket на одном порту
 - Vercel: `vercel.json` + `api/` (serverless functions) — только для dev/preview
 - `.env` содержит `ANTHROPIC_API_KEY`, `DATABASE_URL`, ключи Binance и др.
+- WebSocket: сначала прямой `wss://trade.questtick.com/ws` (DNS only, nginx `questtick-trade` на VPS, сертификат Let's Encrypt, наружу открыт только `/ws`; из Вьетнама ~70 мс против ~115 через Cloudflare), при неудаче — `wss://api.questtick.com/ws` через Cloudflare, повтор прямого через 5 мин (`src/api.js`). HTTP API — только через Cloudflare.
+- Индикатор связи в стакане: `src/latency.js` (+ формулы `src/latency-stats.js`, `npm run test:latency`), сервер отвечает на `{type:'ping'}` в WS с маршрутом, узлом Cloudflare, страной и задержкой сервер → Binance.
 
 ## Торговля (`trader/`)
 Отдельный процесс (pm2 `trader`), только он держит ключи Binance. Слушает `127.0.0.1:3010`, каждый запрос — с заголовком `x-trader-secret`.
