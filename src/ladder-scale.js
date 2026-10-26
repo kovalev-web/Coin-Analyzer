@@ -20,3 +20,22 @@ export function smoothScale(prev, target, dtMs, tauMs) {
   var a = 1 - Math.exp(-dtMs / (tauMs || AUTO_TAU_MS));
   return prev + (target - prev) * a;
 }
+
+// Amounts typed in the settings: "2M", "500k", "1.5m", "2 000 000", "2,5М" → USD.
+// Empty / zero / unreadable → 0 (= automatic / off).
+export function parseUsd(text) {
+  var s = String(text == null ? '' : text).trim().toLowerCase().replace(/\s+/g, '').replace(',', '.');
+  var m = /^(\d+(?:\.\d+)?)([kкmм]?)$/.exec(s);
+  if (!m) return 0;
+  var n = Number(m[1]) * ({ k: 1e3, 'к': 1e3, m: 1e6, 'м': 1e6 }[m[2]] || 1);
+  return n > 0 ? n : 0;
+}
+
+// 2000000 → "2M", 500000 → "500K", 1500 → "1.5K", 800 → "800"
+export function formatUsdShort(n) {
+  if (!(n > 0)) return '';
+  function trim(x) { return String(Number(x.toFixed(2))); }
+  if (n >= 1e6) return trim(n / 1e6) + 'M';
+  if (n >= 1e3) return trim(n / 1e3) + 'K';
+  return trim(n);
+}

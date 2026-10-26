@@ -22,3 +22,19 @@ test('smoothing does not depend on how often it is called', () => {
   const b = smoothScale(100, 200, 1000, 10000);
   assert.ok(Math.abs(a - b) < 1e-9);
 });
+
+test('typed amounts: suffixes, spaces, comma, Cyrillic', async () => {
+  const { parseUsd, formatUsdShort } = await import('./ladder-scale.js');
+  assert.equal(parseUsd('2M'), 2e6);
+  assert.equal(parseUsd('500k'), 5e5);
+  assert.equal(parseUsd('1.5m'), 1.5e6);
+  assert.equal(parseUsd('2 000 000'), 2e6);
+  assert.equal(parseUsd('2,5М'), 2.5e6);
+  assert.equal(parseUsd('300к'), 3e5);
+  assert.equal(parseUsd(''), 0);
+  assert.equal(parseUsd('abc'), 0);
+  assert.equal(formatUsdShort(2e6), '2M');
+  assert.equal(formatUsdShort(1500), '1.5K');
+  assert.equal(formatUsdShort(800), '800');
+  assert.equal(formatUsdShort(0), '');
+});

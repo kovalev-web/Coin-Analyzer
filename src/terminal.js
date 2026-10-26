@@ -16,7 +16,7 @@ import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
-import { levelPercentile, smoothScale, AUTO_PERCENTILE } from './ladder-scale.js';
+import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
 import { booksStart, booksStop, bookRows, bookListed, BOOK_VENUES } from './venue-books.js';
 
@@ -319,6 +319,8 @@ function _openSettings() {
   document.body.appendChild(ov);
   ov.addEventListener('change', function (e) { if (e.target.closest('#dom-settings')) _applySettingInput(e.target); });
   ov.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-chip]');
+    if (chip) { _applyChip(chip); return; }
     if (e.target === ov || e.target.closest('[data-set-close]')) _closeSettings();
   });
   document.addEventListener('keydown', _settingsKey);
@@ -341,6 +343,18 @@ function _settingsKey(e) {
   if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); _closeSettings(); }
 }
 
+// Quick values under a field; the active one is highlighted
+function _chipsHTML(kind, current, list) {
+  return '<div class="dom-chips">' + list.map(function (c) {
+    return '<button type="button" class="dom-chip' + (Number(current) === c[0] ? ' active' : '') + '" data-chip="' + kind + '" data-value="' + c[0] + '">' + c[1] + '</button>';
+  }).join('') + '</div>';
+}
+
+function _switchHTML(key, label, on) {
+  return '<label class="dom-set-switch"><span>' + label + '</span>'
+    + '<span class="ds-switch"><input type="checkbox" data-set-' + key + '="1"' + (on ? ' checked' : '') + '><i></i></span></label>';
+}
+
 function _settingsHTML() {
   return '<div class="dom-settings" id="dom-settings">'
     + '<div class="dom-set-row"><span>Order sizes, USDT</span><div class="dom-set-sizes">'
@@ -348,24 +362,42 @@ function _settingsHTML() {
         return '<input class="ds-input" type="number" inputmode="decimal" min="' + SIZE_MIN + '" max="' + SIZE_MAX + '" data-set-size="' + i + '" value="' + (S.sizes[i] != null ? S.sizes[i] : '') + '">';
       }).join('')
     + '</div></div>'
-    + '<div class="dom-set-row"><span>Full scale, thousand USD</span>'
-    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' (now ≈ $' + _fmtQty(T.autoFull) + ')' : '') + '" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
-    + '<div class="dom-set-row"><span>Color from, % of full scale</span>'
-    + '<input class="ds-input" type="number" inputmode="decimal" min="1" max="100" step="5" data-set-highlight="1" value="' + S.highlight + '"></div>'
-    + '<div class="dom-set-row"><span>Other venues (tape + books)</span><select class="ds-input" data-set-venues="1">'
-    + '<option value="on"' + (S.venues ? ' selected' : '') + '>On</option><option value="off"' + (S.venues ? '' : ' selected') + '>Off</option></select></div>'
-    + '<div class="dom-set-row"><span>Trades tape</span><select class="ds-input" data-set-tape="1">'
-    + '<option value="on"' + (S.tape ? ' selected' : '') + '>On</option><option value="off"' + (S.tape ? '' : ' selected') + '>Off</option></select></div>'
-    + '<div class="dom-set-row"><span>Tape: ignore trades under, USD</span>'
-    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-tape-min="1" placeholder="All trades" value="' + (S.tapeMin || '') + '"></div>'
+    + '<div class="dom-set-row"><span>Volume bar is full at, $</span>'
+    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' · now ≈ ' + formatUsdShort(T.autoFull) : '') + '" value="' + formatUsdShort(S.fullScale) + '">'
+    + _chipsHTML('full', S.fullScale, [[0, 'Auto'], [250e3, '250K'], [500e3, '500K'], [1e6, '1M'], [2e6, '2M'], [5e6, '5M']])
+    + '<span class="dom-set-note">Type 2M, 500K or 1.5M. Empty or Auto — set from the levels on screen.</span></div>'
+    + '<div class="dom-set-row"><span>Colored from, % of a full bar</span>'
+    + _chipsHTML('hl', S.highlight, [[50, '50%'], [60, '60%'], [65, '65%'], [70, '70%'], [80, '80%'], [90, '90%']])
+    + '<span class="dom-set-note">Smaller levels stay grey.</span></div>'
+    + _switchHTML('tape', 'Trades tape', S.tape)
+    + '<div class="dom-set-row"><span>Tape: hide trades under, $</span>'
+    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-tape-min="1" placeholder="Show all" value="' + formatUsdShort(S.tapeMin) + '">'
+    + _chipsHTML('tmin', S.tapeMin, [[0, 'All'], [10, '10'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']]) + '</div>'
+    + _switchHTML('venues', 'Other venues: books and their trades on the tape', S.venues)
     + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
     + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
     + '</select></div>'
-    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K); smaller levels stay grey. Empty — set automatically from the levels on screen (a typical big one is full). Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '<div class="dom-set-hint">Order sizes ' + SIZE_MIN + '–' + SIZE_MAX + ' USDT, an empty slot hides it.</div>'
     + '<div class="dom-set-row"><span>Hotkeys · all coins</span><div class="dom-keys">'
     + HOTKEYS.map(function (k) { return '<kbd>' + k[0] + '</kbd><span>' + k[1] + '</span>'; }).join('')
     + '</div></div>'
     + '</div>';
+}
+
+// Re-draw the modal body (chips' active state) keeping the focused field
+function _refreshSettings() {
+  var box = document.getElementById('dom-settings');
+  if (box) box.outerHTML = _settingsHTML();
+}
+
+function _applyChip(btn) {
+  var v = Number(btn.dataset.value);
+  if (btn.dataset.chip === 'full') S.fullScale = v;
+  else if (btn.dataset.chip === 'hl') S.highlight = v;
+  else if (btn.dataset.chip === 'tmin') S.tapeMin = v;
+  _saveSettings();
+  _refreshSettings();
+  _queueRender();
 }
 
 function _applySettingInput(inp) {
@@ -373,25 +405,21 @@ function _applySettingInput(inp) {
     _setClusterTf(inp.value);
     return;
   } else if (inp.dataset.setVenues) {
-    S.venues = inp.value === 'on';
+    S.venues = inp.checked;
     _syncVenueCols();
     window.dispatchEvent(new Event('resize'));
   } else if (inp.dataset.setTape) {
-    S.tape = inp.value === 'on';
+    S.tape = inp.checked;
     _syncClusterLayout();
     window.dispatchEvent(new Event('resize'));
   } else if (inp.dataset.setTapeMin) {
-    var tm = Number(inp.value);
-    S.tapeMin = tm > 0 ? tm : 0;
-    if (!S.tapeMin) inp.value = '';
-  } else if (inp.dataset.setHighlight) {
-    var h = Number(inp.value);
-    S.highlight = h > 0 && h <= 100 ? h : HIGHLIGHT_DEFAULT;
-    inp.value = S.highlight;
+    S.tapeMin = parseUsd(inp.value);
+    inp.value = formatUsdShort(S.tapeMin);
+    _refreshSettings();
   } else if (inp.dataset.setFull) {
-    var f = Number(inp.value);
-    S.fullScale = f > 0 ? f * 1000 : 0; // typed in thousands, kept in USD
-    if (!S.fullScale) inp.value = '';
+    S.fullScale = parseUsd(inp.value); // "2M", "500K" or plain dollars; empty = auto
+    inp.value = formatUsdShort(S.fullScale);
+    _refreshSettings();
   } else {
     var vals = [];
     document.querySelectorAll('#dom-settings [data-set-size]').forEach(function (el) {

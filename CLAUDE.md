@@ -84,6 +84,7 @@ state.journalToday     // запись дневника за сегодня (д�
 | Popup/модалка | `.popup` → `.popup-header` → `.popup-title` → `.popup-body` → `.popup-footer` |
 | CTA-кнопка | `.btn-cta` (`.danger` модификатор для деструктивных) |
 | Иконка-кнопка | `.btn-icon` |
+| Переключатель вкл/выкл | `.ds-switch` > `<input type="checkbox">` + `<i></i>` |
 | Кнопка в шапке | `.btn-topbar` |
 | Спиннер кнопки | `.btn-loading` (добавить к `<button>`) |
 | Спиннер инлайн | `.spinner` |
