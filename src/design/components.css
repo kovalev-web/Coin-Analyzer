@@ -779,3 +779,12 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.has-order.buy{background:color-mix(in srgb,var(--bullish) 9%,transparent);}
 .dom-row.has-order.sell{background:color-mix(in srgb,var(--danger) 9%,transparent);}
 .dom-row.has-order:hover{background:var(--fog);}
+
+/* head on one row: Live/Test · ping · scale · settings. The ping badge gives
+   way first (city truncates) so the settings button never wraps */
+.dom-head{flex-wrap:nowrap;gap:var(--space-2);}
+.dom-mode,.dom-scale,.dom-gear{flex:none;}
+.dom-ping{min-width:0;flex:0 1 auto;}
+.dom-ping>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dom-scale button{min-width:22px;padding:0 var(--space-1);}
+.dom-scale-val{min-width:28px;}
