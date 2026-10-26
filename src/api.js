@@ -778,13 +778,18 @@ export async function fetchChartData(symbol, tf) {
 
 // ── Trading (proxied by pump-ws to the trader process) ───────────────────
 // Resolves with the JSON body; rejects with Error(message) carrying .status.
+// Terminal mode: 'live' (real account) or 'test' (Binance Demo via the test
+// trader). pump-ws routes only trading commands by it; keys and 2FA stay live.
+var _tradeEnv = 'live';
+export function setTradeEnv(env) { _tradeEnv = env === 'test' ? 'test' : 'live'; }
+
 export async function tradeRequest(method, action, body) {
   // Commands go over the open WebSocket when we have one (faster: no new
   // HTTP request per click); reads, the no-socket case and 'POST_HTTP'
   // (key management, which the server only accepts over HTTP) use HTTP.
   if (method === 'POST_HTTP') method = 'POST';
   else if (method === 'POST' && ws && ws.readyState === WebSocket.OPEN) {
-    var reply = await wsRequest({ type: 'trade', action: action, body: body || {} });
+    var reply = await wsRequest({ type: 'trade', action: action, body: body || {}, env: _tradeEnv });
     if (reply.status >= 400) {
       var wsErr = new Error((reply.body && reply.body.error && reply.body.error.message) || ('HTTP ' + reply.status));
       wsErr.status = reply.status;
@@ -792,7 +797,8 @@ export async function tradeRequest(method, action, body) {
     }
     return reply.body;
   }
-  var res = await fetch(API_BASE + '/api/trade/' + action, {
+  var envQs = _tradeEnv === 'test' ? (action.indexOf('?') === -1 ? '?' : '&') + 'env=test' : '';
+  var res = await fetch(API_BASE + '/api/trade/' + action + envQs, {
     method: method,
     credentials: 'include',
     headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,

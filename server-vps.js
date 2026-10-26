@@ -720,6 +720,12 @@ function startKlineWS() {
 // the session and forwards to trader/server.js on 127.0.0.1 with a shared secret.
 
 var TRADER_URL             = process.env.TRADER_URL || 'http://127.0.0.1:3010';
+// Test mode in the terminal: a second trader process on Binance Demo (testnet).
+// Only trading commands and their reads switch to it; keys, 2FA and journal
+// history always go to the live trader. No day gate in test mode.
+var TRADER_TEST_URL        = process.env.TRADER_TEST_URL || 'http://127.0.0.1:3011';
+var TEST_ACTIONS = { status: true, account: true, rules: true, order: true, cancel: true, 'cancel-all': true, leverage: true, kill: true, resume: true, day: true };
+function traderUrlFor(action, env) { return env === 'test' && TEST_ACTIONS[action] ? TRADER_TEST_URL : TRADER_URL; }
 var TRADER_INTERNAL_SECRET = process.env.TRADER_INTERNAL_SECRET || '';
 var TRADER_USER_ID         = process.env.TRADER_USER_ID || '';
 var TRADE_ROUTES = {
@@ -764,6 +770,10 @@ function notifyKeyChange(action, env) {
 }
 
 async function handleTradeRequest(req, res, action, query) {
+  var qs = new URLSearchParams(query || '');
+  var tenv = qs.get('env') === 'test' ? 'test' : 'live';
+  qs.delete('env');
+  query = qs.toString();
   function json(status, body) {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
@@ -787,8 +797,8 @@ async function handleTradeRequest(req, res, action, query) {
       });
     } catch (e) { return json(413, { error: { message: e.message } }); }
   }
-  if (action === 'day') return json(200, await tradingDay());
-  if (req.method === 'POST' && (action === 'order' || action === 'leverage' || action === 'resume')) {
+  if (action === 'day') return json(200, tenv === 'test' ? { open: true, reason: null, test: true } : await tradingDay());
+  if (tenv === 'live' && req.method === 'POST' && (action === 'order' || action === 'leverage' || action === 'resume')) {
     var gb;
     try { gb = JSON.parse(body || '{}'); } catch (e) { gb = {}; }
     var gateErr = await dayGateError(action, gb);
@@ -806,7 +816,7 @@ async function handleTradeRequest(req, res, action, query) {
     body = JSON.stringify(kb);
   }
   try {
-    var r = await fetch(TRADER_URL + '/' + action + (req.method === 'GET' && query ? '?' + query : ''), {
+    var r = await fetch(traderUrlFor(action, tenv) + '/' + action + (req.method === 'GET' && query ? '?' + query : ''), {
       method: req.method,
       headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET, 'Content-Type': 'application/json' },
       body: req.method === 'POST' ? (body || '{}') : undefined,
@@ -898,14 +908,18 @@ async function dayGateError(action, body) {
   return d.open ? null : d.reason;
 }
 
-// Relay trader events (SSE) to the trading user's WebSocket tabs only.
-var _traderEventsRetry = null;
+// Relay trader events (SSE) to the trading user's WebSocket tabs only, one
+// stream per trader process; each event is tagged with its env (live / test).
+var _traderEventsRetry = {};
 
-function connectTraderEvents() {
+function connectTraderEvents(env) {
+  env = env || 'live';
   if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return;
-  var treq = http.request(TRADER_URL + '/events', { headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET } }, function (tres) {
+  function retryTraderEvents() { retryTraderEventsFor(env); }
+  var base = env === 'test' ? TRADER_TEST_URL : TRADER_URL;
+  var treq = http.request(base + '/events', { headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET } }, function (tres) {
     if (tres.statusCode !== 200) { tres.resume(); return retryTraderEvents(); }
-    console.log('[Trader] Event stream connected');
+    console.log('[Trader] Event stream connected (' + env + ')');
     var buf = '';
     tres.setEncoding('utf8');
     tres.on('data', function (chunk) {
@@ -914,7 +928,7 @@ function connectTraderEvents() {
       buf = blocks.pop();
       blocks.forEach(function (block) {
         block.split('\n').forEach(function (line) {
-          if (line.indexOf('data: ') === 0) broadcastTradeEvent(line.slice(6));
+          if (line.indexOf('data: ') === 0) broadcastTradeEvent(line.slice(6), env);
         });
       });
     });
@@ -925,14 +939,16 @@ function connectTraderEvents() {
   treq.end();
 }
 
-function retryTraderEvents() {
-  if (_traderEventsRetry) return;
-  _traderEventsRetry = setTimeout(function () { _traderEventsRetry = null; connectTraderEvents(); }, 5000);
+function retryTraderEventsFor(env) {
+  if (_traderEventsRetry[env]) return;
+  // The test trader may not be running: keep trying, quietly
+  _traderEventsRetry[env] = setTimeout(function () { _traderEventsRetry[env] = null; connectTraderEvents(env); }, env === 'test' ? 15000 : 5000);
 }
 
-function broadcastTradeEvent(data) {
+function broadcastTradeEvent(data, env) {
   var ev;
   try { ev = JSON.parse(data); } catch (e) { return; }
+  ev.env = env || 'live';
   var msg = JSON.stringify({ type: 'trade_event', event: ev });
   clients.forEach(function (c) {
     if (c.readyState === WebSocket.OPEN && TRADER_USER_ID && c._sessionUserId === TRADER_USER_ID) c.send(msg);
@@ -2635,10 +2651,11 @@ wss.on('connection', function (ws, upgradeReq) {
         if (!TRADER_INTERNAL_SECRET || !TRADER_USER_ID) return tradeReply(503, { error: { message: 'Trading is not configured' } });
         if (!tradeUid || tradeUid !== TRADER_USER_ID || !CORS_ORIGINS.includes(ws._origin)) return tradeReply(403, { error: { message: 'Forbidden' } });
         if (!WS_TRADE_ACTIONS[msg.action]) return tradeReply(404, { error: { message: 'Not found' } });
-        var wsGateErr = await dayGateError(msg.action, msg.body);
+        var wsEnv = msg.env === 'test' ? 'test' : 'live';
+        var wsGateErr = wsEnv === 'test' ? null : await dayGateError(msg.action, msg.body);
         if (wsGateErr) return tradeReply(423, { error: { message: wsGateErr, gate: 'day' } });
         try {
-          var tr = await fetch(TRADER_URL + '/' + msg.action, {
+          var tr = await fetch(traderUrlFor(msg.action, wsEnv) + '/' + msg.action, {
             method: 'POST',
             headers: { 'x-trader-secret': TRADER_INTERNAL_SECRET, 'Content-Type': 'application/json' },
             body: JSON.stringify(msg.body || {}),
@@ -2707,7 +2724,8 @@ bootstrapTicker().then(function() {
 });
 startBinanceWS();       // параллельно: WS подписки для live-обновлений
 startKlineWS();         // kline WS для real-time обновлений свечей
-connectTraderEvents();  // события торговли от trader → WS вкладки владельца
+connectTraderEvents('live');  // события торговли от trader → WS вкладки владельца
+connectTraderEvents('test');  // тестовый trader (Binance Demo), если запущен
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления

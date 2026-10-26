@@ -11,7 +11,7 @@
 // Ladder data comes from the trader's own environment (testnet or live), never
 // from the main chart feed: testnet prices differ from the real market.
 
-import { tradeRequest, refreshTradesAfterFill, saveTradeTag } from './api.js';
+import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv } from './api.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
@@ -43,6 +43,7 @@ var OPEN_ALGO = { NEW: true, TRIGGERING: true };
 var S = _loadSettings(null);
 
 var T = {
+  mode: _lsGet('qt_term_mode') === 'test' ? 'test' : 'live', // Live / Test switch in the panel head
   access: null,          // null = unknown, false = no access, object = /status
   accessPromise: null,
   account: { balances: [], positions: [], orders: [], algoOrders: [] },
@@ -99,6 +100,8 @@ function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
 // ── Access ─────────────────────────────────────────────────────────────────
 
+setTradeEnv(T.mode);
+
 export function checkAccess() {
   if (T.access) return Promise.resolve(T.access);
   if (T.accessPromise) return T.accessPromise;
@@ -106,10 +109,40 @@ export function checkAccess() {
     T.access = s;
     return tradeRequest('GET', 'account').then(function (a) { T.account = a; return s; });
   }).catch(function () {
+    // Test trader down or no testnet key: fall back to Live so the terminal stays reachable
+    if (T.mode === 'test') {
+      _setMode('live');
+      T.accessPromise = null;
+      showToast('Test mode is unavailable — switched to Live');
+      return checkAccess();
+    }
     T.access = false;
     return false;
   }).finally(function () { T.accessPromise = null; });
   return T.accessPromise;
+}
+
+function _setMode(m) {
+  T.mode = m;
+  _lsSet('qt_term_mode', m);
+  setTradeEnv(m);
+}
+
+// Live ↔ Test: different trader, account, book and orders — rebuild the panel from scratch
+function _switchMode(m) {
+  if (m === T.mode) return;
+  var sym = T.sym;
+  _setMode(m);
+  _disconnectDepth();
+  _clearLines();
+  _clearBand();
+  T.access = null;
+  T.account = { balances: [], positions: [], orders: [], algoOrders: [] };
+  T.pending = {}; T.cancelling = {}; T.closedIds = {}; T.tagQueue = [];
+  T.sym = null;
+  checkAccess().then(function (s) {
+    if (s && sym) _openPanel(sym);
+  });
 }
 
 // ── Full view hooks (called from ui.js) ─────────────────────────────────────
@@ -202,9 +235,10 @@ function _isTestnet() { return !(T.access && T.access.env === 'mainnet'); }
 function _viewOnly() { return _isTestnet() && T.viewLive; }
 
 function _panelHTML() {
-  var env = _isTestnet() ? 'Testnet' : 'Live';
   return '<div class="dom-head">'
-    + '<span class="dom-env ' + (env === 'Live' ? 'live' : '') + '">' + env + '</span>'
+    + '<span class="dom-mode" title="Live: real account · Test: Binance Demo, practice money">'
+    + '<button data-mode="live" class="' + (T.mode === 'live' ? 'active live' : '') + '">Live</button>'
+    + '<button data-mode="test" class="' + (T.mode === 'test' ? 'active test' : '') + '">Test</button></span>'
     + '<span class="dom-ping" id="dom-ping" tabindex="0"><i></i><b>— ms</b><span class="dom-ping-pop" id="dom-ping-pop"></span></span>'
     + (_isTestnet()
         ? '<button class="dom-book' + (T.viewLive ? ' active' : '') + '" data-live="1" title="Show the live Binance order book (view only)">'
@@ -486,6 +520,7 @@ function _disconnectDepth() {
 
 on('trade:event', function (ev) {
   if (!ev || !T.access) return;
+  if ((ev.env || 'live') !== T.mode) return; // the other trader's events
   var acc = T.account;
   if (ev.type === 'snapshot') {
     T.account = ev.account;
@@ -513,7 +548,7 @@ on('trade:event', function (ev) {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.quantity + ' ' + f.symbol.replace(/USDT$/, '') + ' @ ' + f.price);
     T.lastFillAt[f.symbol] = f.time;
-    if (/USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
+    if (T.mode === 'live' && /USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
   }
   _queueRender();
 });
@@ -1007,6 +1042,7 @@ var TAG_SETUPS = ['A', 'B', 'C'];
 var TAG_EMOTIONS = [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']];
 
 function _queueTag(symbol, eventTime) {
+  if (T.mode === 'test') return; // practice trades stay out of the journal
   // The fill time is what the facts use; the position event may arrive first,
   // so fall back to its own time when the last known fill is stale.
   var lf = T.lastFillAt[symbol];
@@ -1228,6 +1264,8 @@ function _bindPanel(panel) {
   });
 
   panel.addEventListener('click', function (e) {
+    var md = e.target.closest('[data-mode]');
+    if (md) { _switchMode(md.dataset.mode); return; }
     if (e.target.closest('[data-settings]')) { _openSettings(); return; }
     var size = e.target.closest('[data-size]');
     if (size) {

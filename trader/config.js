@@ -12,7 +12,9 @@
 //   "apiSecret": "...",               //   keys saved in the account page take precedence
 //   "internalSecret": "...",          // shared with pump-ws (TRADER_INTERNAL_SECRET)
 //   "port": 3010,
-//   "dataDir": "/var/lib/questtick-trader"
+//   "dataDir": "/var/lib/questtick-trader",
+//   "credentialsFile": "..."          // optional: share the key store with another
+//                                     //   trader process (test mode runs a testnet one)
 // }
 
 var fs = require('fs');
@@ -66,6 +68,7 @@ function buildConfig(raw) {
     internalSecret: String(raw.internalSecret),
     port: raw.port || 3010,
     dataDir: raw.dataDir || '/var/lib/questtick-trader',
+    credentialsFile: raw.credentialsFile || null,
     rest: raw.rest || ep.rest,
     marketWs: raw.marketWs || ep.marketWs,
     userStream: raw.userStream ? [].concat(raw.userStream) : ep.userStream,

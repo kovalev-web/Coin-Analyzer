@@ -56,7 +56,10 @@ var config = loadConfig();
 fs.mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
 
 var audit = createAudit(config.dataDir);
-var store = config.masterKey ? createStore(path.join(config.dataDir, 'credentials.enc'), config.masterKey) : null;
+var storeFile = config.credentialsFile || path.join(config.dataDir, 'credentials.enc');
+var store = config.masterKey ? createStore(storeFile, config.masterKey) : null;
+// Testnet is practice money (test mode in the terminal): no 2FA lock there
+var PRACTICE = config.env !== 'mainnet';
 var client = null;   // Binance client for the active key (null = no key yet)
 var stream = null;   // user data stream for that client
 var generation = 0;  // bumps on every key change; stale retries stop themselves
@@ -139,6 +142,7 @@ function useCode(code) {
 }
 
 function twoFactorStatus() {
+  if (PRACTICE) return { enabled: false, unlockedUntil: 0, required: false, practice: true };
   return {
     enabled: twoFactorEnabled(),
     unlockedUntil: unlockedUntil > Date.now() ? unlockedUntil : 0,
@@ -151,7 +155,7 @@ function emitStatus() { trader.emit('event', { type: 'status', status: statusBod
 // Opening risk needs an unlock when 2FA is on; live needs 2FA at all.
 function requireUnlocked(b) {
   var reducing = b && (b.reduceOnly === true || b.reduceOnly === 'true' || b.closePosition === true || b.closePosition === 'true');
-  if (reducing) return;
+  if (reducing || PRACTICE) return;
   if (!twoFactorEnabled()) {
     if (config.env === 'mainnet') throw terr(423, 'Set up 2FA in your account before live trading');
     return;
@@ -382,6 +386,17 @@ setInterval(function () {
   if (client) trader.loadRules().catch(function (e) { console.error('[Trader] rules refresh failed:', e.message); });
 }, RULES_REFRESH_MS);
 setInterval(function () { if (client) client.syncTime().catch(function () {}); }, TIME_SYNC_MS);
+
+// A shared key store can be changed by the other trader process (keys are
+// saved through the live one): pick up a new key for our env without a restart.
+if (store && config.credentialsFile) {
+  var lastKey = (activeCreds() || {}).apiKey || null;
+  fs.watchFile(storeFile, { interval: 5000 }, function () {
+    var k = null;
+    try { k = (activeCreds() || {}).apiKey || null; } catch (e) { return; }
+    if (k !== lastKey) { lastKey = k; console.log('[Trader] Key store changed — reloading the', config.env, 'key'); activate(); }
+  });
+}
 
 server.listen(config.port, '127.0.0.1', function () {
   console.log('[Trader] Listening on 127.0.0.1:' + config.port + ' (' + config.env + ')'
