@@ -13,6 +13,7 @@ import { tradeRequest, refreshTradesAfterFill, saveTradeTag } from './api.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
+import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -169,6 +170,8 @@ function _openPanel(sym) {
   _refreshDay();
   clearInterval(T.dayTimer);
   T.dayTimer = setInterval(_refreshDay, 30000);
+  startLatency(_renderPing);
+  _renderPing();
   _queueRender();
 }
 
@@ -182,6 +185,7 @@ function _closePanel(userAction) {
   _disconnectDepth();
   _clearLines();
   _clearBand();
+  stopLatency();
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
@@ -197,6 +201,7 @@ function _panelHTML() {
   var env = _isTestnet() ? 'Testnet' : 'Live';
   return '<div class="dom-head">'
     + '<span class="dom-env ' + (env === 'Live' ? 'live' : '') + '">' + env + '</span>'
+    + '<span class="dom-ping" id="dom-ping" tabindex="0"><i></i><b>— ms</b><span class="dom-ping-pop" id="dom-ping-pop"></span></span>'
     + (_isTestnet()
         ? '<button class="dom-book' + (T.viewLive ? ' active' : '') + '" data-live="1" title="Show the live Binance order book (view only)">'
           + (T.viewLive ? 'Live book' : 'Testnet book') + '</button>'
@@ -304,6 +309,35 @@ function _applySettingInput(inp) {
   _queueRender();
 }
 
+// ── Connection indicator (next to the env badge) ────────────────────────────
+
+function _ms(v) { return v == null ? '—' : Math.round(v) + ' ms'; }
+
+function _renderPing(s) {
+  var el = document.getElementById('dom-ping');
+  if (!el) return;
+  s = s || null;
+  var g = s ? grade(s) : 'unknown';
+  if (el.dataset.grade !== g) { el.dataset.grade = g; }
+  var main = !s ? '— ms' : s.down ? 'offline' : _ms(s.last);
+  var b = el.querySelector('b');
+  if (b.textContent !== main) b.textContent = main;
+  var pop = document.getElementById('dom-ping-pop');
+  if (!pop || !s) return;
+  var ago = s.order ? Math.round((Date.now() - s.order.at) / 1000) : null;
+  pop.innerHTML = '<span class="dom-ping-title">Connection</span>'
+    + _pingRow('You ↔ server', _ms(s.last) + ' · p50 ' + _ms(s.p50) + ' · p95 ' + _ms(s.p95))
+    + _pingRow('Jitter', _ms(s.jitter))
+    + _pingRow('Lost pings', s.samples || s.loss ? Math.round(s.loss * 100) + '%' : '—')
+    + _pingRow('Server ↔ Binance', s.binance == null ? '—' : s.binance.toFixed(1) + ' ms')
+    + _pingRow('Order book delay', _ms(s.book) + (s.bookP95 != null ? ' · p95 ' + _ms(s.bookP95) : ''))
+    + _pingRow('Last order, click → accepted', s.order ? _ms(s.order.ms) + ' · ' + (ago < 60 ? ago + ' s' : Math.round(ago / 60) + ' min') + ' ago' : '—')
+    + _pingRow('Reconnects', String(s.reconnects))
+    + '<span class="dom-ping-note">Last 2 min, ping every 2 s over the order socket.</span>';
+}
+
+function _pingRow(k, v) { return '<span class="dom-ping-row"><span>' + k + '</span><b>' + v + '</b></span>'; }
+
 // ── Order book (trader's environment) ───────────────────────────────────────
 // Full local book, maintained the way Binance documents it: a REST snapshot
 // (up to 1000 levels per side) plus the @depth@100ms diff stream, checked for
@@ -335,6 +369,7 @@ function _connectDepth() {
     var m;
     try { m = JSON.parse(ev.data); } catch (e) { return; }
     var d = m.data || m;
+    if (d.E) noteBookEvent(d.E);
     if (d.e === 'bookTicker') {
       T.bbo = { b: Number(d.b), B: Number(d.B), a: Number(d.a), A: Number(d.A), u: d.u };
     } else if (d.e === 'depthUpdate') {
@@ -928,8 +963,10 @@ function _send(action, body, okMsg) {
 function _placeOptimistic(body, price, kind, okMsg) {
   var id = body.clientOrderId;
   T.pending[id] = { price: price, kind: kind, qty: body.quantity != null ? Number(body.quantity) : null, at: Date.now() };
+  var t0 = performance.now(); // ~ the click: orders go out on mousedown
   _queueRender();
   return _send('order', body, okMsg).then(function (r) {
+    if (r && (r.order || r.algo)) noteOrder(performance.now() - t0);
     if (r && r.order && OPEN_ORDER[r.order.status] && !T.closedIds['o' + r.order.orderId] && !T.account.orders.some(function (o) { return o.orderId === r.order.orderId; })) {
       T.account.orders.push(r.order);
     }

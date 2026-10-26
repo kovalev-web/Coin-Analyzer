@@ -13,6 +13,7 @@
     "trader": "node trader/server.js",
     "test:trader": "node --test trader/*.test.js",
     "test:journal": "node --test journal/*.test.js",
+    "test:latency": "node --test src/latency-stats.test.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server-vps.js"

@@ -201,6 +201,23 @@ ensureAuthTables();
 
 var PORT = process.env.WSS_PORT || 3001;
 var BINANCE_REST = 'https://fapi.binance.com';
+
+// Server → Binance REST round trip, measured every 5 s over the kept-alive
+// connection and reported with every terminal ping (latency indicator).
+var _binanceRtt = [];
+setInterval(function () {
+  var t0 = performance.now();
+  fetch(BINANCE_REST + '/fapi/v1/ping', { signal: AbortSignal.timeout(4000) }).then(function (r) {
+    if (!r.ok) return;
+    _binanceRtt.push(performance.now() - t0);
+    if (_binanceRtt.length > 12) _binanceRtt.shift();
+  }).catch(function () {});
+}, 5000);
+function binanceRttMs() {
+  if (!_binanceRtt.length) return null;
+  var v = _binanceRtt.slice().sort(function (a, b) { return a - b; });
+  return Math.round(v[Math.floor(v.length / 2)] * 10) / 10;
+}
 var BINANCE_WS_URL = 'wss://fstream.binance.com/ws';
 var BINANCE_KLINE_WS_URL     = 'wss://fstream.binance.com/market/ws'; // kline belongs to /market endpoint
 
@@ -2542,7 +2559,12 @@ wss.on('connection', function (ws, upgradeReq) {
     try { msg = JSON.parse(raw.toString()); } catch (e) { return; }
 
     try {
-      if (msg.type === 'get_ticker') {
+      // Latency indicator: answer at once; t lets the client estimate the clock offset
+      if (msg.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs() }));
+      }
+
+      else if (msg.type === 'get_ticker') {
         var cur = Object.values(tickerCache);
         if (cur.length) ws.send(JSON.stringify({ type: 'ticker', _id: msg._id, data: cur }));
       }

@@ -42,6 +42,7 @@ var _wsReady = null; // promise that resolves when WS connects
 var _wsReadyResolve = null;
 var _reqId = 0;
 var _pending = {};
+export var wsReconnects = 0; // closes since page load (latency indicator)
 
 function connectWS() {
   if (_wsReady === null) {
@@ -124,6 +125,7 @@ function connectWS() {
 
   ws.onclose = function () {
     wsConnected = false;
+    wsReconnects++;
     console.log('[WS] Disconnected, reconnecting in 3s...');
     // Reject all pending requests
     Object.keys(_pending).forEach(function (id) {
@@ -177,6 +179,20 @@ function wsRequest(msg) {
       }, 20000),
     };
     wsSend(msg);
+  });
+}
+
+// Round trip over the open socket (the same path orders take). Resolves to
+// { rtt, serverTime, binanceMs } or rejects when the socket is down / no answer.
+export function wsPing(timeoutMs) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.reject(new Error('WS down'));
+  var t0 = performance.now(), sent = Date.now();
+  return Promise.race([
+    wsRequest({ type: 'ping' }),
+    new Promise(function (_, reject) { setTimeout(function () { reject(new Error('ping timeout')); }, timeoutMs || 3000); }),
+  ]).then(function (m) {
+    var rtt = performance.now() - t0;
+    return { rtt: rtt, sent: sent, serverTime: m.t, binanceMs: m.binanceMs };
   });
 }
 
