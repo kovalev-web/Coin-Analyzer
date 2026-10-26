@@ -24,6 +24,7 @@
   /* ── Typography: size (all ×2) ─────────────────────────────── */
   --text-2xs:  10px;   /* badges, uppercase labels          */
   --text-xs:   12px;   /* notes, secondary meta             */
+  --text-ladder: 11px; /* order book ladder only (off the ×2 scale on purpose) */
   --text-sm:   14px;   /* buttons, inputs, body text        */
   --text-base: 16px;   /* card tickers, popup titles        */
   --text-lg:   18px;   /* large numbers                     */

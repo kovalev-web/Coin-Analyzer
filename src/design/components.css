@@ -579,7 +579,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-size.active{background:var(--ink-deep);color:var(--paper);}
 .dom-unit{color:var(--graphite);font-size:var(--text-2xs);margin-left:var(--space-1);}
 .dom-scale{display:flex;gap:var(--space-1);}
-.dom-cols{padding:var(--space-2) var(--space-4);color:var(--graphite);font-size:var(--text-2xs);border-bottom:1px solid var(--steel);}
+.dom-cols{padding:var(--space-2) var(--space-4);color:var(--graphite);font-size:var(--text-ladder);border-bottom:1px solid var(--steel);}
 .dom-cols span:nth-child(3){text-align:center;}
 .dom-ladder{flex:1;min-height:0;overflow:hidden;padding:0 var(--space-4);}
 .dom-row:hover{background:var(--fog);}
@@ -590,7 +590,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-c-price{text-align:center;font-weight:var(--font-medium);}
 .dom-c-mine{display:flex;gap:var(--space-1);overflow:hidden;}
 .dom-c-mine.has{cursor:pointer;}
-.dom-mine{font-size:var(--text-2xs);font-weight:var(--font-bold);padding:0 var(--space-2);border-radius:var(--radius-md);white-space:nowrap;line-height:14px;}
+.dom-mine{font-size:var(--text-ladder);font-weight:var(--font-bold);padding:0 var(--space-2);border-radius:var(--radius-md);white-space:nowrap;line-height:14px;}
 .dom-mine.b,.dom-mine.tp{background:color-mix(in srgb,var(--bullish) 22%,transparent);color:var(--bullish);}
 .dom-mine.s,.dom-mine.sl{background:color-mix(in srgb,var(--danger) 22%,transparent);color:var(--danger);}
 .dom-c-mine.has:hover .dom-mine{text-decoration:line-through;}
@@ -626,7 +626,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* compact ladder: Mine | Volume (heat-filled) | Price */
 .dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 92px;align-items:center;}
 .dom-cols span:nth-child(2){padding-left:var(--space-2);}
-.dom-row{height:16px;font-size:var(--text-2xs);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
+.dom-row{height:16px;font-size:var(--text-ladder);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
 .dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
 .dom-c-vol i{position:absolute;top:1px;bottom:1px;left:0;width:0;opacity:0;border-radius:0 2px 2px 0;}
 .dom-row.ask .dom-c-vol i{background:var(--danger);}
