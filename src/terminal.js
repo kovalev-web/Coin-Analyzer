@@ -1078,6 +1078,7 @@ function _render() {
   }
   _drawRuler();
   _drawTape(step);
+  _renderOffscreen(step, mine);
 }
 
 // ── % ruler: distance from the current price to the hovered level ──────────
@@ -1162,7 +1163,6 @@ function _renderFoot() {
       + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
       + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
   }
-  html += _ordersAroundHTML();
   // Rebuilt only on change: the order rows are clickable and must not be replaced under the mouse
   if (el._html !== html) { el.innerHTML = html; el._html = html; }
   var st = document.getElementById('dom-status');
@@ -1172,49 +1172,41 @@ function _renderFoot() {
   }
 }
 
-// Your orders on this coin above and below the current price, summed per kind,
-// so you know they're there even when the ladder doesn't show them.
-// Click → scroll the ladder to the nearest one.
-function _ordersAround() {
-  var ref = T.lastTrade ? T.lastTrade.price : T.bids.length && T.asks.length ? (T.bids[0][0] + T.asks[0][0]) / 2 : null;
-  if (!ref) return null;
-  var side = { up: { kinds: {}, order: [], nearest: null }, down: { kinds: {}, order: [], nearest: null } };
-  function add(price, kind, usd) {
-    var s = price > ref ? side.up : side.down;
-    if (!s.kinds[kind]) { s.kinds[kind] = { kind: kind, usd: null, n: 0 }; s.order.push(kind); }
-    var k = s.kinds[kind];
-    k.n++;
-    if (usd != null) k.usd = (k.usd || 0) + usd;
-    if (s.nearest == null || Math.abs(price - ref) < Math.abs(s.nearest - ref)) s.nearest = price;
-  }
-  T.account.orders.forEach(function (o) {
-    if (o.symbol !== T.sym) return;
-    add(Number(o.price), o.side === 'BUY' ? 'B' : 'S', (Number(o.origQty) - Number(o.executedQty || 0)) * Number(o.price));
+// Your orders outside the visible ladder: a small badge at the top / bottom of
+// the Mine column ("↑ S 50 · TP"), summed per kind; a click scrolls to the
+// nearest one. Hidden while every order is on screen.
+function _renderOffscreen(step, mine) {
+  var panel = document.getElementById('fv-dom'), ladder = document.getElementById('dom-ladder');
+  if (!panel || !ladder || !ladder.firstChild || !ladder.firstChild.children) return;
+  var hi = T.top, lo = T.top - T.rows + 1;
+  var up = [], down = [], nearUp = null, nearDown = null;
+  Object.keys(mine).forEach(function (k) {
+    var i = Number(k);
+    if (i > hi) { up = up.concat(mine[k]); if (nearUp == null || i < nearUp) nearUp = i; }
+    else if (i < lo) { down = down.concat(mine[k]); if (nearDown == null || i > nearDown) nearDown = i; }
   });
-  T.account.algoOrders.forEach(function (a) {
-    if (a.symbol !== T.sym) return;
-    var entry = _isStopEntry(a);
-    add(Number(a.triggerPrice), entry ? (a.side === 'BUY' ? 'BS' : 'SS') : a.type === 'TAKE_PROFIT_MARKET' ? 'TP' : 'SL',
-      entry ? Number(a.quantity) * Number(a.triggerPrice) : null);
+  var cell = ladder.firstChild.children[0];
+  var left = ladder.offsetLeft + cell.offsetLeft;
+  [['up', up, nearUp, '↑', ladder.offsetTop + 2], ['down', down, nearDown, '↓', null]].forEach(function (d) {
+    var id = 'dom-off-' + d[0], el = document.getElementById(id);
+    if (!d[1].length) { if (el) el.style.display = 'none'; return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.className = 'dom-off';
+      el.title = 'Your orders off screen — click to show';
+      panel.appendChild(el);
+    }
+    var html = '<span class="dom-off-arrow">' + d[3] + '</span>' + _sumByKind(d[1]).map(function (x) {
+      return '<span class="dom-mine ' + x.kind.toLowerCase() + '">' + x.kind + (x.usd != null ? ' ' + _fmtQty(x.usd) : '') + '</span>';
+    }).join('');
+    if (el._html !== html) { el.innerHTML = html; el._html = html; }
+    el.dataset.jump = _priceOf(d[2]);
+    el.style.display = '';
+    el.style.left = left + 'px';
+    if (d[4] != null) { el.style.top = d[4] + 'px'; el.style.bottom = ''; }
+    else { el.style.top = (ladder.offsetTop + ladder.clientHeight - el.offsetHeight - 2) + 'px'; }
   });
-  return side;
-}
-
-function _ordersAroundHTML() {
-  var a = _ordersAround();
-  if (!a) return '';
-  function row(dir, label) {
-    var s = a[dir];
-    var body = s.order.length
-      ? s.order.map(function (k) {
-          var g = s.kinds[k];
-          return '<span class="dom-mine ' + k.toLowerCase() + '">' + k + (g.usd != null ? ' ' + _fmtQty(g.usd) : '') + (g.n > 1 && g.usd == null ? ' ×' + g.n : '') + '</span>';
-        }).join('')
-      : '<span class="dom-around-none">none</span>';
-    return '<div class="dom-pos-row dom-around' + (s.order.length ? ' has' : '') + '"' + (s.order.length ? ' data-jump="' + s.nearest + '" title="Show in the order book"' : '') + '>'
-      + '<span>' + label + '</span><span class="dom-around-list">' + body + '</span></div>';
-  }
-  return row('up', 'Orders above ↑') + row('down', 'Orders below ↓');
 }
 
 function _jumpTo(price) {

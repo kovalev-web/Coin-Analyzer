@@ -762,12 +762,10 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row .dom-c-vol,.dom-row .dom-c-price{cursor:pointer;}
 .fv-dom.view-only .dom-row .dom-c-vol,.fv-dom.view-only .dom-row .dom-c-price{cursor:default;}
 
-/* footer: your orders above / below the price; click jumps the ladder there */
-.dom-around{align-items:center;gap:var(--space-4);}
-.dom-around.has{cursor:pointer;}
-.dom-around.has:hover>span:first-child{color:var(--ink-deep);}
-.dom-around-list{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-1);}
-.dom-around-none{color:var(--graphite);}
+/* your orders off screen: badge at the top / bottom of the Mine column, click scrolls there */
+.dom-off{position:absolute;z-index:4;display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);background:var(--paper);box-shadow:var(--shadow-md);border:1px solid var(--steel);cursor:pointer;white-space:nowrap;}
+.dom-off:hover{border-color:var(--graphite);}
+.dom-off-arrow{font-size:var(--text-ladder);font-weight:var(--font-bold);color:var(--graphite);}
 
 /* one typeface for the whole ladder: volume, price, your orders and the % ruler
    share size and weight (change --ladder-weight to restyle all of them) */
