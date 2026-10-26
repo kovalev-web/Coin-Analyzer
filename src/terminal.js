@@ -193,7 +193,7 @@ function _panelHTML() {
     + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
-    + '<div class="dom-cols"><span>Mine</span><span>Volume</span><span>Price</span></div>'
+    + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
     + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
     + '<div class="dom-foot">'
@@ -216,16 +216,16 @@ function _settingsHTML() {
         return '<input class="ds-input" type="number" inputmode="decimal" min="' + SIZE_MIN + '" max="' + SIZE_MAX + '" data-set-size="' + i + '" value="' + (S.sizes[i] != null ? S.sizes[i] : '') + '">';
       }).join('')
     + '</div></div>'
-    + '<div class="dom-set-row"><span>Full scale, USD</span>'
-    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="1000" data-set-full="1" placeholder="Auto" value="' + (S.fullScale || '') + '"></div>'
-    + '<div class="dom-set-hint">A volume bar is full when the level holds this much in USD. Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
+    + '<div class="dom-set-row"><span>Full scale, thousand USD</span>'
+    + '<input class="ds-input" type="number" inputmode="decimal" min="0" step="10" data-set-full="1" placeholder="Auto" value="' + (S.fullScale ? S.fullScale / 1000 : '') + '"></div>'
+    + '<div class="dom-set-hint">A volume bar is full when the level holds this much (100 = $100K). Empty — relative to the biggest level on screen. Sizes ' + SIZE_MIN + '–' + SIZE_MAX + ', empty slot hides it.</div>'
     + '</div>';
 }
 
 function _applySettingInput(inp) {
   if (inp.dataset.setFull) {
     var f = Number(inp.value);
-    S.fullScale = f > 0 ? f : 0;
+    S.fullScale = f > 0 ? f * 1000 : 0; // typed in thousands, kept in USD
     if (!S.fullScale) inp.value = '';
   } else {
     var vals = [];
@@ -575,7 +575,8 @@ function _render() {
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
-    _setVol(c[1], v, !v ? 0 : S.fullScale ? Math.min(1, v * i * step / S.fullScale) : v / maxVol);
+    var usd = v * i * step;
+    _setVol(c[1], usd, !v ? 0 : S.fullScale ? Math.min(1, usd / S.fullScale) : v / maxVol);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
@@ -627,7 +628,7 @@ function _makeRow() {
 }
 
 // Bar length ∝ size: r = share of the full scale (set in USD, or the biggest
-// level on screen); bigger also brighter
+// level on screen); bigger also brighter. v is the level's size in USD.
 function _setVol(cell, v, r) {
   var w = v ? Math.max(2, Math.round(r * 100)) + '%' : '0%';
   var o = v ? (0.35 + 0.5 * r).toFixed(2) : '0';
