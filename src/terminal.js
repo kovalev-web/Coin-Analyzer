@@ -191,12 +191,16 @@ function _openPanel(sym) {
     T.sym = sym;
     S = _loadSettings(sym);
     T.size = _savedSize();
-    T.rules = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
+    T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null;
     tradeRequest('GET', 'rules?symbol=' + sym).then(function (r) {
       if (T.sym !== sym) return;
       T.rules = r;
       _queueRender();
-    }).catch(function (e) { _setStatus('Rules: ' + e.message, true); });
+    }).catch(function (e) {
+      if (T.sym !== sym) return;
+      T.rulesError = e.message;
+      _queueRender();
+    });
     _connectDepth();
   }
   panel.innerHTML = _panelHTML();
@@ -345,6 +349,15 @@ function _applySettingInput(inp) {
   }
   _saveSettings();
   _queueRender();
+}
+
+// Binance Demo lists fewer coins than the real exchange (≈560 of ≈750)
+function _rulesErrorText(err) {
+  var coin = (T.sym || '').replace(/USDT$/, '');
+  if (/unknown symbol/i.test(err) && T.mode === 'test') {
+    return coin + ' is not listed on Binance Demo, so it can\'t be traded in Test mode.<br>Open another coin or switch to Live.';
+  }
+  return 'Could not load ' + coin + ' trading rules: ' + err;
 }
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
@@ -668,7 +681,10 @@ function _render() {
   _syncLines();
   _syncBand();
   if (!T.rules || !T.bids.length || !T.asks.length) {
-    ladder.innerHTML = '<div class="dom-empty">' + (T.rules ? 'Waiting for order book…' : 'Loading…') + '</div>';
+    var msg = T.rules ? 'Waiting for order book…' : T.rulesError ? _rulesErrorText(T.rulesError) : 'Loading…';
+    if (ladder.firstChild && ladder.firstChild._msg === msg) return;
+    ladder.innerHTML = '<div class="dom-empty">' + msg + '</div>';
+    ladder.firstChild._msg = msg;
     return;
   }
   var empty = ladder.querySelector('.dom-empty');
