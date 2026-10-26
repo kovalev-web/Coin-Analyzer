@@ -682,10 +682,9 @@ function _myOrdersByIdx(step) {
 }
 
 // Levels, rays and alerts from the chart, on the row their price falls in.
-// The testnet book trades at other prices, so marks are hidden there.
+// Shown in Test too: Binance Demo follows the real market within a tick or two.
 function _chartMarksByIdx(step) {
   var out = {};
-  if (_isTestnet() && !_viewOnly()) return out;
   chartMarks(T.sym.replace(/USDT$/, '')).forEach(function (m) {
     if (!(m.price > 0)) return;
     var i = Math.round(m.price / step);
