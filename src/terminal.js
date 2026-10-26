@@ -12,7 +12,7 @@
 import { tradeRequest, refreshTradesAfterFill, saveTradeTag } from './api.js';
 import { on } from './events.js';
 import { icon } from './utils.js';
-import { showToast, getCSSVar } from './ui.js';
+import { showToast, getCSSVar, chartMarks } from './ui.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -542,6 +542,19 @@ function _myOrdersByIdx(step) {
   return out;
 }
 
+// Levels, rays and alerts from the chart, on the row their price falls in.
+// The testnet book trades at other prices, so marks are hidden there.
+function _chartMarksByIdx(step) {
+  var out = {};
+  if (_isTestnet() && !_viewOnly()) return out;
+  chartMarks(T.sym.replace(/USDT$/, '')).forEach(function (m) {
+    if (!(m.price > 0)) return;
+    var i = Math.round(m.price / step);
+    if ((out[i] || '').indexOf(' mk-' + m.kind) === -1) out[i] = (out[i] || '') + ' mk-' + m.kind;
+  });
+  return out;
+}
+
 // ── Render ──────────────────────────────────────────────────────────────────
 
 function _queueRender() {
@@ -589,6 +602,7 @@ function _render() {
   Object.keys(askVol).forEach(function (k) { maxVol = Math.max(maxVol, askVol[k]); });
 
   var mine = _myOrdersByIdx(step);
+  var marks = _chartMarksByIdx(step);
   var pnl = _pnlInfo();
   var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
@@ -613,6 +627,7 @@ function _render() {
     if (i === entryIdx) cls += ' entry';
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (tradeIdx === i) cls += tradeCls;
+    if (marks[i]) cls += marks[i];
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];

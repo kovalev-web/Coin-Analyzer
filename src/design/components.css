@@ -715,3 +715,12 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-settings .ds-input{height:var(--h-btn-lg);padding:0 var(--space-3);font-size:var(--text-sm);min-width:0;}
 .dom-set-hint{color:var(--graphite);font-size:var(--text-2xs);line-height:var(--leading-relaxed);}
 .dom-gear svg{flex:0 0 auto;}
+
+/* chart marks on the ladder: level (solid, primary), horizontal ray (solid,
+   level-deep), alert (dashed, danger, bell by the price) — same as the chart */
+.dom-row{position:relative;}
+.dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--primary);pointer-events:none;}
+.dom-row.mk-ray::after{border-top-color:var(--level-deep);}
+.dom-row.mk-alert::after{border-top:1px dashed var(--danger);}
+.dom-row.mk-alert .dom-c-price::before{content:'';display:inline-block;width:9px;height:9px;margin-right:var(--space-1);vertical-align:-1px;background:var(--danger);-webkit-mask:var(--dom-bell) center/contain no-repeat;mask:var(--dom-bell) center/contain no-repeat;}
+.fv-dom{--dom-bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.268 21a2 2 0 0 0 3.464 0'/%3E%3Cpath d='M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326'/%3E%3C/svg%3E");}

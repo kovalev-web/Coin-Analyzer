@@ -2222,6 +2222,17 @@ export function clearRays(sym) {
   updateClearBtn(sym);
 }
 
+// Price marks drawn on the chart, for the order book ladder: levels,
+// horizontal rays and alerts that have not fired yet. Live objects are read
+// on every call, so a dragged line moves in the ladder on its next render.
+export function chartMarks(sym) {
+  var k = String(sym).toLowerCase(), out = [];
+  (_levels[k] || []).forEach(function (l) { out.push({ kind: 'level', price: Number(l.price) }); });
+  (_rays[k] || []).forEach(function (r) { out.push({ kind: 'ray', price: Number(r.price1) }); });
+  (_alerts[k] || []).forEach(function (a) { if (!a.triggered) out.push({ kind: 'alert', price: Number(a.price) }); });
+  return out;
+}
+
 // ── Alerts ─────────────────────────────────────────────────────────────────
 //
 // Architecture: pure data in _alerts, chart references in _aLines (keyed by alert id).
