@@ -773,3 +773,9 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
    share size and weight (change --ladder-weight to restyle all of them) */
 .fv-dom{--ladder-weight:var(--font-bold);}
 .dom-row,.dom-c-price,.dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price,.dom-c-vol b,.dom-mine,.dom-ruler-tag{font-size:var(--text-ladder);font-weight:var(--ladder-weight);}
+
+/* rows with your resting orders: a faint tint across the whole row */
+.dom-row.has-order{background:color-mix(in srgb,var(--ink-deep) 6%,transparent);}
+.dom-row.has-order.buy{background:color-mix(in srgb,var(--bullish) 9%,transparent);}
+.dom-row.has-order.sell{background:color-mix(in srgb,var(--danger) 9%,transparent);}
+.dom-row.has-order:hover{background:var(--fog);}

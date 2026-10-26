@@ -779,6 +779,12 @@ function _render() {
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (tradeIdx === i) cls += tradeCls;
     if (marks[i]) cls += marks[i];
+    // Faint row tint where your orders rest: green for buy-colored kinds, red for sell
+    if (mine[i]) {
+      var green = mine[i].some(function (x) { return /^(B|BS|TP)$/.test(x.kind); });
+      var red = mine[i].some(function (x) { return /^(S|SS|SL)$/.test(x.kind); });
+      cls += green && red ? ' has-order' : green ? ' has-order buy' : ' has-order sell';
+    }
     if (row.className !== cls) row.className = cls;
     row.dataset.idx = i;
     var m = mine[i];
