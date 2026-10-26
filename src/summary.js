@@ -150,7 +150,8 @@ function mineHTML() {
 }
 
 // "Open now" card (trading account only): positions with live PnL from the
-// ticker, resting orders per coin, and one button to market-close everything.
+// ticker, resting orders per coin, and one button that flattens every coin with
+// a position (cancels its orders and market-closes it).
 function _fmtK(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n >= 10 ? n.toFixed(0) : n.toFixed(1); }
 
 function _ordersByCoin(acc) {
@@ -254,7 +255,7 @@ document.addEventListener('click', function (e) {
     var bad = res.filter(function (r) { return !r.ok; });
     showToast(bad.length
       ? 'Not closed: ' + bad.map(function (r) { return r.symbol.replace(/USDT$/, '') + ' (' + r.error + ')'; }).join(', ')
-      : 'Closed ' + res.length + ' position' + (res.length === 1 ? '' : 's'));
+      : 'Closed ' + res.length + ' position' + (res.length === 1 ? '' : 's') + ', their orders cancelled');
   }).finally(function () { S.closing = false; _paintOpen(); });
 });
 

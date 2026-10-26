@@ -574,17 +574,26 @@ export function tradingSnapshot() {
   return { mode: T.mode, account: T.account };
 }
 
-// Market-close every open position (reduce-only, all coins at once). Allowed
-// even when the day or 2FA is locked: it only reduces risk.
+// Like Space on every coin with a position, all at once: cancel the coin's
+// orders (limits, stop entries, SL/TP) and market-close the position
+// (reduce-only). Allowed even when the day or 2FA is locked: it only reduces risk.
 export function closeAllPositions() {
   var list = T.account.positions.filter(function (p) { return Number(p.amount) !== 0; });
   return Promise.all(list.map(function (p) {
     var amt = Number(p.amount);
-    return tradeRequest('POST', 'order', {
+    var hasOrders = T.account.orders.some(function (o) { return o.symbol === p.symbol; })
+      || T.account.algoOrders.some(function (a) { return a.symbol === p.symbol; });
+    var cancel = hasOrders
+      ? tradeRequest('POST', 'cancel-all', { symbol: p.symbol }).then(function () { return null; }, function (e) { return 'orders not cancelled: ' + e.message; })
+      : Promise.resolve(null);
+    var close = tradeRequest('POST', 'order', {
       clientOrderId: _clientId(), symbol: p.symbol, side: amt > 0 ? 'SELL' : 'BUY', type: 'MARKET',
       quantity: String(Math.abs(amt)), reduceOnly: true,
-    }).then(function () { return { symbol: p.symbol, ok: true }; },
-            function (e) { return { symbol: p.symbol, ok: false, error: e.message }; });
+    }).then(function () { return null; }, function (e) { return e.message; });
+    return Promise.all([close, cancel]).then(function (errs) {
+      var err = errs.filter(Boolean).join('; ');
+      return err ? { symbol: p.symbol, ok: false, error: err } : { symbol: p.symbol, ok: true };
+    });
   }));
 }
 
