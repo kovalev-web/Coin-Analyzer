@@ -31,3 +31,33 @@ var KEY_RU = {
 export function keyRu(key) { return KEY_RU[key] || key; }
 // Same, capitalized — for a row label
 export function keyLabel(key) { var k = keyRu(key); return k.charAt(0).toUpperCase() + k.slice(1); }
+
+// ── Conclusions from the groups ─────────────────────────────────────────────
+// A dimension says something when trades fall into 2+ known groups with at
+// least MIN_GROUP trades each, and the best and worst differ by at least
+// MIN_GAP_R per trade. Rule breaks are left out — the execution panel has them.
+
+var MIN_GROUP = 2;
+var MIN_GAP_R = 0.3;
+var UNKNOWN = { 'not recorded': true, unknown: true, 'no levels set': true };
+var SKIP = { flags: true };
+
+// One conclusion per dimension: { dim, title, best, worst, gapR, early }
+// best / worst: { key, label, n, avgR }. oneR: 1R in USDT (groups carry USDT).
+// Biggest gaps first, at most `limit`.
+export function conclusions(groups, oneR, minN, limit) {
+  if (!groups || !(oneR > 0)) return [];
+  var out = [];
+  Object.keys(DIMENSIONS).forEach(function (dim) {
+    if (SKIP[dim] || !groups[dim]) return;
+    var rows = groups[dim].filter(function (r) { return !UNKNOWN[r.key] && r.n >= MIN_GROUP; })
+      .map(function (r) { return { key: r.key, label: keyLabel(r.key), n: r.n, avgR: Math.round(r.avgPnl / oneR * 100) / 100 }; });
+    if (rows.length < 2) return;
+    rows.sort(function (a, b) { return b.avgR - a.avgR; });
+    var best = rows[0], worst = rows[rows.length - 1];
+    var gap = Math.round((best.avgR - worst.avgR) * 100) / 100;
+    if (gap < MIN_GAP_R) return;
+    out.push({ dim: dim, title: DIMENSIONS[dim], best: best, worst: worst, gapR: gap, early: best.n < (minN || 20) || worst.n < (minN || 20) });
+  });
+  return out.sort(function (a, b) { return b.gapR - a.gapR; }).slice(0, limit || 4);
+}

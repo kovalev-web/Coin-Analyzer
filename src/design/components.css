@@ -1019,3 +1019,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-summary b.up{color:var(--bullish);}
 .edge-summary b.dn{color:var(--danger);}
 .edge-setups tr.real td{font-weight:var(--font-bold);border-top:1px solid var(--steel);}
+.edge-conclusions{margin-bottom:var(--space-12);}
+.edge-concl{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--space-4);}
+.edge-concl li{font-size:var(--text-sm);color:var(--ink-deep);line-height:var(--leading-relaxed);}
+.edge-concl li b{font-weight:var(--font-semi);}
+.edge-concl li span{color:var(--graphite);font-size:var(--text-xs);}

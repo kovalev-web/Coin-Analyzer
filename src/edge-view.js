@@ -8,10 +8,9 @@ import { fetchJournalEdge, saveTradeTag } from './api.js';
 import { tzDateStr, tzTimeStr, escHtml } from './utils.js';
 import { ensureSetups, changeSetup, setupButtons } from './setups.js';
 import { state } from './state.js';
-import { keyLabel, DIMENSIONS } from './edge-insights.js';
+import { conclusions } from './edge-insights.js';
 
 var RANGES = [['1m', '1 мес'], ['3m', '3 мес'], ['6m', '6 мес'], ['all', 'Всё']];
-var SECTIONS = Object.keys(DIMENSIONS).map(function (k) { return [k, DIMENSIONS[k]]; });
 
 var _range = '3m';
 var _editing = false; // setup list editor open
@@ -112,15 +111,18 @@ function untaggedHTML(list) {
     + '</tbody></table></div>';
 }
 
-function tableHTML(rows) {
-  if (!rows || !rows.length) return '<div class="edge-empty">Сделок нет</div>';
-  return '<table class="edge-table"><thead><tr><th></th><th>Сделок</th><th>В плюс</th><th>Итог</th><th>Средняя</th></tr></thead><tbody>'
-    + rows.map(function (r) {
-        return '<tr class="' + (r.enough ? '' : 'thin') + '"><td>' + keyLabel(r.key) + '</td><td>' + r.n + '</td><td>' + r.winRate + '%</td>'
-          + '<td class="' + (r.pnl >= 0 ? 'up' : 'dn') + '">' + money(r.pnl) + '</td>'
-          + '<td class="' + (r.avgPnl >= 0 ? 'up' : 'dn') + '">' + money(r.avgPnl) + '</td></tr>';
-      }).join('')
-    + '</tbody></table>';
+// A few plain conclusions from the rest of the data (time of day, setup quality,
+// emotion, plan, morning state): where you do best and worst, in R per trade
+function conclusionsHTML(e) {
+  var list = conclusions(e.groups, e.oneR, e.minN, 4);
+  var body = list.length
+    ? '<ul class="edge-concl">' + list.map(function (c) {
+        return '<li><b>' + c.title + ':</b> лучше всего — «' + c.best.label + '» (' + rr(c.best.avgR) + ' на сделку, ' + c.best.n + ' ' + plural(c.best.n, 'сделка', 'сделки', 'сделок') + '), '
+          + 'хуже всего — «' + c.worst.label + '» (' + rr(c.worst.avgR) + ', ' + c.worst.n + ' ' + plural(c.worst.n, 'сделка', 'сделки', 'сделок') + ').'
+          + (c.early ? ' <span>Предварительно — мало сделок.</span>' : '') + '</li>';
+      }).join('') + '</ul>'
+    : '<div class="edge-empty">Пока не из чего делать выводы: заметной разницы между группами нет или в каждой меньше 2 сделок. Выводы появятся, когда будут дни и часы с разным результатом.</div>';
+  return '<div class="edge-panel edge-conclusions"><h4 class="edge-h">Выводы</h4>' + body + '</div>';
 }
 
 export function renderEdgeSection(container) {
@@ -146,11 +148,8 @@ export function renderEdgeSection(container) {
         + (e.dates && e.dates.length ? '<span>дни: ' + e.dates.map(shortDate).join(', ') + ' — в отчёт попадают только дни с сохранённой вечерней карточкой</span>' : '')
       + '</div>'
       + '<div class="edge-panels">' + executionHTML(e.execution, e.breaksCostR, e.oneR) + setupsHTML(e) + '</div>'
-      + untaggedHTML(e.untagged)
-      + '<details class="edge-details"><summary>Все разрезы (в USDT)</summary>'
-      + '<div class="edge-grid">' + SECTIONS.map(function (s) {
-          return '<div class="edge-card"><div class="edge-card-title">' + s[1] + '</div>' + tableHTML(e.groups[s[0]]) + '</div>';
-        }).join('') + '</div></details>';
+      + conclusionsHTML(e)
+      + untaggedHTML(e.untagged);
     bindEditor(body, container);
     body.querySelectorAll('[data-edge-pattern]').forEach(function (b) {
       b.onclick = function () {
