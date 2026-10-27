@@ -899,3 +899,7 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom.mode-test{border-top:3px solid var(--level-deep);}
 .fv-dom.mode-test .dom-ladder{position:relative;}
 .fv-dom.mode-test .dom-ladder::before{content:'TEST';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);font-size:calc(var(--text-lg) * 5);font-weight:var(--font-bold);letter-spacing:0.1em;color:var(--level-deep);opacity:0.1;pointer-events:none;z-index:5;}
+
+/* each venue's own spread: a line under its best ask, in its column only —
+   when a venue trades above / below Binance its line sits higher / lower */
+.dom-c-ven b.best-ask{box-shadow:inset 0 -1px 0 var(--graphite);}

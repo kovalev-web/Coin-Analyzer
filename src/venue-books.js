@@ -185,24 +185,30 @@ export function bookListed(id) { return B.listed[id]; }
 // USDT per ladder row for one venue: { bid: {idx: usd}, ask: {idx: usd}, ready }
 // (same rounding as the Binance ladder: bids floor, asks ceil)
 // askEdge / bidEdge: the last rows the feed covers when it's cut at its depth
-// limit (null when we hold the whole side)
+// limit (null when we hold the whole side). bestAsk / bestBid: this venue's own
+// top of book as ladder rows — its prices can sit above or below Binance's
+// (spot premium, a lagging venue), so each column has its own spread
 export function bookRows(id, step, lo, hi) {
   var book = B.books[id];
   if (!book || !book.ready) return null;
-  var bid = {}, ask = {}, minBid = Infinity, maxAsk = 0;
+  var bid = {}, ask = {}, minBid = Infinity, maxAsk = 0, maxBid = 0, minAsk = Infinity;
   book.bids.forEach(function (usd, px) {
     if (px < minBid) minBid = px;
+    if (px > maxBid) maxBid = px;
     var i = Math.floor(px / step + 1e-9);
     if (i >= lo && i <= hi) bid[i] = (bid[i] || 0) + usd;
   });
   book.asks.forEach(function (usd, px) {
     if (px > maxAsk) maxAsk = px;
+    if (px < minAsk) minAsk = px;
     var i = Math.ceil(px / step - 1e-9);
     if (i >= lo && i <= hi) ask[i] = (ask[i] || 0) + usd;
   });
   var cut = (DEPTH_LIMIT[id] || 1000) * 0.9;
   return {
     bid: bid, ask: ask,
+    bestBid: maxBid > 0 ? Math.floor(maxBid / step + 1e-9) : null,
+    bestAsk: minAsk < Infinity ? Math.ceil(minAsk / step - 1e-9) : null,
     bidEdge: book.bids.size >= cut && minBid < Infinity ? Math.floor(minBid / step + 1e-9) : null,
     askEdge: book.asks.size >= cut && maxAsk > 0 ? Math.ceil(maxAsk / step - 1e-9) : null,
   };

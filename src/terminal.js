@@ -816,14 +816,29 @@ function _venueView(step, lo, hi, mainFull, mainColorThr, mainBarOf) {
   });
 }
 
-function _setVenueCells(box, i, view, side) {
-  if (S.venueFull) return _setVenueBars(box, i, view, side);
+// Which side of THIS venue's book a row is on: its own top of book, not
+// Binance's — a venue trading above or below us shows its levels at its prices
+function _venueSide(rows, i) {
+  if (!rows) return null;
+  if (rows.bestAsk != null && i >= rows.bestAsk) return 'ask';
+  if (rows.bestBid != null && i <= rows.bestBid) return 'bid';
+  return null;
+}
+
+// The venue's own spread edge: a line under its best ask (as on our ladder)
+function _venueEdge(rows, i) {
+  return rows && rows.bestAsk != null && i === rows.bestAsk ? ' best-ask' : '';
+}
+
+function _setVenueCells(box, i, view) {
+  if (S.venueFull) return _setVenueBars(box, i, view);
   for (var k = 0; k < view.length; k++) {
     var cell = box.children[k], col = view[k];
+    var side = _venueSide(col.rows, i);
     var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
     var t = col.folded || !usd ? '' : _fmtQty(usd);
     var a = usd && col.full ? Math.round(6 + 44 * Math.min(1, usd / col.full)) : 0;
-    var cls = (side || '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    var cls = (side || '') + _venueEdge(col.rows, i) + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
     if (cell.firstChild && cell.firstChild.nodeType === 1) { cell.textContent = ''; cell._t = null; }
     if (cell._t !== t) { cell.textContent = t; cell._t = t; }
     if (cell._a !== a || cell._side !== side) {
@@ -836,9 +851,10 @@ function _setVenueCells(box, i, view, side) {
 
 // Full books: the same bar as our Volume column — length by size against our
 // ladder's full scale (same dollars as Binance), grey under the color threshold
-function _setVenueBars(box, i, view, side) {
+function _setVenueBars(box, i, view) {
   for (var k = 0; k < view.length; k++) {
     var cell = box.children[k], col = view[k];
+    var side = _venueSide(col.rows, i);
     if (!cell.firstChild || cell.firstChild.nodeType !== 1) { cell.innerHTML = '<i></i><em></em>'; cell._t = null; cell._w = null; cell.style.background = ''; cell._a = null; }
     var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
     var ratio = usd && col.barOf ? col.barOf(usd) : 0;
@@ -848,7 +864,7 @@ function _setVenueBars(box, i, view, side) {
     var o = !usd ? '0' : dim ? '0.3' : (0.35 + 0.5 * ratio).toFixed(2);
     // Past the feed's depth limit: unknown, not empty
     var nodata = col.rows && ((side === 'ask' && col.rows.askEdge != null && i > col.rows.askEdge) || (side === 'bid' && col.rows.bidEdge != null && i < col.rows.bidEdge));
-    var cls = (side || '') + (dim ? ' dim' : '') + (nodata ? ' nodata' : '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    var cls = (side || '') + _venueEdge(col.rows, i) + (dim ? ' dim' : '') + (nodata ? ' nodata' : '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
     var bar = cell.firstChild, txt = cell.lastChild;
     if (cell._w !== w) { bar.style.width = w; cell._w = w; }
     if (bar.style.opacity !== o) bar.style.opacity = o;
@@ -1330,7 +1346,7 @@ function _render() {
     }).join('') : '');
     var c = row.children;
     if (cl) _setClusterCells(c[3], i, cl);
-    if (ven) _setVenueCells(c[4], i, ven, i >= askIdx ? 'ask' : i <= bidIdx ? 'bid' : null);
+    if (ven) _setVenueCells(c[4], i, ven);
     if (c[0]._html !== mineHtml) { c[0].innerHTML = mineHtml; c[0]._html = mineHtml; c[0].classList.toggle('has', !!m); }
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
