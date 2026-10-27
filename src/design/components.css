@@ -783,7 +783,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* position (PnL zone) and own-order tints: only across Volume | Price,
    not over the tape, clusters, Mine (52px grid column) or other venues */
 .dom-row.pnl-up::before,.dom-row.pnl-dn::before,.dom-row.has-order::before{
-  content:'';position:absolute;top:0;bottom:0;left:calc(var(--tape-w) + var(--cl-w) + 52px);right:var(--ven-w, 0px);background:var(--row-tint);pointer-events:none;z-index:1;
+  content:'';position:absolute;top:0;bottom:0;left:calc(var(--tape-w) + var(--cl-w));right:calc(var(--ven-w, 0px) + 52px);background:var(--row-tint);pointer-events:none;z-index:1;
 }
 .dom-row.has-order:hover{background:var(--fog);}
 
@@ -821,32 +821,30 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom{--tape-w:0px;}
 .fv-dom.has-tape{--tape-w:190px;}
 .fv-dom.has-tape{width:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));flex-basis:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));}
-.dom-cols,.dom-row{grid-template-columns:var(--cl-w) var(--tape-w) 52px 1fr 72px var(--ven-w, 0px);}
-.dom-c-mine,.dom-cols>span:nth-child(1){grid-column:3;}
-.dom-c-vol,.dom-cols>span:nth-child(2){grid-column:4;}
-.dom-c-price,.dom-cols>span:nth-child(3){grid-column:5;}
+.dom-cols,.dom-row{grid-template-columns:var(--cl-w) var(--tape-w) 1fr 72px 52px var(--ven-w, 0px);}
+.dom-c-vol,.dom-cols>span:nth-child(2){grid-column:3;}
+.dom-c-price,.dom-cols>span:nth-child(3){grid-column:4;}
+.dom-c-mine,.dom-cols>span:nth-child(1){grid-column:5;padding-left:var(--space-2);}
 .dom-c-cl,.dom-cols-cl{grid-column:1;}
 .dom-cols-tape{grid-column:2;grid-row:1;display:none;}
 .fv-dom.has-tape .dom-cols-tape{display:block;}
 .dom-tape{position:absolute;left:calc(var(--space-4) + var(--cl-w));width:var(--tape-w);pointer-events:none;z-index:1;}
-.fv-dom.has-cl .dom-ruler,.fv-dom.has-tape .dom-ruler{left:calc(var(--space-4) + var(--tape-w) + var(--cl-w));}
+/* % ruler in the Mine column (right of Price) */
+.fv-dom .dom-ruler,.fv-dom.has-cl .dom-ruler,.fv-dom.has-tape .dom-ruler{left:auto;right:calc(var(--space-4) + var(--ven-w, 0px));width:52px;padding-left:var(--space-2);}
 
 /* cluster numbers: regular weight, semi-transparent, so they don't compete with the ladder */
 .dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
 
-/* clusters | tape | Mine | Volume | Price. The ladder on a darker surface than the tape; clusters
-   and the other venues' books halfway between, so they stand apart (painted under the rows,
+/* clusters | tape | Volume | Price | Mine — our Binance futures side, one
+   surface; the other venues' books on a lighter one (painted under the rows,
    so order / PnL tints still show on top) */
 .fv-dom.has-ven{--ven-pad:var(--space-4);}
 .fv-dom.has-cl .dom-ladder,.fv-dom.has-tape .dom-ladder,.fv-dom.has-cl .dom-cols,.fv-dom.has-tape .dom-cols,
 .fv-dom.has-ven .dom-ladder,.fv-dom.has-ven .dom-cols{
   --side-bg:color-mix(in srgb,var(--cloud) 50%,var(--paper));
   background:linear-gradient(to right,
-    var(--paper) var(--space-4),
-    var(--side-bg) 0 calc(var(--space-4) + var(--cl-w)),
-    var(--paper) 0 calc(var(--space-4) + var(--cl-w) + var(--tape-w)),
-    var(--cloud) 0 calc(100% - var(--ven-pad, 0px) - var(--ven-w, 0px)),
+    var(--cloud) calc(100% - var(--ven-pad, 0px) - var(--ven-w, 0px)),
     var(--side-bg) 0);
 }
 
