@@ -4,7 +4,8 @@
 // your risk per trade, not dollars). PnL is one line on top, the old per-group
 // tables are folded at the bottom. Numbers: journal/edge.js (GET /api/journal/edge).
 
-import { fetchJournalEdge } from './api.js';
+import { fetchJournalEdge, saveTradeTag } from './api.js';
+import { tzDateStr, tzTimeStr } from './utils.js';
 import { keyLabel, DIMENSIONS } from './edge-insights.js';
 
 var RANGES = [['1m', '1 мес'], ['3m', '3 мес'], ['6m', '6 мес'], ['all', 'Всё']];
@@ -55,8 +56,24 @@ function setupsHTML(e) {
           + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>';
       }).join('')
     + '</tbody></table>'
-    + (e.noPattern ? '<div class="edge-sub">' + e.noPattern + ' ' + plural(e.noPattern, 'сделка', 'сделки', 'сделок') + ' без отмеченного сетапа — отметь в вечерней карточке, иначе они сюда не попадут.</div>' : '')
+    + (e.noPattern ? '<div class="edge-sub">' + e.noPattern + ' ' + plural(e.noPattern, 'сделка', 'сделки', 'сделок') + ' без сетапа — отметь их ниже, иначе они сюда не попадут.</div>' : '')
     + '</div>';
+}
+
+// Trades without a setup type: tag them right here (one click per trade)
+var PATTERN_BUTTONS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок-тренд'], ['bounce_counter', 'Отскок-контр'], ['range_hold', 'Удержание']];
+function untaggedHTML(list) {
+  if (!list || !list.length) return '';
+  return '<div class="edge-panel edge-untagged"><h4 class="edge-h">Отметь сетап — ' + list.length + ' ' + plural(list.length, 'сделка', 'сделки', 'сделок') + '</h4>'
+    + '<table class="edge-list"><thead><tr><th>Закрыта</th><th>Монета</th><th>Итог</th><th>Сетап</th></tr></thead><tbody>'
+    + list.map(function (u) {
+        var d = new Date(u.closeTime);
+        return '<tr data-sym="' + u.symbol + '" data-close="' + u.closeTime + '"><td>' + tzDateStr(d).slice(5).split('-').reverse().join('.') + ' ' + tzTimeStr(d) + '</td>'
+          + '<td>' + u.symbol.replace(/USDT$/, '') + ' ' + (u.side === 'long' ? 'лонг' : 'шорт') + '</td>'
+          + '<td class="' + (u.pnlNet >= 0 ? 'up' : 'dn') + '">' + (u.r != null ? rr(u.r) : money(u.pnlNet) + ' USDT') + '</td>'
+          + '<td><span class="edge-tagbtns">' + PATTERN_BUTTONS.map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '">' + p[1] + '</button>'; }).join('') + '</span></td></tr>';
+      }).join('')
+    + '</tbody></table></div>';
 }
 
 function tableHTML(rows) {
@@ -91,9 +108,23 @@ export function renderEdgeSection(container) {
         + '<span>итог ' + money(t.pnl) + ' USDT</span>'
       + '</div>'
       + '<div class="edge-panels">' + executionHTML(e.execution) + setupsHTML(e) + '</div>'
+      + untaggedHTML(e.untagged)
       + '<details class="edge-details"><summary>Все разрезы (в USDT)</summary>'
       + '<div class="edge-grid">' + SECTIONS.map(function (s) {
           return '<div class="edge-card"><div class="edge-card-title">' + s[1] + '</div>' + tableHTML(e.groups[s[0]]) + '</div>';
         }).join('') + '</div></details>';
+    body.querySelectorAll('[data-edge-pattern]').forEach(function (b) {
+      b.onclick = function () {
+        var row = b.closest('tr');
+        b.disabled = true;
+        saveTradeTag({ symbol: row.dataset.sym, closeTime: Number(row.dataset.close), pattern: b.dataset.edgePattern }).then(function () {
+          row.remove();
+          clearTimeout(_refresh);
+          _refresh = setTimeout(function () { renderEdgeSection(container); }, 1500); // recount once you pause tagging
+        }).catch(function () { b.disabled = false; });
+      };
+    });
   });
 }
+
+var _refresh = null;

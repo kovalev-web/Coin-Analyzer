@@ -32,7 +32,6 @@ var RULES = [
   ['noRevenge', 'без реванша после убытка'],
   ['noCrane', 'без входов после стоп-крана'],
   ['noSizeUp', 'без роста объёма после серии'],
-  ['tagged', 'сетап отмечен'],
 ];
 
 // Keys of the rules this trade broke. x: { t: fact trade, tag, r }
@@ -44,7 +43,6 @@ function brokenRules(x) {
   if (x.t.revenge) out.push('noRevenge');
   if (x.t.afterCrane) out.push('noCrane');
   if (x.t.sizeUp) out.push('noSizeUp');
-  if (!x.tag || !x.tag.pattern) out.push('tagged');
   return out;
 }
 
@@ -164,7 +162,7 @@ function computeEdge(days, tags, opts) {
 
   // Strategy: each setup on trades done by the rules (other than tagging), in R
   var byRules = trades.filter(function (x) {
-    return x.r != null && x.broken.every(function (k) { return k === 'tagged'; }) && x.tag && x.tag.pattern;
+    return x.r != null && !x.broken.length && x.tag && x.tag.pattern;
   });
   var setups = PATTERNS.map(function (p) {
     var st = setupStats(byRules.filter(function (x) { return x.tag.pattern === p; }).map(function (x) { return x.r; }));
@@ -180,6 +178,13 @@ function computeEdge(days, tags, opts) {
     setups: setups,
     setupsAll: allByRules,
     noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
+    // Trades still waiting for a setup type, newest first — tagged right in the report
+    untagged: trades.filter(function (x) { return x.t.closeTime && (!x.tag || !x.tag.pattern); })
+      .sort(function (a, b) { return b.t.closeTime - a.t.closeTime; }).slice(0, 50)
+      .map(function (x) {
+        return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
+          pnlNet: x.t.pnlNet, r: x.r == null ? null : Math.round(x.r * 100) / 100, broken: x.broken };
+      }),
     total: group(function () { return 'all trades'; })[0] || { key: 'all trades', n: 0 },
     tagged: trades.filter(function (x) { return x.tag; }).length,
     groups: {

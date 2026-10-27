@@ -57,11 +57,11 @@ test('R: PnL in units of the planned risk (0.5% of a 100 USDT position = 0.5 USD
 });
 
 test('rules: each break is named; unknown R does not count as a stop overrun', () => {
-  const ok = { t: { planned: true }, tag: { pattern: 'breakout' }, r: -1 };
+  const ok = { t: { planned: true }, tag: null, r: -1 }; // no setup type is not a trading rule
   assert.deepEqual(brokenRules(ok), []);
   assert.deepEqual(brokenRules({ ...ok, r: -1.5 }), ['stopHeld']);
   assert.deepEqual(brokenRules({ ...ok, r: null }), []);
-  assert.deepEqual(brokenRules({ t: { planned: false, revenge: true, oversize: true }, tag: null, r: 0.5 }), ['planned', 'size', 'noRevenge', 'tagged']);
+  assert.deepEqual(brokenRules({ t: { planned: false, revenge: true, oversize: true }, tag: null, r: 0.5 }), ['planned', 'size', 'noRevenge']);
 });
 
 test('setup stats: expectancy is the average R per trade', () => {
@@ -89,12 +89,13 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
     { symbol: 'XUSDT', close_time: 300, pattern: 'breakout' },
   ];
   const e = computeEdge(d, tg, { riskPct: 0.5 });
+  // revenge and off-briefing break rules; the untagged Y trade is still by the rules
   assert.deepEqual([e.execution.n, e.execution.clean, e.execution.rate], [4, 2, 50]);
   assert.equal(e.execution.rules.find((r) => r.key === 'noRevenge').broken, 1);
-  assert.equal(e.execution.rules.find((r) => r.key === 'tagged').broken, 1);
   assert.deepEqual(e.execution.weeks, [{ week: '2026-10-26', n: 4, clean: 2, rate: 50 }]);
   // breakout by the rules: +2R and −1R (the revenge trade is out) → +0.5R per trade
   const b = e.setups.find((x) => x.key === 'breakout');
   assert.deepEqual([b.n, b.expectancyR, b.totalR], [2, 0.5, 1]);
   assert.equal(e.noPattern, 1);
+  assert.deepEqual(e.untagged.map((u) => [u.symbol, u.closeTime, u.r]), [['YUSDT', 400, 1]]);
 });
