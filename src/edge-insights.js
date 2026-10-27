@@ -42,9 +42,11 @@ var MIN_GAP_R = 0.3;
 var UNKNOWN = { 'not recorded': true, unknown: true, 'no levels set': true };
 var SKIP = { flags: true };
 
-// One conclusion per dimension: { dim, title, best, worst, gapR, early }
+// One conclusion per dimension: { dim, title, best, worst, gapR, early, weight }
 // best / worst: { key, label, n, avgR }. oneR: 1R in USDT (groups carry USDT).
-// Biggest gaps first, at most `limit`.
+// Order: reliable ones first (both groups ≥ minN trades) by gap; then early ones
+// by gap × how close the smaller group is to minN, so a big gap on 2 trades
+// doesn't push out a solid one on 100. At most `limit`.
 export function conclusions(groups, oneR, minN, limit) {
   if (!groups || !(oneR > 0)) return [];
   var out = [];
@@ -57,7 +59,12 @@ export function conclusions(groups, oneR, minN, limit) {
     var best = rows[0], worst = rows[rows.length - 1];
     var gap = Math.round((best.avgR - worst.avgR) * 100) / 100;
     if (gap < MIN_GAP_R) return;
-    out.push({ dim: dim, title: DIMENSIONS[dim], best: best, worst: worst, gapR: gap, early: best.n < (minN || 20) || worst.n < (minN || 20) });
+    var need = minN || 20;
+    var weight = Math.min(1, Math.min(best.n, worst.n) / need);
+    out.push({ dim: dim, title: DIMENSIONS[dim], best: best, worst: worst, gapR: gap, early: weight < 1, weight: weight });
   });
-  return out.sort(function (a, b) { return b.gapR - a.gapR; }).slice(0, limit || 4);
+  return out.sort(function (a, b) {
+    if (a.early !== b.early) return a.early ? 1 : -1;
+    return b.gapR * b.weight - a.gapR * a.weight;
+  }).slice(0, limit || 4);
 }

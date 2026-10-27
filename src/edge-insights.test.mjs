@@ -21,5 +21,18 @@ test('conclusions: compare groups in R per trade, biggest gap first, skip one-gr
   const c = conclusions(groups, 0.5, 20);
   assert.equal(c.length, 1);
   assert.deepEqual([c[0].dim, c[0].best.key, c[0].best.avgR, c[0].worst.avgR, c[0].gapR, c[0].early], ['hour', '04–08', 0.42, -0.48, 0.9, true]);
+  assert.equal(c[0].weight, 0.2); // 4 of 20 trades in the smaller group
   assert.deepEqual(conclusions(groups, null, 20), []);
+});
+
+test('conclusions: a solid finding on many trades outranks a big gap on a few', async () => {
+  const { conclusions } = await import('./edge-insights.js');
+  const g = (key, n, avgPnl) => ({ key, n, avgPnl });
+  const groups = {
+    energy: [g('high (4–5)', 2, 1.0), g('low (1–2)', 2, -1.0)],     // gap 4R, 2 trades each
+    hour: [g('04–08', 60, 0.2), g('08–12', 50, -0.1)],               // gap 0.6R, 50+ trades
+    focus: [g('high (4–5)', 12, 0.3), g('low (1–2)', 10, -0.2)],     // gap 1R, 10 trades: 1 × 0.5 = 0.5
+  };
+  const c = conclusions(groups, 0.5, 20);
+  assert.deepEqual(c.map((x) => [x.dim, x.early]), [['hour', false], ['focus', true], ['energy', true]]);
 });
