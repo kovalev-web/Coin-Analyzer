@@ -9,6 +9,7 @@ import { tzDateStr, tzTimeStr, escHtml } from './utils.js';
 import { ensureSetups, changeSetup, setupButtons, diagramAttr } from './setups.js';
 import { state } from './state.js';
 import { on } from './events.js';
+import { dateRangeHTML, bindDateRange } from './date-range.js';
 import { ensureCoinNotes, notesOnDay } from './coin-notes.js';
 import { conclusions } from './edge-insights.js';
 
@@ -160,17 +161,17 @@ export function renderEdgeSection(container, cached) {
   if (!container) return;
   container.innerHTML = '<div class="edge-section"><div class="edge-head"><h3>Мой edge</h3><div class="edge-ranges">'
     + RANGES.map(function (r) { return '<button data-edge-range="' + r[0] + '" class="' + (r[0] === _period.range ? 'active' : '') + '">' + r[1] + '</button>'; }).join('')
-    + '<span class="edge-dates"><input type="date" class="ds-input" data-edge-from value="' + (_period.from || '') + '"><span>—</span><input type="date" class="ds-input" data-edge-to value="' + (_period.to || '') + '"></span>'
+    + dateRangeHTML('edge', _period.from, _period.to, 'Свои даты')
     + '</div></div><div class="edge-body"><span class="big-spinner"></span></div></div>';
   container.querySelectorAll('[data-edge-range]').forEach(function (b) {
     b.onclick = function () { _period = { range: b.dataset.edgeRange }; renderEdgeSection(container); };
   });
-  // Any period: both dates set → that range
-  container.querySelectorAll('[data-edge-from],[data-edge-to]').forEach(function (inp) {
-    inp.onchange = function () {
-      var f = container.querySelector('[data-edge-from]').value, t = container.querySelector('[data-edge-to]').value;
-      if (f && t && f <= t) { _period = { from: f, to: t }; renderEdgeSection(container); }
-    };
+  // Any period: pick the start and the end in the calendar
+  bindDateRange(container, 'edge', {
+    min: (_last && _last.e && _last.e.startDate) || '2026-10-28',
+    max: tzDateStr(),
+    from: _period.from, to: _period.to,
+    onChange: function (f, t) { _period = { from: f, to: t }; renderEdgeSection(container); },
   });
   Promise.all([cached ? Promise.resolve(cached) : fetchJournalEdge(_period), ensureSetups()]).then(function (res) {
     var e = res[0];
