@@ -1929,6 +1929,12 @@ function _onLevelClick(idx, side, shift, alt) {
   }, price, side === 'BUY' ? 'B' : 'S', (side === 'BUY' ? 'Buy ' : 'Sell ') + (through ? 'now up to ' : 'limit at ') + price);
 }
 
+// Stops (SL / TP / stop entries) trigger on the LAST traded price, the one the
+// ladder and the tape show. Binance's default is the mark price — an index
+// average that updates about once a second and lags a fast move, so a stop on
+// mark fires late after the price already traded through it.
+var STOP_TRIGGER = 'CONTRACT_PRICE';
+
 // Pending entry: buy when the price rises to the level, sell when it falls to it.
 // Market on trigger (fills even in a fast move; may slip by the spread).
 function _placeStopEntry(price, bestBid, bestAsk) {
@@ -1936,7 +1942,7 @@ function _placeStopEntry(price, bestBid, bestAsk) {
   if (!side) { _setStatus('Stop orders go above the ask (buy) or below the bid (sell)', true); return; }
   _placeOptimistic({
     clientOrderId: _clientId(), symbol: T.sym, side: side, type: 'STOP_MARKET',
-    triggerPrice: String(price), quantity: String(T.size / price),
+    triggerPrice: String(price), quantity: String(T.size / price), workingType: STOP_TRIGGER,
   }, price, side === 'BUY' ? 'BS' : 'SS', (side === 'BUY' ? 'Buy stop at ' : 'Sell stop at ') + price);
 }
 
@@ -1952,7 +1958,7 @@ function _placeProtective(price, bestBid, bestAsk) {
   if (!type) { _setStatus('SL/TP must be outside the spread', true); return; }
   _placeOptimistic({
     clientOrderId: _clientId(), symbol: T.sym, side: long ? 'SELL' : 'BUY', type: type,
-    triggerPrice: String(price), closePosition: true,
+    triggerPrice: String(price), closePosition: true, workingType: STOP_TRIGGER,
   }, price, type === 'STOP_MARKET' ? 'SL' : 'TP', (type === 'STOP_MARKET' ? 'Stop-loss at ' : 'Take-profit at ') + price);
 }
 

@@ -81,6 +81,12 @@ test('stop-loss with closePosition goes to the algo endpoint without quantity', 
   assert.equal(r.algo.algoId, 2);
 });
 
+test('a stop on the last price is sent with workingType CONTRACT_PRICE (the order book sends this)', async () => {
+  const { t, client } = await makeTrader();
+  await t.placeOrder({ clientOrderId: 'sl-last', symbol: 'BTCUSDT', side: 'SELL', type: 'STOP_MARKET', triggerPrice: '58000.0', closePosition: true, workingType: 'CONTRACT_PRICE' });
+  assert.equal(callsTo(client, 'POST', '/fapi/v1/algoOrder')[0].params.workingType, 'CONTRACT_PRICE');
+});
+
 test('validation errors are 400 and send nothing', async () => {
   const { t, client } = await makeTrader();
   await assert.rejects(t.placeOrder({ clientOrderId: 'x1', symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', quantity: '1' }), { status: 400 });
