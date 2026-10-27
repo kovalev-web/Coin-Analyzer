@@ -9,7 +9,8 @@ var MIN_N = 20;
 var TAG_MATCH_MS = 2000; // tag close_time vs fact closeTime (both are the exchange fill time)
 
 var SETUP = { A: 'A setup', B: 'B setup', C: 'C setup' };
-// Setup types — what kind of entry the trade was (tagged after the close)
+// Setup types — what kind of entry the trade was (tagged after the close). The
+// user edits the list (user_setups); these are the starting four, used when no list is passed.
 var PATTERNS = ['breakout', 'bounce_trend', 'bounce_counter', 'range_hold'];
 var STOP_OVERRUN_R = 1.2; // a loss beyond this many R means the stop wasn't held
 
@@ -90,9 +91,15 @@ function hourBlock(h) {
 
 // days: [{ date, facts, morning: { sleepHours, sleepQuality, energy, carryover, focus } }]
 // tags: [{ symbol, close_time, setup, emotion }]
-// opts: { riskPct } — risk per trade, % of the position (Account settings)
+// opts: { riskPct, setups } — risk per trade, % of the position (Account
+// settings); the user's setups [{ key, name, exclude, archived }]. Trades tagged
+// with an excluded setup (misclicks, tests) are left out of the whole report.
 function computeEdge(days, tags, opts) {
   var riskPct = opts && opts.riskPct;
+  var setupList = (opts && opts.setups) || PATTERNS.map(function (k) { return { key: k, name: k }; });
+  var excludedKeys = {};
+  setupList.forEach(function (x) { if (x.exclude) excludedKeys[x.key] = true; });
+  var excludedCount = 0;
   var trades = [];
   var used = new Set();
   (days || []).forEach(function (d) {
@@ -108,6 +115,7 @@ function computeEdge(days, tags, opts) {
       });
       if (best != null) used.add(best);
       var x = { date: d.date, t: t, tag: best != null ? tags[best] : null, m: d.morning || {} };
+      if (x.tag && x.tag.pattern && excludedKeys[x.tag.pattern]) { excludedCount++; return; }
       x.r = tradeR(t.pnlNet, t.maxNotional, riskPct);
       x.broken = brokenRules(x);
       trades.push(x);
@@ -164,10 +172,10 @@ function computeEdge(days, tags, opts) {
   var byRules = trades.filter(function (x) {
     return x.r != null && !x.broken.length && x.tag && x.tag.pattern;
   });
-  var setups = PATTERNS.map(function (p) {
-    var st = setupStats(byRules.filter(function (x) { return x.tag.pattern === p; }).map(function (x) { return x.r; }));
-    return Object.assign({ key: p, enough: st.n >= MIN_N }, st);
-  });
+  var setups = setupList.filter(function (p) { return !p.exclude; }).map(function (p) {
+    var st = setupStats(byRules.filter(function (x) { return x.tag.pattern === p.key; }).map(function (x) { return x.r; }));
+    return Object.assign({ key: p.key, name: p.name, archived: !!p.archived, enough: st.n >= MIN_N }, st);
+  }).filter(function (p) { return !p.archived || p.n > 0; }); // a hidden setup still shows while it has trades
   var allByRules = Object.assign({ key: 'all', enough: byRules.length >= MIN_N }, setupStats(byRules.map(function (x) { return x.r; })));
 
   var flagOrder = ['clean', 'revenge (≤5 min after a loss)', 'size-up after a streak', 'after stop-crane', 'over volume limit'];
@@ -177,6 +185,7 @@ function computeEdge(days, tags, opts) {
     execution: execution,
     setups: setups,
     setupsAll: allByRules,
+    excluded: excludedCount,
     noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
     // Trades still waiting for a setup type, newest first — tagged right in the report
     untagged: trades.filter(function (x) { return x.t.closeTime && (!x.tag || !x.tag.pattern); })

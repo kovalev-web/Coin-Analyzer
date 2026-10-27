@@ -145,6 +145,20 @@ function ensureAuthTables() {
     )
   `);
   sqlite.exec('CREATE INDEX IF NOT EXISTS "coin_notes_user_symbol_ts" ON "coin_notes" ("user_id", "symbol", "ts")');
+  // Your own setup list (names you type and rename). trade_tags.pattern holds a setup's key;
+  // `exclude` = not counted in My edge (misclicks, tests), `archived` = hidden from the buttons
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS "user_setups" (
+      "user_id" TEXT NOT NULL,
+      "key" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "position" INTEGER NOT NULL DEFAULT 0,
+      "exclude" INTEGER NOT NULL DEFAULT 0,
+      "archived" INTEGER NOT NULL DEFAULT 0,
+      "created_at" INTEGER NOT NULL,
+      PRIMARY KEY ("user_id", "key")
+    )
+  `);
   // Setup type of a closed trade (what kind of entry it was); `setup` stays the A/B/C quality
   var tagCols = sqlite.prepare('PRAGMA table_info("trade_tags")').all().map(function (c) { return c.name; });
   if (tagCols.indexOf('pattern') === -1) sqlite.exec('ALTER TABLE "trade_tags" ADD COLUMN "pattern" TEXT');

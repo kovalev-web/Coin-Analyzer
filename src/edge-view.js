@@ -5,14 +5,16 @@
 // tables are folded at the bottom. Numbers: journal/edge.js (GET /api/journal/edge).
 
 import { fetchJournalEdge, saveTradeTag } from './api.js';
-import { tzDateStr, tzTimeStr } from './utils.js';
+import { tzDateStr, tzTimeStr, escHtml } from './utils.js';
+import { ensureSetups, changeSetup, setupButtons } from './setups.js';
+import { state } from './state.js';
 import { keyLabel, DIMENSIONS } from './edge-insights.js';
 
 var RANGES = [['1m', '1 мес'], ['3m', '3 мес'], ['6m', '6 мес'], ['all', 'Всё']];
 var SECTIONS = Object.keys(DIMENSIONS).map(function (k) { return [k, DIMENSIONS[k]]; });
-var PATTERN_LABEL = { breakout: 'Пробой', bounce_trend: 'Отскок по тренду', bounce_counter: 'Отскок против тренда', range_hold: 'Удержание границы', all: 'Все сетапы' };
 
 var _range = '3m';
+var _editing = false; // setup list editor open
 
 function money(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2); }
 function rr(n) { return n == null ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2) + 'R'; }
@@ -41,7 +43,9 @@ function executionHTML(x) {
 
 // Strategy: each setup on trades done by the rules, in R
 function setupsHTML(e) {
-  var head = '<div class="edge-panel"><h4 class="edge-h">Сетапы — только сделки по правилам, в R</h4>';
+  var head = '<div class="edge-panel"><div class="edge-panel-head"><h4 class="edge-h">Сетапы — только сделки по правилам, в R</h4>'
+    + '<button type="button" class="edge-link" data-edge-edit>' + (_editing ? 'Готово' : 'Настроить сетапы') + '</button></div>'
+    + (_editing ? editorHTML() : '');
   if (!e.riskPct) return head + '<div class="edge-empty">Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</div></div>';
   var rows = e.setups.concat([e.setupsAll]);
   return head
@@ -49,19 +53,36 @@ function setupsHTML(e) {
     + '<table class="edge-list edge-setups"><thead><tr><th>Сетап</th><th>Сделок</th><th>В плюс</th><th>Ср. плюс</th><th>Ср. минус</th><th>Ожидание</th><th>Итого</th></tr></thead><tbody>'
     + rows.map(function (s) {
         var cls = (s.key === 'all' ? 'total ' : '') + (s.n && !s.enough ? 'thin' : '');
-        if (!s.n) return '<tr class="' + cls + ' none"><td>' + PATTERN_LABEL[s.key] + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
-        return '<tr class="' + cls + '"><td>' + PATTERN_LABEL[s.key] + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
+        var name = s.key === 'all' ? 'Все сетапы' : escHtml(s.name || s.key);
+        if (!s.n) return '<tr class="' + cls + ' none"><td>' + name + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
+        return '<tr class="' + cls + '"><td>' + name + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
           + '<td class="up">' + rr(s.avgWinR) + '</td><td class="dn">' + rr(s.avgLossR) + '</td>'
           + '<td class="' + (s.expectancyR >= 0 ? 'up' : 'dn') + '"><b>' + rr(s.expectancyR) + '</b></td>'
           + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>';
       }).join('')
     + '</tbody></table>'
+    + (e.excluded ? '<div class="edge-sub">Не считаются: ' + e.excluded + ' ' + plural(e.excluded, 'сделка', 'сделки', 'сделок') + ' с сетапами «не считать» (мисклики и т.п.).</div>' : '')
     + (e.noPattern ? '<div class="edge-sub">' + e.noPattern + ' ' + plural(e.noPattern, 'сделка', 'сделки', 'сделок') + ' без сетапа — отметь их ниже, иначе они сюда не попадут.</div>' : '')
     + '</div>';
 }
 
+// Your setup list: rename in place, leave out of the report, hide from the buttons, add
+function editorHTML() {
+  var list = state.setups || [];
+  return '<div class="edge-editor">'
+    + list.map(function (x) {
+        return '<div class="edge-editor-row' + (x.archived ? ' hidden' : '') + '" data-setup-key="' + x.key + '">'
+          + '<input class="ds-input" data-setup-name value="' + escHtml(x.name) + '" maxlength="40">'
+          + '<label class="edge-check"><input type="checkbox" data-setup-exclude' + (x.exclude ? ' checked' : '') + '> не считать</label>'
+          + '<button type="button" class="edge-link" data-setup-archive>' + (x.archived ? 'Вернуть' : 'Скрыть') + '</button></div>';
+      }).join('')
+    + '<div class="edge-editor-row"><input class="ds-input" data-setup-new placeholder="Новый сетап, например «Мисклик»" maxlength="40">'
+    + '<button type="button" class="edge-link" data-setup-add>Добавить</button></div>'
+    + '<div class="edge-sub">«Не считать» — сделки с этим сетапом не попадают в отчёт (мисклики, тесты). «Скрыть» — убрать из кнопок, статистика остаётся.</div>'
+    + '</div>';
+}
+
 // Trades without a setup type: tag them right here (one click per trade)
-var PATTERN_BUTTONS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок-тренд'], ['bounce_counter', 'Отскок-контр'], ['range_hold', 'Удержание']];
 function untaggedHTML(list) {
   if (!list || !list.length) return '';
   return '<div class="edge-panel edge-untagged"><h4 class="edge-h">Отметь сетап — ' + list.length + ' ' + plural(list.length, 'сделка', 'сделки', 'сделок') + '</h4>'
@@ -71,7 +92,7 @@ function untaggedHTML(list) {
         return '<tr data-sym="' + u.symbol + '" data-close="' + u.closeTime + '"><td>' + tzDateStr(d).slice(5).split('-').reverse().join('.') + ' ' + tzTimeStr(d) + '</td>'
           + '<td>' + u.symbol.replace(/USDT$/, '') + ' ' + (u.side === 'long' ? 'лонг' : 'шорт') + '</td>'
           + '<td class="' + (u.pnlNet >= 0 ? 'up' : 'dn') + '">' + (u.r != null ? rr(u.r) : money(u.pnlNet) + ' USDT') + '</td>'
-          + '<td><span class="edge-tagbtns">' + PATTERN_BUTTONS.map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '">' + p[1] + '</button>'; }).join('') + '</span></td></tr>';
+          + '<td><span class="edge-tagbtns">' + setupButtons().map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '">' + escHtml(p[1]) + '</button>'; }).join('') + '</span></td></tr>';
       }).join('')
     + '</tbody></table></div>';
 }
@@ -95,7 +116,8 @@ export function renderEdgeSection(container) {
   container.querySelectorAll('[data-edge-range]').forEach(function (b) {
     b.onclick = function () { _range = b.dataset.edgeRange; renderEdgeSection(container); };
   });
-  fetchJournalEdge(_range).then(function (e) {
+  Promise.all([fetchJournalEdge(_range), ensureSetups()]).then(function (res) {
+    var e = res[0];
     var body = container.querySelector('.edge-body');
     if (!body) return;
     if (!e || !e.total || !e.total.n) {
@@ -113,6 +135,7 @@ export function renderEdgeSection(container) {
       + '<div class="edge-grid">' + SECTIONS.map(function (s) {
           return '<div class="edge-card"><div class="edge-card-title">' + s[1] + '</div>' + tableHTML(e.groups[s[0]]) + '</div>';
         }).join('') + '</div></details>';
+    bindEditor(body, container);
     body.querySelectorAll('[data-edge-pattern]').forEach(function (b) {
       b.onclick = function () {
         var row = b.closest('tr');
@@ -128,3 +151,22 @@ export function renderEdgeSection(container) {
 }
 
 var _refresh = null;
+
+function bindEditor(body, container) {
+  var redraw = function () { renderEdgeSection(container); };
+  var toggle = body.querySelector('[data-edge-edit]');
+  if (toggle) toggle.onclick = function () { _editing = !_editing; redraw(); };
+  body.querySelectorAll('[data-setup-key]').forEach(function (row) {
+    var key = row.dataset.setupKey;
+    var name = row.querySelector('[data-setup-name]');
+    name.onchange = function () { if (name.value.trim()) changeSetup({ action: 'rename', key: key, name: name.value.trim() }).then(redraw); };
+    row.querySelector('[data-setup-exclude]').onchange = function (ev) { changeSetup({ action: 'exclude', key: key, exclude: ev.target.checked }).then(redraw); };
+    row.querySelector('[data-setup-archive]').onclick = function () { changeSetup({ action: 'archive', key: key, archived: !row.classList.contains('hidden') }).then(redraw); };
+  });
+  var add = body.querySelector('[data-setup-add]'), input = body.querySelector('[data-setup-new]');
+  if (add) {
+    var doAdd = function () { if (input.value.trim()) changeSetup({ action: 'add', name: input.value.trim() }).then(redraw); };
+    add.onclick = doAdd;
+    input.onkeydown = function (ev) { if (ev.key === 'Enter') doAdd(); };
+  }
+}

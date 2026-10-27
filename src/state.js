@@ -33,6 +33,7 @@ export const state = {
   briefingViewDate: null, // currently viewed date in panel (null = today)
   trades: {},          // 'sym:date' → {status:'ok'|'loading'|'error', pnl, count, entries[]}
   coinNotes: {},       // 'AIN' → [{id, symbol, ts, price, text}] notes written while watching
+  setups: null,        // [{key, name, exclude, archived}] your setup list (src/setups.js)
   aiSummary: null,     // текст от Gemini (journal AI-анализ)
   aiSummaryDate: null,      // ISO timestamp последней генерации
   aiSummaryRange: null, // диапазон ('1w'|'2w'|'1m'), за который сгенерирован journal AI-анализ

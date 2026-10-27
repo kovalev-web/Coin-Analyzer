@@ -12,6 +12,8 @@
 // from the main chart feed: testnet prices differ from the real market.
 
 import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv, wsConnected } from './api.js';
+import { ensureSetups, setupButtons } from './setups.js';
+import { state } from './state.js';
 import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
@@ -1085,6 +1087,8 @@ function _disconnectDepth() {
 
 // ── Account events ──────────────────────────────────────────────────────────
 
+on('setups:updated', function () { _renderTag(); });
+
 on('trade:event', function (ev) {
   if (!ev || !T.access) return;
   if ((ev.env || 'live') !== T.mode) return; // the other trader's events
@@ -1778,7 +1782,6 @@ function _viewOnlyBlocked() {
 // one tap each, skippable. Keyed by the exchange close time so the edge
 // report can join it to the computed trade.
 
-var TAG_PATTERNS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок-тренд'], ['bounce_counter', 'Отскок-контр'], ['range_hold', 'Удержание']];
 var TAG_SETUPS = ['A', 'B', 'C'];
 var TAG_EMOTIONS = [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']];
 
@@ -1799,8 +1802,9 @@ function _renderTag() {
   if (!el) return;
   var q = T.tagQueue[T.tagQueue.length - 1];
   if (!q) { el.innerHTML = ''; return; }
+  if (!state.setups) { ensureSetups().then(_renderTag); }
   el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + ' closed</span>'
-    + '<span class="dom-tag-group">' + TAG_PATTERNS.map(function (x) {
+    + '<span class="dom-tag-group">' + setupButtons().map(function (x) {
         return '<button data-tag-pattern="' + x[0] + '" class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
       }).join('') + '</span>'
     + '<span class="dom-tag-group">' + TAG_SETUPS.map(function (x) {

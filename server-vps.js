@@ -967,6 +967,19 @@ async function getSession(req) {
   } catch (e) { return null; }
 }
 
+// ── Setups: the user's own list of entry types (journal) ───────────────────
+// First use seeds the four starting setups; their keys match tags saved before
+// the list became editable. New setups get key 's<timestamp>'.
+var DEFAULT_SETUPS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок по тренду'], ['bounce_counter', 'Отскок против тренда'], ['range_hold', 'Удержание границы']];
+function userSetups(db, userId) {
+  var rows = db.prepare('SELECT key, name, position, exclude, archived FROM user_setups WHERE user_id = ? ORDER BY position, created_at').all(userId);
+  if (rows.length) return rows.map(function (r) { return { key: r.key, name: r.name, position: r.position, exclude: !!r.exclude, archived: !!r.archived }; });
+  var now = Date.now();
+  var ins = db.prepare('INSERT OR IGNORE INTO user_setups (user_id, key, name, position, created_at) VALUES (?, ?, ?, ?, ?)');
+  DEFAULT_SETUPS.forEach(function (d, i) { ins.run(userId, d[0], d[1], i, now + i); });
+  return DEFAULT_SETUPS.map(function (d, i) { return { key: d[0], name: d[1], position: i, exclude: false, archived: false }; });
+}
+
 function unauthorized(res) {
   res.writeHead(401, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Unauthorized' }));
@@ -1497,7 +1510,7 @@ var httpServer = http.createServer(async function (req, res) {
         var jTagClose = Number(jTag.closeTime);
         var jSetupOk = jTag.setup == null || ['A', 'B', 'C'].indexOf(jTag.setup) !== -1;
         var jEmoOk = jTag.emotion == null || ['plan', 'fomo', 'revenge', 'boredom', 'fear'].indexOf(jTag.emotion) !== -1;
-        var jPatOk = jTag.pattern == null || ['breakout', 'bounce_trend', 'bounce_counter', 'range_hold'].indexOf(jTag.pattern) !== -1;
+        var jPatOk = jTag.pattern == null || userSetups(jDb, jUserId).some(function (x) { return x.key === jTag.pattern; });
         if (!/^[A-Z0-9]{2,30}$/.test(jTagSym) || !(jTagClose > 0) || !jSetupOk || !jEmoOk || !jPatOk || (!jTag.setup && !jTag.emotion && !jTag.pattern)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid tag' }));
@@ -1508,6 +1521,36 @@ var httpServer = http.createServer(async function (req, res) {
           .run(jUserId, jTagSym, Math.floor(jTagClose), jTag.setup || null, jTag.emotion || null, jTag.pattern || null, Date.now());
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+
+      // Your setups: GET the list; POST { action: 'add', name } | { action: 'rename', key, name }
+      // | { action: 'exclude', key, exclude } | { action: 'archive', key, archived }
+      if (req.url === '/api/journal/setups') {
+        if (req.method === 'POST') {
+          var jsBody = await new Promise(function (resolve) { var b = ''; req.on('data', function (c) { b += c; if (b.length > 4096) req.destroy(); }); req.on('end', function () { resolve(b); }); });
+          var js;
+          try { js = JSON.parse(jsBody || '{}'); } catch (e) { js = {}; }
+          var jsList = userSetups(jDb, jUserId);
+          var jsName = String(js.name || '').trim().slice(0, 40);
+          var jsHas = jsList.some(function (x) { return x.key === js.key; });
+          if (js.action === 'add' && jsName) {
+            jDb.prepare('INSERT INTO user_setups (user_id, key, name, position, created_at) VALUES (?, ?, ?, ?, ?)')
+              .run(jUserId, 's' + Date.now(), jsName, jsList.length, Date.now());
+          } else if (js.action === 'rename' && jsHas && jsName) {
+            jDb.prepare('UPDATE user_setups SET name = ? WHERE user_id = ? AND key = ?').run(jsName, jUserId, js.key);
+          } else if (js.action === 'exclude' && jsHas) {
+            jDb.prepare('UPDATE user_setups SET exclude = ? WHERE user_id = ? AND key = ?').run(js.exclude ? 1 : 0, jUserId, js.key);
+          } else if (js.action === 'archive' && jsHas) {
+            jDb.prepare('UPDATE user_setups SET archived = ? WHERE user_id = ? AND key = ?').run(js.archived ? 1 : 0, jUserId, js.key);
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid setup change' }));
+            return;
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ setups: userSetups(jDb, jUserId) }));
         return;
       }
 
@@ -1565,7 +1608,7 @@ var httpServer = http.createServer(async function (req, res) {
         var jEdge = computeEdge(jEdgeRows.map(function (r) {
           var e = journalRowToEntry(r);
           return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
-        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null });
+        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, setups: userSetups(jDb, jUserId) });
         jEdge.range = jEdgeRange;
         jEdge.days = jEdgeRows.length;
         res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -99,3 +99,26 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
   assert.equal(e.noPattern, 1);
   assert.deepEqual(e.untagged.map((u) => [u.symbol, u.closeTime, u.r]), [['YUSDT', 400, 1]]);
 });
+
+test('your own setups: named rows, excluded setup (misclicks) leaves the report, hidden setup shows only with trades', () => {
+  const d = [{ date: '2026-10-26', morning: {}, facts: { trades: [
+    { symbol: 'XUSDT', closeTime: 100, pnlNet: 1, result: 'win', planned: true, maxNotional: 100 },
+    { symbol: 'XUSDT', closeTime: 200, pnlNet: -5, result: 'loss', planned: false, maxNotional: 100 },
+    { symbol: 'XUSDT', closeTime: 300, pnlNet: 0.5, result: 'win', planned: true, maxNotional: 100 },
+  ] } }];
+  const tg = [
+    { symbol: 'XUSDT', close_time: 100, pattern: 's1' },
+    { symbol: 'XUSDT', close_time: 200, pattern: 'miss' },
+    { symbol: 'XUSDT', close_time: 300, pattern: 'old' },
+  ];
+  const setups = [
+    { key: 's1', name: 'Ложный пробой' },
+    { key: 'miss', name: 'Мисклик', exclude: true },
+    { key: 'old', name: 'Старый', archived: true },
+    { key: 'gone', name: 'Скрытый пустой', archived: true },
+  ];
+  const e = computeEdge(d, tg, { riskPct: 0.5, setups });
+  assert.equal(e.excluded, 1);
+  assert.deepEqual([e.execution.n, e.execution.clean], [2, 2]); // the misclick broke a rule but is not counted
+  assert.deepEqual(e.setups.map((x) => [x.key, x.name, x.n]), [['s1', 'Ложный пробой', 1], ['old', 'Старый', 1]]);
+});
