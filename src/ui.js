@@ -5,7 +5,7 @@ import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 
@@ -4359,13 +4359,18 @@ function _drawFVOverlays(ctx, rc, sym) {
   });
 }
 
+// Entry/exit triangles: with the briefing drawer open — every briefing day of
+// this coin; otherwise today's fills on it (loaded when the coin is opened and
+// refetched after each fill), so a plain open of the coin shows where you got in
 function _applyFVTradeMarkers(sym) {
+  if (!sym) { _fvTradeMarkersData = []; return; }
   var _drawer = document.getElementById('fv-briefing-drawer');
-  if (!sym || !_drawer || !_drawer.classList.contains('open')) { _fvTradeMarkersData = []; return; }
-  var briefingEntries = (state.briefing || []).filter(function (e) { return e.sym === sym; });
+  var dates = _drawer && _drawer.classList.contains('open')
+    ? (state.briefing || []).filter(function (e) { return e.sym === sym; }).map(function (e) { return e.date; })
+    : [todayDate()];
   var markers = [];
-  briefingEntries.forEach(function (e) {
-    var t = state.trades[sym + ':' + e.date];
+  dates.forEach(function (date) {
+    var t = state.trades[sym + ':' + date];
     if (!t || t.status !== 'ok' || !t.entries || !t.entries.length) return;
     t.entries.forEach(function (trade) {
       markers.push({
@@ -4435,6 +4440,7 @@ export function openCoinFullView(sym) {
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = sym;
+  fetchTrades(sym, todayDate()).then(function () { if (_fvSym === sym) _applyFVTradeMarkers(sym); });
 
   var overlay = document.getElementById('fv-overlay');
   if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; overlay.className = 'overlay'; document.body.appendChild(overlay); }
