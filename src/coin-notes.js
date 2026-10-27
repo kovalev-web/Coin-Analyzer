@@ -18,6 +18,16 @@ function _cssVar(name) {
 
 function _S(sym) { return String(sym || '').toUpperCase(); }
 
+// Note bubbles on the chart can be hidden (remembered in this browser)
+var SHOW_KEY = 'qt_notes_on_chart';
+export function notesOnChart() {
+  try { return localStorage.getItem(SHOW_KEY) !== '0'; } catch (e) { return true; }
+}
+function _setNotesOnChart(on) {
+  try { localStorage.setItem(SHOW_KEY, on ? '1' : '0'); } catch (e) {}
+  if (!on) clearNoteIcons();
+}
+
 export function notesFor(sym) { return state.coinNotes[_S(sym)] || []; }
 
 // Load a coin's notes once (later changes come through add / delete)
@@ -92,7 +102,9 @@ export function toggleNotePopover(sym, onSaved) {
   ensureCoinNotes(sym);
   var pop = document.createElement('div');
   pop.className = 'cn-pop';
-  pop.innerHTML = '<textarea class="ds-input cn-input" rows="2" placeholder="What do you see? Enter saves, Shift+Enter new line"></textarea>'
+  pop.innerHTML = '<label class="cn-show"><span>Show notes on chart</span>'
+    + '<span class="ds-switch"><input type="checkbox" data-notes-show="1"' + (notesOnChart() ? ' checked' : '') + '><i></i></span></label>'
+    + '<textarea class="ds-input cn-input" rows="2" placeholder="What do you see? Enter saves, Shift+Enter new line"></textarea>'
     + '<div class="cn-pop-list"></div>';
   wrap.appendChild(pop);
   var island = wrap.querySelector('.fv-coin-info');
@@ -119,6 +131,7 @@ export function toggleNotePopover(sym, onSaved) {
       import('./ui.js').then(function (ui) { ui.showToast(err.message); });
     });
   });
+  pop.querySelector('[data-notes-show]').addEventListener('change', function (e) { _setNotesOnChart(e.target.checked); });
   pop.addEventListener('click', function (e) {
     var del = e.target.closest('[data-note-del]');
     if (!del) return;
@@ -138,7 +151,7 @@ export function drawNoteIcons(ctx, series, chart, sym, tfSec, w, h) {
   N.hits = [];
   N.canvas = ctx.canvas;
   var list = notesFor(sym);
-  if (!list.length || !series || !chart) return;
+  if (!list.length || !series || !chart || !notesOnChart()) return;
   var fill = _cssVar('--ink-deep'), ink = _cssVar('--paper');
   list.forEach(function (n) {
     if (!(n.price > 0)) return;
