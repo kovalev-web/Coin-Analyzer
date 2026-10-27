@@ -20,8 +20,8 @@ function plural(n, one, few, many) {
 
 // Findings as one plain table: what, how it went, effect, what to do
 function findingsHTML(title, list, good, empty) {
-  if (!list.length) return '<h4 class="edge-h">' + title + '</h4><div class="edge-empty">' + empty + '</div>';
-  return '<h4 class="edge-h">' + title + '</h4><table class="edge-list"><thead><tr>'
+  if (!list.length) return '<div class="edge-panel"><h4 class="edge-h">' + title + '</h4><div class="edge-empty">' + empty + '</div></div>';
+  return '<div class="edge-panel"><h4 class="edge-h">' + title + '</h4><table class="edge-list"><thead><tr>'
     + '<th>Что</th><th>Сделок</th><th>В плюс</th><th>Итог, USDT</th><th title="Сколько принесло или унесло сверх того же числа твоих средних сделок">Влияние</th><th>Что делать</th>'
     + '</tr></thead><tbody>' + list.map(function (f) {
       return '<tr><td><b>' + keyLabel(f.key) + '</b><span>' + f.title + '</span></td>'
@@ -29,7 +29,7 @@ function findingsHTML(title, list, good, empty) {
         + '<td class="' + (f.pnl >= 0 ? 'up' : 'dn') + '">' + money(f.pnl) + '</td>'
         + '<td class="' + (good ? 'up' : 'dn') + '"><b>' + money(f.impact) + '</b></td>'
         + '<td>' + f.advice + '</td></tr>';
-    }).join('') + '</tbody></table>';
+    }).join('') + '</tbody></table></div>';
 }
 
 function tableHTML(rows) {
@@ -71,8 +71,10 @@ export function renderEdgeSection(container) {
         ? '<div class="edge-sample"><div class="edge-sample-bar"><i style="width:' + Math.round(x.sample.ratio * 100) + '%"></i></div>'
           + '<span>Данных мало: ' + t.n + ' из ' + x.sample.minN + ' сделок. Выводы предварительные.</span></div>'
         : '')
-      + findingsHTML('Что работает', x.works, true, 'Пока ничего не выделяется')
-      + findingsHTML('Что стоит денег', x.costs, false, 'Ничего не теряет больше твоей средней сделки')
+      + '<div class="edge-panels">'
+        + findingsHTML('Что работает', x.works, true, 'Пока ничего не выделяется')
+        + findingsHTML('Что стоит денег', x.costs, false, 'Ничего не теряет больше твоей средней сделки')
+      + '</div>'
       + (x.flat.length ? '<div class="edge-flat">Не с чем сравнить: ' + x.flat.join(', ').toLowerCase()
         + ' — все сделки в одной группе. Появятся, когда дни будут разными.</div>' : '')
       + '<details class="edge-details"><summary>Все разрезы</summary>'
