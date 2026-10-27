@@ -828,10 +828,14 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
 .dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));right:var(--ven-w, 0px);}
 
-/* Mine | Volume | Price on a slightly darker surface than the tape and clusters
-   (painted under the rows, so order / PnL tints still show on top) */
+/* Mine | Volume | Price on a slightly darker surface than the tape; clusters
+   halfway between, so they don't merge with the tape (painted under the rows,
+   so order / PnL tints still show on top) */
 .fv-dom.has-cl .dom-ladder,.fv-dom.has-tape .dom-ladder,.fv-dom.has-cl .dom-cols,.fv-dom.has-tape .dom-cols{
-  background:linear-gradient(to right,var(--paper) calc(var(--space-4) + var(--tape-w) + var(--cl-w)),var(--cloud) 0);
+  background:linear-gradient(to right,
+    var(--paper) calc(var(--space-4) + var(--tape-w)),
+    color-mix(in srgb,var(--cloud) 50%,var(--paper)) 0 calc(var(--space-4) + var(--tape-w) + var(--cl-w)),
+    var(--cloud) 0);
 }
 
 
