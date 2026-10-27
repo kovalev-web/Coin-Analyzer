@@ -1473,6 +1473,16 @@ function _jumpTo(price) {
 
 function _fmtUsd(n) { return n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2); }
 
+// Price move from the entry in the position's favour, % (+ = in profit direction)
+function _moveFromEntry(info) {
+  return info.avgEntry ? (info.exit - info.avgEntry) / info.avgEntry * 100 * (info.amt > 0 ? 1 : -1) : 0;
+}
+
+function _movePct(info) {
+  var m = _moveFromEntry(info);
+  return (m >= 0 ? '+' : '−') + Math.abs(m).toFixed(2) + '%';
+}
+
 function _fmtPnl(info) {
   return (info.pnl >= 0 ? '+' : '') + info.pnl.toFixed(2) + ' USDT (' + (info.pct >= 0 ? '+' : '') + info.pct.toFixed(2) + '%)';
 }
@@ -1586,9 +1596,10 @@ function _syncBand() {
   T.zone.setData({
     entry: info.entry, exit: info.exit, time: openSec, long: info.amt > 0,
     upColor: getCSSVar('--bullish'), dnColor: getCSSVar('--danger'),
-    // The label is the real PnL at the price you can close at now
-    color: getCSSVar(info.up ? '--bullish' : '--danger'),
-    label: _fmtPnl(info),
+    // The label is only how far the price went from the entry (at the price you
+    // can close at now); the dollars are in the ladder footer
+    color: getCSSVar(_moveFromEntry(info) >= 0 ? '--bullish' : '--danger'),
+    label: _movePct(info),
   });
 }
 
@@ -1613,11 +1624,9 @@ function _syncLines() {
   if (!series || !T.sym) { _clearLines(); return; }
   var specs = [];
   var pos = _position();
-  if (pos) specs.push({ price: Number(pos.entryPrice), color: '--primary', title: (Number(pos.amount) > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(Number(pos.amount)) * Number(pos.entryPrice)) + ' $', style: 0 });
-  // Breakeven moves away from the entry after a partial close (and by the fees)
-  if (pos && pos.breakEven != null && Math.abs(Number(pos.breakEven) - Number(pos.entryPrice)) / Number(pos.entryPrice) > 0.0002) {
-    specs.push({ price: Number(pos.breakEven), color: '--primary', title: 'BE', style: 2 });
-  }
+  // Entry: a plain dashed line in the text color (white on dark), dashed like the
+  // alert lines, only its price on the axis — sizes and PnL are in the ladder
+  if (pos) specs.push({ price: Number(pos.entryPrice), color: '--ink-deep', text: '--paper', title: '', style: 2 });
   // One line per price and side, with the summed USDT of all orders there
   var sums = {};
   T.account.orders.forEach(function (o) {
@@ -1643,7 +1652,7 @@ function _syncLines() {
   specs.forEach(function (s) {
     var c = getCSSVar(s.color);
     try {
-      T.lines.push(series.createPriceLine({ price: s.price, color: c, lineWidth: 1, lineStyle: s.style, axisLabelVisible: true, axisLabelColor: c, axisLabelTextColor: '#fff', title: s.title }));
+      T.lines.push(series.createPriceLine({ price: s.price, color: c, lineWidth: 1, lineStyle: s.style, axisLabelVisible: true, axisLabelColor: c, axisLabelTextColor: s.text ? getCSSVar(s.text) : '#fff', title: s.title }));
     } catch (e) {}
   });
 }
