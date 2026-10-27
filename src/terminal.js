@@ -11,7 +11,7 @@
 // Ladder data comes from the trader's own environment (testnet or live), never
 // from the main chart feed: testnet prices differ from the real market.
 
-import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv } from './api.js';
+import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv, wsConnected } from './api.js';
 import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
@@ -147,6 +147,42 @@ export function checkAccess() {
     return false;
   }).finally(function () { T.accessPromise = null; });
   return T.accessPromise;
+}
+
+// Account data can miss a load (the server restarting, a dropped socket) and
+// then the panel would show no balance until a page reload: reload it after
+// every reconnect (a failed access check is retried here too), and every 15 s
+// while the panel is open without a USDT balance
+var _wsWasUp = false;
+on('ws:status', function () {
+  if (wsConnected && !_wsWasUp) _reloadAccount();
+  _wsWasUp = wsConnected;
+});
+setInterval(function () {
+  var hasUsdt = T.account.balances.some(function (b) { return b.asset === 'USDT'; });
+  if (T.open && T.sym && T.access && !hasUsdt) _reloadAccount();
+}, 15000);
+
+function _reloadAccount() {
+  if (!T.open || !T.sym) return;
+  if (T.access === false) {
+    // The first check failed: ask again and rebuild the panel when it works
+    T.access = null;
+    checkAccess().then(function (s) {
+      if (!s || !T.open) return;
+      var sym = T.sym;
+      T.sym = null;
+      _openPanel(sym);
+    });
+    return;
+  }
+  if (!T.access) return;
+  tradeRequest('GET', 'account').then(function (a) {
+    if (!a || !a.balances) return;
+    T.account = a;
+    emit('terminal:account');
+    _queueRender();
+  }).catch(function () {});
 }
 
 function _setMode(m) {
