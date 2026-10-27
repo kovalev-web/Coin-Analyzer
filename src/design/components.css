@@ -585,8 +585,12 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row:hover{background:var(--fog);}
 .dom-row.spread .dom-c-price{color:var(--graphite);}
 .dom-row.bid .dom-c-price,.dom-row.ask .dom-c-price{color:var(--ink-deep);}
-.dom-row.bid .dom-c-price{background:color-mix(in srgb,var(--primary) 10%,transparent);}
-.dom-row.ask .dom-c-price{background:color-mix(in srgb,var(--danger) 10%,transparent);}
+.dom-row.ask .dom-c-vol,.dom-row.ask .dom-c-price{background:color-mix(in srgb,var(--danger) 14%,transparent);}
+.dom-row.bid .dom-c-vol,.dom-row.bid .dom-c-price{background:color-mix(in srgb,var(--bullish) 14%,transparent);}
+/* the spread at a glance: best ask and best bid rows filled solid */
+.dom-row.best-ask .dom-c-vol,.dom-row.best-ask .dom-c-price{background:var(--danger);}
+.dom-row.best-bid .dom-c-vol,.dom-row.best-bid .dom-c-price{background:var(--bullish);}
+.dom-row.best-ask .dom-c-vol b,.dom-row.best-ask .dom-c-price,.dom-row.best-bid .dom-c-vol b,.dom-row.best-bid .dom-c-price{color:#fff;}
 .dom-row.entry{box-shadow:inset 0 0 0 1px var(--primary);}
 .dom-c-price{text-align:center;font-weight:var(--font-medium);}
 .dom-c-mine{display:flex;gap:var(--space-1);overflow:hidden;}
@@ -613,13 +617,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-pnl{font-size:var(--text-sm);}
 .dom-mine.pending{opacity:0.5;}
 .dom-mine.cancelling{opacity:0.4;text-decoration:line-through;}
-.dom-row.last-buy .dom-c-price{background:color-mix(in srgb,var(--primary) 45%,transparent);}
-.dom-row.last-sell .dom-c-price{background:color-mix(in srgb,var(--danger) 45%,transparent);}
-.dom-row.flash.last-buy .dom-c-price{background:var(--primary);color:#fff;}
-.dom-row.flash.last-sell .dom-c-price{background:var(--danger);color:#fff;}
-/* Binance futures spread: a 2px line under the best ask, only across our
-   Volume | Price (the other venues draw their own) */
-.dom-row.best-ask::after{content:'';position:absolute;bottom:0;height:2px;left:calc(var(--tape-w) + var(--cl-w) + 52px);right:var(--ven-w, 0px);background:var(--graphite);pointer-events:none;}
+.dom-row.last-buy .dom-c-price,.dom-row.last-sell .dom-c-price{box-shadow:inset 0 0 0 1px var(--ink-deep);}
+.dom-row.flash.last-buy .dom-c-price,.dom-row.flash.last-sell .dom-c-price{box-shadow:inset 0 0 0 2px var(--ink-deep);}
 .dom-book{height:var(--h-btn-sm);padding:0 var(--space-3);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;white-space:nowrap;}
 .dom-book.active{background:var(--danger);color:var(--paper);}
 .dom-viewonly{padding:var(--space-2) var(--space-4);background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);font-size:var(--text-2xs);font-weight:var(--font-medium);text-align:center;}
@@ -633,9 +632,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row{height:16px;font-size:var(--text-ladder);line-height:16px;font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px solid color-mix(in srgb,var(--steel) 35%,transparent);}
 .dom-c-vol{position:relative;height:100%;display:flex;align-items:center;}
 .dom-c-vol i{position:absolute;top:1px;bottom:1px;left:0;width:0;opacity:0;border-radius:0 2px 2px 0;}
-.dom-row.ask .dom-c-vol i{background:var(--danger);}
-.dom-row.bid .dom-c-vol i{background:var(--primary);}
-.dom-row .dom-c-vol.dim i{background:var(--graphite);}
+.dom-row.ask .dom-c-vol i,.dom-row.bid .dom-c-vol i,.dom-row .dom-c-vol.dim i{background:var(--level-deep);}
+.dom-row.best-ask .dom-c-vol i,.dom-row.best-bid .dom-c-vol i{background:color-mix(in srgb,var(--level-deep) 60%,#fff);}
 .dom-c-vol b{position:relative;font-weight:var(--font-medium);padding:0 var(--space-2);color:var(--ink-deep);}
 .dom-c-vol.tiny b{color:var(--graphite);}
 .dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price{font-weight:var(--font-medium);}
@@ -784,8 +782,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.has-order.sell{--row-tint:color-mix(in srgb,var(--danger) 9%,transparent);}
 /* position (PnL zone) and own-order tints: only across Volume | Price,
    not over the tape, clusters, Mine (52px grid column) or other venues */
-.dom-row.pnl-up,.dom-row.pnl-dn,.dom-row.has-order{
-  background:linear-gradient(to right,transparent calc(var(--tape-w) + var(--cl-w) + 52px),var(--row-tint) 0 calc(100% - var(--ven-w, 0px)),transparent 0);
+.dom-row.pnl-up::before,.dom-row.pnl-dn::before,.dom-row.has-order::before{
+  content:'';position:absolute;top:0;bottom:0;left:calc(var(--tape-w) + var(--cl-w) + 52px);right:var(--ven-w, 0px);background:var(--row-tint);pointer-events:none;z-index:1;
 }
 .dom-row.has-order:hover{background:var(--fog);}
 
@@ -823,21 +821,21 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom{--tape-w:0px;}
 .fv-dom.has-tape{--tape-w:190px;}
 .fv-dom.has-tape{width:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));flex-basis:calc(270px + var(--tape-w) + var(--cl-w) + var(--ven-w, 0px));}
-.dom-cols,.dom-row{grid-template-columns:var(--tape-w) var(--cl-w) 52px 1fr 72px var(--ven-w, 0px);}
+.dom-cols,.dom-row{grid-template-columns:var(--cl-w) var(--tape-w) 52px 1fr 72px var(--ven-w, 0px);}
 .dom-c-mine,.dom-cols>span:nth-child(1){grid-column:3;}
 .dom-c-vol,.dom-cols>span:nth-child(2){grid-column:4;}
 .dom-c-price,.dom-cols>span:nth-child(3){grid-column:5;}
-.dom-c-cl,.dom-cols-cl{grid-column:2;}
-.dom-cols-tape{grid-column:1;grid-row:1;display:none;}
+.dom-c-cl,.dom-cols-cl{grid-column:1;}
+.dom-cols-tape{grid-column:2;grid-row:1;display:none;}
 .fv-dom.has-tape .dom-cols-tape{display:block;}
-.dom-tape{position:absolute;left:var(--space-4);width:var(--tape-w);pointer-events:none;z-index:1;}
+.dom-tape{position:absolute;left:calc(var(--space-4) + var(--cl-w));width:var(--tape-w);pointer-events:none;z-index:1;}
 .fv-dom.has-cl .dom-ruler,.fv-dom.has-tape .dom-ruler{left:calc(var(--space-4) + var(--tape-w) + var(--cl-w));}
 
 /* cluster numbers: regular weight, semi-transparent, so they don't compete with the ladder */
 .dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
 
-/* Mine | Volume | Price on a slightly darker surface than the tape; clusters
+/* clusters | tape | Mine | Volume | Price. The ladder on a darker surface than the tape; clusters
    and the other venues' books halfway between, so they stand apart (painted under the rows,
    so order / PnL tints still show on top) */
 .fv-dom.has-ven{--ven-pad:var(--space-4);}
@@ -845,8 +843,9 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom.has-ven .dom-ladder,.fv-dom.has-ven .dom-cols{
   --side-bg:color-mix(in srgb,var(--cloud) 50%,var(--paper));
   background:linear-gradient(to right,
-    var(--paper) calc(var(--space-4) + var(--tape-w)),
-    var(--side-bg) 0 calc(var(--space-4) + var(--tape-w) + var(--cl-w)),
+    var(--paper) var(--space-4),
+    var(--side-bg) 0 calc(var(--space-4) + var(--cl-w)),
+    var(--paper) 0 calc(var(--space-4) + var(--cl-w) + var(--tape-w)),
     var(--cloud) 0 calc(100% - var(--ven-pad, 0px) - var(--ven-w, 0px)),
     var(--side-bg) 0);
 }
