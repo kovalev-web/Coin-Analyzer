@@ -1534,18 +1534,18 @@ PnlZone.prototype._drawZone = function (target) {
     var g = self._geom(scope.mediaSize.width);
     if (!g) return;
     var ctx = scope.context, w = scope.mediaSize.width - g.x;
+    // Fill only, no edges of its own. It stops ZONE_GAP px short of the current
+    // price so the chart's dashed price line lies on the plain background
+    // instead of mixing with the tint.
+    var ZONE_GAP = 2;
+    var yExit = Math.round(g.yExit), yEntry = Math.round(g.yEntry);
+    var a = yEntry < yExit ? yEntry : yExit + ZONE_GAP + 1;
+    var b = yEntry < yExit ? yExit - ZONE_GAP : yEntry;
+    if (b <= a) return;
     ctx.save();
     ctx.fillStyle = g.color;
     ctx.globalAlpha = 0.12;
-    ctx.fillRect(g.x, g.top, w, g.h);
-    ctx.globalAlpha = 0.7;
-    ctx.strokeStyle = g.color;
-    ctx.setLineDash([4, 3]);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(g.x, Math.round(g.yExit) + 0.5); ctx.lineTo(g.x + w, Math.round(g.yExit) + 0.5);
-    ctx.moveTo(g.x + 0.5, g.top); ctx.lineTo(g.x + 0.5, g.top + g.h);
-    ctx.stroke();
+    ctx.fillRect(g.x, a, w, b - a);
     ctx.restore();
   });
 };
