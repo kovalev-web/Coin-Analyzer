@@ -906,10 +906,11 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
    when a venue trades above / below Binance its line sits higher / lower */
 .dom-c-ven b.best-ask{box-shadow:inset 0 -2px 0 var(--graphite);}
 
-/* open position: a bright band over Volume | Price from the breakeven to the
-   current price, with a thick edge in the PnL color — stands out from the
+/* open position: a bright see-through band in the PnL color (green in profit,
+   red in loss) over Volume | Price from the breakeven to the current price, with a thick edge — stands out from the
    red / green side tints (wins over the faint own-order tint) */
-.dom-row.pnl-up,.dom-row.pnl-dn{--row-tint:color-mix(in srgb,var(--ink-deep) 22%,transparent);}
+.dom-row.pnl-up{--row-tint:color-mix(in srgb,var(--bullish) 38%,transparent);}
+.dom-row.pnl-dn{--row-tint:color-mix(in srgb,var(--danger) 38%,transparent);}
 .dom-row.pnl-up{--pnl-edge:var(--bullish);}
 .dom-row.pnl-dn{--pnl-edge:var(--danger);}
 .dom-row.pnl-up::before,.dom-row.pnl-dn::before{box-shadow:inset 4px 0 0 var(--pnl-edge);}
