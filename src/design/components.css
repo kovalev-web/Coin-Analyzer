@@ -1029,3 +1029,10 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .setup-tip svg{display:block;width:100%;height:auto;font-family:inherit;}
 [data-setup-diagram]{cursor:help;}
 button[data-setup-diagram]{cursor:pointer;}
+/* journal: PnL per day under the chart */
+.journal-days{margin:var(--space-8) 0;}
+.journal-days .edge-list{table-layout:auto;}
+.journal-days .edge-list th,.journal-days .edge-list td{width:auto;padding-left:0;padding-right:var(--space-8);}
+.journal-days .edge-list th:nth-child(n+2),.journal-days .edge-list td:nth-child(n+2){text-align:right;}
+.journal-days .edge-list th:first-child,.journal-days .edge-list td:first-child{width:100%;text-align:left;}
+.journal-days .edge-list th:last-child,.journal-days .edge-list td:last-child{padding-right:0;}

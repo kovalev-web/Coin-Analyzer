@@ -1617,6 +1617,20 @@ export function hideEveningModal() {
   el.remove();
 }
 
+// PnL per day from every trade (same data as the chart), newest first
+export function renderJournalDays(container, daily) {
+  if (!container) return;
+  if (!daily || !daily.length) { container.innerHTML = ''; return; }
+  var rows = daily.slice().reverse();
+  container.innerHTML = '<div class="edge-panel journal-days"><h4 class="edge-h">По дням</h4>'
+    + '<table class="edge-list"><thead><tr><th>Дата</th><th>Сделок</th><th>PnL, USDT</th></tr></thead><tbody>'
+    + rows.map(function (d) {
+        return '<tr><td>' + d.date.slice(8, 10) + '.' + d.date.slice(5, 7) + '</td><td>' + d.tradeCount + '</td>'
+          + '<td class="' + (d.pnl >= 0 ? 'up' : 'dn') + '">' + (d.pnl > 0 ? '+' : d.pnl < 0 ? '−' : '') + Math.abs(d.pnl).toFixed(2) + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div>';
+}
+
 export function renderJournalChart(container, history) {
   if (!container) return;
   // Re-rendering (e.g. interval change) leaves a stale chart instance behind
@@ -1627,7 +1641,7 @@ export function renderJournalChart(container, history) {
   }
   container.innerHTML = '';
   if (!history || !history.length) {
-    container.innerHTML = '<div style="color:var(--graphite);font-size:var(--text-xs);padding:var(--space-8) 0;">No PnL data yet — complete an evening review to start tracking</div>';
+    container.innerHTML = '<div style="color:var(--graphite);font-size:var(--text-xs);padding:var(--space-8) 0;">Сделок за период пока нет</div>';
     return;
   }
 

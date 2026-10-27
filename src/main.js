@@ -8,7 +8,7 @@ import {
   fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary, loadJournalAiSummaryCache,
 } from './api.js';
 import {
-  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
+  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote, renderJournalDays,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -945,6 +945,7 @@ var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m'
 function _renderJournalPnlChart() {
   var daily = (state.journalSummary && state.journalSummary.daily) || [];
   renderJournalChart(document.getElementById('journal-pnl-chart'), daily);
+  renderJournalDays(document.getElementById('journal-days-section'), daily);
 }
 
 function _refreshJournalSummary() {
@@ -987,10 +988,9 @@ registerRoute('/journal', function () {
     '<div id="journal-stats-col" class="journal-stats-col"></div>' +
     '</div>' +
     '<div id="journal-summary-section"></div>' +
+    '<div id="journal-days-section"></div>' +
     '<div id="journal-edge-section"></div>' +
     '</div>';
-  // The day-by-day table is gone: it listed days the report doesn't count (the
-  // journal starts over on 2026-10-28); the cards are still filled from the topbar
   renderEdgeSection(document.getElementById('journal-edge-section'));
   renderJournalSummarySection();
   fetchJournalSummary(state.journalRange).then(function () {

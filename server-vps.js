@@ -1095,6 +1095,39 @@ var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m'
 // Shared by /api/journal/summary and /api/journal/ai-summary: gathers watchlist
 // entries + (cached or fresh) Binance fills for the range, and aggregates pnl/win-rate.
 // Past days are cached forever in Redis (immutable); today is always refetched.
+// Every trade of every day from `fromDate` to `today` (user's days), from the
+// day facts (journal/facts.js). Days two or more days old are cached in Redis;
+// yesterday and today are recounted. null without Binance access.
+async function allTradesDaily(userId, fromDate, today) {
+  var dates = [];
+  for (var d = new Date(fromDate + 'T00:00:00Z'); d.toISOString().slice(0, 10) <= today; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  var out = { pnl: 0, tradeCount: 0, winCount: 0, daily: [] }, any = false;
+  for (var i = 0; i < dates.length; i++) {
+    // A trade opened late in a day can close after midnight: only days at least
+    // two days old are final and cached
+    var date = dates[i], key = 'day_summary:' + userId + ':' + date, sum = null, final = i < dates.length - 2;
+    if (final) {
+      var c = await redis(['GET', key]);
+      if (c && c.result) { try { sum = JSON.parse(c.result); } catch (e) {} }
+    }
+    if (!sum) {
+      var f = null;
+      try { f = await buildDayFacts(userId, date); } catch (e) { console.error('[DailyAll]', date, e.message); }
+      if (!f) continue;
+      sum = { trades: f.summary.trades, wins: f.summary.wins, pnl: f.summary.pnlNet };
+      if (final) await redis(['SET', key, JSON.stringify(sum)]);
+    }
+    any = true;
+    out.pnl += sum.pnl;
+    out.tradeCount += sum.trades;
+    out.winCount += sum.wins;
+    if (sum.trades || sum.pnl) out.daily.push({ date: date, pnl: Math.round(sum.pnl * 100) / 100, tradeCount: sum.trades });
+  }
+  return any ? out : null;
+}
+
 async function computeJournalRangeStats(userId, today, range) {
   var days = JOURNAL_RANGE_DAYS[range];
   if (!days) throw new Error('Invalid range');
@@ -1206,6 +1239,15 @@ async function computeJournalRangeStats(userId, today, range) {
   var daily = Object.keys(dailyPnl).sort().map(function (d) {
     return { date: d, pnl: parseFloat(dailyPnl[d].toFixed(2)), tradeCount: dailyTradeCount[d] || 0 };
   });
+
+  // The chart, the PnL cards and the day table count EVERY trade, not only
+  // coins from the briefing or days with a filled card: each day's facts from
+  // Binance (the same trades as the evening card and My edge), summed. The
+  // briefing data above stays only for the AI summary.
+  var all = await allTradesDaily(userId, fromDate, today);
+  if (all) {
+    totalPnl = all.pnl; tradeCount = all.tradeCount; winCount = all.winCount; daily = all.daily;
+  }
 
   return {
     entries: entries,
