@@ -605,8 +605,8 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-status.err{color:var(--danger);}
 .dom-hint{color:var(--graphite);font-size:var(--text-2xs);line-height:var(--leading-relaxed);}
 #fv-dom-btn.active{background:var(--fog);color:var(--primary);}
-.dom-row.pnl-up{background:color-mix(in srgb,var(--bullish) 12%,transparent);}
-.dom-row.pnl-dn{background:color-mix(in srgb,var(--danger) 12%,transparent);}
+.dom-row.pnl-up{--row-tint:color-mix(in srgb,var(--bullish) 12%,transparent);}
+.dom-row.pnl-dn{--row-tint:color-mix(in srgb,var(--danger) 12%,transparent);}
 .dom-row.pnl-up:hover,.dom-row.pnl-dn:hover{background:var(--fog);}
 .dom-mine.pos{background:var(--primary);color:var(--paper);}
 .dom-pnl{font-size:var(--text-sm);}
@@ -774,9 +774,14 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row,.dom-c-price,.dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price,.dom-c-vol b,.dom-mine,.dom-ruler-tag{font-size:var(--text-ladder);font-weight:var(--ladder-weight);}
 
 /* rows with your resting orders: a faint tint across the whole row */
-.dom-row.has-order{background:color-mix(in srgb,var(--ink-deep) 6%,transparent);}
-.dom-row.has-order.buy{background:color-mix(in srgb,var(--bullish) 9%,transparent);}
-.dom-row.has-order.sell{background:color-mix(in srgb,var(--danger) 9%,transparent);}
+.dom-row.has-order{--row-tint:color-mix(in srgb,var(--ink-deep) 6%,transparent);}
+.dom-row.has-order.buy{--row-tint:color-mix(in srgb,var(--bullish) 9%,transparent);}
+.dom-row.has-order.sell{--row-tint:color-mix(in srgb,var(--danger) 9%,transparent);}
+/* position (PnL zone) and own-order tints: only across Mine | Volume | Price,
+   not over the tape, clusters or other venues */
+.dom-row.pnl-up,.dom-row.pnl-dn,.dom-row.has-order{
+  background:linear-gradient(to right,transparent calc(var(--tape-w) + var(--cl-w)),var(--row-tint) 0 calc(100% - var(--ven-w, 0px)),transparent 0);
+}
 .dom-row.has-order:hover{background:var(--fog);}
 
 /* head on one row: Live/Test · ping · scale · settings. The ping badge gives
