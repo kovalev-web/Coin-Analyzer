@@ -1803,7 +1803,7 @@ function _renderTag() {
   var q = T.tagQueue[T.tagQueue.length - 1];
   if (!q) { el.innerHTML = ''; return; }
   if (!state.setups) { ensureSetups().then(_renderTag); }
-  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + ' closed</span>'
+  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + (q.pattern ? ' — сетап сохранён, остальное по желанию' : ' closed — какой сетап?') + '</span>'
     + '<span class="dom-tag-group">' + setupButtons().map(function (x) {
         return '<button data-tag-pattern="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
       }).join('') + '</span>'
@@ -1823,7 +1823,18 @@ function _tagClick(kind, value) {
   var body = { symbol: q.symbol, closeTime: q.closeTime };
   body[kind] = value;
   saveTradeTag(body).catch(function (e) { _setStatus(e.message, true); });
-  if (q.pattern && q.setup && q.emotion) T.tagQueue.pop();
+  // Only the setup is required (it's what My edge needs). Once it's chosen the
+  // row stays a few seconds for the optional quality / emotion, then goes.
+  if (q.pattern && q.setup && q.emotion) _dropTag(q);
+  else if (q.pattern && !q.dropTimer) q.dropTimer = setTimeout(function () { _dropTag(q); }, TAG_OPTIONAL_MS);
+  _renderTag();
+}
+
+var TAG_OPTIONAL_MS = 6000;
+function _dropTag(q) {
+  clearTimeout(q.dropTimer);
+  var i = T.tagQueue.indexOf(q);
+  if (i !== -1) T.tagQueue.splice(i, 1);
   _renderTag();
 }
 

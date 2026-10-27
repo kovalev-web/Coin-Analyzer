@@ -99,6 +99,22 @@ function hourBlock(h) {
 
 // days: [{ date, facts, morning: { sleepHours, sleepQuality, energy, carryover, focus } }]
 // tags: [{ symbol, close_time, setup, emotion }]
+// The report's period: a preset (week / month / all) or explicit from–to
+// (YYYY-MM-DD), never before `start` nor after `today`. → { from, to, preset }
+var PERIOD_DAYS = { week: 7, month: 30 };
+function edgePeriod(q, today, start) {
+  var re = /^\d{4}-\d{2}-\d{2}$/;
+  var clamp = function (d) { return d < start ? start : d > today ? today : d; };
+  if (q && re.test(q.from || '') && re.test(q.to || '') && q.from <= q.to) {
+    return { from: clamp(q.from), to: clamp(q.to), preset: null };
+  }
+  var preset = q && (PERIOD_DAYS[q.range] || q.range === 'all') ? q.range : 'all';
+  if (preset === 'all') return { from: start, to: today, preset: 'all' };
+  var d = new Date(today + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - PERIOD_DAYS[preset] + 1);
+  return { from: clamp(d.toISOString().slice(0, 10)), to: today, preset: preset };
+}
+
 // opts: { riskPct, workingVolume, setups } — risk per trade in % and the
 // working volume in USDT (Account settings); the user's setups [{ key, name, exclude, archived }]. Trades tagged
 // with an excluded setup (misclicks, tests) are left out of the whole report.
@@ -183,8 +199,15 @@ function computeEdge(days, tags, opts) {
   });
   var setups = setupList.filter(function (p) { return !p.exclude; }).map(function (p) {
     var st = setupStats(byRules.filter(function (x) { return x.tag.pattern === p.key; }).map(function (x) { return x.r; }));
-    return Object.assign({ key: p.key, name: p.name, archived: !!p.archived, enough: st.n >= MIN_N }, st);
-  }).filter(function (p) { return !p.archived || p.n > 0; }); // a hidden setup still shows while it has trades
+    // Every trade tagged with this setup (breaks included, marked) — for the review list
+    var list = trades.filter(function (x) { return x.tag && x.tag.pattern === p.key; })
+      .sort(function (a, b) { return (b.t.closeTime || 0) - (a.t.closeTime || 0); }).slice(0, 100)
+      .map(function (x) {
+        return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
+          pnlNet: x.t.pnlNet, r: x.r == null ? null : Math.round(x.r * 100) / 100, broken: x.broken };
+      });
+    return Object.assign({ key: p.key, name: p.name, archived: !!p.archived, enough: st.n >= MIN_N, trades: list }, st);
+  }).filter(function (p) { return !p.archived || p.n > 0 || p.trades.length; }); // a hidden setup still shows while it has trades
   var allByRules = Object.assign({ key: 'all', enough: byRules.length >= MIN_N }, setupStats(byRules.map(function (x) { return x.r; })));
   // Everything you actually traded, breaks included — the real result in R —
   // and what the trades with breaks cost on their own
@@ -237,4 +260,4 @@ function computeEdge(days, tags, opts) {
   };
 }
 
-module.exports = { computeEdge, tradeR, riskUsd, brokenRules, setupStats, weekOf, MIN_N, TAG_MATCH_MS, SETUP, EMOTION, PATTERNS, RULES, STOP_OVERRUN_R };
+module.exports = { computeEdge, edgePeriod, tradeR, riskUsd, brokenRules, setupStats, weekOf, MIN_N, TAG_MATCH_MS, SETUP, EMOTION, PATTERNS, RULES, STOP_OVERRUN_R };

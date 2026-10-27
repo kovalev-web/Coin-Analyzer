@@ -1014,8 +1014,11 @@ export function deleteCoinNote(sym, id) {
     });
 }
 
-export function fetchJournalEdge(range) {
-  return fetch(API_BASE + '/api/journal/edge?range=' + (range || '3m'), { credentials: 'include' })
+// period: { range: 'week' | 'month' | 'all' } or { from, to } (YYYY-MM-DD)
+export function fetchJournalEdge(period) {
+  var p = period || {};
+  var qs = p.from && p.to ? 'from=' + p.from + '&to=' + p.to : 'range=' + (p.range || 'all');
+  return fetch(API_BASE + '/api/journal/edge?' + qs, { credentials: 'include' })
     .then(function (r) { return r.ok ? r.json() : null; })
     .catch(function () { return null; });
 }

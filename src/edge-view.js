@@ -8,11 +8,14 @@ import { fetchJournalEdge, saveTradeTag } from './api.js';
 import { tzDateStr, tzTimeStr, escHtml } from './utils.js';
 import { ensureSetups, changeSetup, setupButtons, diagramAttr } from './setups.js';
 import { state } from './state.js';
+import { on } from './events.js';
+import { ensureCoinNotes, notesOnDay } from './coin-notes.js';
 import { conclusions } from './edge-insights.js';
 
-var RANGES = [['1m', '1 мес'], ['3m', '3 мес'], ['6m', '6 мес'], ['all', 'Всё']];
+var RANGES = [['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']];
 
-var _range = '3m';
+var _period = { range: 'all' }; // or { from, to }
+var _openSetup = null;         // setup row expanded to its trades
 var _editing = false; // setup list editor open
 
 function money(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2); }
@@ -68,16 +71,37 @@ function setupsHTML(e) {
         var cls = (s.key === 'all' ? 'total ' : '') + (s.n && !s.enough ? 'thin' : '');
         var name = s.key === 'all' ? 'Все сетапы по правилам' : s.key === 'everything' ? 'Все сделки, с нарушениями' : escHtml(s.name || s.key);
         if (s.key === 'everything') cls = 'real';
-        if (!s.n) return '<tr class="' + cls + ' none"><td>' + name + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
-        return '<tr class="' + cls + '"><td' + diagramAttr(s.key) + '>' + name + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
+        // A setup with trades opens its list (click the name)
+        var open = s.trades && s.trades.length;
+        if (open) cls += ' openable' + (_openSetup === s.key ? ' open' : '');
+        var nameCell = '<td' + diagramAttr(s.key) + (open ? ' data-setup-open="' + s.key + '"' : '') + '>' + (open ? (_openSetup === s.key ? '▾ ' : '▸ ') : '') + name + '</td>';
+        var tradesRow = open && _openSetup === s.key ? '<tr class="edge-trades-row"><td colspan="7">' + setupTradesHTML(s.trades) + '</td></tr>' : '';
+        if (!s.n) return '<tr class="' + cls + ' none">' + nameCell + '<td>0</td><td colspan="5">нет сделок по правилам</td></tr>' + tradesRow;
+        return '<tr class="' + cls + '">' + nameCell + '<td>' + s.n + '</td><td>' + s.winRate + '%</td>'
           + '<td class="up">' + rr(s.avgWinR) + '</td><td class="dn">' + rr(s.avgLossR) + '</td>'
           + '<td class="' + (s.expectancyR >= 0 ? 'up' : 'dn') + '"><b>' + rr(s.expectancyR) + '</b></td>'
-          + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>';
+          + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>' + tradesRow;
       }).join('')
     + '</tbody></table>'
     + (e.excluded ? '<div class="edge-sub">Не считаются: ' + e.excluded + ' ' + plural(e.excluded, 'сделка', 'сделки', 'сделок') + ' с сетапами «не считать» (мисклики и т.п.).</div>' : '')
     + (e.noPattern ? '<div class="edge-sub">' + e.noPattern + ' ' + plural(e.noPattern, 'сделка', 'сделки', 'сделок') + ' без сетапа — отметь их ниже, иначе они сюда не попадут.</div>' : '')
     + '</div>';
+}
+
+// A setup's trades with your notes on that coin that day — why you entered, next to how it went
+function setupTradesHTML(trades) {
+  return '<div class="edge-trades">' + trades.map(function (t) {
+    var d = new Date(t.closeTime), coin = t.symbol.replace(/USDT$/, '');
+    ensureCoinNotes(coin);
+    var notes = notesOnDay(coin, tzDateStr(d));
+    var breaks = (t.broken || []).map(function (k) { return BREAK_LABEL[k] || k; });
+    return '<div class="edge-trade">'
+      + '<div class="edge-trade-head"><span>' + shortDate(tzDateStr(d)) + ' ' + tzTimeStr(d) + '</span><b>' + coin + ' ' + (t.side === 'long' ? 'лонг' : 'шорт') + '</b>'
+      + '<span class="' + ((t.r != null ? t.r : t.pnlNet) >= 0 ? 'up' : 'dn') + '">' + (t.r != null ? rr(t.r) : money(t.pnlNet) + ' USDT') + '</span>'
+      + (breaks.length ? '<span class="dn">' + breaks.join(', ') + '</span>' : '<span class="muted">по правилам</span>') + '</div>'
+      + (notes.length ? '<ul class="edge-trade-notes">' + notes.map(function (n) { return '<li><span>' + tzTimeStr(new Date(n.ts)) + '</span>' + escHtml(n.text) + '</li>'; }).join('') + '</ul>' : '<div class="edge-trade-nonotes">Заметок по ' + coin + ' в этот день нет</div>')
+      + '</div>';
+  }).join('') + '</div>';
 }
 
 // Your setup list: rename in place, leave out of the report, hide from the buttons, add
@@ -125,34 +149,53 @@ function conclusionsHTML(e) {
   return '<div class="edge-panel edge-conclusions"><h4 class="edge-h">Выводы</h4>' + body + '</div>';
 }
 
-export function renderEdgeSection(container) {
+var _last = null;
+// Notes arriving for an open setup's trades: redraw from the data we have
+on('coin-notes:updated', function () {
+  if (_openSetup && _last && _last.container.isConnected) renderEdgeSection(_last.container, _last.e);
+});
+
+// cached: the last report, to redraw without asking the server again
+export function renderEdgeSection(container, cached) {
   if (!container) return;
   container.innerHTML = '<div class="edge-section"><div class="edge-head"><h3>Мой edge</h3><div class="edge-ranges">'
-    + RANGES.map(function (r) { return '<button data-edge-range="' + r[0] + '" class="' + (r[0] === _range ? 'active' : '') + '">' + r[1] + '</button>'; }).join('')
+    + RANGES.map(function (r) { return '<button data-edge-range="' + r[0] + '" class="' + (r[0] === _period.range ? 'active' : '') + '">' + r[1] + '</button>'; }).join('')
+    + '<span class="edge-dates"><input type="date" class="ds-input" data-edge-from value="' + (_period.from || '') + '"><span>—</span><input type="date" class="ds-input" data-edge-to value="' + (_period.to || '') + '"></span>'
     + '</div></div><div class="edge-body"><span class="big-spinner"></span></div></div>';
   container.querySelectorAll('[data-edge-range]').forEach(function (b) {
-    b.onclick = function () { _range = b.dataset.edgeRange; renderEdgeSection(container); };
+    b.onclick = function () { _period = { range: b.dataset.edgeRange }; renderEdgeSection(container); };
   });
-  Promise.all([fetchJournalEdge(_range), ensureSetups()]).then(function (res) {
+  // Any period: both dates set → that range
+  container.querySelectorAll('[data-edge-from],[data-edge-to]').forEach(function (inp) {
+    inp.onchange = function () {
+      var f = container.querySelector('[data-edge-from]').value, t = container.querySelector('[data-edge-to]').value;
+      if (f && t && f <= t) { _period = { from: f, to: t }; renderEdgeSection(container); }
+    };
+  });
+  Promise.all([cached ? Promise.resolve(cached) : fetchJournalEdge(_period), ensureSetups()]).then(function (res) {
     var e = res[0];
     var body = container.querySelector('.edge-body');
     if (!body) return;
     if (!e || !e.total || !e.total.n) {
-      body.innerHTML = '<div class="edge-empty">' + (e && e.startDate ? 'Отчёт считается с ' + shortDate(e.startDate) + '. ' : '')
-        + 'Сделки появятся здесь после вечерней карточки этого дня. Отмечай сетап в стакане сразу после выхода — что не успел, отметишь здесь.</div>';
+      body.innerHTML = '<div class="edge-empty">' + (e && e.period ? 'За ' + shortDate(e.period.from) + ' — ' + shortDate(e.period.to) + ' сделок нет. ' : '')
+        + (e && e.startDate ? 'Отчёт считается с ' + shortDate(e.startDate) + '. ' : '')
+        + 'Отмечай сетап в стакане сразу после выхода — что не успел, отметишь здесь.</div>';
       return;
     }
     var t = e.total;
     body.innerHTML = '<div class="edge-summary">'
         + '<span><b>' + t.n + '</b> ' + plural(t.n, 'сделка', 'сделки', 'сделок') + ' за <b>' + e.days + '</b> ' + plural(e.days, 'день', 'дня', 'дней') + '</span>'
         + '<span>итог <b class="' + (t.pnl >= 0 ? 'up' : 'dn') + '">' + money(t.pnl) + ' USDT</b>' + (e.oneR ? ' = ' + rr(t.pnl / e.oneR) : '') + '</span>'
-        + (e.startDate ? '<span>считается с ' + shortDate(e.startDate) + '</span>' : '')
-        + (e.dates && e.dates.length ? '<span>дни: ' + e.dates.map(shortDate).join(', ') + ' — в отчёт попадают только дни с сохранённой вечерней карточкой</span>' : '')
+        + (e.period ? '<span>период ' + shortDate(e.period.from) + ' — ' + shortDate(e.period.to) + '</span>' : '')
       + '</div>'
       + '<div class="edge-panels">' + executionHTML(e.execution, e.breaksCostR, e.oneR) + setupsHTML(e) + '</div>'
       + conclusionsHTML(e)
       + untaggedHTML(e.untagged);
     bindEditor(body, container);
+    body.querySelectorAll('[data-setup-open]').forEach(function (td) {
+      td.onclick = function () { _openSetup = _openSetup === td.dataset.setupOpen ? null : td.dataset.setupOpen; renderEdgeSection(container, e); };
+    });
+    _last = { container: container, e: e };
     body.querySelectorAll('[data-edge-pattern]').forEach(function (b) {
       b.onclick = function () {
         var row = b.closest('tr');

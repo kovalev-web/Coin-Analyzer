@@ -59,6 +59,24 @@ export function notesListHTML(sym, date) {
   }).join('') + '</div>';
 }
 
+// Briefing row: write a note on the coin right there (same notes as the chart)
+export function noteInputHTML(sym) {
+  return '<input class="ds-input cn-brief-input" data-cn-sym="' + sym + '" placeholder="Заметка по ' + _S(sym) + ' — Enter, сохранится и на графике" maxlength="2000">';
+}
+
+document.addEventListener('keydown', function (e) {
+  var inp = e.target && e.target.closest && e.target.closest('[data-cn-sym]');
+  if (!inp || e.key !== 'Enter') return;
+  e.preventDefault();
+  var text = inp.value.trim(), sym = inp.dataset.cnSym;
+  if (!text || inp.disabled) return;
+  inp.disabled = true;
+  var coin = state.coins.find(function (c) { return c.symbol === sym; });
+  addCoinNote(sym, text, coin && coin.current_price > 0 ? coin.current_price : null).then(function () {
+    inp.value = ''; inp.disabled = false;
+  }).catch(function () { inp.disabled = false; });
+});
+
 // ── Popover under the island: write a note, see and delete this coin's notes ──
 
 function _currentPrice(sym) {

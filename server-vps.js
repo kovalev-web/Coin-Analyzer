@@ -13,7 +13,7 @@ try {
 } catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart } = require('./journal/facts');
-const { computeEdge } = require('./journal/edge');
+const { computeEdge, edgePeriod } = require('./journal/edge');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -1095,35 +1095,43 @@ var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m'
 // Shared by /api/journal/summary and /api/journal/ai-summary: gathers watchlist
 // entries + (cached or fresh) Binance fills for the range, and aggregates pnl/win-rate.
 // Past days are cached forever in Redis (immutable); today is always refetched.
-// Every trade of every day from `fromDate` to `today` (user's days), from the
-// day facts (journal/facts.js). Days two or more days old are cached in Redis;
-// yesterday and today are recounted. null without Binance access.
-async function allTradesDaily(userId, fromDate, today) {
-  var dates = [];
-  for (var d = new Date(fromDate + 'T00:00:00Z'); d.toISOString().slice(0, 10) <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-    dates.push(d.toISOString().slice(0, 10));
+// Days from..to inclusive (YYYY-MM-DD)
+function dateList(from, to) {
+  var out = [];
+  for (var d = new Date(from + 'T00:00:00Z'); d.toISOString().slice(0, 10) <= to; d.setUTCDate(d.getUTCDate() + 1)) out.push(d.toISOString().slice(0, 10));
+  return out;
+}
+
+// A day's facts (every trade, journal/facts.js), cached in Redis once final: a
+// trade opened late can close after midnight, so only days at least two days
+// before `today` are final. null without Binance access.
+async function dayFactsCached(userId, date, today) {
+  var t = new Date(today + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - 2);
+  var final = date <= t.toISOString().slice(0, 10);
+  var key = 'day_facts:' + userId + ':' + date;
+  if (final) {
+    var c = await redis(['GET', key]);
+    if (c && c.result) { try { return JSON.parse(c.result); } catch (e) {} }
   }
+  var f = null;
+  try { f = await buildDayFacts(userId, date); } catch (e) { console.error('[DayFacts]', date, e.message); }
+  if (f && final) await redis(['SET', key, JSON.stringify(f)]);
+  return f;
+}
+
+// Every trade of every day from `fromDate` to `today`, summed — the journal
+// chart, PnL cards and the day table. null without Binance access.
+async function allTradesDaily(userId, fromDate, today) {
   var out = { pnl: 0, tradeCount: 0, winCount: 0, daily: [] }, any = false;
+  var dates = dateList(fromDate, today);
   for (var i = 0; i < dates.length; i++) {
-    // A trade opened late in a day can close after midnight: only days at least
-    // two days old are final and cached
-    var date = dates[i], key = 'day_summary:' + userId + ':' + date, sum = null, final = i < dates.length - 2;
-    if (final) {
-      var c = await redis(['GET', key]);
-      if (c && c.result) { try { sum = JSON.parse(c.result); } catch (e) {} }
-    }
-    if (!sum) {
-      var f = null;
-      try { f = await buildDayFacts(userId, date); } catch (e) { console.error('[DailyAll]', date, e.message); }
-      if (!f) continue;
-      sum = { trades: f.summary.trades, wins: f.summary.wins, pnl: f.summary.pnlNet };
-      if (final) await redis(['SET', key, JSON.stringify(sum)]);
-    }
+    var f = await dayFactsCached(userId, dates[i], today);
+    if (!f) continue;
     any = true;
-    out.pnl += sum.pnl;
-    out.tradeCount += sum.trades;
-    out.winCount += sum.wins;
-    if (sum.trades || sum.pnl) out.daily.push({ date: date, pnl: Math.round(sum.pnl * 100) / 100, tradeCount: sum.trades });
+    out.pnl += f.summary.pnlNet;
+    out.tradeCount += f.summary.trades;
+    out.winCount += f.summary.wins;
+    if (f.summary.trades || f.summary.pnlNet) out.daily.push({ date: dates[i], pnl: Math.round(f.summary.pnlNet * 100) / 100, tradeCount: f.summary.trades });
   }
   return any ? out : null;
 }
@@ -1644,23 +1652,30 @@ var httpServer = http.createServer(async function (req, res) {
 
       // "My edge": closed trades from saved facts × tags × morning state
       if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/edge') {
-        var jEdgeRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || '3m';
-        var jEdgeDays = { '1m': 30, '3m': 90, '6m': 180, all: 3650 }[jEdgeRange] || 90;
-        var jEdgeFrom = new Date(Date.now() - jEdgeDays * 86400000).toISOString().slice(0, 10);
-        // The report starts over on EDGE_START: earlier days are not counted at all
-        if (jEdgeFrom < EDGE_START) jEdgeFrom = EDGE_START;
-        var jEdgeRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND facts_json IS NOT NULL ORDER BY date ASC').all(jUserId, jEdgeFrom);
+        // Any period (?range=week|month|all or ?from=&to=), from EDGE_START on. Every
+        // day's trades count — filled cards add only the morning state
+        var jEq = new URL(req.url, 'https://questtick.com').searchParams;
+        var jPeriod = edgePeriod({ range: jEq.get('range'), from: jEq.get('from'), to: jEq.get('to') }, jToday, EDGE_START);
+        var jEdgeRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND date <= ?').all(jUserId, jPeriod.from, jPeriod.to);
+        var jMorningBy = {};
+        jEdgeRows.forEach(function (r) { var e = journalRowToEntry(r); jMorningBy[e.date] = { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus }; });
+        var jEdgeDaysData = [];
+        if (jPeriod.from <= jPeriod.to) {
+          var jEdgeDates = dateList(jPeriod.from, jPeriod.to);
+          for (var jdi = 0; jdi < jEdgeDates.length; jdi++) {
+            var jdf = await dayFactsCached(jUserId, jEdgeDates[jdi], jToday);
+            if (jdf && jdf.trades && jdf.trades.length) jEdgeDaysData.push({ date: jEdgeDates[jdi], facts: jdf, morning: jMorningBy[jEdgeDates[jdi]] || {} });
+          }
+        }
         var jEdgeTags = jDb.prepare('SELECT symbol, close_time, setup, emotion, pattern FROM trade_tags WHERE user_id = ?').all(jUserId);
         // Risk per trade (Account settings → % per trade) turns PnL into R
         var jEdgeLimits = {};
         try { var jElr = await redis(['GET', 'account_trading_limits:' + jUserId]); jEdgeLimits = jElr && jElr.result ? JSON.parse(jElr.result) : {}; } catch (e) {}
-        var jEdge = computeEdge(jEdgeRows.map(function (r) {
-          var e = journalRowToEntry(r);
-          return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
-        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, workingVolume: Number(jEdgeLimits.maxVolume) || null, setups: userSetups(jDb, jUserId) });
-        jEdge.range = jEdgeRange;
-        jEdge.days = jEdgeRows.length;
+        var jEdge = computeEdge(jEdgeDaysData, jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, workingVolume: Number(jEdgeLimits.maxVolume) || null, setups: userSetups(jDb, jUserId) });
+        jEdge.period = jPeriod;
+        jEdge.days = jEdgeDaysData.length;
         jEdge.startDate = EDGE_START;
+        jEdge.today = jToday;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(jEdge));
         return;

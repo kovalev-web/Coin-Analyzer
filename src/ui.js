@@ -4,7 +4,7 @@ import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './termi
 import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
 import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
-import { noteButtonHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
+import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
@@ -1581,7 +1581,8 @@ function _factsHTML(f, taggable) {
     if (t.tag && t.tag.emotion) tags.push(t.tag.emotion);
     var tagger = '';
     if (t.tag && t.tag.pattern) tags.unshift(setupName(t.tag.pattern));
-    if (taggable && t.closeTime && !(t.tag && t.tag.pattern && t.tag.setup && t.tag.emotion)) {
+    // Only the setup is required; quality and emotion stay optional
+    if (taggable && t.closeTime && !(t.tag && t.tag.pattern)) {
       tagger = '<div class="jf-tagger">'
         + setupButtons().map(function (x) {
             return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
@@ -4106,7 +4107,7 @@ export function renderBriefingPanel() {
     var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
     var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
     var hasNote = !!e.note;
-    var hasNotes = hasNote || notesOnDay(e.sym, e.date).length > 0;
+    var hasNotes = notesOnDay(e.sym, e.date).length > 0;
     ensureCoinNotes(e.sym);
     return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
@@ -4120,12 +4121,9 @@ export function renderBriefingPanel() {
           (tradeLocked
             ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>'
             : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
-          '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' +
         '</div>' +
         notesListHTML(e.sym, e.date) +
-        '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
-          '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
-        '</div>' +
+        (e.date === today ? noteInputHTML(e.sym) : '') +
       '</div>';
   }).join('') : '<div class="bp-empty">No coins for today — star them on the dashboard</div>';
 
@@ -5340,7 +5338,7 @@ export function renderFVBriefingDrawer() {
       var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
       var isExpanded = _expandedFvKey === e.sym + ':' + e.date;
       var hasNote = !!e.note;
-      var hasNotes = hasNote || notesOnDay(e.sym, e.date).length > 0;
+      var hasNotes = notesOnDay(e.sym, e.date).length > 0;
       ensureCoinNotes(e.sym);
       var isCurrent = _fvSym === e.sym;
       html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
@@ -5357,32 +5355,9 @@ export function renderFVBriefingDrawer() {
         + (tradeLocked
           ? '<span class="bp-status-group"><span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>' + (tradeInline || '') + '</span>'
           : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
-        + (isToday ? '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' : '')
         + '</div>'
         + notesListHTML(e.sym, e.date)
-        + (isToday
-          ? '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
-            + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'
-            + '</div>'
-          : (hasNote ? '<div class="fvbd-history"><div class="fvbd-history-note">' + escHtml(e.note) + '</div></div>' : ''))
-        + (isToday ? (function () {
-          var _fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          var _weekMonday = _dateStr(_currentWeekMonday());
-          var _hist = (state.briefing || [])
-            .filter(function (e2) { return e2.sym === e.sym && e2.date !== today && e2.date >= _weekMonday && e2.note; })
-            .sort(function (a, b) { return b.date < a.date ? -1 : b.date > a.date ? 1 : 0; });
-          if (!_hist.length) return '';
-          return '<div class="fvbd-history">' + _hist.map(function (e2) {
-            var _p = e2.date.split('-'); var _d = new Date(+_p[0], +_p[1] - 1, +_p[2]);
-            return '<div class="fvbd-history-item">'
-              + '<span class="fvbd-history-date">' + _fullDays[_d.getDay()] + '</span>'
-              + '<div class="fvbd-history-row">'
-              + '<span class="fvbd-history-note">' + escHtml(e2.note) + '</span>'
-              + '<span class="bp-row-status ' + briefingStatusClass(e2.status) + '">' + briefingStatusLabel(e2.status) + '</span>'
-              + '</div>'
-              + '</div>';
-          }).join('') + '</div>';
-        })() : '')
+        + (isToday ? noteInputHTML(e.sym) : '')
         + '</div>';
     });
   });

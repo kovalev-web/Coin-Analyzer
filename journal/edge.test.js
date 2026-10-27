@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { computeEdge, tradeR, riskUsd, brokenRules, setupStats, weekOf } = require('./edge');
+const { computeEdge, edgePeriod, tradeR, riskUsd, brokenRules, setupStats, weekOf } = require('./edge');
 
 function trade(symbol, closeTime, pnl, extra) {
   return Object.assign({ symbol, closeTime, pnlNet: pnl, result: pnl > 0 ? 'win' : 'loss', planned: true, atLevel: null, hour: 9 }, extra);
@@ -131,4 +131,27 @@ test('your own setups: named rows, excluded setup (misclicks) leaves the report,
   assert.equal(e.excluded, 1);
   assert.deepEqual([e.execution.n, e.execution.clean], [2, 2]); // the misclick broke a rule but is not counted
   assert.deepEqual(e.setups.map((x) => [x.key, x.name, x.n]), [['s1', 'Ложный пробой', 1], ['old', 'Старый', 1]]);
+});
+
+test('period: presets and from–to, never before the start nor after today', () => {
+  const T = '2026-11-20', S = '2026-10-28';
+  assert.deepEqual(edgePeriod({ range: 'week' }, T, S), { from: '2026-11-14', to: T, preset: 'week' });
+  assert.deepEqual(edgePeriod({ range: 'month' }, T, S), { from: '2026-10-28', to: T, preset: 'month' }); // clamped to the start
+  assert.deepEqual(edgePeriod({ range: 'all' }, T, S), { from: S, to: T, preset: 'all' });
+  assert.deepEqual(edgePeriod({}, T, S), { from: S, to: T, preset: 'all' });
+  assert.deepEqual(edgePeriod({ from: '2026-11-01', to: '2026-11-05' }, T, S), { from: '2026-11-01', to: '2026-11-05', preset: null });
+  assert.deepEqual(edgePeriod({ from: '2026-10-01', to: '2026-12-31' }, T, S), { from: S, to: T, preset: null });
+  assert.deepEqual(edgePeriod({ from: '2026-11-05', to: '2026-11-01' }, T, S).preset, 'all'); // reversed → default
+});
+
+test('each setup lists its trades, breaks included', () => {
+  const d = [{ date: '2026-10-28', morning: {}, facts: { trades: [
+    { symbol: 'XUSDT', side: 'long', openTime: 50, closeTime: 100, pnlNet: 1, result: 'win', planned: true, maxNotional: 100 },
+    { symbol: 'XUSDT', side: 'short', openTime: 150, closeTime: 200, pnlNet: -1, result: 'loss', planned: true, maxNotional: 100, revenge: true },
+  ] } }];
+  const tg = [{ symbol: 'XUSDT', close_time: 100, pattern: 'knife' }, { symbol: 'XUSDT', close_time: 200, pattern: 'knife' }];
+  const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100, setups: [{ key: 'knife', name: 'Нож' }] });
+  const k = e.setups[0];
+  assert.equal(k.n, 1); // only the trade by the rules counts in the numbers
+  assert.deepEqual(k.trades.map((t) => [t.closeTime, t.r, t.broken]), [[200, -2, ['stopHeld', 'noRevenge']], [100, 2, []]]);
 });
