@@ -5,18 +5,33 @@
 // Tests: npm run test:insights
 
 export var DIMENSIONS = {
-  setup: 'Setup quality',
-  emotion: 'What drove the entry',
-  flags: 'Rule breaks',
-  plan: 'Briefing plan',
-  level: 'Signal level',
-  hour: 'Time of day',
-  sleep: 'Sleep',
-  sleepQuality: 'Sleep quality',
-  energy: 'Energy',
-  carryover: 'Carrying yesterday',
-  focus: 'Focus',
+  setup: 'Качество сетапа',
+  emotion: 'Эмоция входа',
+  flags: 'Нарушения',
+  plan: 'План брифинга',
+  level: 'Уровень',
+  hour: 'Время дня',
+  sleep: 'Сон',
+  sleepQuality: 'Качество сна',
+  energy: 'Энергия',
+  carryover: 'Груз вчерашнего',
+  focus: 'Фокус',
 };
+
+// Group names come from the server in English (journal/edge.js) — shown in Russian
+var KEY_RU = {
+  'A setup': 'A-сетап', 'B setup': 'B-сетап', 'C setup': 'C-сетап', 'not tagged': 'без пометки',
+  'Calm, by plan': 'спокойно, по плану', FOMO: 'FOMO', Revenge: 'отыграться', Boredom: 'скука', Fear: 'страх',
+  clean: 'без нарушений', 'revenge (≤5 min after a loss)': 'реванш (≤5 мин после убытка)',
+  'size-up after a streak': 'объём вырос после серии', 'after stop-crane': 'после стоп-крана', 'over volume limit': 'сверх лимита объёма',
+  'in briefing': 'из брифинга', 'outside briefing': 'вне брифинга',
+  'at a signal level': 'у уровня', 'away from levels': 'вдали от уровней', 'no levels set': 'уровней нет',
+  'low (1–2)': 'низкая (1–2)', 'mid (3)': 'средняя (3)', 'high (4–5)': 'высокая (4–5)', 'not recorded': 'не записано',
+  '< 6 h': '< 6 ч', '6–7.5 h': '6–7.5 ч', '7.5 h +': '7.5 ч +', unknown: 'неизвестно',
+};
+export function keyRu(key) { return KEY_RU[key] || key; }
+// Same, capitalized — for a row label
+export function keyLabel(key) { var k = keyRu(key); return k.charAt(0).toUpperCase() + k.slice(1); }
 
 // Groups that say "we don't know" — never a conclusion on their own
 var UNKNOWN = { 'not recorded': true, unknown: true, 'no levels set': true };
@@ -38,25 +53,25 @@ export function comparable(rows) {
 // One line of advice per finding
 export function advice(dim, key, good) {
   if (dim === 'setup') {
-    if (key === 'not tagged') return 'Tag every trade right after it closes — untagged trades hide where the losses come from';
-    return good ? 'This is your edge — look for exactly these entries' : 'Skip ' + key + 's or trade them at half size';
+    if (key === 'not tagged') return 'Ставь пометку сразу после выхода — без неё не видно, откуда убытки';
+    return good ? 'Это твой edge — ищи именно такие входы' : 'Пропускай ' + keyRu(key) + 'ы или торгуй их половинным объёмом';
   }
   if (dim === 'emotion') {
-    if (key === 'not tagged') return 'Tag every trade right after it closes';
-    return good ? 'Only enter when it is in your plan' : 'When you feel ' + key.toLowerCase() + ', take your hands off the order book for 5 minutes';
+    if (key === 'not tagged') return 'Ставь пометку сразу после выхода';
+    return good ? 'Входи только по своему плану' : 'Почувствовал «' + keyRu(key) + '» — 5 минут без входов';
   }
   if (dim === 'flags') {
-    if (key === 'clean') return good ? 'Your rules work — keep them' : 'Even clean trades lose — the setups themselves need work';
-    if (/revenge/.test(key)) return 'After a loss: 5 minutes without new entries';
-    if (/size-up/.test(key)) return 'Keep the size the same after a winning streak';
-    if (/stop-crane/.test(key)) return 'Stop-crane means the day is over';
-    if (/volume/.test(key)) return 'Stay within your volume limit';
+    if (key === 'clean') return good ? 'Правила работают — держись их' : 'Даже без нарушений в минусе — дело в самих сетапах';
+    if (/revenge/.test(key)) return 'После убытка — 5 минут без новых входов';
+    if (/size-up/.test(key)) return 'Не увеличивай объём после серии';
+    if (/stop-crane/.test(key)) return 'Стоп-кран — значит, день закончен';
+    if (/volume/.test(key)) return 'Держись лимита объёма';
   }
-  if (dim === 'plan') return key === 'in briefing' ? (good ? 'Your briefing picks work — trade from it' : 'Your briefing picks lose — review how you pick coins') : 'Trade only coins from your briefing';
-  if (dim === 'level') return key === 'at a signal level' ? 'Enter at your levels' : 'Enter at your levels, not away from them';
-  if (dim === 'hour') return good ? 'Your best window is ' + key + ' — trade your main size here' : 'Cut size or skip ' + key;
-  var what = (DIMENSIONS[dim] || dim).toLowerCase() + ' ' + key;
-  return good ? 'You trade best with ' + what : 'On days with ' + what + ' — trade smaller';
+  if (dim === 'plan') return key === 'in briefing' ? (good ? 'Монеты из брифинга работают — торгуй их' : 'Монеты из брифинга в минусе — пересмотри, как выбираешь') : 'Торгуй только монеты из брифинга';
+  if (dim === 'level') return 'Входи от своих уровней';
+  if (dim === 'hour') return good ? 'Твоё лучшее окно ' + key + ' — основной объём здесь' : 'Сократи объём или не торгуй ' + key;
+  var what = (DIMENSIONS[dim] || dim).toLowerCase() + ': ' + keyRu(key);
+  return good ? 'Лучше всего торгуешь, когда ' + what : 'В дни, когда ' + what + ', — меньше объём';
 }
 
 // edge: { total: {n, avgPnl, ...}, groups: {dim: rows}, minN }

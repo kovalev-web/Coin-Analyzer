@@ -36,7 +36,7 @@ test('insights from the screenshot: what works, what costs, what has nothing to 
   assert.deepEqual(x.works.map((f) => f.key), ['Calm, by plan', 'A setup', '04–08']);
   // the untagged trade shows once, not for setup and again for emotion
   assert.deepEqual(x.costs.map((f) => f.key), ['not tagged', '08–12', 'clean']);
-  assert.deepEqual(x.flat, ['Briefing plan', 'Signal level', 'Sleep']);
+  assert.deepEqual(x.flat, ['План брифинга', 'Уровень', 'Сон']);
   assert.deepEqual(x.sample, { n: 8, minN: 20, ratio: 0.4, early: true });
   assert.match(x.costs[1].advice, /08–12/);
 });
@@ -48,7 +48,7 @@ test('a group that earns but less than average is neither works nor costs', () =
 });
 
 test('advice has a line for every kind of finding', () => {
-  assert.match(advice('setup', 'C setup', false), /C setup/);
-  assert.match(advice('flags', 'revenge (≤5 min after a loss)', false), /5 minutes/);
-  assert.match(advice('energy', 'low (1–2)', false), /smaller/);
+  assert.match(advice('setup', 'C setup', false), /C-сетап/);
+  assert.match(advice('flags', 'revenge (≤5 min after a loss)', false), /5 минут/);
+  assert.match(advice('energy', 'low (1–2)', false), /меньше объём/);
 });

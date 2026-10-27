@@ -930,35 +930,27 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .cn-tip .cn-time{display:block;margin-bottom:var(--space-1);}
 .cn-show{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);font-size:var(--text-xs);color:var(--graphite);cursor:pointer;}
 
-/* My edge: result → data sufficiency → what works / what costs → flat dims → tables */
-.edge-stats{display:flex;flex-wrap:wrap;gap:var(--space-4) var(--space-16);margin-bottom:var(--space-8);}
-.edge-stat{display:flex;flex-direction:column;gap:var(--space-1);}
-.edge-stat span{font-size:var(--text-2xs);color:var(--graphite);text-transform:uppercase;letter-spacing:0.04em;}
-.edge-stat b{font-size:var(--text-lg);font-weight:var(--font-bold);font-variant-numeric:tabular-nums;}
-.edge-stat b.up{color:var(--bullish);}
-.edge-stat b.dn{color:var(--danger);}
-.edge-sample{display:flex;align-items:center;gap:var(--space-6);margin-bottom:var(--space-8);font-size:var(--text-xs);color:var(--graphite);}
-.edge-sample-bar{flex:none;width:120px;height:6px;border-radius:var(--radius-full);background:var(--fog);overflow:hidden;}
+/* My edge: one summary line → data sufficiency → two plain tables of findings
+   → one line of dimensions with nothing to compare → folded breakdowns.
+   Flat: no cards, rows divided by hairlines. */
+.edge-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-2) var(--space-12);margin-bottom:var(--space-6);font-size:var(--text-sm);color:var(--graphite);}
+.edge-summary b{font-weight:var(--font-bold);color:var(--ink-deep);font-variant-numeric:tabular-nums;}
+.edge-summary .up b{color:var(--bullish);font-size:var(--text-lg);}
+.edge-summary .dn b{color:var(--danger);font-size:var(--text-lg);}
+.edge-sample{display:flex;align-items:center;gap:var(--space-6);margin-bottom:var(--space-12);font-size:var(--text-xs);color:var(--graphite);}
+.edge-sample-bar{flex:none;width:120px;height:4px;border-radius:var(--radius-full);background:var(--fog);overflow:hidden;}
 .edge-sample-bar i{display:block;height:100%;background:var(--level-deep);}
-.edge-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--space-8);margin-bottom:var(--space-8);}
-.edge-col{display:flex;flex-direction:column;gap:var(--space-4);}
-.edge-col-title{font-size:var(--text-sm);font-weight:var(--font-bold);}
-.edge-col-title.good{color:var(--bullish);}
-.edge-col-title.bad{color:var(--danger);}
-.edge-find{background:var(--paper);border-radius:var(--radius-xl);padding:var(--space-6) var(--space-8);border-left:3px solid var(--steel);display:flex;flex-direction:column;gap:var(--space-2);}
-.edge-find.good{border-left-color:var(--bullish);}
-.edge-find.bad{border-left-color:var(--danger);}
-.edge-find-top{display:flex;align-items:baseline;gap:var(--space-4);}
-.edge-find-key{font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink-deep);}
-.edge-find-dim{font-size:var(--text-2xs);color:var(--graphite);}
-.edge-find-impact{margin-left:auto;font-size:var(--text-sm);font-weight:var(--font-bold);font-variant-numeric:tabular-nums;}
-.edge-find.good .edge-find-impact{color:var(--bullish);}
-.edge-find.bad .edge-find-impact{color:var(--danger);}
-.edge-find-stats{font-size:var(--text-xs);color:var(--graphite);font-variant-numeric:tabular-nums;}
-.edge-find-advice{font-size:var(--text-sm);color:var(--ink-deep);}
-.edge-find-advice::before{content:'→ ';color:var(--graphite);}
+.edge-h{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink-deep);margin:0 0 var(--space-4);}
+.edge-list{width:100%;border-collapse:collapse;margin-bottom:var(--space-12);font-size:var(--text-sm);font-variant-numeric:tabular-nums;}
+.edge-list th{text-align:left;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);padding:0 var(--space-6) var(--space-3) 0;border-bottom:1px solid var(--steel);white-space:nowrap;}
+.edge-list td{padding:var(--space-4) var(--space-6) var(--space-4) 0;border-bottom:1px solid color-mix(in srgb,var(--steel) 50%,transparent);vertical-align:top;color:var(--ink-deep);}
+.edge-list th:nth-child(n+2):nth-child(-n+5),.edge-list td:nth-child(n+2):nth-child(-n+5){text-align:right;}
+.edge-list td:first-child b{display:block;font-weight:var(--font-semi);}
+.edge-list td:first-child span{font-size:var(--text-2xs);color:var(--graphite);}
+.edge-list td:last-child{width:45%;padding-left:var(--space-8);}
+.edge-list td.up{color:var(--bullish);}
+.edge-list td.dn{color:var(--danger);}
 .edge-flat{font-size:var(--text-xs);color:var(--graphite);line-height:var(--leading-relaxed);margin-bottom:var(--space-8);}
-.edge-flat b{color:var(--ink-deep);font-weight:var(--font-medium);}
 .edge-details summary{cursor:pointer;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--graphite);margin-bottom:var(--space-6);}
 .edge-details summary:hover{color:var(--ink-deep);}
-.edge-find-impact small{font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);}
+.edge-details .edge-card{background:none;border-radius:0;padding:var(--space-4) 0;border-top:1px solid var(--steel);}
