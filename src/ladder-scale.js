@@ -51,3 +51,22 @@ export function colorThreshold(medianUsd, fullUsd, highlightPct, k) {
   var byDensity = medianUsd > 0 ? medianUsd * (k || DENSITY_K) : 0;
   return Math.max(byPct, byDensity);
 }
+
+// Auto mode bar length: log scale from a floor (a quarter of the typical level)
+// to the biggest level on screen, so 14K and 615K are clearly different bars
+// while small levels still differ. 0.02 … 1.
+export function barRatio(usd, typicalUsd, maxUsd) {
+  if (!(usd > 0)) return 0;
+  var floor = Math.max((typicalUsd || 0) / 4, 1);
+  var hi = Math.max(maxUsd || 0, floor * 1.0001);
+  if (usd <= floor) return 0.02;
+  return Math.max(0.02, Math.min(1, Math.log(usd / floor) / Math.log(hi / floor)));
+}
+
+// The biggest level on screen: jumps up at once (a new wall shows full), eases
+// down slowly (so a wall that's eaten doesn't make every bar jump)
+export function trackMax(prev, target, dtMs, tauMs) {
+  if (target == null) return prev;
+  if (prev == null || target >= prev) return target;
+  return smoothScale(prev, target, dtMs, tauMs);
+}

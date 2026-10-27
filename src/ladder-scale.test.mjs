@@ -50,3 +50,20 @@ test('auto color: only levels well above the typical one', async () => {
   // no median yet → falls back to the % of the full bar
   assert.equal(colorThreshold(0, 10000, 65), 6500);
 });
+
+test('auto bar length: walls of very different size get different bars', async () => {
+  const { barRatio } = await import('./ladder-scale.js');
+  const typical = 6000, max = 615000;
+  const r14 = barRatio(14000, typical, max), r615 = barRatio(615000, typical, max), r64 = barRatio(63500, typical, max);
+  assert.equal(r615, 1);
+  assert.ok(r14 < 0.5 && r64 > r14 && r64 < r615);   // 14K well under 615K, 63K in between
+  assert.ok(barRatio(4000, typical, max) < r14);      // small levels still differ
+  assert.equal(barRatio(500, typical, max), 0.02);    // tiny → a sliver
+});
+
+test('max tracking: up at once, down slowly', async () => {
+  const { trackMax } = await import('./ladder-scale.js');
+  assert.equal(trackMax(100, 500, 100, 10000), 500);
+  const d = trackMax(500, 100, 1000, 10000);
+  assert.ok(d < 500 && d > 400);
+});

@@ -16,7 +16,7 @@ import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
-import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold } from './ladder-scale.js';
+import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
 import { booksStart, booksStop, bookRows, bookListed, bookAt, BOOK_VENUES } from './venue-books.js';
 import { autoThreshold, hitStrength, tapeIntensity, HIT_WINDOW_MS, SIZE_HISTORY_MS, FRAME_PERCENTILE, TAPE_PERCENTILE } from './hit-stats.js';
@@ -218,7 +218,7 @@ function _openPanel(sym) {
     T.sym = sym;
     S = _loadSettings(sym);
     T.size = _savedSize();
-    T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null; T.autoFull = null; T.autoMed = null;
+    T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null; T.autoFull = null; T.autoMed = null; T.autoMax = null;
     tradeRequest('GET', 'rules?symbol=' + sym).then(function (r) {
       if (T.sym !== sym) return;
       T.rules = r;
@@ -769,7 +769,7 @@ function _venueThreshold(id, pct) {
   return v;
 }
 
-function _venueView(step, lo, hi, mainFull, mainColorThr) {
+function _venueView(step, lo, hi, mainFull, mainColorThr, mainBarOf) {
   if (!S.venues) return null;
   var folded = _venueFolded(), now = Date.now();
   return BOOK_VENUES.map(function (v) {
@@ -802,7 +802,8 @@ function _venueView(step, lo, hi, mainFull, mainColorThr) {
     // One scale with our ladder: a wall is colored when it's big in dollars next to
     // Binance's levels, not just big for a thin venue; own scale only until ours is known
     var vf = mainFull || T.vAuto[v.id];
-    return { rows: rows, hits: hits, full: vf, colorThr: mainColorThr || (vf ? vf * S.highlight / 100 : 0) };
+    return { rows: rows, hits: hits, full: vf, colorThr: mainColorThr || (vf ? vf * S.highlight / 100 : 0),
+      barOf: mainBarOf || (vf ? function (u) { return Math.min(1, u / vf); } : null) };
   });
 }
 
@@ -831,7 +832,7 @@ function _setVenueBars(box, i, view, side) {
     var cell = box.children[k], col = view[k];
     if (!cell.firstChild || cell.firstChild.nodeType !== 1) { cell.innerHTML = '<i></i><em></em>'; cell._t = null; cell._w = null; cell.style.background = ''; cell._a = null; }
     var usd = col.rows && side ? (col.rows[side][i] || 0) : 0;
-    var ratio = usd && col.full ? Math.min(1, usd / col.full) : 0;
+    var ratio = usd && col.barOf ? col.barOf(usd) : 0;
     var dim = usd && col.colorThr && usd < col.colorThr;
     var t = col.folded || !usd ? '' : _fmtQty(usd);
     var w = usd ? Math.max(2, Math.round(ratio * 100)) + '%' : '0%';
@@ -1264,7 +1265,13 @@ function _render() {
   var nowMs = Date.now();
   T.autoFull = smoothScale(T.autoFull, levelPercentile(usdLevels, AUTO_PERCENTILE), nowMs - (T.autoAt || nowMs));
   T.autoMed = smoothScale(T.autoMed, levelPercentile(usdLevels, 50), nowMs - (T.autoAt || nowMs));
+  T.autoMax = trackMax(T.autoMax, usdLevels.length ? Math.max.apply(null, usdLevels) : null, nowMs - (T.autoAt || nowMs));
   T.autoAt = nowMs;
+  // Bar length: manual full scale → linear to it; auto → log from a quarter of the
+  // typical level to the biggest on screen, so a 615K wall is far longer than a 14K one
+  var barOf = S.fullScale
+    ? function (u) { return Math.min(1, u / S.fullScale); }
+    : function (u) { return barRatio(u, T.autoMed, T.autoMax); };
   var full = S.fullScale || T.autoFull || 0;
   // Colored = a density. Manual full scale: the % of it; auto: also ≥ 3× the typical
   // level on screen, so a flat book stays grey (ladder-scale.js colorThreshold)
@@ -1273,7 +1280,7 @@ function _render() {
   var mine = _myOrdersByIdx(step);
   var marks = _chartMarksByIdx(step);
   var cl = _clusterView(step);
-  var ven = _venueView(step, T.top - T.rows + 1, T.top, full, colorThr);
+  var ven = _venueView(step, T.top - T.rows + 1, T.top, full, colorThr, full ? barOf : null);
   var pnl = _pnlInfo();
   var entryIdx = pnl ? Math.round(pnl.entry / step) : null;
   var exitIdx = pnl ? Math.round(pnl.exit / step) : null;
@@ -1318,7 +1325,7 @@ function _render() {
     // One volume column: asks above the spread, bids below, heat-filled by size
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
     var usd = v * i * step;
-    var ratio = !v ? 0 : full ? Math.min(1, usd / full) : v / maxVol;
+    var ratio = !v ? 0 : full ? barOf(usd) : v / maxVol;
     _setVol(c[1], usd, ratio, colorThr > 0 && usd < colorThr);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
@@ -2007,7 +2014,7 @@ function _pickSize(v) {
 function _changeScale(dir) {
   var i = (T.scaleIdx || 0) + dir;
   T.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, i));
-  T.autoFull = null; T.autoMed = null; // a row now holds more (or less): measure the scale afresh
+  T.autoFull = null; T.autoMed = null; T.autoMax = null; // a row now holds more (or less): measure the scale afresh
   _lsSet('qt_term_scale_' + T.sym, String(SCALES[T.scaleIdx]));
   T.top = null;
   _queueRender();
