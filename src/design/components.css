@@ -725,10 +725,11 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* chart marks on the ladder: level (solid, primary), horizontal ray (solid,
    level-deep), alert (dashed, danger, bell by the price) — same as the chart */
 .dom-row{position:relative;}
-.dom-row.mk-level .dom-c-price{box-shadow:inset 3px 0 0 var(--primary);color:var(--primary);}
-.dom-row.mk-ray .dom-c-price{box-shadow:inset 3px 0 0 var(--level-deep);color:var(--level-deep);}
-.dom-row.mk-alert .dom-c-price{box-shadow:inset 3px 0 0 var(--danger);color:var(--danger);}
-.dom-row.mk-alert .dom-c-price::before{content:'';display:inline-block;width:9px;height:9px;margin-right:var(--space-1);vertical-align:-1px;background:var(--danger);-webkit-mask:var(--dom-bell) center/contain no-repeat;mask:var(--dom-bell) center/contain no-repeat;}
+/* chart marks: a line across the Mine column in the mark's color, nothing in
+   Volume / Price (alert dashed) */
+.dom-row.mk-level .dom-c-mine{background:linear-gradient(var(--primary),var(--primary)) center/100% 2px no-repeat;}
+.dom-row.mk-ray .dom-c-mine{background:linear-gradient(var(--level-deep),var(--level-deep)) center/100% 2px no-repeat;}
+.dom-row.mk-alert .dom-c-mine{background:repeating-linear-gradient(to right,var(--danger) 0 4px,transparent 4px 7px) center/100% 2px no-repeat;}
 .fv-dom{--dom-bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.268 21a2 2 0 0 0 3.464 0'/%3E%3Cpath d='M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326'/%3E%3C/svg%3E");}
 
 /* hotkeys list in the order book settings */
