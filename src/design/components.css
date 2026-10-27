@@ -914,3 +914,17 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-row.pnl-up{--pnl-edge:var(--bullish);}
 .dom-row.pnl-dn{--pnl-edge:var(--danger);}
 .dom-row.pnl-up::before,.dom-row.pnl-dn::before{box-shadow:inset 4px 0 0 var(--pnl-edge);}
+
+/* coin notes: popover under the chart island, list in the briefing, tooltip on the chart icon */
+.cn-pop{position:absolute;left:50%;transform:translateX(-50%);z-index:11;width:360px;max-width:calc(100% - var(--space-8));display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4);background:var(--paper);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);animation:popup-in 0.15s ease-out;}
+.cn-pop .cn-input{resize:none;min-height:56px;padding:var(--space-3) var(--space-4);font-size:var(--text-sm);line-height:1.4;}
+.cn-pop-list{display:flex;flex-direction:column;gap:var(--space-2);max-height:220px;overflow-y:auto;}
+.cn-pop-list:empty{display:none;}
+.cn-list{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-2) 0;}
+.cn-item{display:flex;align-items:flex-start;gap:var(--space-4);font-size:var(--text-xs);color:var(--ink-deep);line-height:1.4;}
+.cn-time{flex:none;color:var(--graphite);font-variant-numeric:tabular-nums;}
+.cn-text{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;}
+.cn-del{flex:none;width:18px;height:18px;opacity:0;}
+.cn-item:hover .cn-del{opacity:1;}
+.cn-tip{position:fixed;z-index:50;display:none;max-width:280px;padding:var(--space-3) var(--space-4);background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-md);box-shadow:var(--shadow-md);font-size:var(--text-xs);color:var(--ink-deep);line-height:1.4;white-space:pre-wrap;pointer-events:none;}
+.cn-tip .cn-time{display:block;margin-bottom:var(--space-1);}

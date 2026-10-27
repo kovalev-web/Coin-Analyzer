@@ -970,6 +970,50 @@ export function saveTradeTag(tag) {
   }).then(function (r) { if (!r.ok) throw new Error('Tag not saved'); return r.json(); });
 }
 
+// ── Coin notes: many per coin, each with time and price (chart + briefing) ──
+// Cached per coin in state.coinNotes[SYM]; 'coin-notes:updated' fires on change.
+export function fetchCoinNotes(sym) {
+  var S = String(sym).toUpperCase();
+  return fetch(API_BASE + '/api/journal/notes?symbol=' + encodeURIComponent(S), { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d) return null;
+      state.coinNotes[S] = d.notes || [];
+      emit('coin-notes:updated', S);
+      return state.coinNotes[S];
+    })
+    .catch(function () { return null; });
+}
+
+export function addCoinNote(sym, text, price) {
+  var S = String(sym).toUpperCase();
+  return fetch(API_BASE + '/api/journal/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ symbol: S, text: text, price: price }),
+  }).then(function (r) { if (!r.ok) throw new Error('Note not saved'); return r.json(); })
+    .then(function (d) {
+      (state.coinNotes[S] = state.coinNotes[S] || []).push(d.note);
+      emit('coin-notes:updated', S);
+      return d.note;
+    });
+}
+
+export function deleteCoinNote(sym, id) {
+  var S = String(sym).toUpperCase();
+  return fetch(API_BASE + '/api/journal/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ id: id, delete: true }),
+  }).then(function (r) { if (!r.ok) throw new Error('Note not deleted'); })
+    .then(function () {
+      state.coinNotes[S] = (state.coinNotes[S] || []).filter(function (n) { return n.id !== id; });
+      emit('coin-notes:updated', S);
+    });
+}
+
 export function fetchJournalEdge(range) {
   return fetch(API_BASE + '/api/journal/edge?range=' + (range || '3m'), { credentials: 'include' })
     .then(function (r) { return r.ok ? r.json() : null; })

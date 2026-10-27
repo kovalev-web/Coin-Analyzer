@@ -8,7 +8,7 @@ import {
   fetchJournalSummary, generateJournalAiSummary, deleteJournalAiSummary, loadJournalAiSummaryCache,
 } from './api.js';
 import {
-  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers,
+  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -603,6 +603,9 @@ document.body.addEventListener('click', function (e) {
     }
     case 'toggle-briefing':
       toggleBriefing(sym);
+      break;
+    case 'fv-note':
+      openFVNote(sym);
       break;
     case 'toggle-terminal':
       toggleTerminal();

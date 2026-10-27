@@ -3,6 +3,7 @@ import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTime
 import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
 import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
+import { noteButtonHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
@@ -4085,11 +4086,13 @@ export function renderBriefingPanel() {
     var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
     var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
     var hasNote = !!e.note;
+    var hasNotes = hasNote || notesOnDay(e.sym, e.date).length > 0;
+    ensureCoinNotes(e.sym);
     return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">' +
       '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
       (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>') +
       (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
-      '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
+      '<button class="btn-icon bp-note-btn' + (hasNotes ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
       '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
       '</div>' +
       '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
@@ -4099,6 +4102,7 @@ export function renderBriefingPanel() {
             : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
           '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' +
         '</div>' +
+        notesListHTML(e.sym, e.date) +
         '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>' +
           '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>' +
         '</div>' +
@@ -4169,6 +4173,7 @@ function _fvBottomBarHTML(sym, tf) {
     + '<div class="fv-bb-right">'
     + '<button class="btn-icon warming" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
+    + noteButtonHTML(sym)
     + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
@@ -4209,6 +4214,7 @@ function _fvCoinInfoHTML(sym, tf) {
     + terminalButtonHTML()
     + '<button class="btn-icon warming" id="fv-liq-btn" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
     + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>'
+    + noteButtonHTML(sym)
     + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
     + fvBadge
     + '</div>'
@@ -4357,6 +4363,8 @@ function _drawFVOverlays(ctx, rc, sym) {
     ctx.fill();
     ctx.restore();
   });
+  // Your notes on this coin: a bubble at the time and price each was written
+  drawNoteIcons(ctx, _fvSeries, _fvChart, sym, tfSec, cssW, paneH);
 }
 
 // Entry/exit triangles: with the briefing drawer open — every briefing day of
@@ -4383,7 +4391,22 @@ function _applyFVTradeMarkers(sym) {
   _fvTradeMarkersData = markers;
 }
 
+// Briefing rows list the coin's notes of that day; redraw when they change
+on('coin-notes:updated', function () {
+  renderBriefingPanel();
+  var _d = document.getElementById('fv-briefing-drawer');
+  if (_d && _d.classList.contains('open')) renderFVBriefingDrawer();
+});
+
 export function applyFVTradeMarkers() { _applyFVTradeMarkers(_fvSym); }
+
+// Note button in the island: write a note; a note also puts the coin into
+// today's briefing (writing a thought about it means you're watching it)
+export function openFVNote(sym) {
+  toggleNotePopover(sym, function () {
+    if (!isInBriefing(sym)) toggleBriefing(sym);
+  });
+}
 
 function _setFVData(sym, cd) {
   if (!_fvSeries || !_fvChart || !cd || cd.status !== 'ok' || !cd.candles.length) return;
@@ -4441,6 +4464,8 @@ export function openCoinFullView(sym) {
   }
   _fvSym = sym;
   fetchTrades(sym, todayDate()).then(function () { if (_fvSym === sym) _applyFVTradeMarkers(sym); });
+  closeNotePopover();
+  ensureCoinNotes(sym);
 
   var overlay = document.getElementById('fv-overlay');
   if (!overlay) { overlay = document.createElement('div'); overlay.id = 'fv-overlay'; overlay.className = 'overlay'; document.body.appendChild(overlay); }
@@ -5090,6 +5115,8 @@ export function openCoinFullView(sym) {
 }
 
 export function closeCoinFullView() {
+  closeNotePopover();
+  clearNoteIcons();
   softDisconnectOrderbook();
   terminalOnFVClose();
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
@@ -5293,12 +5320,14 @@ export function renderFVBriefingDrawer() {
       var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
       var isExpanded = _expandedFvKey === e.sym + ':' + e.date;
       var hasNote = !!e.note;
+      var hasNotes = hasNote || notesOnDay(e.sym, e.date).length > 0;
+      ensureCoinNotes(e.sym);
       var isCurrent = _fvSym === e.sym;
       html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
         + '<span class="bp-sym-btn">' + e.sym.toUpperCase() + '</span>'
         + (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>')
         + '<span class="bp-row-status ' + briefingStatusClass(tradeLocked ? 'traded' : e.status) + '">' + briefingStatusLabel(tradeLocked ? 'traded' : e.status) + '</span>'
-        + '<button class="btn-icon bp-note-btn' + (hasNote ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
+        + '<button class="btn-icon bp-note-btn' + (hasNotes ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
         + (isToday
           ? '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
           : '')
@@ -5310,6 +5339,7 @@ export function renderFVBriefingDrawer() {
           : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
         + (isToday ? '<button class="acc-delete-cancel" data-action="bp-note-action" data-sym="' + e.sym + '" data-date="' + e.date + '">' + (hasNote ? 'Delete note' : 'Add note') + '</button>' : '')
         + '</div>'
+        + notesListHTML(e.sym, e.date)
         + (isToday
           ? '<div class="bp-note-wrap"' + (hasNote ? '' : ' style="display:none"') + '>'
             + '<textarea placeholder="Note..." data-sym="' + e.sym + '" data-date="' + e.date + '">' + escHtml(e.note || '') + '</textarea>'

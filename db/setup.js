@@ -131,6 +131,20 @@ function ensureAuthTables() {
       PRIMARY KEY ("user_id", "symbol", "close_time")
     )
   `);
+  // Notes on a coin while watching it: many per coin, each with the time and
+  // price it was written at, shown on the chart and in the briefing
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS "coin_notes" (
+      "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+      "user_id" TEXT NOT NULL,
+      "symbol" TEXT NOT NULL,
+      "ts" INTEGER NOT NULL,
+      "price" REAL,
+      "text" TEXT NOT NULL,
+      "created_at" INTEGER NOT NULL
+    )
+  `);
+  sqlite.exec('CREATE INDEX IF NOT EXISTS "coin_notes_user_symbol_ts" ON "coin_notes" ("user_id", "symbol", "ts")');
   if (journalCols.indexOf('max_trades') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }

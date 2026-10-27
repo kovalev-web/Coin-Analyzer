@@ -1510,6 +1510,47 @@ var httpServer = http.createServer(async function (req, res) {
         return;
       }
 
+      // Coin notes: thoughts written while watching a coin, many per coin, each
+      // with its time and price. GET ?symbol=AIN (one coin) or ?from=&to= (ms, all coins)
+      if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/notes') {
+        var jnQ = new URL(req.url, 'https://questtick.com').searchParams;
+        var jnSym = String(jnQ.get('symbol') || '').toUpperCase();
+        var jnFrom = Number(jnQ.get('from')) || 0, jnTo = Number(jnQ.get('to')) || 8.64e15;
+        var jnRows = jnSym
+          ? jDb.prepare('SELECT id, symbol, ts, price, text FROM coin_notes WHERE user_id = ? AND symbol = ? AND ts >= ? AND ts < ? ORDER BY ts ASC').all(jUserId, jnSym, jnFrom, jnTo)
+          : jDb.prepare('SELECT id, symbol, ts, price, text FROM coin_notes WHERE user_id = ? AND ts >= ? AND ts < ? ORDER BY ts ASC LIMIT 2000').all(jUserId, jnFrom, jnTo);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ notes: jnRows }));
+        return;
+      }
+
+      // Add a note (time is the server's, price is what the chart showed) or delete one ({ id, delete: true })
+      if (req.method === 'POST' && req.url === '/api/journal/notes') {
+        var jnBody = await new Promise(function (resolve) { var b = ''; req.on('data', function (c) { b += c; if (b.length > 8192) req.destroy(); }); req.on('end', function () { resolve(b); }); });
+        var jn;
+        try { jn = JSON.parse(jnBody || '{}'); } catch (e) { jn = {}; }
+        if (jn.delete) {
+          jDb.prepare('DELETE FROM coin_notes WHERE id = ? AND user_id = ?').run(Number(jn.id) || 0, jUserId);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        var jnS = String(jn.symbol || '').toUpperCase();
+        var jnText = String(jn.text || '').trim().slice(0, 2000);
+        var jnPrice = Number(jn.price);
+        if (!/^[A-Z0-9]{1,30}$/.test(jnS) || !jnText) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid note' }));
+          return;
+        }
+        var jnNow = Date.now();
+        var jnRes = jDb.prepare('INSERT INTO coin_notes (user_id, symbol, ts, price, text, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+          .run(jUserId, jnS, jnNow, jnPrice > 0 ? jnPrice : null, jnText, jnNow);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ note: { id: Number(jnRes.lastInsertRowid), symbol: jnS, ts: jnNow, price: jnPrice > 0 ? jnPrice : null, text: jnText } }));
+        return;
+      }
+
       // "My edge": closed trades from saved facts × tags × morning state
       if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/edge') {
         var jEdgeRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || '3m';
