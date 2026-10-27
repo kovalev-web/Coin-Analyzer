@@ -827,7 +827,9 @@ function _setVenueBars(box, i, view, side) {
     var t = col.folded || !usd ? '' : _fmtQty(usd);
     var w = usd ? Math.max(2, Math.round(ratio * 100)) + '%' : '0%';
     var o = !usd ? '0' : dim ? '0.3' : (0.35 + 0.5 * ratio).toFixed(2);
-    var cls = (side || '') + (dim ? ' dim' : '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
+    // Past the feed's depth limit: unknown, not empty
+    var nodata = col.rows && ((side === 'ask' && col.rows.askEdge != null && i > col.rows.askEdge) || (side === 'bid' && col.rows.bidEdge != null && i < col.rows.bidEdge));
+    var cls = (side || '') + (dim ? ' dim' : '') + (nodata ? ' nodata' : '') + (col.hits && col.hits[i] ? ' ' + col.hits[i] : '');
     var bar = cell.firstChild, txt = cell.lastChild;
     if (cell._w !== w) { bar.style.width = w; cell._w = w; }
     if (bar.style.opacity !== o) bar.style.opacity = o;

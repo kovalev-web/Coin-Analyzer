@@ -3,11 +3,15 @@
 // the browser. Each is a pair of Maps: price on the Binance futures ladder →
 // USDT resting there. Re-synced on any gap. Read by src/terminal.js.
 //   Binance spot: REST snapshot + @depth@100ms diffs (U / u sequence)
-//   Bybit:        orderbook.200 snapshot + deltas (size 0 = remove)
+//   Bybit:        orderbook.1000 snapshot + deltas (size 0 = remove)
 //   OKX:          books (400 levels) snapshot + updates, seqId / prevSeqId
 //                 (size in contracts × ctVal)
 
 import { splitSymbol } from './venues-stats.js';
+
+// Levels per side each feed gives at most: past them the venue has orders we
+// can't see, so those rows are marked "no data" rather than shown as empty
+var DEPTH_LIMIT = { BS: 1000, BB: 1000, OK: 400 };
 
 export var BOOK_VENUES = [
   { id: 'BS', name: 'Spot', title: 'Binance spot' },
@@ -113,7 +117,7 @@ function _bybit(symbol) {
 
 function _bybitStream(symbol, book) {
   _ws('wss://stream.bybit.com/v5/public/linear', function (sock) {
-    sock.send(JSON.stringify({ op: 'subscribe', args: ['orderbook.200.' + symbol] }));
+    sock.send(JSON.stringify({ op: 'subscribe', args: ['orderbook.1000.' + symbol] }));
   }, function (m, sock) {
     if (m.op === 'subscribe' && m.success === false) { _notListed('BB'); _stop(sock); return; }
     if (!m.topic || !m.data) return;
@@ -180,17 +184,26 @@ export function bookListed(id) { return B.listed[id]; }
 
 // USDT per ladder row for one venue: { bid: {idx: usd}, ask: {idx: usd}, ready }
 // (same rounding as the Binance ladder: bids floor, asks ceil)
+// askEdge / bidEdge: the last rows the feed covers when it's cut at its depth
+// limit (null when we hold the whole side)
 export function bookRows(id, step, lo, hi) {
   var book = B.books[id];
   if (!book || !book.ready) return null;
-  var bid = {}, ask = {};
+  var bid = {}, ask = {}, minBid = Infinity, maxAsk = 0;
   book.bids.forEach(function (usd, px) {
+    if (px < minBid) minBid = px;
     var i = Math.floor(px / step + 1e-9);
     if (i >= lo && i <= hi) bid[i] = (bid[i] || 0) + usd;
   });
   book.asks.forEach(function (usd, px) {
+    if (px > maxAsk) maxAsk = px;
     var i = Math.ceil(px / step - 1e-9);
     if (i >= lo && i <= hi) ask[i] = (ask[i] || 0) + usd;
   });
-  return { bid: bid, ask: ask };
+  var cut = (DEPTH_LIMIT[id] || 1000) * 0.9;
+  return {
+    bid: bid, ask: ask,
+    bidEdge: book.bids.size >= cut && minBid < Infinity ? Math.floor(minBid / step + 1e-9) : null,
+    askEdge: book.asks.size >= cut && maxAsk > 0 ? Math.ceil(maxAsk / step - 1e-9) : null,
+  };
 }

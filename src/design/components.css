@@ -876,3 +876,5 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom.ven-full .dom-c-ven b em{position:relative;font-style:normal;font-weight:var(--ladder-weight);padding:0 var(--space-2);color:var(--ink-deep);}
 .fv-dom.ven-full .dom-cols-ven b{text-align:left;padding-left:var(--space-2);}
 .fv-dom.ven-full .dom-cols-ven b.folded{text-align:center;padding:0;}
+/* rows past a venue's feed depth: unknown (hatched), not empty */
+.dom-c-ven b.nodata{background-image:repeating-linear-gradient(135deg,color-mix(in srgb,var(--steel) 45%,transparent) 0 1px,transparent 1px 6px);}
