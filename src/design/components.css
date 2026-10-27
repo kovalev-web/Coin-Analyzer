@@ -836,13 +836,14 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* Mine | Volume | Price on a slightly darker surface than the tape; clusters
    and the other venues' books halfway between, so they stand apart (painted under the rows,
    so order / PnL tints still show on top) */
+.fv-dom.has-ven{--ven-pad:var(--space-4);}
 .fv-dom.has-cl .dom-ladder,.fv-dom.has-tape .dom-ladder,.fv-dom.has-cl .dom-cols,.fv-dom.has-tape .dom-cols,
 .fv-dom.has-ven .dom-ladder,.fv-dom.has-ven .dom-cols{
   --side-bg:color-mix(in srgb,var(--cloud) 50%,var(--paper));
   background:linear-gradient(to right,
     var(--paper) calc(var(--space-4) + var(--tape-w)),
     var(--side-bg) 0 calc(var(--space-4) + var(--tape-w) + var(--cl-w)),
-    var(--cloud) 0 calc(100% - var(--space-4) - var(--ven-w, 0px)),
+    var(--cloud) 0 calc(100% - var(--ven-pad, 0px) - var(--ven-w, 0px)),
     var(--side-bg) 0);
 }
 
