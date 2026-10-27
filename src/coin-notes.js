@@ -85,7 +85,7 @@ function _renderPopList() {
 // Chart closed: forget the icon positions and hide the tooltip
 export function clearNoteIcons() {
   N.hits = [];
-  if (_tip) _tip.style.display = 'none';
+  _hideTip();
 }
 
 export function closeNotePopover() {
@@ -174,23 +174,55 @@ export function drawNoteIcons(ctx, series, chart, sym, tfSec, w, h) {
   });
 }
 
-// Hover a note icon → its time and text next to it
-var _tip = null;
-document.addEventListener('mousemove', function (e) {
-  if (!N.hits.length || !N.canvas || !N.canvas.isConnected) { if (_tip) _tip.style.display = 'none'; return; }
+// Hover a note icon → its time and text next to it; click (or tap) it → the
+// note stays open until you click elsewhere or press Esc
+var _tip = null, _pinned = false;
+
+function _hitAt(e) {
+  if (!N.hits.length || !N.canvas || !N.canvas.isConnected) return null;
   var r = N.canvas.getBoundingClientRect();
-  if (!r.width) { N.hits = []; if (_tip) _tip.style.display = 'none'; return; } // chart closed / hidden
+  if (!r.width) return null; // chart closed / hidden
   var x = e.clientX - r.left, y = e.clientY - r.top;
-  var hit = null;
   for (var i = N.hits.length - 1; i >= 0; i--) {
     var b = N.hits[i];
-    if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) { hit = b; break; }
+    if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) return b;
   }
-  if (!hit) { if (_tip) _tip.style.display = 'none'; return; }
+  return null;
+}
+
+function _hideTip() {
+  _pinned = false;
+  if (_tip) { _tip.style.display = 'none'; _tip.classList.remove('pinned'); }
+}
+
+function _showTip(note, cx, cy, pin) {
   if (!_tip) { _tip = document.createElement('div'); _tip.className = 'cn-tip'; document.body.appendChild(_tip); }
-  var d = new Date(hit.note.ts);
-  _tip.innerHTML = '<span class="cn-time">' + tzDateStr(d).slice(5).replace('-', '.') + ' ' + tzTimeStr(d) + '</span>' + escHtml(hit.note.text);
+  var d = new Date(note.ts);
+  _tip.innerHTML = '<span class="cn-time">' + tzDateStr(d).slice(5).replace('-', '.') + ' ' + tzTimeStr(d) + '</span>' + escHtml(note.text);
+  _tip.classList.toggle('pinned', !!pin);
   _tip.style.display = 'block';
-  _tip.style.left = Math.min(window.innerWidth - _tip.offsetWidth - 8, e.clientX + 12) + 'px';
-  _tip.style.top = Math.max(8, e.clientY - _tip.offsetHeight - 10) + 'px';
+  _tip.style.left = Math.max(8, Math.min(window.innerWidth - _tip.offsetWidth - 8, cx + 12)) + 'px';
+  _tip.style.top = Math.max(8, cy - _tip.offsetHeight - 10) + 'px';
+  _pinned = !!pin;
+}
+
+document.addEventListener('mousemove', function (e) {
+  if (_pinned) return;
+  var hit = _hitAt(e);
+  if (hit) _showTip(hit.note, e.clientX, e.clientY, false); else if (_tip) _tip.style.display = 'none';
 });
+
+// Capture phase: a press on a bubble opens the note and doesn't reach the chart
+// (no ruler / level drag starts under it)
+document.addEventListener('mousedown', function (e) {
+  if (_tip && _pinned && _tip.contains(e.target)) return;
+  var hit = _hitAt(e);
+  if (!hit) { if (_pinned) _hideTip(); return; }
+  e.stopPropagation();
+  e.preventDefault();
+  _showTip(hit.note, e.clientX, e.clientY, true);
+}, true);
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && _pinned) { e.stopPropagation(); _hideTip(); }
+}, true);
