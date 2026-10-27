@@ -742,8 +742,11 @@ function _syncVenueCols() {
   var folded = _venueFolded();
   // Not listed on that venue → always folded to its (red) letter
   var widths = BOOK_VENUES.map(function (v) { return !S.venues ? 0 : folded[v.id] || bookListed(v.id) === false ? VEN_FOLDED_W : S.venueFull ? VEN_FULL_W : VEN_W; });
-  var total = widths.reduce(function (a, b) { return a + b; }, 0);
+  // A gap before the venues keeps them apart from your trading columns
+  var gap = S.venues ? (parseInt(getCSSVar('--space-6'), 10) || 12) : 0;
+  var total = widths.reduce(function (a, b) { return a + b; }, 0) + gap;
   panel.style.setProperty('--ven-w', total + 'px');
+  panel.style.setProperty('--ven-gap', gap + 'px');
   panel.style.setProperty('--ven-cols', widths.map(function (w) { return w + 'px'; }).join(' '));
   panel.classList.toggle('has-ven', !!S.venues);
   panel.classList.toggle('ven-full', !!S.venueFull);
