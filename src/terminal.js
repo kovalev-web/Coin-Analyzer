@@ -1111,6 +1111,10 @@ on('trade:event', function (ev) {
   } else if (ev.type === 'status') {
     T.access = Object.assign({}, T.access, ev.status);
     _renderLock(true);
+  } else if (ev.type === 'local-stop') {
+    // The trader closed the position itself the moment a trade hit your SL / TP
+    var ls = ev.stop;
+    showToast(ls.kind + ' ' + ls.symbol.replace(/USDT$/, '') + ' closed locally at ' + ls.tradePrice + ' (trigger ' + ls.trigger + (ls.ms ? ', ' + ls.ms.order + ' ms' : '') + ')');
   } else if (ev.type === 'fill') {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.symbol.replace(/USDT$/, '') + ' ' + _fmtUsd(Number(f.quantity) * Number(f.price)) + ' USDT @ ' + f.price);

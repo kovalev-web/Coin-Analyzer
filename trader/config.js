@@ -13,8 +13,10 @@
 //   "internalSecret": "...",          // shared with pump-ws (TRADER_INTERNAL_SECRET)
 //   "port": 3010,
 //   "dataDir": "/var/lib/questtick-trader",
-//   "credentialsFile": "..."          // optional: share the key store with another
+//   "credentialsFile": "...",         // optional: share the key store with another
 //                                     //   trader process (test mode runs a testnet one)
+//   "localStops": true                // default on: close at once when a trade hits
+//                                     //   your SL / TP (localstops.js); false = exchange only
 // }
 
 var fs = require('fs');
@@ -73,6 +75,7 @@ function buildConfig(raw) {
     marketWs: raw.marketWs || ep.marketWs,
     userStream: raw.userStream ? [].concat(raw.userStream) : ep.userStream,
     userStreamEvents: USER_STREAM_EVENTS,
+    localStops: raw.localStops !== false,
   };
 }
 

@@ -40,6 +40,7 @@ var { loadConfig } = require('./config');
 var { createClient } = require('./binance');
 var { createAudit } = require('./audit');
 var { createUserStream } = require('./userstream');
+var { createLocalStops, marketTradesUrl } = require('./localstops');
 var { Trader } = require('./trader');
 var { describeError } = require('./errors');
 var { createStore } = require('./credentials');
@@ -97,6 +98,13 @@ function readJson(req) {
     });
   });
 }
+
+// Local stops: watch trades on symbols with an SL / TP and close at once when
+// one prints through it; the exchange order stays as the backup
+var localStops = config.localStops ? createLocalStops({ trader: trader, url: marketTradesUrl(config.marketWs) }) : null;
+trader.on('event', function (ev) {
+  if (localStops && (ev.type === 'algo' || ev.type === 'snapshot' || ev.type === 'position')) localStops.sync();
+});
 
 var sseClients = new Set();
 trader.on('event', function (ev) {
@@ -184,7 +192,7 @@ function needKey(fn) {
 }
 
 function statusBody() {
-  return Object.assign({ env: config.env, marketWs: config.marketWs, marketRest: config.rest, publicIp: config.publicIp, configured: !!client, twoFactor: twoFactorStatus() }, trader.getStatus());
+  return Object.assign({ env: config.env, localStops: !!localStops, marketWs: config.marketWs, marketRest: config.rest, publicIp: config.publicIp, configured: !!client, twoFactor: twoFactorStatus() }, trader.getStatus());
 }
 
 var routes = {
@@ -407,4 +415,4 @@ server.listen(config.port, '127.0.0.1', function () {
   activate();
 });
 
-process.on('SIGTERM', function () { if (stream) stream.stop(); server.close(); process.exit(0); });
+process.on('SIGTERM', function () { if (stream) stream.stop(); if (localStops) localStops.stop(); server.close(); process.exit(0); });
