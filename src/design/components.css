@@ -1014,3 +1014,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-editor-row .ds-input{height:var(--h-btn-md);font-size:var(--text-sm);flex:1;min-width:0;}
 .edge-editor-row.hidden .ds-input{opacity:0.5;}
 .edge-check{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;cursor:pointer;}
+.edge-cost{font-size:var(--text-sm);color:var(--ink-deep);margin-bottom:var(--space-6);}
+.edge-cost.dn b{color:var(--danger);}
+.edge-summary b.up{color:var(--bullish);}
+.edge-summary b.dn{color:var(--danger);}
+.edge-setups tr.real td{font-weight:var(--font-bold);border-top:1px solid var(--steel);}

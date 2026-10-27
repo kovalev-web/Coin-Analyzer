@@ -186,6 +186,11 @@ function computeEdge(days, tags, opts) {
     return Object.assign({ key: p.key, name: p.name, archived: !!p.archived, enough: st.n >= MIN_N }, st);
   }).filter(function (p) { return !p.archived || p.n > 0; }); // a hidden setup still shows while it has trades
   var allByRules = Object.assign({ key: 'all', enough: byRules.length >= MIN_N }, setupStats(byRules.map(function (x) { return x.r; })));
+  // Everything you actually traded, breaks included — the real result in R —
+  // and what the trades with breaks cost on their own
+  var withR = trades.filter(function (x) { return x.r != null; });
+  var allTrades = Object.assign({ key: 'everything' }, setupStats(withR.map(function (x) { return x.r; })));
+  var breaksR = withR.filter(function (x) { return x.broken.length; }).reduce(function (sum, x) { return sum + x.r; }, 0);
 
   var flagOrder = ['clean', 'revenge (≤5 min after a loss)', 'size-up after a streak', 'after stop-crane', 'over volume limit'];
   return {
@@ -196,6 +201,9 @@ function computeEdge(days, tags, opts) {
     execution: execution,
     setups: setups,
     setupsAll: allByRules,
+    allTrades: allTrades,
+    breaksCostR: Math.round(breaksR * 100) / 100,
+    dates: days.filter(function (d) { return d.facts && d.facts.trades; }).map(function (d) { return d.date; }),
     excluded: excludedCount,
     noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
     // Trades still waiting for a setup type, newest first — tagged right in the report

@@ -104,6 +104,10 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
   assert.deepEqual([b.n, b.expectancyR, b.totalR], [2, 0.5, 1]);
   assert.equal(e.noPattern, 1);
   assert.deepEqual(e.untagged.map((u) => [u.symbol, u.closeTime, u.r]), [['YUSDT', 400, 1]]);
+  // everything traded: +2 −1 −2 +1 = 0R; the revenge (−2R) and off-briefing (+1R) trades cost −1R
+  assert.deepEqual([e.allTrades.n, e.allTrades.totalR], [4, 0]);
+  assert.equal(e.breaksCostR, -1);
+  assert.deepEqual(e.dates, ['2026-10-26']);
 });
 
 test('your own setups: named rows, excluded setup (misclicks) leaves the report, hidden setup shows only with trades', () => {

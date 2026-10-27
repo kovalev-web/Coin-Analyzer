@@ -37,12 +37,13 @@ var BREAK_LABEL = {
 };
 
 // Execution: share of trades by the rules, which rules break, weekly trend
-function executionHTML(x) {
+function executionHTML(x, cost, oneR) {
   if (!x || !x.n) return '<div class="edge-panel"><h4 class="edge-h">Исполнение</h4><div class="edge-empty">Сделок нет</div></div>';
   var rules = x.rules.slice().sort(function (a, b) { return b.broken - a.broken; });
   return '<div class="edge-panel"><h4 class="edge-h">Исполнение</h4>'
     + '<div class="edge-big"><b class="' + (x.rate >= 80 ? 'up' : x.rate >= 50 ? '' : 'dn') + '">' + x.rate + '%</b>'
     + '<span>сделок по правилам — ' + x.clean + ' из ' + x.n + '</span></div>'
+    + (cost ? '<div class="edge-cost ' + (cost < 0 ? 'dn' : '') + '">Сделки с нарушениями дали <b>' + rr(cost) + '</b>' + (oneR ? ' (' + money(cost * oneR) + ' USDT)' : '') + '</div>' : '')
     + (x.weeks.length > 1 ? '<div class="edge-sub">По неделям: ' + x.weeks.map(function (w) { return 'с ' + shortDate(w.week) + ' — <b>' + w.rate + '%</b>'; }).join(' · ') + '</div>' : '')
     + '<table class="edge-list edge-rules"><thead><tr><th>Нарушение</th><th>Сколько раз</th></tr></thead><tbody>'
     + rules.map(function (r) {
@@ -58,13 +59,16 @@ function setupsHTML(e) {
     + (_editing ? editorHTML() : '');
   if (!e.riskPct) return head + '<div class="edge-empty">Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</div></div>';
   var rows = e.setups.concat([e.setupsAll]);
+  if (e.allTrades && e.allTrades.n) rows.push(e.allTrades);
   return head
+    + '<div class="edge-sub"><b>Строки сетапов — только сделки по правилам:</b> сколько сетап даёт, если делать его правильно. Твой реальный результат со всеми нарушениями — последняя строка.</div>'
     + '<div class="edge-sub">1R = ' + (e.oneR != null ? e.oneR.toFixed(2) + ' USDT — ' : '') + e.riskPct + '% от '
       + (e.workingVolume ? 'рабочего объёма ' + e.workingVolume + ' USDT' : 'объёма позиции (рабочий объём не задан в настройках)') + '. Ожидание — сколько R в среднем приносит одна такая сделка. Надёжно от ' + e.minN + ' сделок, строки бледнее — пока меньше.</div>'
     + '<table class="edge-list edge-setups"><thead><tr><th>Сетап</th><th>Сделок</th><th>В плюс</th><th>Ср. плюс</th><th>Ср. минус</th><th>Ожидание</th><th>Итого</th></tr></thead><tbody>'
     + rows.map(function (s) {
         var cls = (s.key === 'all' ? 'total ' : '') + (s.n && !s.enough ? 'thin' : '');
-        var name = s.key === 'all' ? 'Все сетапы' : escHtml(s.name || s.key);
+        var name = s.key === 'all' ? 'Все сетапы по правилам' : s.key === 'everything' ? 'Все сделки, с нарушениями' : escHtml(s.name || s.key);
+        if (s.key === 'everything') cls = 'real';
         if (!s.n) return '<tr class="' + cls + ' none"><td>' + name + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
         return '<tr class="' + cls + '"><td>' + name + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
           + '<td class="up">' + rr(s.avgWinR) + '</td><td class="dn">' + rr(s.avgLossR) + '</td>'
@@ -138,9 +142,10 @@ export function renderEdgeSection(container) {
     var t = e.total;
     body.innerHTML = '<div class="edge-summary">'
         + '<span><b>' + t.n + '</b> ' + plural(t.n, 'сделка', 'сделки', 'сделок') + ' за <b>' + e.days + '</b> ' + plural(e.days, 'день', 'дня', 'дней') + '</span>'
-        + '<span>итог ' + money(t.pnl) + ' USDT</span>'
+        + '<span>итог <b class="' + (t.pnl >= 0 ? 'up' : 'dn') + '">' + money(t.pnl) + ' USDT</b>' + (e.oneR ? ' = ' + rr(t.pnl / e.oneR) : '') + '</span>'
+        + (e.dates && e.dates.length ? '<span>дни: ' + e.dates.map(shortDate).join(', ') + ' — в отчёт попадают только дни с сохранённой вечерней карточкой</span>' : '')
       + '</div>'
-      + '<div class="edge-panels">' + executionHTML(e.execution) + setupsHTML(e) + '</div>'
+      + '<div class="edge-panels">' + executionHTML(e.execution, e.breaksCostR, e.oneR) + setupsHTML(e) + '</div>'
       + untaggedHTML(e.untagged)
       + '<details class="edge-details"><summary>Все разрезы (в USDT)</summary>'
       + '<div class="edge-grid">' + SECTIONS.map(function (s) {
