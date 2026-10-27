@@ -1475,12 +1475,12 @@ var httpServer = http.createServer(async function (req, res) {
         var jFacts = null;
         try { jFacts = await buildDayFacts(jUserId, jFactsDate); } catch (e) { console.error('[Facts]', e.message); }
         if (jFacts) {
-          var jTagRows = jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ? AND close_time >= ? AND close_time < ?')
+          var jTagRows = jDb.prepare('SELECT symbol, close_time, setup, emotion, pattern FROM trade_tags WHERE user_id = ? AND close_time >= ? AND close_time < ?')
             .all(jUserId, jFacts.trades.length ? jFacts.trades[0].openTime : 0, Date.now() + 86400000);
           jFacts.trades.forEach(function (t) {
             if (!t.closeTime) return;
             var tg = jTagRows.find(function (g) { return g.symbol === t.symbol && Math.abs(g.close_time - t.closeTime) <= 2000; });
-            if (tg) t.tag = { setup: tg.setup, emotion: tg.emotion };
+            if (tg) t.tag = { setup: tg.setup, emotion: tg.emotion, pattern: tg.pattern };
           });
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1497,14 +1497,15 @@ var httpServer = http.createServer(async function (req, res) {
         var jTagClose = Number(jTag.closeTime);
         var jSetupOk = jTag.setup == null || ['A', 'B', 'C'].indexOf(jTag.setup) !== -1;
         var jEmoOk = jTag.emotion == null || ['plan', 'fomo', 'revenge', 'boredom', 'fear'].indexOf(jTag.emotion) !== -1;
-        if (!/^[A-Z0-9]{2,30}$/.test(jTagSym) || !(jTagClose > 0) || !jSetupOk || !jEmoOk || (!jTag.setup && !jTag.emotion)) {
+        var jPatOk = jTag.pattern == null || ['breakout', 'bounce_trend', 'bounce_counter', 'range_hold'].indexOf(jTag.pattern) !== -1;
+        if (!/^[A-Z0-9]{2,30}$/.test(jTagSym) || !(jTagClose > 0) || !jSetupOk || !jEmoOk || !jPatOk || (!jTag.setup && !jTag.emotion && !jTag.pattern)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid tag' }));
           return;
         }
-        jDb.prepare('INSERT INTO trade_tags (user_id, symbol, close_time, setup, emotion, created_at) VALUES (?, ?, ?, ?, ?, ?) '
-          + 'ON CONFLICT(user_id, symbol, close_time) DO UPDATE SET setup = COALESCE(excluded.setup, trade_tags.setup), emotion = COALESCE(excluded.emotion, trade_tags.emotion)')
-          .run(jUserId, jTagSym, Math.floor(jTagClose), jTag.setup || null, jTag.emotion || null, Date.now());
+        jDb.prepare('INSERT INTO trade_tags (user_id, symbol, close_time, setup, emotion, pattern, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) '
+          + 'ON CONFLICT(user_id, symbol, close_time) DO UPDATE SET setup = COALESCE(excluded.setup, trade_tags.setup), emotion = COALESCE(excluded.emotion, trade_tags.emotion), pattern = COALESCE(excluded.pattern, trade_tags.pattern)')
+          .run(jUserId, jTagSym, Math.floor(jTagClose), jTag.setup || null, jTag.emotion || null, jTag.pattern || null, Date.now());
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -1557,11 +1558,14 @@ var httpServer = http.createServer(async function (req, res) {
         var jEdgeDays = { '1m': 30, '3m': 90, '6m': 180, all: 3650 }[jEdgeRange] || 90;
         var jEdgeFrom = new Date(Date.now() - jEdgeDays * 86400000).toISOString().slice(0, 10);
         var jEdgeRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND facts_json IS NOT NULL ORDER BY date ASC').all(jUserId, jEdgeFrom);
-        var jEdgeTags = jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ?').all(jUserId);
+        var jEdgeTags = jDb.prepare('SELECT symbol, close_time, setup, emotion, pattern FROM trade_tags WHERE user_id = ?').all(jUserId);
+        // Risk per trade (Account settings → % per trade) turns PnL into R
+        var jEdgeLimits = {};
+        try { var jElr = await redis(['GET', 'account_trading_limits:' + jUserId]); jEdgeLimits = jElr && jElr.result ? JSON.parse(jElr.result) : {}; } catch (e) {}
         var jEdge = computeEdge(jEdgeRows.map(function (r) {
           var e = journalRowToEntry(r);
           return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
-        }), jEdgeTags);
+        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null });
         jEdge.range = jEdgeRange;
         jEdge.days = jEdgeRows.length;
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1956,7 +1960,7 @@ var httpServer = http.createServer(async function (req, res) {
               var jEdgeA = computeEdge(jEdgeRowsA.map(function (r) {
                 var e = journalRowToEntry(r);
                 return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
-              }), jDb.prepare('SELECT symbol, close_time, setup, emotion FROM trade_tags WHERE user_id = ?').all(jUserId));
+              }), jDb.prepare('SELECT symbol, close_time, setup, emotion, pattern FROM trade_tags WHERE user_id = ?').all(jUserId));
               if (jEdgeA.total.n) {
                 var jEdgeLines = ['Разрезы по сделкам (посчитано системой; n — число сделок, выводы при n < ' + jEdgeA.minN + ' предварительные):'];
                 Object.keys(jEdgeA.groups).forEach(function (gk) {

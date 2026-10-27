@@ -9,6 +9,67 @@ var MIN_N = 20;
 var TAG_MATCH_MS = 2000; // tag close_time vs fact closeTime (both are the exchange fill time)
 
 var SETUP = { A: 'A setup', B: 'B setup', C: 'C setup' };
+// Setup types — what kind of entry the trade was (tagged after the close)
+var PATTERNS = ['breakout', 'bounce_trend', 'bounce_counter', 'range_hold'];
+var STOP_OVERRUN_R = 1.2; // a loss beyond this many R means the stop wasn't held
+
+// ── Strategy and execution (measured in R, not USDT) ───────────────────────
+
+// R = PnL in units of the planned risk: risk per trade (Account settings, % of
+// the position) × the trade's size. +1% move with a 0.5% risk = +2R.
+// null when the risk or the size is unknown.
+function tradeR(pnlNet, maxNotional, riskPct) {
+  var risk = Number(maxNotional) * Number(riskPct) / 100;
+  if (!(risk > 0) || pnlNet == null || isNaN(pnlNet)) return null;
+  return pnlNet / risk;
+}
+
+// Your rules; a trade is "by the rules" when none is broken. Unknown → not counted.
+var RULES = [
+  ['planned', 'монета из брифинга'],
+  ['stopHeld', 'стоп выдержан (убыток не больше 1R)'],
+  ['size', 'объём в лимите'],
+  ['noRevenge', 'без реванша после убытка'],
+  ['noCrane', 'без входов после стоп-крана'],
+  ['noSizeUp', 'без роста объёма после серии'],
+  ['tagged', 'сетап отмечен'],
+];
+
+// Keys of the rules this trade broke. x: { t: fact trade, tag, r }
+function brokenRules(x) {
+  var out = [];
+  if (!x.t.planned) out.push('planned');
+  if (x.r != null && x.r < -STOP_OVERRUN_R) out.push('stopHeld');
+  if (x.t.oversize) out.push('size');
+  if (x.t.revenge) out.push('noRevenge');
+  if (x.t.afterCrane) out.push('noCrane');
+  if (x.t.sizeUp) out.push('noSizeUp');
+  if (!x.tag || !x.tag.pattern) out.push('tagged');
+  return out;
+}
+
+// Expectancy of a list of R results: what one trade of this kind is worth on average
+function setupStats(rs) {
+  var wins = rs.filter(function (r) { return r > 0; }), losses = rs.filter(function (r) { return r <= 0; });
+  var sum = function (a) { return a.reduce(function (s, v) { return s + v; }, 0); };
+  var r2 = function (v) { return Math.round(v * 100) / 100; };
+  return {
+    n: rs.length,
+    winRate: rs.length ? Math.round(wins.length / rs.length * 100) : 0,
+    avgWinR: wins.length ? r2(sum(wins) / wins.length) : null,
+    avgLossR: losses.length ? r2(sum(losses) / losses.length) : null,
+    expectancyR: rs.length ? r2(sum(rs) / rs.length) : null,
+    totalR: r2(sum(rs)),
+  };
+}
+
+// Monday of the date's week (YYYY-MM-DD), for the weekly execution trend
+function weekOf(date) {
+  var d = new Date(date + 'T00:00:00Z');
+  var dow = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
 var EMOTION = { plan: 'Calm, by plan', fomo: 'FOMO', revenge: 'Revenge', boredom: 'Boredom', fear: 'Fear' };
 
 function scaleBucket(v) {
@@ -31,7 +92,9 @@ function hourBlock(h) {
 
 // days: [{ date, facts, morning: { sleepHours, sleepQuality, energy, carryover, focus } }]
 // tags: [{ symbol, close_time, setup, emotion }]
-function computeEdge(days, tags) {
+// opts: { riskPct } — risk per trade, % of the position (Account settings)
+function computeEdge(days, tags, opts) {
+  var riskPct = opts && opts.riskPct;
   var trades = [];
   var used = new Set();
   (days || []).forEach(function (d) {
@@ -46,7 +109,10 @@ function computeEdge(days, tags) {
         if (dt <= TAG_MATCH_MS && dt < bestD) { best = i; bestD = dt; }
       });
       if (best != null) used.add(best);
-      trades.push({ date: d.date, t: t, tag: best != null ? tags[best] : null, m: d.morning || {} });
+      var x = { date: d.date, t: t, tag: best != null ? tags[best] : null, m: d.morning || {} };
+      x.r = tradeR(t.pnlNet, t.maxNotional, riskPct);
+      x.broken = brokenRules(x);
+      trades.push(x);
     });
   });
 
@@ -75,9 +141,45 @@ function computeEdge(days, tags) {
     return rows;
   }
 
+  // Execution: share of trades by the rules, which rules break, by week
+  var clean = trades.filter(function (x) { return !x.broken.length; });
+  var weeks = {};
+  trades.forEach(function (x) {
+    var w = weeks[weekOf(x.date)] = weeks[weekOf(x.date)] || { week: weekOf(x.date), n: 0, clean: 0 };
+    w.n++;
+    if (!x.broken.length) w.clean++;
+  });
+  var execution = {
+    n: trades.length,
+    clean: clean.length,
+    rate: trades.length ? Math.round(clean.length / trades.length * 100) : null,
+    rules: RULES.map(function (r) {
+      return { key: r[0], label: r[1], broken: trades.filter(function (x) { return x.broken.indexOf(r[0]) !== -1; }).length };
+    }),
+    weeks: Object.keys(weeks).sort().map(function (k) {
+      var w = weeks[k];
+      return { week: w.week, n: w.n, clean: w.clean, rate: Math.round(w.clean / w.n * 100) };
+    }),
+  };
+
+  // Strategy: each setup on trades done by the rules (other than tagging), in R
+  var byRules = trades.filter(function (x) {
+    return x.r != null && x.broken.every(function (k) { return k === 'tagged'; }) && x.tag && x.tag.pattern;
+  });
+  var setups = PATTERNS.map(function (p) {
+    var st = setupStats(byRules.filter(function (x) { return x.tag.pattern === p; }).map(function (x) { return x.r; }));
+    return Object.assign({ key: p, enough: st.n >= MIN_N }, st);
+  });
+  var allByRules = Object.assign({ key: 'all', enough: byRules.length >= MIN_N }, setupStats(byRules.map(function (x) { return x.r; })));
+
   var flagOrder = ['clean', 'revenge (≤5 min after a loss)', 'size-up after a streak', 'after stop-crane', 'over volume limit'];
   return {
     minN: MIN_N,
+    riskPct: riskPct || null,
+    execution: execution,
+    setups: setups,
+    setupsAll: allByRules,
+    noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
     total: group(function () { return 'all trades'; })[0] || { key: 'all trades', n: 0 },
     tagged: trades.filter(function (x) { return x.tag; }).length,
     groups: {
@@ -102,4 +204,4 @@ function computeEdge(days, tags) {
   };
 }
 
-module.exports = { computeEdge, MIN_N, TAG_MATCH_MS, SETUP, EMOTION };
+module.exports = { computeEdge, tradeR, brokenRules, setupStats, weekOf, MIN_N, TAG_MATCH_MS, SETUP, EMOTION, PATTERNS, RULES, STOP_OVERRUN_R };

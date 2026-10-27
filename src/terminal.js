@@ -1778,6 +1778,7 @@ function _viewOnlyBlocked() {
 // one tap each, skippable. Keyed by the exchange close time so the edge
 // report can join it to the computed trade.
 
+var TAG_PATTERNS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок-тренд'], ['bounce_counter', 'Отскок-контр'], ['range_hold', 'Удержание']];
 var TAG_SETUPS = ['A', 'B', 'C'];
 var TAG_EMOTIONS = [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']];
 
@@ -1799,6 +1800,9 @@ function _renderTag() {
   var q = T.tagQueue[T.tagQueue.length - 1];
   if (!q) { el.innerHTML = ''; return; }
   el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + ' closed</span>'
+    + '<span class="dom-tag-group">' + TAG_PATTERNS.map(function (x) {
+        return '<button data-tag-pattern="' + x[0] + '" class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+      }).join('') + '</span>'
     + '<span class="dom-tag-group">' + TAG_SETUPS.map(function (x) {
         return '<button data-tag-setup="' + x + '" class="' + (q.setup === x ? 'on' : '') + '">' + x + '</button>';
       }).join('') + '</span>'
@@ -1815,7 +1819,7 @@ function _tagClick(kind, value) {
   var body = { symbol: q.symbol, closeTime: q.closeTime };
   body[kind] = value;
   saveTradeTag(body).catch(function (e) { _setStatus(e.message, true); });
-  if (q.setup && q.emotion) T.tagQueue.pop();
+  if (q.pattern && q.setup && q.emotion) T.tagQueue.pop();
   _renderTag();
 }
 
@@ -2033,6 +2037,8 @@ function _bindPanel(panel) {
     if (size) { _pickSize(Number(size.dataset.size)); return; }
     var ts = e.target.closest('[data-tag-setup]');
     if (ts) { _tagClick('setup', ts.dataset.tagSetup); return; }
+    var tp = e.target.closest('[data-tag-pattern]');
+    if (tp) { _tagClick('pattern', tp.dataset.tagPattern); return; }
     var te = e.target.closest('[data-tag-emotion]');
     if (te) { _tagClick('emotion', te.dataset.tagEmotion); return; }
     if (e.target.closest('[data-tag-skip]')) { T.tagQueue.pop(); _renderTag(); return; }

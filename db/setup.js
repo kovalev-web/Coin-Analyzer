@@ -145,6 +145,9 @@ function ensureAuthTables() {
     )
   `);
   sqlite.exec('CREATE INDEX IF NOT EXISTS "coin_notes_user_symbol_ts" ON "coin_notes" ("user_id", "symbol", "ts")');
+  // Setup type of a closed trade (what kind of entry it was); `setup` stays the A/B/C quality
+  var tagCols = sqlite.prepare('PRAGMA table_info("trade_tags")').all().map(function (c) { return c.name; });
+  if (tagCols.indexOf('pattern') === -1) sqlite.exec('ALTER TABLE "trade_tags" ADD COLUMN "pattern" TEXT');
   if (journalCols.indexOf('max_trades') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }

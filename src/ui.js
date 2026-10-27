@@ -1578,8 +1578,12 @@ function _factsHTML(f, taggable) {
     if (t.tag && t.tag.setup) tags.unshift(t.tag.setup + ' setup');
     if (t.tag && t.tag.emotion) tags.push(t.tag.emotion);
     var tagger = '';
-    if (taggable && t.closeTime && !(t.tag && t.tag.setup && t.tag.emotion)) {
+    if (t.tag && t.tag.pattern) tags.unshift({ breakout: 'Пробой', bounce_trend: 'Отскок-тренд', bounce_counter: 'Отскок-контр', range_hold: 'Удержание' }[t.tag.pattern] || t.tag.pattern);
+    if (taggable && t.closeTime && !(t.tag && t.tag.pattern && t.tag.setup && t.tag.emotion)) {
       tagger = '<div class="jf-tagger">'
+        + [['breakout', 'Пробой'], ['bounce_trend', 'Отскок-тренд'], ['bounce_counter', 'Отскок-контр'], ['range_hold', 'Удержание']].map(function (x) {
+            return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '" class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+          }).join('')
         + ['A', 'B', 'C'].map(function (x) { return '<button type="button" data-jf-tag="setup" data-val="' + x + '" class="' + (t.tag && t.tag.setup === x ? 'on' : '') + '">' + x + '</button>'; }).join('')
         + [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']].map(function (x) {
             return '<button type="button" data-jf-tag="emotion" data-val="' + x[0] + '" class="' + (t.tag && t.tag.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';

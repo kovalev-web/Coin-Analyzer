@@ -966,3 +966,30 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-list th:first-child,.edge-list td:first-child{width:26%;}
 .edge-list th:nth-child(n+2):nth-child(-n+5),.edge-list td:nth-child(n+2):nth-child(-n+5){width:9%;padding-left:0;padding-right:var(--space-6);}
 .edge-list td:first-child b,.edge-list td:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Мой edge: execution and setups panels */
+.edge-big{display:flex;align-items:baseline;gap:var(--space-6);margin-bottom:var(--space-4);}
+.edge-big b{font-size:calc(var(--text-lg) * 2);font-weight:var(--font-bold);font-variant-numeric:tabular-nums;color:var(--ink-deep);line-height:1;}
+.edge-big b.up{color:var(--bullish);}
+.edge-big b.dn{color:var(--danger);}
+.edge-big span{font-size:var(--text-sm);color:var(--graphite);}
+.edge-sub{font-size:var(--text-xs);color:var(--graphite);line-height:var(--leading-relaxed);margin-bottom:var(--space-6);}
+.edge-sub b{color:var(--ink-deep);font-weight:var(--font-semi);}
+.edge-panel .edge-sub:last-child{margin:var(--space-6) 0 var(--space-2);}
+/* rules: two columns */
+.edge-rules th:first-child,.edge-rules td:first-child{width:auto;}
+.edge-rules th:last-child,.edge-rules td:last-child{width:110px;text-align:right;padding-left:0;}
+.edge-rules tr.kept td{color:var(--graphite);}
+.edge-rules tr.broken td:first-child{color:var(--ink-deep);}
+.edge-rules tr.broken td:last-child{color:var(--danger);font-weight:var(--font-semi);}
+/* setups: name + six numbers, all right-aligned under their headers */
+.edge-setups th,.edge-setups td{text-align:right;width:auto;padding-left:0;padding-right:var(--space-4);}
+.edge-setups th:first-child,.edge-setups td:first-child{text-align:left;width:30%;}
+.edge-setups th:last-child,.edge-setups td:last-child{width:auto;padding-left:0;padding-right:0;}
+.edge-setups tr.thin td{opacity:0.55;}
+.edge-setups tr.none td{color:var(--graphite);}
+.edge-setups tr.none td[colspan]{text-align:left;}
+.edge-setups tr.total td{font-weight:var(--font-semi);border-top:1px solid var(--steel);}
+.edge-setups{table-layout:auto;}
+.edge-setups th,.edge-setups td{white-space:nowrap;}
+.edge-setups th:nth-child(n+2),.edge-setups td:nth-child(n+2){padding-right:var(--space-4);padding-left:var(--space-4);}
+.edge-setups th:last-child,.edge-setups td:last-child{padding-right:0;}

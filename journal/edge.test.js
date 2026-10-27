@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { computeEdge } = require('./edge');
+const { computeEdge, tradeR, brokenRules, setupStats, weekOf } = require('./edge');
 
 function trade(symbol, closeTime, pnl, extra) {
   return Object.assign({ symbol, closeTime, pnlNet: pnl, result: pnl > 0 ? 'win' : 'loss', planned: true, atLevel: null, hour: 9 }, extra);
@@ -47,4 +47,54 @@ test('morning state buckets and enough-data flag', () => {
   assert.equal(g.focus.find((r) => r.key === 'high (4–5)').winRate, 100);
   assert.equal(g.sleep[0].enough, false);
   assert.deepEqual(g.hour.map((r) => r.key).sort(), ['08–12', '12–16']);
+});
+
+test('R: PnL in units of the planned risk (0.5% of a 100 USDT position = 0.5 USDT)', () => {
+  assert.equal(tradeR(1, 100, 0.5), 2);
+  assert.equal(tradeR(-0.5, 100, 0.5), -1);
+  assert.equal(tradeR(1, 100, null), null);
+  assert.equal(tradeR(1, 0, 0.5), null);
+});
+
+test('rules: each break is named; unknown R does not count as a stop overrun', () => {
+  const ok = { t: { planned: true }, tag: { pattern: 'breakout' }, r: -1 };
+  assert.deepEqual(brokenRules(ok), []);
+  assert.deepEqual(brokenRules({ ...ok, r: -1.5 }), ['stopHeld']);
+  assert.deepEqual(brokenRules({ ...ok, r: null }), []);
+  assert.deepEqual(brokenRules({ t: { planned: false, revenge: true, oversize: true }, tag: null, r: 0.5 }), ['planned', 'size', 'noRevenge', 'tagged']);
+});
+
+test('setup stats: expectancy is the average R per trade', () => {
+  // 3 wins of +2R, 2 losses of −1R → (6 − 2) / 5 = +0.8R per trade
+  assert.deepEqual(setupStats([2, 2, 2, -1, -1]), { n: 5, winRate: 60, avgWinR: 2, avgLossR: -1, expectancyR: 0.8, totalR: 4 });
+  assert.deepEqual(setupStats([]), { n: 0, winRate: 0, avgWinR: null, avgLossR: null, expectancyR: null, totalR: 0 });
+});
+
+test('week starts on Monday', () => {
+  assert.equal(weekOf('2026-10-27'), '2026-10-26'); // Tuesday
+  assert.equal(weekOf('2026-10-26'), '2026-10-26');
+  assert.equal(weekOf('2026-11-01'), '2026-10-26'); // Sunday
+});
+
+test('execution and setups: by-the-rules share and setups in R on clean trades only', () => {
+  const d = [{ date: '2026-10-26', morning: {}, facts: { trades: [
+    { symbol: 'XUSDT', closeTime: 100, pnlNet: 1, result: 'win', planned: true, maxNotional: 100 },
+    { symbol: 'XUSDT', closeTime: 200, pnlNet: -0.5, result: 'loss', planned: true, maxNotional: 100 },
+    { symbol: 'XUSDT', closeTime: 300, pnlNet: -1, result: 'loss', planned: true, maxNotional: 100, revenge: true },
+    { symbol: 'YUSDT', closeTime: 400, pnlNet: 0.5, result: 'win', planned: false, maxNotional: 100 },
+  ] } }];
+  const tg = [
+    { symbol: 'XUSDT', close_time: 100, pattern: 'breakout' },
+    { symbol: 'XUSDT', close_time: 200, pattern: 'breakout' },
+    { symbol: 'XUSDT', close_time: 300, pattern: 'breakout' },
+  ];
+  const e = computeEdge(d, tg, { riskPct: 0.5 });
+  assert.deepEqual([e.execution.n, e.execution.clean, e.execution.rate], [4, 2, 50]);
+  assert.equal(e.execution.rules.find((r) => r.key === 'noRevenge').broken, 1);
+  assert.equal(e.execution.rules.find((r) => r.key === 'tagged').broken, 1);
+  assert.deepEqual(e.execution.weeks, [{ week: '2026-10-26', n: 4, clean: 2, rate: 50 }]);
+  // breakout by the rules: +2R and −1R (the revenge trade is out) → +0.5R per trade
+  const b = e.setups.find((x) => x.key === 'breakout');
+  assert.deepEqual([b.n, b.expectancyR, b.totalR], [2, 0.5, 1]);
+  assert.equal(e.noPattern, 1);
 });

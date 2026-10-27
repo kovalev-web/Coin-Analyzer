@@ -1,35 +1,62 @@
-// ── "My edge" section on the journal page (journal stage 5) ─────────────────
-// Reads top-down: the result, how much data there is, what makes money, what
-// costs money (each with what to do), dimensions with nothing to compare yet,
-// and the full tables folded at the bottom. Conclusions: src/edge-insights.js.
+// ── "Мой edge" on the journal page ──────────────────────────────────────────
+// Two questions, side by side: do you trade by your rules (execution), and does
+// each setup make money when it's done by the rules (strategy, in R — units of
+// your risk per trade, not dollars). PnL is one line on top, the old per-group
+// tables are folded at the bottom. Numbers: journal/edge.js (GET /api/journal/edge).
 
 import { fetchJournalEdge } from './api.js';
-import { insights, keyLabel, DIMENSIONS } from './edge-insights.js';
+import { keyLabel, DIMENSIONS } from './edge-insights.js';
 
 var RANGES = [['1m', '1 мес'], ['3m', '3 мес'], ['6m', '6 мес'], ['all', 'Всё']];
 var SECTIONS = Object.keys(DIMENSIONS).map(function (k) { return [k, DIMENSIONS[k]]; });
+var PATTERN_LABEL = { breakout: 'Пробой', bounce_trend: 'Отскок по тренду', bounce_counter: 'Отскок против тренда', range_hold: 'Удержание границы', all: 'Все сетапы' };
 
 var _range = '3m';
 
 function money(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2); }
+function rr(n) { return n == null ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2) + 'R'; }
 
 function plural(n, one, few, many) {
   var m10 = n % 10, m100 = n % 100;
   return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? few : many;
 }
 
-// Findings as one plain table: what, how it went, effect, what to do
-function findingsHTML(title, list, good, empty) {
-  if (!list.length) return '<div class="edge-panel"><h4 class="edge-h">' + title + '</h4><div class="edge-empty">' + empty + '</div></div>';
-  return '<div class="edge-panel"><h4 class="edge-h">' + title + '</h4><table class="edge-list"><thead><tr>'
-    + '<th>Что</th><th>Сделок</th><th>В плюс</th><th>Итог, USDT</th><th title="Сколько принесло или унесло сверх того же числа твоих средних сделок">Влияние</th><th>Что делать</th>'
-    + '</tr></thead><tbody>' + list.map(function (f) {
-      return '<tr><td><b>' + keyLabel(f.key) + '</b><span>' + f.title + '</span></td>'
-        + '<td>' + f.n + '</td><td>' + f.winRate + '%</td>'
-        + '<td class="' + (f.pnl >= 0 ? 'up' : 'dn') + '">' + money(f.pnl) + '</td>'
-        + '<td class="' + (good ? 'up' : 'dn') + '"><b>' + money(f.impact) + '</b></td>'
-        + '<td>' + f.advice + '</td></tr>';
-    }).join('') + '</tbody></table></div>';
+function shortDate(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+
+// Execution: share of trades by the rules, which rules break, weekly trend
+function executionHTML(x) {
+  if (!x || !x.n) return '<div class="edge-panel"><h4 class="edge-h">Исполнение</h4><div class="edge-empty">Сделок нет</div></div>';
+  var rules = x.rules.slice().sort(function (a, b) { return b.broken - a.broken; });
+  return '<div class="edge-panel"><h4 class="edge-h">Исполнение</h4>'
+    + '<div class="edge-big"><b class="' + (x.rate >= 80 ? 'up' : x.rate >= 50 ? '' : 'dn') + '">' + x.rate + '%</b>'
+    + '<span>сделок по правилам — ' + x.clean + ' из ' + x.n + '</span></div>'
+    + (x.weeks.length > 1 ? '<div class="edge-sub">По неделям: ' + x.weeks.map(function (w) { return 'с ' + shortDate(w.week) + ' — <b>' + w.rate + '%</b>'; }).join(' · ') + '</div>' : '')
+    + '<table class="edge-list edge-rules"><thead><tr><th>Правило</th><th>Нарушений</th></tr></thead><tbody>'
+    + rules.map(function (r) {
+        return '<tr class="' + (r.broken ? 'broken' : 'kept') + '"><td>' + (r.broken ? '✕ ' : '✓ ') + r.label + '</td><td>' + (r.broken || '—') + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div>';
+}
+
+// Strategy: each setup on trades done by the rules, in R
+function setupsHTML(e) {
+  var head = '<div class="edge-panel"><h4 class="edge-h">Сетапы — только сделки по правилам, в R</h4>';
+  if (!e.riskPct) return head + '<div class="edge-empty">Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</div></div>';
+  var rows = e.setups.concat([e.setupsAll]);
+  return head
+    + '<div class="edge-sub">1R = ' + e.riskPct + '% от объёма позиции. Ожидание — сколько R в среднем приносит одна такая сделка. Надёжно от ' + e.minN + ' сделок, строки бледнее — пока меньше.</div>'
+    + '<table class="edge-list edge-setups"><thead><tr><th>Сетап</th><th>Сделок</th><th>В плюс</th><th>Ср. плюс</th><th>Ср. минус</th><th>Ожидание</th><th>Итого</th></tr></thead><tbody>'
+    + rows.map(function (s) {
+        var cls = (s.key === 'all' ? 'total ' : '') + (s.n && !s.enough ? 'thin' : '');
+        if (!s.n) return '<tr class="' + cls + ' none"><td>' + PATTERN_LABEL[s.key] + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
+        return '<tr class="' + cls + '"><td>' + PATTERN_LABEL[s.key] + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
+          + '<td class="up">' + rr(s.avgWinR) + '</td><td class="dn">' + rr(s.avgLossR) + '</td>'
+          + '<td class="' + (s.expectancyR >= 0 ? 'up' : 'dn') + '"><b>' + rr(s.expectancyR) + '</b></td>'
+          + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + (e.noPattern ? '<div class="edge-sub">' + e.noPattern + ' ' + plural(e.noPattern, 'сделка', 'сделки', 'сделок') + ' без отмеченного сетапа — отметь в вечерней карточке, иначе они сюда не попадут.</div>' : '')
+    + '</div>';
 }
 
 function tableHTML(rows) {
@@ -55,29 +82,16 @@ export function renderEdgeSection(container) {
     var body = container.querySelector('.edge-body');
     if (!body) return;
     if (!e || !e.total || !e.total.n) {
-      body.innerHTML = '<div class="edge-empty">Пока пусто. Факты сохраняются с каждой вечерней карточкой; ставь пометку сразу после сделки, чтобы видеть сетапы и эмоции.</div>';
+      body.innerHTML = '<div class="edge-empty">Пока пусто. Факты сохраняются с каждой вечерней карточкой; отмечай сетап сразу после сделки.</div>';
       return;
     }
     var t = e.total;
-    var x = insights(e);
     body.innerHTML = '<div class="edge-summary">'
-        + '<span class="' + (t.pnl >= 0 ? 'up' : 'dn') + '"><b>' + money(t.pnl) + ' USDT</b></span>'
-        + '<span><b>' + t.n + '</b> ' + plural(t.n, 'сделка', 'сделки', 'сделок') + '</span>'
-        + '<span><b>' + t.winRate + '%</b> в плюс</span>'
-        + '<span><b>' + e.days + '</b> ' + plural(e.days, 'день', 'дня', 'дней') + ' разобрано</span>'
-        + '<span>пометок <b>' + e.tagged + ' из ' + t.n + '</b></span>'
+        + '<span><b>' + t.n + '</b> ' + plural(t.n, 'сделка', 'сделки', 'сделок') + ' за <b>' + e.days + '</b> ' + plural(e.days, 'день', 'дня', 'дней') + '</span>'
+        + '<span>итог ' + money(t.pnl) + ' USDT</span>'
       + '</div>'
-      + (x.sample.early
-        ? '<div class="edge-sample"><div class="edge-sample-bar"><i style="width:' + Math.round(x.sample.ratio * 100) + '%"></i></div>'
-          + '<span>Данных мало: ' + t.n + ' из ' + x.sample.minN + ' сделок. Выводы предварительные.</span></div>'
-        : '')
-      + '<div class="edge-panels">'
-        + findingsHTML('Что работает', x.works, true, 'Пока ничего не выделяется')
-        + findingsHTML('Что стоит денег', x.costs, false, 'Ничего не теряет больше твоей средней сделки')
-      + '</div>'
-      + (x.flat.length ? '<div class="edge-flat">Не с чем сравнить: ' + x.flat.join(', ').toLowerCase()
-        + ' — все сделки в одной группе. Появятся, когда дни будут разными.</div>' : '')
-      + '<details class="edge-details"><summary>Все разрезы</summary>'
+      + '<div class="edge-panels">' + executionHTML(e.execution) + setupsHTML(e) + '</div>'
+      + '<details class="edge-details"><summary>Все разрезы (в USDT)</summary>'
       + '<div class="edge-grid">' + SECTIONS.map(function (s) {
           return '<div class="edge-card"><div class="edge-card-title">' + s[1] + '</div>' + tableHTML(e.groups[s[0]]) + '</div>';
         }).join('') + '</div></details>';
