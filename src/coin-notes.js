@@ -178,14 +178,16 @@ export function drawNoteIcons(ctx, series, chart, sym, tfSec, w, h) {
 // note stays open until you click elsewhere or press Esc
 var _tip = null, _pinned = false;
 
-function _hitAt(e) {
+// pad: extra px around the bubble (bigger for a finger)
+function _hitAt(e, pad) {
+  pad = pad || 0;
   if (!N.hits.length || !N.canvas || !N.canvas.isConnected) return null;
   var r = N.canvas.getBoundingClientRect();
   if (!r.width) return null; // chart closed / hidden
   var x = e.clientX - r.left, y = e.clientY - r.top;
   for (var i = N.hits.length - 1; i >= 0; i--) {
     var b = N.hits[i];
-    if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) return b;
+    if (x >= b.x0 - pad && x <= b.x1 + pad && y >= b.y0 - pad && y <= b.y1 + pad) return b;
   }
   return null;
 }
@@ -212,16 +214,19 @@ document.addEventListener('mousemove', function (e) {
   if (hit) _showTip(hit.note, e.clientX, e.clientY, false); else if (_tip) _tip.style.display = 'none';
 });
 
-// Capture phase: a press on a bubble opens the note and doesn't reach the chart
-// (no ruler / level drag starts under it)
-document.addEventListener('mousedown', function (e) {
+// Capture phase, pointer events: a press or a tap (phones: no hover, and the
+// chart swallows touch so no mouse events follow) on a bubble opens the note and
+// doesn't reach the chart (no ruler / level drag starts under it)
+function _onPress(e) {
   if (_tip && _pinned && _tip.contains(e.target)) return;
-  var hit = _hitAt(e);
-  if (!hit) { if (_pinned) _hideTip(); return; }
+  var hit = _hitAt(e, e.pointerType === 'touch' ? 10 : 3);
+  if (!hit) { if (_pinned && e.type === 'pointerdown') _hideTip(); return; }
   e.stopPropagation();
-  e.preventDefault();
+  if (e.type === 'mousedown') e.preventDefault();
   _showTip(hit.note, e.clientX, e.clientY, true);
-}, true);
+}
+document.addEventListener('pointerdown', _onPress, true);
+document.addEventListener('mousedown', _onPress, true);
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && _pinned) { e.stopPropagation(); _hideTip(); }
