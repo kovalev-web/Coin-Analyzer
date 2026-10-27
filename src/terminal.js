@@ -19,7 +19,7 @@ import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './la
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
 import { booksStart, booksStop, bookRows, bookListed, bookAt, BOOK_VENUES } from './venue-books.js';
-import { autoThreshold, hitStrength, HIT_WINDOW_MS, SIZE_HISTORY_MS, FRAME_PERCENTILE, TAPE_PERCENTILE } from './hit-stats.js';
+import { autoThreshold, hitStrength, tapeIntensity, HIT_WINDOW_MS, SIZE_HISTORY_MS, FRAME_PERCENTILE, TAPE_PERCENTILE } from './hit-stats.js';
 
 var ROW_H = 16;
 var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
@@ -606,9 +606,10 @@ function _setClusterTf(tf) {
 // edge (next to the clusters), older ones step left; blue = buy, red = sell,
 // size ∝ √USDT relative to the biggest print shown. Trades at the same
 // millisecond and side merge into one print (one aggressive order). Prints
-// under the tape minimum (automatic per venue by default) are dropped; size grows with log(USDT) on a
-// fixed scale (10 $ → 5 px radius … 100K $ → 17 px), so one huge trade doesn't
-// shrink the rest; from TAPE_BIG_USD a print is a square with its size in it.
+// under the tape minimum (automatic per venue by default) are dropped; size and
+// brightness are relative: the minimum is palest, the biggest print on screen
+// solid (hit-stats.js tapeIntensity); from TAPE_BIG_USD a print is a square
+// with its size in it.
 // A thin line joins the prints.
 
 // Smallest print the tape shows for a venue: the coin's own setting, or
@@ -656,11 +657,18 @@ function _drawTape(step) {
   // Lay out from the newest (right edge) back in time: each print takes its own
   // width, so squares sit side by side with readable numbers instead of piling up
   var recent = tape.slice(-200).filter(function (x) { return x.usd >= _tapeMinFor(x.v); });
+  // Relative hierarchy: the tape's minimum is the palest and smallest, the
+  // biggest print on screen the brightest and largest (log steps in between),
+  // so a jump in hit size stands out whatever the minimum is set to
+  var minUsd = Infinity, maxUsd = 0;
+  recent.forEach(function (x) { var m = _tapeMinFor(x.v); if (m < minUsd) minUsd = m; if (x.usd > maxUsd) maxUsd = x.usd; });
+  if (!isFinite(minUsd)) minUsd = TAPE_MIN_FLOOR;
   var items = [], right = w - 2;
   for (var j = recent.length - 1; j >= 0 && right > 0; j--) {
     var x = recent[j];
-    var r = Math.max(5, Math.min(17, 5 + 3 * Math.log10(Math.max(x.usd, 10) / 10)));
-    var it = { x: x, y: (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2, kind: 'bubble', r: r, bw: 2 * r, bh: 2 * r };
+    var t = tapeIntensity(x.usd, minUsd, maxUsd);
+    var r = 5 + 11 * t;
+    var it = { x: x, t: t, y: (T.top - Math.round(x.p / step)) * ROW_H + ROW_H / 2, kind: 'bubble', r: r, bw: 2 * r, bh: 2 * r };
     it.venue = VENUE_SHORT[x.v] || '';
     if (x.usd >= TAPE_BIG_USD) {
       it.kind = 'square';
@@ -679,28 +687,29 @@ function _drawTape(step) {
   ctx.beginPath();
   items.forEach(function (it, k) { if (k) ctx.lineTo(it.cx, it.y); else ctx.moveTo(it.cx, it.y); });
   ctx.stroke();
-  var buyC = getCSSVar('--primary'), sellC = getCSSVar('--danger');
+  var buyC = getCSSVar('--primary'), sellC = getCSSVar('--danger'), inkC = getCSSVar('--ink-deep');
   items.forEach(function (it) {
     if (it.y < -20 || it.y > h + 20) return;
     ctx.fillStyle = it.x.buy ? buyC : sellC;
+    var alpha = 0.22 + 0.78 * it.t;            // pale at the minimum → solid for the biggest
+    var ink = it.t < 0.45 ? inkC : '#fff';     // dark text on pale fills, white on strong ones
     if (it.kind === 'bubble') {
-      ctx.globalAlpha = 0.8;
+      ctx.globalAlpha = alpha;
       ctx.beginPath();
       ctx.arc(it.cx, it.y, it.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.strokeStyle = getCSSVar('--paper'); // thin rim keeps overlapping bubbles apart
       ctx.stroke();
-      if (it.venue && it.r >= 6) { ctx.fillStyle = '#fff'; ctx.fillText(it.venue, it.cx, it.y + 0.5); } // other venue: its letter
+      if (it.venue && it.r >= 6) { ctx.fillStyle = ink; ctx.fillText(it.venue, it.cx, it.y + 0.5); } // other venue: its letter
       return;
     }
-    ctx.globalAlpha = 0.95;
+    ctx.globalAlpha = alpha;
     ctx.fillRect(it.cx - it.bw / 2, it.y - it.bh / 2, it.bw, it.bh);
     ctx.globalAlpha = 1;
     ctx.strokeStyle = getCSSVar('--paper');
     ctx.strokeRect(it.cx - it.bw / 2, it.y - it.bh / 2, it.bw, it.bh);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff'; // white on the blue / red square in both themes (as the chart labels)
+    ctx.fillStyle = ink; // white on strong blue / red (as the chart labels), dark on pale ones
     ctx.fillText(it.label, it.cx, it.y + 0.5);
   });
   ctx.globalAlpha = 1;

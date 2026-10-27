@@ -28,3 +28,12 @@ test('hit strength: a hit that ate a fifth of a real level counts, a thin price 
   assert.equal(hitStrength(5000, 1000, 5000), 3);
   assert.equal(hitStrength(0, 100, 0), 0);
 });
+
+test('tape intensity: minimum is palest, the biggest on screen brightest, log steps', async () => {
+  const { tapeIntensity } = await import('./hit-stats.js');
+  assert.equal(tapeIntensity(1000, 1000, 100000), 0);
+  assert.equal(tapeIntensity(100000, 1000, 100000), 1);
+  assert.ok(Math.abs(tapeIntensity(10000, 1000, 100000) - 0.5) < 1e-9); // 10K halfway between 1K and 100K
+  assert.equal(tapeIntensity(2000, 1000, 1000), 0.5);                     // nothing bigger on screen
+  assert.equal(tapeIntensity(500, 1000, 100000), 0);                      // under the minimum → palest
+});

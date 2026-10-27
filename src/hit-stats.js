@@ -29,3 +29,14 @@ export function hitStrength(hitUsd, threshold, beforeUsd) {
   var r = Math.max(bySize, byEat);
   return r >= 4 ? 3 : r >= 2 ? 2 : r >= 1 ? 1 : 0;
 }
+
+// Tape hierarchy: 0 for a print at the tape's minimum (palest), 1 for the
+// biggest print on screen (brightest), log-scaled so 1K → 10K → 100K are even
+// steps. One print or all equal → 0.5.
+export function tapeIntensity(usd, minUsd, maxUsd) {
+  var lo = Math.max(minUsd || 0, 1), hi = Math.max(maxUsd || 0, lo);
+  if (!(usd > 0)) return 0;
+  if (hi <= lo * 1.0001) return 0.5;
+  var t = Math.log(Math.max(usd, lo) / lo) / Math.log(hi / lo);
+  return Math.max(0, Math.min(1, t));
+}
