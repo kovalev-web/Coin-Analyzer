@@ -584,8 +584,9 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-ladder{flex:1;min-height:0;overflow:hidden;padding:0 var(--space-4);}
 .dom-row:hover{background:var(--fog);}
 .dom-row.spread .dom-c-price{color:var(--graphite);}
-.dom-row.bid .dom-c-price{color:var(--bullish);}
-.dom-row.ask .dom-c-price{color:var(--danger);}
+.dom-row.bid .dom-c-price,.dom-row.ask .dom-c-price{color:var(--ink-deep);}
+.dom-row.bid .dom-c-price{background:color-mix(in srgb,var(--primary) 10%,transparent);}
+.dom-row.ask .dom-c-price{background:color-mix(in srgb,var(--danger) 10%,transparent);}
 .dom-row.entry{box-shadow:inset 0 0 0 1px var(--primary);}
 .dom-c-price{text-align:center;font-weight:var(--font-medium);}
 .dom-c-mine{display:flex;gap:var(--space-1);overflow:hidden;}
@@ -612,10 +613,11 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-pnl{font-size:var(--text-sm);}
 .dom-mine.pending{opacity:0.5;}
 .dom-mine.cancelling{opacity:0.4;text-decoration:line-through;}
-.dom-row.last-buy .dom-c-price{box-shadow:inset 0 -2px 0 var(--bullish);}
-.dom-row.last-sell .dom-c-price{box-shadow:inset 0 -2px 0 var(--danger);}
-.dom-row.flash.last-buy .dom-c-price{background:color-mix(in srgb,var(--bullish) 35%,transparent);}
-.dom-row.flash.last-sell .dom-c-price{background:color-mix(in srgb,var(--danger) 35%,transparent);}
+.dom-row.last-buy .dom-c-price{background:color-mix(in srgb,var(--primary) 45%,transparent);}
+.dom-row.last-sell .dom-c-price{background:color-mix(in srgb,var(--danger) 45%,transparent);}
+.dom-row.flash.last-buy .dom-c-price{background:var(--primary);color:#fff;}
+.dom-row.flash.last-sell .dom-c-price{background:var(--danger);color:#fff;}
+.dom-row.best-ask{border-bottom-color:var(--graphite);}
 .dom-book{height:var(--h-btn-sm);padding:0 var(--space-3);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;white-space:nowrap;}
 .dom-book.active{background:var(--danger);color:var(--paper);}
 .dom-viewonly{padding:var(--space-2) var(--space-4);background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);font-size:var(--text-2xs);font-weight:var(--font-medium);text-align:center;}
@@ -633,6 +635,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.bid .dom-c-vol i{background:var(--primary);}
 .dom-row .dom-c-vol.dim i{background:var(--graphite);}
 .dom-c-vol b{position:relative;font-weight:var(--font-medium);padding:0 var(--space-2);color:var(--ink-deep);}
+.dom-c-vol.tiny b{color:var(--graphite);}
 .dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price{font-weight:var(--font-medium);}
 .dom-c-price{text-align:right;padding-right:var(--space-3);}
 .fv-dom{position:relative;}
@@ -720,9 +723,9 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* chart marks on the ladder: level (solid, primary), horizontal ray (solid,
    level-deep), alert (dashed, danger, bell by the price) — same as the chart */
 .dom-row{position:relative;}
-.dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--primary);pointer-events:none;}
-.dom-row.mk-ray::after{border-top-color:var(--level-deep);}
-.dom-row.mk-alert::after{border-top:1px dashed var(--danger);}
+.dom-row.mk-level .dom-c-price{box-shadow:inset 3px 0 0 var(--primary);color:var(--primary);}
+.dom-row.mk-ray .dom-c-price{box-shadow:inset 3px 0 0 var(--level-deep);color:var(--level-deep);}
+.dom-row.mk-alert .dom-c-price{box-shadow:inset 3px 0 0 var(--danger);color:var(--danger);}
 .dom-row.mk-alert .dom-c-price::before{content:'';display:inline-block;width:9px;height:9px;margin-right:var(--space-1);vertical-align:-1px;background:var(--danger);-webkit-mask:var(--dom-bell) center/contain no-repeat;mask:var(--dom-bell) center/contain no-repeat;}
 .fv-dom{--dom-bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.268 21a2 2 0 0 0 3.464 0'/%3E%3Cpath d='M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326'/%3E%3C/svg%3E");}
 
@@ -831,7 +834,6 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 /* cluster numbers: regular weight, semi-transparent, so they don't compete with the ladder */
 .dom-c-cl b{font-weight:var(--font-normal);color:color-mix(in srgb,var(--ink-deep) 38%,transparent);}
 /* chart levels only across Mine | Volume | Price, not over the tape and clusters */
-.dom-row.mk-level::after,.dom-row.mk-ray::after,.dom-row.mk-alert::after{left:calc(var(--tape-w) + var(--cl-w));right:var(--ven-w, 0px);}
 
 /* Mine | Volume | Price on a slightly darker surface than the tape; clusters
    and the other venues' books halfway between, so they stand apart (painted under the rows,
@@ -862,7 +864,7 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .dom-cols-ven b{font-weight:var(--font-normal);text-align:right;padding-right:var(--space-1);cursor:pointer;white-space:nowrap;overflow:hidden;}
 .dom-cols-ven b:hover{color:var(--ink-deep);}
 .dom-cols-ven b.folded{text-align:center;padding:0;}
-.dom-cols-ven b.na{color:var(--danger);cursor:default;}
+.dom-cols-ven b.na{color:var(--danger);cursor:default;text-decoration:line-through;}
 
 /* switch: a checkbox styled as an on/off toggle (generic) */
 .ds-switch{position:relative;display:inline-flex;flex:none;width:34px;height:20px;}
@@ -891,3 +893,9 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .fv-dom.ven-full .dom-cols-ven b.folded{text-align:center;padding:0;}
 /* rows past a venue's feed depth: unknown (hatched), not empty */
 .dom-c-ven b.nodata{background-image:repeating-linear-gradient(135deg,color-mix(in srgb,var(--steel) 45%,transparent) 0 1px,transparent 1px 6px);}
+
+/* Test (Binance Demo): a bar on top of the panel and a faint TEST watermark over
+   the ladder, so it can't be taken for the live book */
+.fv-dom.mode-test{border-top:3px solid var(--level-deep);}
+.fv-dom.mode-test .dom-ladder{position:relative;}
+.fv-dom.mode-test .dom-ladder::before{content:'TEST';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);font-size:calc(var(--text-lg) * 5);font-weight:var(--font-bold);letter-spacing:0.1em;color:var(--level-deep);opacity:0.1;pointer-events:none;z-index:5;}

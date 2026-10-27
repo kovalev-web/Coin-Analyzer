@@ -153,6 +153,14 @@ function _setMode(m) {
   T.mode = m;
   _lsSet('qt_term_mode', m);
   setTradeEnv(m);
+  _markMode();
+}
+
+// Test mode is marked on the whole panel (top bar + watermark), so a demo
+// ladder can't be mistaken for the live one
+function _markMode() {
+  var panel = document.getElementById('fv-dom');
+  if (panel) panel.classList.toggle('mode-test', T.mode === 'test');
 }
 
 // Live ↔ Test: different trader, account, book and orders — rebuild the panel from scratch
@@ -214,6 +222,7 @@ function _openPanel(sym) {
     _bindPanel(panel);
   }
   body.classList.add('has-dom');
+  _markMode();
   if (T.sym !== sym) {
     T.sym = sym;
     S = _loadSettings(sym);
@@ -1302,6 +1311,7 @@ function _render() {
     var row = ladder.children[r];
     var cls = 'dom-row';
     if (i >= askIdx) cls += ' ask'; else if (i <= bidIdx) cls += ' bid'; else cls += ' spread';
+    if (i === askIdx) cls += ' best-ask'; else if (i === bidIdx) cls += ' best-bid';
     if (pnl && i >= pnlLo && i <= pnlHi) cls += pnlCls;
     if (tradeIdx === i) cls += tradeCls;
     if (T.drag && T.drag.moved && T.drag.toIdx === i) cls += ' drop-target';
@@ -1326,7 +1336,7 @@ function _render() {
     var v = i >= askIdx ? askVol[i] : i <= bidIdx ? bidVol[i] : 0;
     var usd = v * i * step;
     var ratio = !v ? 0 : full ? barOf(usd) : v / maxVol;
-    _setVol(c[1], usd, ratio, colorThr > 0 && usd < colorThr);
+    _setVol(c[1], usd, ratio, colorThr > 0 && usd < colorThr, T.autoMed > 0 && usd < T.autoMed);
     var pt = (i * step).toFixed(d);
     if (c[2].textContent !== pt) c[2].textContent = pt;
   }
@@ -1383,7 +1393,9 @@ function _makeRow() {
 // Bar length ∝ size: r = share of the full scale (set in USD, or the biggest
 // level on screen); bigger also brighter. v is the level's size in USD.
 // dim: under the highlight threshold — grey, to cut color noise.
-function _setVol(cell, v, r, dim) {
+// tiny: smaller than the typical level on screen — its number is muted too.
+function _setVol(cell, v, r, dim, tiny) {
+  if (cell.classList.contains('tiny') !== !!tiny) cell.classList.toggle('tiny', !!tiny);
   var w = v ? Math.max(2, Math.round(r * 100)) + '%' : '0%';
   var o = !v ? '0' : dim ? '0.3' : (0.35 + 0.5 * r).toFixed(2);
   if (cell.classList.contains('dim') !== !!dim) cell.classList.toggle('dim', !!dim);
