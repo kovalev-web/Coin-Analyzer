@@ -8,6 +8,7 @@
 import { state } from './state.js';
 import { emit } from './events.js';
 import { API_BASE } from './api.js';
+import { SETUP_DIAGRAMS } from './setup-diagrams.js';
 
 var _loading = null;
 
@@ -48,3 +49,31 @@ export function setupName(key) {
   var s = (state.setups || []).find(function (x) { return x.key === key; });
   return s ? s.name : key;
 }
+
+// ── Diagram tooltip ─────────────────────────────────────────────────────────
+// Anything marked with diagramAttr(key) shows that setup's schematic on hover.
+// Your own setups (no drawing) show nothing.
+
+export function diagramAttr(key) {
+  return SETUP_DIAGRAMS[key] ? ' data-setup-diagram="' + key + '"' : '';
+}
+
+var _tip = null, _tipKey = null;
+function _hideTip() { if (_tip) _tip.style.display = 'none'; _tipKey = null; }
+
+document.addEventListener('mouseover', function (e) {
+  var el = e.target.closest && e.target.closest('[data-setup-diagram]');
+  if (!el) { if (_tipKey) _hideTip(); return; }
+  var key = el.dataset.setupDiagram;
+  if (key === _tipKey) return;
+  if (!_tip) { _tip = document.createElement('div'); _tip.className = 'setup-tip'; document.body.appendChild(_tip); }
+  _tip.innerHTML = SETUP_DIAGRAMS[key] || '';
+  _tip.style.display = 'block';
+  _tipKey = key;
+  // Below the button, or above it when there's no room; kept inside the window
+  var r = el.getBoundingClientRect(), w = _tip.offsetWidth, h = _tip.offsetHeight;
+  var top = r.bottom + 8 + h > window.innerHeight ? r.top - h - 8 : r.bottom + 8;
+  _tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  _tip.style.top = Math.max(8, top) + 'px';
+});
+document.addEventListener('scroll', _hideTip, true);

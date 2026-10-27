@@ -3,7 +3,7 @@ import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTime
 import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
 import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
-import { ensureSetups, setupButtons, setupName } from './setups.js';
+import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
 import { noteButtonHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on } from './events.js';
 import { getCurrentRoute } from './router.js';
@@ -1584,7 +1584,7 @@ function _factsHTML(f, taggable) {
     if (taggable && t.closeTime && !(t.tag && t.tag.pattern && t.tag.setup && t.tag.emotion)) {
       tagger = '<div class="jf-tagger">'
         + setupButtons().map(function (x) {
-            return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '" class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+            return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
           }).join('')
         + ['A', 'B', 'C'].map(function (x) { return '<button type="button" data-jf-tag="setup" data-val="' + x + '" class="' + (t.tag && t.tag.setup === x ? 'on' : '') + '">' + x + '</button>'; }).join('')
         + [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']].map(function (x) {

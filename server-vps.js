@@ -968,9 +968,9 @@ async function getSession(req) {
 }
 
 // ── Setups: the user's own list of entry types (journal) ───────────────────
-// First use seeds the four starting setups; their keys match tags saved before
-// the list became editable. New setups get key 's<timestamp>'.
-var DEFAULT_SETUPS = [['breakout', 'Пробой'], ['bounce_trend', 'Отскок по тренду'], ['bounce_counter', 'Отскок против тренда'], ['range_hold', 'Удержание границы']];
+// First use seeds the six starting setups. New setups get key 's<timestamp>'.
+// Keys match the diagrams in src/setup-diagrams.js
+var DEFAULT_SETUPS = [['squeeze_breakout', 'Пробой с поджатием'], ['retest_breakout', 'Пробой с ретестом'], ['level_bounce', 'Отскок от уровня'], ['false_breakout', 'Ложный пробой / закол'], ['knife', 'Нож / прострел'], ['range', 'Боковик']];
 function userSetups(db, userId) {
   var rows = db.prepare('SELECT key, name, position, exclude, archived FROM user_setups WHERE user_id = ? ORDER BY position, created_at').all(userId);
   if (rows.length) return rows.map(function (r) { return { key: r.key, name: r.name, position: r.position, exclude: !!r.exclude, archived: !!r.archived }; });

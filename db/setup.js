@@ -159,9 +159,23 @@ function ensureAuthTables() {
       PRIMARY KEY ("user_id", "key")
     )
   `);
+  // One-off data migrations, applied once and recorded
+  sqlite.exec('CREATE TABLE IF NOT EXISTS "migrations" ("name" TEXT PRIMARY KEY, "applied_at" INTEGER NOT NULL)');
+  function once(name, fn) {
+    if (sqlite.prepare('SELECT 1 FROM migrations WHERE name = ?').get(name)) return;
+    fn();
+    sqlite.prepare('INSERT INTO migrations (name, applied_at) VALUES (?, ?)').run(name, Date.now());
+  }
   // Setup type of a closed trade (what kind of entry it was); `setup` stays the A/B/C quality
   var tagCols = sqlite.prepare('PRAGMA table_info("trade_tags")').all().map(function (c) { return c.name; });
   if (tagCols.indexOf('pattern') === -1) sqlite.exec('ALTER TABLE "trade_tags" ADD COLUMN "pattern" TEXT');
+  // 2026-10-27: the setup list starts over with the six diagrammed setups
+  // (server-vps.js DEFAULT_SETUPS): old setups are removed and trades unlinked
+  // from them (A/B/C quality and emotion tags stay)
+  once('setups_v2_reset', function () {
+    sqlite.exec('DELETE FROM user_setups');
+    sqlite.exec('UPDATE trade_tags SET pattern = NULL');
+  });
   if (journalCols.indexOf('max_trades') === -1) {
     sqlite.exec('ALTER TABLE "journal_entries" ADD COLUMN "max_trades" INTEGER');
   }

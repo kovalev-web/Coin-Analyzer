@@ -90,9 +90,9 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
     { symbol: 'YUSDT', closeTime: 400, pnlNet: 0.5, result: 'win', planned: false, maxNotional: 100 },
   ] } }];
   const tg = [
-    { symbol: 'XUSDT', close_time: 100, pattern: 'breakout' },
-    { symbol: 'XUSDT', close_time: 200, pattern: 'breakout' },
-    { symbol: 'XUSDT', close_time: 300, pattern: 'breakout' },
+    { symbol: 'XUSDT', close_time: 100, pattern: 'squeeze_breakout' },
+    { symbol: 'XUSDT', close_time: 200, pattern: 'squeeze_breakout' },
+    { symbol: 'XUSDT', close_time: 300, pattern: 'squeeze_breakout' },
   ];
   const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100 });
   // revenge and off-briefing break rules; the untagged Y trade is still by the rules
@@ -100,7 +100,7 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
   assert.equal(e.execution.rules.find((r) => r.key === 'noRevenge').broken, 1);
   assert.deepEqual(e.execution.weeks, [{ week: '2026-10-26', n: 4, clean: 2, rate: 50 }]);
   // breakout by the rules: +2R and −1R (the revenge trade is out) → +0.5R per trade
-  const b = e.setups.find((x) => x.key === 'breakout');
+  const b = e.setups.find((x) => x.key === 'squeeze_breakout');
   assert.deepEqual([b.n, b.expectancyR, b.totalR], [2, 0.5, 1]);
   assert.equal(e.noPattern, 1);
   assert.deepEqual(e.untagged.map((u) => [u.symbol, u.closeTime, u.r]), [['YUSDT', 400, 1]]);

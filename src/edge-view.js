@@ -6,7 +6,7 @@
 
 import { fetchJournalEdge, saveTradeTag } from './api.js';
 import { tzDateStr, tzTimeStr, escHtml } from './utils.js';
-import { ensureSetups, changeSetup, setupButtons } from './setups.js';
+import { ensureSetups, changeSetup, setupButtons, diagramAttr } from './setups.js';
 import { state } from './state.js';
 import { conclusions } from './edge-insights.js';
 
@@ -69,7 +69,7 @@ function setupsHTML(e) {
         var name = s.key === 'all' ? 'Все сетапы по правилам' : s.key === 'everything' ? 'Все сделки, с нарушениями' : escHtml(s.name || s.key);
         if (s.key === 'everything') cls = 'real';
         if (!s.n) return '<tr class="' + cls + ' none"><td>' + name + '</td><td>0</td><td colspan="5">нет сделок по правилам</td></tr>';
-        return '<tr class="' + cls + '"><td>' + name + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
+        return '<tr class="' + cls + '"><td' + diagramAttr(s.key) + '>' + name + '</td><td>' + s.n + '</td><td>' + s.winRate + '%</td>'
           + '<td class="up">' + rr(s.avgWinR) + '</td><td class="dn">' + rr(s.avgLossR) + '</td>'
           + '<td class="' + (s.expectancyR >= 0 ? 'up' : 'dn') + '"><b>' + rr(s.expectancyR) + '</b></td>'
           + '<td class="' + (s.totalR >= 0 ? 'up' : 'dn') + '">' + rr(s.totalR) + '</td></tr>';
@@ -106,7 +106,7 @@ function untaggedHTML(list) {
         return '<tr data-sym="' + u.symbol + '" data-close="' + u.closeTime + '"><td>' + tzDateStr(d).slice(5).split('-').reverse().join('.') + ' ' + tzTimeStr(d) + '</td>'
           + '<td>' + u.symbol.replace(/USDT$/, '') + ' ' + (u.side === 'long' ? 'лонг' : 'шорт') + '</td>'
           + '<td class="' + (u.pnlNet >= 0 ? 'up' : 'dn') + '">' + (u.r != null ? rr(u.r) : money(u.pnlNet) + ' USDT') + '</td>'
-          + '<td><span class="edge-tagbtns">' + setupButtons().map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '">' + escHtml(p[1]) + '</button>'; }).join('') + '</span></td></tr>';
+          + '<td><span class="edge-tagbtns">' + setupButtons().map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '"' + diagramAttr(p[0]) + '>' + escHtml(p[1]) + '</button>'; }).join('') + '</span></td></tr>';
       }).join('')
     + '</tbody></table></div>';
 }

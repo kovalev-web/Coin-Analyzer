@@ -12,7 +12,7 @@
 // from the main chart feed: testnet prices differ from the real market.
 
 import { tradeRequest, refreshTradesAfterFill, saveTradeTag, setTradeEnv, wsConnected } from './api.js';
-import { ensureSetups, setupButtons } from './setups.js';
+import { ensureSetups, setupButtons, diagramAttr } from './setups.js';
 import { state } from './state.js';
 import { on, emit } from './events.js';
 import { icon } from './utils.js';
@@ -1805,7 +1805,7 @@ function _renderTag() {
   if (!state.setups) { ensureSetups().then(_renderTag); }
   el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + ' closed</span>'
     + '<span class="dom-tag-group">' + setupButtons().map(function (x) {
-        return '<button data-tag-pattern="' + x[0] + '" class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
+        return '<button data-tag-pattern="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
       }).join('') + '</span>'
     + '<span class="dom-tag-group">' + TAG_SETUPS.map(function (x) {
         return '<button data-tag-setup="' + x + '" class="' + (q.setup === x ? 'on' : '') + '">' + x + '</button>';

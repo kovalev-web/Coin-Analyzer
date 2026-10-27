@@ -10,8 +10,8 @@ var TAG_MATCH_MS = 2000; // tag close_time vs fact closeTime (both are the excha
 
 var SETUP = { A: 'A setup', B: 'B setup', C: 'C setup' };
 // Setup types — what kind of entry the trade was (tagged after the close). The
-// user edits the list (user_setups); these are the starting four, used when no list is passed.
-var PATTERNS = ['breakout', 'bounce_trend', 'bounce_counter', 'range_hold'];
+// user edits the list (user_setups); these are the starting six, used when no list is passed.
+var PATTERNS = ['squeeze_breakout', 'retest_breakout', 'level_bounce', 'false_breakout', 'knife', 'range'];
 var STOP_OVERRUN_R = 1.2; // a loss beyond this many R means the stop wasn't held
 
 // ── Strategy and execution (measured in R, not USDT) ───────────────────────

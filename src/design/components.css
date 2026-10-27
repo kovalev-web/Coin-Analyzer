@@ -1024,3 +1024,8 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-concl li{font-size:var(--text-sm);color:var(--ink-deep);line-height:var(--leading-relaxed);}
 .edge-concl li b{font-weight:var(--font-semi);}
 .edge-concl li span{color:var(--graphite);font-size:var(--text-xs);}
+/* setup schematic on hover (src/setups.js) */
+.setup-tip{position:fixed;z-index:2000;display:none;width:560px;max-width:calc(100vw - var(--space-8));padding:var(--space-4) var(--space-6);background:var(--paper);border:1px solid var(--steel);border-radius:var(--radius-md);box-shadow:var(--shadow-md);pointer-events:none;}
+.setup-tip svg{display:block;width:100%;height:auto;font-family:inherit;}
+[data-setup-diagram]{cursor:help;}
+button[data-setup-diagram]{cursor:pointer;}
