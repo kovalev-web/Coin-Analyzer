@@ -969,6 +969,10 @@ async function getSession(req) {
 
 // ── Setups: the user's own list of entry types (journal) ───────────────────
 // First use seeds the six starting setups. New setups get key 's<timestamp>'.
+// "Мой edge" counts trades from this day on (2026-10-27: started over with the
+// six setups and the execution rules — earlier trades were tagged by other rules)
+var EDGE_START = '2026-10-28';
+
 // Keys match the diagrams in src/setup-diagrams.js
 var DEFAULT_SETUPS = [['squeeze_breakout', 'Пробой с поджатием'], ['retest_breakout', 'Пробой с ретестом'], ['level_bounce', 'Отскок от уровня'], ['false_breakout', 'Ложный пробой / закол'], ['knife', 'Нож / прострел'], ['range', 'Боковик']];
 function userSetups(db, userId) {
@@ -1600,6 +1604,8 @@ var httpServer = http.createServer(async function (req, res) {
         var jEdgeRange = new URL(req.url, 'https://questtick.com').searchParams.get('range') || '3m';
         var jEdgeDays = { '1m': 30, '3m': 90, '6m': 180, all: 3650 }[jEdgeRange] || 90;
         var jEdgeFrom = new Date(Date.now() - jEdgeDays * 86400000).toISOString().slice(0, 10);
+        // The report starts over on EDGE_START: earlier days are not counted at all
+        if (jEdgeFrom < EDGE_START) jEdgeFrom = EDGE_START;
         var jEdgeRows = jDb.prepare('SELECT * FROM journal_entries WHERE user_id = ? AND date >= ? AND facts_json IS NOT NULL ORDER BY date ASC').all(jUserId, jEdgeFrom);
         var jEdgeTags = jDb.prepare('SELECT symbol, close_time, setup, emotion, pattern FROM trade_tags WHERE user_id = ?').all(jUserId);
         // Risk per trade (Account settings → % per trade) turns PnL into R
@@ -1611,6 +1617,7 @@ var httpServer = http.createServer(async function (req, res) {
         }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, workingVolume: Number(jEdgeLimits.maxVolume) || null, setups: userSetups(jDb, jUserId) });
         jEdge.range = jEdgeRange;
         jEdge.days = jEdgeRows.length;
+        jEdge.startDate = EDGE_START;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(jEdge));
         return;

@@ -106,7 +106,7 @@ function untaggedHTML(list) {
         return '<tr data-sym="' + u.symbol + '" data-close="' + u.closeTime + '"><td>' + tzDateStr(d).slice(5).split('-').reverse().join('.') + ' ' + tzTimeStr(d) + '</td>'
           + '<td>' + u.symbol.replace(/USDT$/, '') + ' ' + (u.side === 'long' ? 'лонг' : 'шорт') + '</td>'
           + '<td class="' + (u.pnlNet >= 0 ? 'up' : 'dn') + '">' + (u.r != null ? rr(u.r) : money(u.pnlNet) + ' USDT') + '</td>'
-          + '<td><span class="edge-tagbtns">' + setupButtons().map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '"' + diagramAttr(p[0]) + '>' + escHtml(p[1]) + '</button>'; }).join('') + '</span></td></tr>';
+          + '<td><span class="edge-tagbtns">' + setupButtons().map(function (p) { return '<button type="button" data-edge-pattern="' + p[0] + '">' + escHtml(p[1]) + '</button>'; }).join('') + '</span></td></tr>';
       }).join('')
     + '</tbody></table></div>';
 }
@@ -138,13 +138,15 @@ export function renderEdgeSection(container) {
     var body = container.querySelector('.edge-body');
     if (!body) return;
     if (!e || !e.total || !e.total.n) {
-      body.innerHTML = '<div class="edge-empty">Пока пусто. Факты сохраняются с каждой вечерней карточкой; отмечай сетап сразу после сделки.</div>';
+      body.innerHTML = '<div class="edge-empty">' + (e && e.startDate ? 'Отчёт считается с ' + shortDate(e.startDate) + '. ' : '')
+        + 'Сделки появятся здесь после вечерней карточки этого дня. Отмечай сетап в стакане сразу после выхода — что не успел, отметишь здесь.</div>';
       return;
     }
     var t = e.total;
     body.innerHTML = '<div class="edge-summary">'
         + '<span><b>' + t.n + '</b> ' + plural(t.n, 'сделка', 'сделки', 'сделок') + ' за <b>' + e.days + '</b> ' + plural(e.days, 'день', 'дня', 'дней') + '</span>'
         + '<span>итог <b class="' + (t.pnl >= 0 ? 'up' : 'dn') + '">' + money(t.pnl) + ' USDT</b>' + (e.oneR ? ' = ' + rr(t.pnl / e.oneR) : '') + '</span>'
+        + (e.startDate ? '<span>считается с ' + shortDate(e.startDate) + '</span>' : '')
         + (e.dates && e.dates.length ? '<span>дни: ' + e.dates.map(shortDate).join(', ') + ' — в отчёт попадают только дни с сохранённой вечерней карточкой</span>' : '')
       + '</div>'
       + '<div class="edge-panels">' + executionHTML(e.execution, e.breaksCostR, e.oneR) + setupsHTML(e) + '</div>'
