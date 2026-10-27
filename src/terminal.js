@@ -1557,17 +1557,19 @@ PnlZone.prototype._drawLabel = function (target) {
     if (!g) return;
     var ctx = scope.context;
     ctx.save();
-    // Same look as the price-axis label next to it (chart font 11 px, same
-    // height), centred on the current price, right against the axis
-    ctx.font = '11px Manrope, Arial, sans-serif';
+    // Glued to the price-axis label of the current price: same height
+    // (lightweight-charts: font 11 + 2 × 2.5/12 × 11 padding), centred on it,
+    // no gap; rounded on the left only, the right edge meets the axis label
+    var fs = 11;
+    ctx.font = fs + 'px Manrope, Arial, sans-serif';
     var text = self.d.label;
-    var tw = ctx.measureText(text).width, padX = 6, bh = 19;
-    var bx = scope.mediaSize.width - tw - padX * 2 - 2;
-    var by = g.yExit - bh / 2;
+    var tw = ctx.measureText(text).width, padX = 6, bh = Math.round(fs + 2 * (2.5 / 12) * fs);
+    var bx = scope.mediaSize.width - tw - padX * 2;
+    var by = Math.round(g.yExit - bh / 2);
     by = Math.max(0, Math.min(scope.mediaSize.height - bh, by));
     ctx.fillStyle = self.d.color;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(bx, by, tw + padX * 2, bh, 2); else ctx.rect(bx, by, tw + padX * 2, bh);
+    if (ctx.roundRect) ctx.roundRect(bx, by, tw + padX * 2, bh, [2, 0, 0, 2]); else ctx.rect(bx, by, tw + padX * 2, bh);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.textBaseline = 'middle';
