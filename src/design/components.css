@@ -777,10 +777,10 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.has-order{--row-tint:color-mix(in srgb,var(--ink-deep) 6%,transparent);}
 .dom-row.has-order.buy{--row-tint:color-mix(in srgb,var(--bullish) 9%,transparent);}
 .dom-row.has-order.sell{--row-tint:color-mix(in srgb,var(--danger) 9%,transparent);}
-/* position (PnL zone) and own-order tints: only across Mine | Volume | Price,
-   not over the tape, clusters or other venues */
+/* position (PnL zone) and own-order tints: only across Volume | Price,
+   not over the tape, clusters, Mine (52px grid column) or other venues */
 .dom-row.pnl-up,.dom-row.pnl-dn,.dom-row.has-order{
-  background:linear-gradient(to right,transparent calc(var(--tape-w) + var(--cl-w)),var(--row-tint) 0 calc(100% - var(--ven-w, 0px)),transparent 0);
+  background:linear-gradient(to right,transparent calc(var(--tape-w) + var(--cl-w) + 52px),var(--row-tint) 0 calc(100% - var(--ven-w, 0px)),transparent 0);
 }
 .dom-row.has-order:hover{background:var(--fog);}
 
