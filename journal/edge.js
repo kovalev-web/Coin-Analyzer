@@ -16,13 +16,21 @@ var STOP_OVERRUN_R = 1.2; // a loss beyond this many R means the stop wasn't hel
 
 // ── Strategy and execution (measured in R, not USDT) ───────────────────────
 
-// R = PnL in units of the planned risk: risk per trade (Account settings, % of
-// the position) × the trade's size. +1% move with a 0.5% risk = +2R.
-// null when the risk or the size is unknown.
-function tradeR(pnlNet, maxNotional, riskPct) {
-  var risk = Number(maxNotional) * Number(riskPct) / 100;
-  if (!(risk > 0) || pnlNet == null || isNaN(pnlNet)) return null;
-  return pnlNet / risk;
+// 1R in USDT — the planned loss per trade, the same for every trade: risk %
+// (Account settings, % per trade) of the working volume (Account settings,
+// max volume). 0.5% of 100 USDT = 0.50 USDT. Without a working volume, the
+// trade's own size stands in. null when the risk is unknown.
+function riskUsd(riskPct, workingVolume, maxNotional) {
+  var base = Number(workingVolume) > 0 ? Number(workingVolume) : Number(maxNotional);
+  var r = base * Number(riskPct) / 100;
+  return r > 0 ? r : null;
+}
+
+// R = PnL in units of 1R. +1.00 USDT with 1R = 0.50 USDT is +2R, whatever size
+// you entered with. null when 1R is unknown.
+function tradeR(pnlNet, oneR) {
+  if (!(oneR > 0) || pnlNet == null || isNaN(pnlNet)) return null;
+  return pnlNet / oneR;
 }
 
 // Your rules; a trade is "by the rules" when none is broken. Unknown → not counted.
@@ -91,11 +99,12 @@ function hourBlock(h) {
 
 // days: [{ date, facts, morning: { sleepHours, sleepQuality, energy, carryover, focus } }]
 // tags: [{ symbol, close_time, setup, emotion }]
-// opts: { riskPct, setups } — risk per trade, % of the position (Account
-// settings); the user's setups [{ key, name, exclude, archived }]. Trades tagged
+// opts: { riskPct, workingVolume, setups } — risk per trade in % and the
+// working volume in USDT (Account settings); the user's setups [{ key, name, exclude, archived }]. Trades tagged
 // with an excluded setup (misclicks, tests) are left out of the whole report.
 function computeEdge(days, tags, opts) {
   var riskPct = opts && opts.riskPct;
+  var workingVolume = opts && opts.workingVolume;
   var setupList = (opts && opts.setups) || PATTERNS.map(function (k) { return { key: k, name: k }; });
   var excludedKeys = {};
   setupList.forEach(function (x) { if (x.exclude) excludedKeys[x.key] = true; });
@@ -116,7 +125,7 @@ function computeEdge(days, tags, opts) {
       if (best != null) used.add(best);
       var x = { date: d.date, t: t, tag: best != null ? tags[best] : null, m: d.morning || {} };
       if (x.tag && x.tag.pattern && excludedKeys[x.tag.pattern]) { excludedCount++; return; }
-      x.r = tradeR(t.pnlNet, t.maxNotional, riskPct);
+      x.r = tradeR(t.pnlNet, riskUsd(riskPct, workingVolume, t.maxNotional));
       x.broken = brokenRules(x);
       trades.push(x);
     });
@@ -182,6 +191,8 @@ function computeEdge(days, tags, opts) {
   return {
     minN: MIN_N,
     riskPct: riskPct || null,
+    workingVolume: workingVolume || null,
+    oneR: riskUsd(riskPct, workingVolume, null),
     execution: execution,
     setups: setups,
     setupsAll: allByRules,
@@ -218,4 +229,4 @@ function computeEdge(days, tags, opts) {
   };
 }
 
-module.exports = { computeEdge, tradeR, brokenRules, setupStats, weekOf, MIN_N, TAG_MATCH_MS, SETUP, EMOTION, PATTERNS, RULES, STOP_OVERRUN_R };
+module.exports = { computeEdge, tradeR, riskUsd, brokenRules, setupStats, weekOf, MIN_N, TAG_MATCH_MS, SETUP, EMOTION, PATTERNS, RULES, STOP_OVERRUN_R };

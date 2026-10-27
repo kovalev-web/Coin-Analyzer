@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { computeEdge, tradeR, brokenRules, setupStats, weekOf } = require('./edge');
+const { computeEdge, tradeR, riskUsd, brokenRules, setupStats, weekOf } = require('./edge');
 
 function trade(symbol, closeTime, pnl, extra) {
   return Object.assign({ symbol, closeTime, pnlNet: pnl, result: pnl > 0 ? 'win' : 'loss', planned: true, atLevel: null, hour: 9 }, extra);
@@ -49,11 +49,17 @@ test('morning state buckets and enough-data flag', () => {
   assert.deepEqual(g.hour.map((r) => r.key).sort(), ['08–12', '12–16']);
 });
 
-test('R: PnL in units of the planned risk (0.5% of a 100 USDT position = 0.5 USDT)', () => {
-  assert.equal(tradeR(1, 100, 0.5), 2);
-  assert.equal(tradeR(-0.5, 100, 0.5), -1);
-  assert.equal(tradeR(1, 100, null), null);
-  assert.equal(tradeR(1, 0, 0.5), null);
+test('1R: 0.5% of the 100 USDT working volume = 0.50 USDT, whatever size you entered with', () => {
+  assert.equal(riskUsd(0.5, 100, 25), 0.5);
+  assert.equal(riskUsd(0.5, null, 200), 1);   // no working volume → the trade's size
+  assert.equal(riskUsd(null, 100, 25), null);
+});
+
+test('R: PnL in units of 1R', () => {
+  assert.equal(tradeR(1, 0.5), 2);
+  assert.equal(tradeR(-0.5, 0.5), -1);
+  assert.equal(tradeR(0.525, 0.5), 1.05);    // +0.525 USDT on a 25 USDT entry is ~1R, not 4.2R
+  assert.equal(tradeR(1, null), null);
 });
 
 test('rules: each break is named; unknown R does not count as a stop overrun', () => {
@@ -88,7 +94,7 @@ test('execution and setups: by-the-rules share and setups in R on clean trades o
     { symbol: 'XUSDT', close_time: 200, pattern: 'breakout' },
     { symbol: 'XUSDT', close_time: 300, pattern: 'breakout' },
   ];
-  const e = computeEdge(d, tg, { riskPct: 0.5 });
+  const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100 });
   // revenge and off-briefing break rules; the untagged Y trade is still by the rules
   assert.deepEqual([e.execution.n, e.execution.clean, e.execution.rate], [4, 2, 50]);
   assert.equal(e.execution.rules.find((r) => r.key === 'noRevenge').broken, 1);
@@ -117,7 +123,7 @@ test('your own setups: named rows, excluded setup (misclicks) leaves the report,
     { key: 'old', name: 'Старый', archived: true },
     { key: 'gone', name: 'Скрытый пустой', archived: true },
   ];
-  const e = computeEdge(d, tg, { riskPct: 0.5, setups });
+  const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100, setups });
   assert.equal(e.excluded, 1);
   assert.deepEqual([e.execution.n, e.execution.clean], [2, 2]); // the misclick broke a rule but is not counted
   assert.deepEqual(e.setups.map((x) => [x.key, x.name, x.n]), [['s1', 'Ложный пробой', 1], ['old', 'Старый', 1]]);

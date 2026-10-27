@@ -59,7 +59,8 @@ function setupsHTML(e) {
   if (!e.riskPct) return head + '<div class="edge-empty">Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</div></div>';
   var rows = e.setups.concat([e.setupsAll]);
   return head
-    + '<div class="edge-sub">1R = ' + e.riskPct + '% от объёма позиции. Ожидание — сколько R в среднем приносит одна такая сделка. Надёжно от ' + e.minN + ' сделок, строки бледнее — пока меньше.</div>'
+    + '<div class="edge-sub">1R = ' + (e.oneR != null ? e.oneR.toFixed(2) + ' USDT — ' : '') + e.riskPct + '% от '
+      + (e.workingVolume ? 'рабочего объёма ' + e.workingVolume + ' USDT' : 'объёма позиции (рабочий объём не задан в настройках)') + '. Ожидание — сколько R в среднем приносит одна такая сделка. Надёжно от ' + e.minN + ' сделок, строки бледнее — пока меньше.</div>'
     + '<table class="edge-list edge-setups"><thead><tr><th>Сетап</th><th>Сделок</th><th>В плюс</th><th>Ср. плюс</th><th>Ср. минус</th><th>Ожидание</th><th>Итого</th></tr></thead><tbody>'
     + rows.map(function (s) {
         var cls = (s.key === 'all' ? 'total ' : '') + (s.n && !s.enough ? 'thin' : '');

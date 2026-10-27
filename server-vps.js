@@ -1608,7 +1608,7 @@ var httpServer = http.createServer(async function (req, res) {
         var jEdge = computeEdge(jEdgeRows.map(function (r) {
           var e = journalRowToEntry(r);
           return { date: e.date, facts: e.facts, morning: { sleepHours: e.sleepHours, sleepQuality: e.sleepQuality, energy: e.energy, carryover: e.carryover, focus: e.focus } };
-        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, setups: userSetups(jDb, jUserId) });
+        }), jEdgeTags, { riskPct: Number(jEdgeLimits.maxDrawdownPct) || null, workingVolume: Number(jEdgeLimits.maxVolume) || null, setups: userSetups(jDb, jUserId) });
         jEdge.range = jEdgeRange;
         jEdge.days = jEdgeRows.length;
         res.writeHead(200, { 'Content-Type': 'application/json' });
