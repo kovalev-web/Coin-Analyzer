@@ -988,19 +988,14 @@ registerRoute('/journal', function () {
     '</div>' +
     '<div id="journal-summary-section"></div>' +
     '<div id="journal-edge-section"></div>' +
-    '<div id="profile-journal-section"></div>' +
     '</div>';
-  if (state.journalEntries) {
-    renderProfileJournal(document.getElementById('profile-journal-section'), state.journalEntries);
-  }
+  // The day-by-day table is gone: it listed days the report doesn't count (the
+  // journal starts over on 2026-10-28); the cards are still filled from the topbar
   renderEdgeSection(document.getElementById('journal-edge-section'));
   renderJournalSummarySection();
   fetchJournalSummary(state.journalRange).then(function () {
     renderJournalSummarySection();
     _renderJournalPnlChart();
-  });
-  fetchJournalRecent().then(function (entries) {
-    renderProfileJournal(document.getElementById('profile-journal-section'), entries);
   });
   fetchJournalToday();
 });

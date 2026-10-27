@@ -969,8 +969,8 @@ async function getSession(req) {
 
 // ── Setups: the user's own list of entry types (journal) ───────────────────
 // First use seeds the six starting setups. New setups get key 's<timestamp>'.
-// "Мой edge" counts trades from this day on (2026-10-27: started over with the
-// six setups and the execution rules — earlier trades were tagged by other rules)
+// The journal page (PnL chart, stats, "Мой edge") counts from this day on
+// (2026-10-27: started over with the six setups and the execution rules)
 var EDGE_START = '2026-10-28';
 
 // Keys match the diagrams in src/setup-diagrams.js
@@ -1099,6 +1099,7 @@ async function computeJournalRangeStats(userId, today, range) {
   var days = JOURNAL_RANGE_DAYS[range];
   if (!days) throw new Error('Invalid range');
   var fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  if (fromDate < EDGE_START) fromDate = EDGE_START; // the journal starts over on EDGE_START
 
   var briefRes = await redis(['GET', 'briefing:' + userId]);
   var briefEntries = briefRes.result ? JSON.parse(briefRes.result) : [];
