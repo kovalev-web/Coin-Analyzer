@@ -26,6 +26,16 @@ function plural(n, one, few, many) {
 
 function shortDate(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
 
+// Rule breaks named as what happened (the server sends rule keys)
+var BREAK_LABEL = {
+  planned: 'Монета не из брифинга',
+  stopHeld: 'Стоп не выдержан (убыток больше 1R)',
+  size: 'Превышение объёма',
+  noRevenge: 'Реванш после убытка',
+  noCrane: 'Вход после стоп-крана',
+  noSizeUp: 'Рост объёма после серии',
+};
+
 // Execution: share of trades by the rules, which rules break, weekly trend
 function executionHTML(x) {
   if (!x || !x.n) return '<div class="edge-panel"><h4 class="edge-h">Исполнение</h4><div class="edge-empty">Сделок нет</div></div>';
@@ -34,9 +44,9 @@ function executionHTML(x) {
     + '<div class="edge-big"><b class="' + (x.rate >= 80 ? 'up' : x.rate >= 50 ? '' : 'dn') + '">' + x.rate + '%</b>'
     + '<span>сделок по правилам — ' + x.clean + ' из ' + x.n + '</span></div>'
     + (x.weeks.length > 1 ? '<div class="edge-sub">По неделям: ' + x.weeks.map(function (w) { return 'с ' + shortDate(w.week) + ' — <b>' + w.rate + '%</b>'; }).join(' · ') + '</div>' : '')
-    + '<table class="edge-list edge-rules"><thead><tr><th>Правило</th><th>Нарушений</th></tr></thead><tbody>'
+    + '<table class="edge-list edge-rules"><thead><tr><th>Нарушение</th><th>Сколько раз</th></tr></thead><tbody>'
     + rules.map(function (r) {
-        return '<tr class="' + (r.broken ? 'broken' : 'kept') + '"><td>' + (r.broken ? '✕ ' : '✓ ') + r.label + '</td><td>' + (r.broken || '—') + '</td></tr>';
+        return '<tr class="' + (r.broken ? 'broken' : 'kept') + '"><td>' + (BREAK_LABEL[r.key] || r.label) + '</td><td>' + r.broken + '</td></tr>';
       }).join('')
     + '</tbody></table></div>';
 }
