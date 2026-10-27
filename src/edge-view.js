@@ -1,9 +1,10 @@
 // ── "My edge" section on the journal page (journal stage 5) ─────────────────
-// Where results come from: closed trades (from saved day facts) grouped by
-// setup quality, what drove the entry, rule breaks, plan, level, morning state
-// and time of day. Groups under the minimum sample are shown pale.
+// Reads top-down: the result, how much data there is, what makes money, what
+// costs money (each with what to do), dimensions with nothing to compare yet,
+// and the full tables folded at the bottom. Conclusions: src/edge-insights.js.
 
 import { fetchJournalEdge } from './api.js';
+import { insights } from './edge-insights.js';
 
 var RANGES = [['1m', '1M'], ['3m', '3M'], ['6m', '6M'], ['all', 'All']];
 var SECTIONS = [
@@ -23,6 +24,21 @@ var SECTIONS = [
 var _range = '3m';
 
 function money(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2); }
+
+function findingHTML(f, good) {
+  return '<div class="edge-find ' + (good ? 'good' : 'bad') + '">'
+    + '<div class="edge-find-top"><span class="edge-find-key">' + f.key + '</span><span class="edge-find-dim">' + f.title + '</span>'
+    + '<span class="edge-find-impact" title="Made or cost beyond the same number of your average trades">' + money(f.impact) + ' <small>vs avg</small></span></div>'
+    + '<div class="edge-find-stats">' + f.n + ' trade' + (f.n === 1 ? '' : 's') + ' · ' + f.winRate + '% win · ' + money(f.pnl) + ' USDT</div>'
+    + '<div class="edge-find-advice">' + f.advice + '</div>'
+    + '</div>';
+}
+
+function columnHTML(title, list, good, empty) {
+  return '<div class="edge-col"><div class="edge-col-title ' + (good ? 'good' : 'bad') + '">' + title + '</div>'
+    + (list.length ? list.map(function (f) { return findingHTML(f, good); }).join('') : '<div class="edge-empty">' + empty + '</div>')
+    + '</div>';
+}
 
 function tableHTML(rows) {
   if (!rows || !rows.length) return '<div class="edge-empty">No trades yet</div>';
@@ -51,11 +67,28 @@ export function renderEdgeSection(container) {
       return;
     }
     var t = e.total;
-    body.innerHTML = '<div class="edge-note">' + t.n + ' closed trades over ' + e.days + ' reviewed day' + (e.days === 1 ? '' : 's')
-      + ' · ' + t.winRate + '% win · ' + money(t.pnl) + ' USDT · ' + e.tagged + ' tagged.'
-      + ' Pale rows have fewer than ' + e.minN + ' trades — not enough to draw conclusions yet.</div>'
+    var x = insights(e);
+    body.innerHTML = '<div class="edge-stats">'
+        + '<div class="edge-stat"><span>Result</span><b class="' + (t.pnl >= 0 ? 'up' : 'dn') + '">' + money(t.pnl) + ' USDT</b></div>'
+        + '<div class="edge-stat"><span>Trades</span><b>' + t.n + '</b></div>'
+        + '<div class="edge-stat"><span>Win rate</span><b>' + t.winRate + '%</b></div>'
+        + '<div class="edge-stat"><span>Days reviewed</span><b>' + e.days + '</b></div>'
+        + '<div class="edge-stat"><span>Tagged</span><b>' + e.tagged + ' / ' + t.n + '</b></div>'
+      + '</div>'
+      + (x.sample.early
+        ? '<div class="edge-sample"><div class="edge-sample-bar"><i style="width:' + Math.round(x.sample.ratio * 100) + '%"></i></div>'
+          + '<span>Early read: ' + t.n + ' of ' + x.sample.minN + ' trades. Treat these as hints — they firm up as trades add up.</span></div>'
+        : '')
+      + '<div class="edge-cols">'
+        + columnHTML('What works', x.works, true, 'Nothing stands out yet')
+        + columnHTML('What costs you', x.costs, false, 'Nothing is losing money beyond your average')
+      + '</div>'
+      + (x.flat.length ? '<div class="edge-flat"><b>Nothing to compare yet:</b> ' + x.flat.join(', ')
+        + ' — all your trades fall into one group. They show up here once your days differ.</div>' : '')
+      + '<details class="edge-details"><summary>All breakdowns</summary>'
+      + '<div class="edge-note">The number on the right of each finding is what it made or cost beyond your average trade. Pale rows have fewer than ' + e.minN + ' trades.</div>'
       + '<div class="edge-grid">' + SECTIONS.map(function (s) {
           return '<div class="edge-card"><div class="edge-card-title">' + s[1] + '</div>' + tableHTML(e.groups[s[0]]) + '</div>';
-        }).join('') + '</div>';
+        }).join('') + '</div></details>';
   });
 }
