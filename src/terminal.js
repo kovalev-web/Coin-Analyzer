@@ -1847,7 +1847,7 @@ function _renderTag() {
   var q = T.tagQueue[T.tagQueue.length - 1];
   if (!q) { el.innerHTML = ''; return; }
   if (!state.setups) { ensureSetups().then(_renderTag); }
-  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + (q.pattern ? ' — сетап сохранён, остальное по желанию' : ' closed — какой сетап?') + '</span>'
+  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + (q.pattern ? ' — сетап сохранён, дополни и нажми ОК' : ' closed — какой сетап?') + '</span>'
     + '<span class="dom-tag-group">' + setupButtons().map(function (x) {
         return '<button data-tag-pattern="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
       }).join('') + '</span>'
@@ -1857,6 +1857,7 @@ function _renderTag() {
     + '<span class="dom-tag-group">' + TAG_EMOTIONS.map(function (x) {
         return '<button data-tag-emotion="' + x[0] + '" class="' + (q.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
       }).join('') + '</span>'
+    + (q.pattern ? '<button class="dom-tag-ok" data-tag-ok="1">ОК</button>' : '')
     + '<button class="dom-tag-skip" data-tag-skip="1" title="Skip">×</button>';
 }
 
@@ -1867,16 +1868,12 @@ function _tagClick(kind, value) {
   var body = { symbol: q.symbol, closeTime: q.closeTime };
   body[kind] = value;
   saveTradeTag(body).catch(function (e) { _setStatus(e.message, true); });
-  // Only the setup is required (it's what My edge needs). Once it's chosen the
-  // row stays a few seconds for the optional quality / emotion, then goes.
-  if (q.pattern && q.setup && q.emotion) _dropTag(q);
-  else if (q.pattern && !q.dropTimer) q.dropTimer = setTimeout(function () { _dropTag(q); }, TAG_OPTIONAL_MS);
+  // Only the setup is required (it's what My edge needs); the row stays until
+  // you press ОК, so the optional quality / emotion can be added at your pace
   _renderTag();
 }
 
-var TAG_OPTIONAL_MS = 6000;
 function _dropTag(q) {
-  clearTimeout(q.dropTimer);
   var i = T.tagQueue.indexOf(q);
   if (i !== -1) T.tagQueue.splice(i, 1);
   _renderTag();
@@ -2117,6 +2114,7 @@ function _bindPanel(panel) {
     var te = e.target.closest('[data-tag-emotion]');
     if (te) { _tagClick('emotion', te.dataset.tagEmotion); return; }
     if (e.target.closest('[data-tag-skip]')) { T.tagQueue.pop(); _renderTag(); return; }
+    if (e.target.closest('[data-tag-ok]')) { _dropTag(T.tagQueue[T.tagQueue.length - 1]); return; }
     if (e.target.closest('[data-unlock]')) { _unlock(); return; }
     if (e.target.closest('[data-lock]')) { _lock(); return; }
     var sc = e.target.closest('[data-scale]');
