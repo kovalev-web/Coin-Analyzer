@@ -124,7 +124,13 @@ function computeEdge(days, tags, opts) {
   var setupList = (opts && opts.setups) || PATTERNS.map(function (k) { return { key: k, name: k }; });
   var excludedKeys = {};
   setupList.forEach(function (x) { if (x.exclude) excludedKeys[x.key] = true; });
-  var excludedCount = 0;
+  var excludedCount = 0, excludedList = [];
+  // A trade as the report lists it (with its current tags, so they can be changed)
+  function listItem(x) {
+    return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
+      pnlNet: x.t.pnlNet, r: x.r == null ? null : Math.round(x.r * 100) / 100, broken: x.broken || [],
+      tag: x.tag ? { pattern: x.tag.pattern || null, setup: x.tag.setup || null, emotion: x.tag.emotion || null } : null };
+  }
   var trades = [];
   var used = new Set();
   (days || []).forEach(function (d) {
@@ -140,7 +146,12 @@ function computeEdge(days, tags, opts) {
       });
       if (best != null) used.add(best);
       var x = { date: d.date, t: t, tag: best != null ? tags[best] : null, m: d.morning || {} };
-      if (x.tag && x.tag.pattern && excludedKeys[x.tag.pattern]) { excludedCount++; return; }
+      if (x.tag && x.tag.pattern && excludedKeys[x.tag.pattern]) {
+        excludedCount++;
+        x.r = tradeR(t.pnlNet, riskUsd(riskPct, workingVolume, t.maxNotional));
+        excludedList.push(listItem(x));
+        return;
+      }
       x.r = tradeR(t.pnlNet, riskUsd(riskPct, workingVolume, t.maxNotional));
       x.broken = brokenRules(x);
       trades.push(x);
@@ -202,10 +213,7 @@ function computeEdge(days, tags, opts) {
     // Every trade tagged with this setup (breaks included, marked) — for the review list
     var list = trades.filter(function (x) { return x.tag && x.tag.pattern === p.key; })
       .sort(function (a, b) { return (b.t.closeTime || 0) - (a.t.closeTime || 0); }).slice(0, 100)
-      .map(function (x) {
-        return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
-          pnlNet: x.t.pnlNet, r: x.r == null ? null : Math.round(x.r * 100) / 100, broken: x.broken };
-      });
+      .map(listItem);
     return Object.assign({ key: p.key, name: p.name, archived: !!p.archived, enough: st.n >= MIN_N, trades: list }, st);
   }).filter(function (p) { return !p.archived || p.n > 0 || p.trades.length; }); // a hidden setup still shows while it has trades
   var allByRules = Object.assign({ key: 'all', enough: byRules.length >= MIN_N }, setupStats(byRules.map(function (x) { return x.r; })));
@@ -228,6 +236,7 @@ function computeEdge(days, tags, opts) {
     breaksCostR: Math.round(breaksR * 100) / 100,
     dates: days.filter(function (d) { return d.facts && d.facts.trades; }).map(function (d) { return d.date; }),
     excluded: excludedCount,
+    excludedTrades: excludedList.sort(function (a, b) { return (b.closeTime || 0) - (a.closeTime || 0); }).slice(0, 100),
     noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
     // Trades still waiting for a setup type, newest first — tagged right in the report
     untagged: trades.filter(function (x) { return x.t.closeTime && (!x.tag || !x.tag.pattern); })

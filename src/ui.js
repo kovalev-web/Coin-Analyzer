@@ -1581,8 +1581,8 @@ function _factsHTML(f, taggable) {
     if (t.tag && t.tag.emotion) tags.push(t.tag.emotion);
     var tagger = '';
     if (t.tag && t.tag.pattern) tags.unshift(setupName(t.tag.pattern));
-    // Only the setup is required; quality and emotion stay optional
-    if (taggable && t.closeTime && !(t.tag && t.tag.pattern)) {
+    // Always shown so a tag can be changed; only the setup is required
+    if (taggable && t.closeTime) {
       tagger = '<div class="jf-tagger">'
         + setupButtons().map(function (x) {
             return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';

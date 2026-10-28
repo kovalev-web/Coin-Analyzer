@@ -96,13 +96,35 @@ function setupTradesHTML(trades) {
     ensureCoinNotes(coin);
     var notes = notesOnDay(coin, tzDateStr(d));
     var breaks = (t.broken || []).map(function (k) { return BREAK_LABEL[k] || k; });
-    return '<div class="edge-trade">'
+    return '<div class="edge-trade" data-retag-sym="' + t.symbol + '" data-retag-close="' + t.closeTime + '">'
       + '<div class="edge-trade-head"><span>' + shortDate(tzDateStr(d)) + ' ' + tzTimeStr(d) + '</span><b>' + coin + ' ' + (t.side === 'long' ? 'лонг' : 'шорт') + '</b>'
       + '<span class="' + ((t.r != null ? t.r : t.pnlNet) >= 0 ? 'up' : 'dn') + '">' + (t.r != null ? rr(t.r) : money(t.pnlNet) + ' USDT') + '</span>'
       + (breaks.length ? '<span class="dn">' + breaks.join(', ') + '</span>' : '<span class="muted">по правилам</span>') + '</div>'
       + (notes.length ? '<ul class="edge-trade-notes">' + notes.map(function (n) { return '<li><span>' + tzTimeStr(new Date(n.ts)) + '</span>' + escHtml(n.text) + '</li>'; }).join('') + '</ul>' : '<div class="edge-trade-nonotes">Заметок по ' + coin + ' в этот день нет</div>')
+      + retagHTML(t.tag)
       + '</div>';
   }).join('') + '</div>';
+}
+
+// Change a trade's tags: setup, quality, emotion — the current ones highlighted
+var QUALITY = [['A', 'A'], ['B', 'B'], ['C', 'C']];
+var EMOTIONS = [['plan', 'По плану'], ['fomo', 'FOMO'], ['revenge', 'Отыграться'], ['boredom', 'Скука'], ['fear', 'Страх']];
+function retagHTML(tag) {
+  tag = tag || {};
+  var chips = function (kind, list, cur) {
+    return list.map(function (x) { return '<button type="button" data-retag="' + kind + '" data-val="' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '">' + escHtml(x[1]) + '</button>'; }).join('');
+  };
+  return '<div class="edge-retag">'
+    + '<span class="edge-tagbtns">' + chips('pattern', setupButtons(), tag.pattern) + '</span>'
+    + '<span class="edge-tagbtns">' + chips('setup', QUALITY, tag.setup) + chips('emotion', EMOTIONS, tag.emotion) + '</span>'
+    + '</div>';
+}
+
+// Trades tagged with a "не считать" setup — listed so a wrong tag can be fixed
+function excludedHTML(list) {
+  if (!list || !list.length) return '';
+  return '<details class="edge-panel edge-excluded"><summary class="edge-h">Не считаются — ' + list.length + ' ' + plural(list.length, 'сделка', 'сделки', 'сделок') + ' (мисклики и т.п.)</summary>'
+    + setupTradesHTML(list) + '</details>';
 }
 
 // Your setup list: rename in place, leave out of the report, hide from the buttons, add
@@ -191,8 +213,22 @@ export function renderEdgeSection(container, cached) {
       + '</div>'
       + '<div class="edge-panels">' + executionHTML(e.execution, e.breaksCostR, e.oneR) + setupsHTML(e) + '</div>'
       + conclusionsHTML(e)
-      + untaggedHTML(e.untagged);
+      + untaggedHTML(e.untagged)
+      + excludedHTML(e.excludedTrades);
     bindEditor(body, container);
+    // Re-tag a listed trade; the report recounts once you pause
+    body.querySelectorAll('[data-retag]').forEach(function (b) {
+      b.onclick = function () {
+        var tr = b.closest('[data-retag-sym]');
+        var tag = { symbol: tr.dataset.retagSym, closeTime: Number(tr.dataset.retagClose) };
+        tag[b.dataset.retag] = b.dataset.val;
+        saveTradeTag(tag).then(function () {
+          b.parentNode.querySelectorAll('[data-retag="' + b.dataset.retag + '"]').forEach(function (x) { x.classList.toggle('on', x === b); });
+          clearTimeout(_refresh);
+          _refresh = setTimeout(function () { renderEdgeSection(container); }, 2500);
+        });
+      };
+    });
     body.querySelectorAll('[data-setup-open]').forEach(function (td) {
       td.onclick = function () { _openSetup = _openSetup === td.dataset.setupOpen ? null : td.dataset.setupOpen; renderEdgeSection(container, e); };
     });

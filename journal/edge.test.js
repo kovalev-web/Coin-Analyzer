@@ -129,6 +129,7 @@ test('your own setups: named rows, excluded setup (misclicks) leaves the report,
   ];
   const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100, setups });
   assert.equal(e.excluded, 1);
+  assert.deepEqual(e.excludedTrades.map((t) => [t.closeTime, t.tag.pattern]), [[200, 'miss']]); // listed, so it can be re-tagged
   assert.deepEqual([e.execution.n, e.execution.clean], [2, 2]); // the misclick broke a rule but is not counted
   assert.deepEqual(e.setups.map((x) => [x.key, x.name, x.n]), [['s1', 'Ложный пробой', 1], ['old', 'Старый', 1]]);
 });
@@ -153,5 +154,5 @@ test('each setup lists its trades, breaks included', () => {
   const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100, setups: [{ key: 'knife', name: 'Нож' }] });
   const k = e.setups[0];
   assert.equal(k.n, 1); // only the trade by the rules counts in the numbers
-  assert.deepEqual(k.trades.map((t) => [t.closeTime, t.r, t.broken]), [[200, -2, ['stopHeld', 'noRevenge']], [100, 2, []]]);
+  assert.deepEqual(k.trades.map((t) => [t.closeTime, t.r, t.broken, t.tag.pattern]), [[200, -2, ['stopHeld', 'noRevenge'], 'knife'], [100, 2, [], 'knife']]);
 });
