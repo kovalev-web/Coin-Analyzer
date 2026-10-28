@@ -3,9 +3,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Buttons: base ──────────────────────────────────────────── */
-button{cursor:pointer;border:none;border-radius:var(--radius-md);font-family:var(--font-family);font-size:var(--text-sm);font-weight:var(--font-medium);letter-spacing:0;padding:0 var(--space-10);transition:opacity 0.15s;white-space:nowrap;}
-button:hover{opacity:0.85;}
-button:disabled{opacity:0.4;cursor:not-allowed;}
+/* Site buttons — not inside shadcn islands / portals (.jr, [data-slot]): the order
+   of the two stylesheets differs between dev and build, so they must not overlap */
+:where(button:not(.jr *, [data-slot], [data-slot] *)){cursor:pointer;border:none;border-radius:var(--radius-md);font-family:var(--font-family);font-size:var(--text-sm);font-weight:var(--font-medium);letter-spacing:0;padding:0 var(--space-10);transition:opacity 0.15s;white-space:nowrap;}
+:where(button:not(.jr *, [data-slot], [data-slot] *)):hover{opacity:0.85;}
+:where(button:not(.jr *, [data-slot], [data-slot] *)):disabled{opacity:0.4;cursor:not-allowed;}
 
 /* ── Icon action buttons ────────────────────────────────────── */
 .btn-icon{background:transparent;color:var(--graphite);border:none;padding:7px;width:30px;height:var(--h-btn-md);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-md);cursor:pointer;flex-shrink:0;}

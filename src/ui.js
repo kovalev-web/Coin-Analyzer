@@ -9,6 +9,7 @@ import { mountIsland, unmountIslands } from './react/islands.jsx';
 import { Topbar } from './react/home/Topbar.jsx';
 import { SortBar } from './react/home/SortBar.jsx';
 import { DaySummary } from './react/home/DaySummary.jsx';
+import { CardHead } from './react/home/CardHead.jsx';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -27,53 +28,19 @@ function natrDisplay(symbol) {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 
+// A coin card: the box and its chart are vanilla (charts by #chart-<sym>), the
+// head is a React island (src/react/home/CardHead.jsx) mounted by mountCardHeads
 function renderCard(coin) {
-  var cache = state.analysisCache[coin.symbol];
-  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
-  var signal = hasA ? cache.result.signal : null;
-  var tf = state.chartTF[coin.symbol] || state.globalTF || '5m';
-  var change = (coin.open_24h > 0 && coin.current_price > 0)
-    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-    : (coin.price_change_percentage_24h || 0);
-  var natr = natrDisplay(coin.symbol);
+  return '<div class="coin-card" data-sym="' + coin.symbol + '">'
+    + '<div class="card-head-root" data-card-head="' + coin.symbol + '"></div>'
+    + '<div class="chart-container" id="chart-' + coin.symbol + '"></div>'
+    + '</div>';
+}
 
-  var badge = '';
-  if (!state.isDemoMode) {
-    if (isE) badge = '<button class="btn-retry" data-action="analyze" data-sym="' + coin.symbol + '">Retry</button>';
-    else if (hasA) badge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + coin.symbol + '">' + signalLabel(signal) + '</span>';
-    else badge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + coin.symbol + '">' + icon('zap', 16) + '</button>';
-  }
-
-  var tfPicker = '<div class="tf-picker">' +
-    '<button class="pill" data-action="tf-pick" data-sym="' + coin.symbol + '">' + tf + '</button>' +
-    '<div class="tf-dd dropdown">' +
-    ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
-      return '<button class="' + (t === tf ? 'active' : '') + '" data-action="tf-opt" data-sym="' + coin.symbol + '" data-tf="' + t + '">' + t + '</button>';
-    }).join('') +
-    '</div>' +
-    '</div>';
-
-  var statsHtml = '<div class="card-chart-stats">' +
-    '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '" title="24h change">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>' +
-    '<span class="stat-val ' + natr.cls + '" title="NATR — volatility (5m × 30 candles)">' + natr.val + '</span>' +
-    '<span class="stat-val" title="24h trading volume">' + fmt(coin.total_volume).replace('$', '') + '</span>' +
-    '</div>';
-
-  return '<div class="coin-card' + (signal ? ' ' + signal : '') + '" data-sym="' + coin.symbol + '">' +
-    '<div class="card-head">' +
-    '<div class="card-sym-row">' +
-    '<span class="card-sym" data-action="copy-sym" data-sym="' + coin.symbol + '" title="Copy ticker">' + coin.symbol.toUpperCase() + '</span>' +
-    statsHtml +
-    '</div>' +
-    '<div class="card-head-right">' +
-    badge +
-    tfPicker +
-    '<button class="btn-icon star' + (isInBriefing(coin.symbol) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + coin.symbol + '" title="' + (isInBriefing(coin.symbol) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>' +
-    '<button class="btn-icon" data-action="expand" data-sym="' + coin.symbol + '" title="Fullscreen">' + icon('maximize', 16) + '</button>' +
-    '</div>' +
-    '</div>' +
-    '<div class="chart-container" id="chart-' + coin.symbol + '"></div>' +
-    '</div>';
+function mountCardHeads(root) {
+  (root || document).querySelectorAll('[data-card-head]').forEach(function (el) {
+    if (!el.firstChild) mountIsland(el, CardHead, { sym: el.dataset.cardHead });
+  });
 }
 
 export function renderCards() {
@@ -97,6 +64,7 @@ export function renderCards() {
   Object.keys(existing).forEach(function (sym) {
     if (!seen[sym]) {
       var el = existing[sym]; if (el) el.remove();
+      unmountIslands(); // the removed card's head
       try { if (_charts[sym]) _charts[sym].remove(); } catch (e) {}
       if (_levels[sym]) _levels[sym].forEach(function (l) { l.line = null; });
       delete _charts[sym]; delete _fullSeries[sym]; delete _volSeries[sym]; delete _rulers[sym]; delete _chartReady[sym];
@@ -113,6 +81,7 @@ export function renderCards() {
     if (current !== el) grid.insertBefore(el, current || null);
   });
 
+  mountCardHeads(grid);
   initCharts();
   // Синхронизируем display с текущим state после каждого ре-ордера.
   // Без этого sort использует свежие значения state, а DOM показывает значения
@@ -121,6 +90,7 @@ export function renderCards() {
 }
 
 export function updateCardBadge(symbol) {
+  // Card heads (React) have no analysis badge — this finds the full view's
   var el = document.querySelector('[data-ck="' + symbol + '"]');
   if (!el) el = document.querySelector('[data-action="open-analysis"][data-sym="' + symbol + '"]');
   if (!el) el = document.querySelector('[data-action="analyze"][data-sym="' + symbol + '"]');
@@ -1985,6 +1955,7 @@ export function render() {
   mountIsland(document.getElementById('topbar-root'), Topbar, { screener: _screenerMode });
   if (!_screenerMode) mountIsland(document.getElementById('day-summary-root'), DaySummary);
   mountIsland(document.getElementById('sortbar-root'), SortBar, { screener: _screenerMode });
+  mountCardHeads(app);
   initCharts();
 }
 
@@ -2104,7 +2075,7 @@ export function briefingThisWeekEntries() {
   return (state.briefing || []).filter(function (e) { return e.date >= weekMonday; });
 }
 
-function isInBriefing(sym) {
+export function isInBriefing(sym) {
   var today = todayDate();
   return (state.briefing || []).some(function (e) { return e.sym === sym && e.date === today; });
 }
@@ -2282,6 +2253,7 @@ function cycleBriefingStatus(sym, date) {
 }
 
 function updateStarButton(sym) {
+  emit('briefing:changed'); // card heads (React)
   var active = isInBriefing(sym);
   document.querySelectorAll('.btn-icon.star[data-sym="' + sym + '"]').forEach(function (btn) {
     btn.classList.toggle('active', active);
@@ -2290,6 +2262,7 @@ function updateStarButton(sym) {
 }
 
 function updateAllStarButtons() {
+  emit('briefing:changed');
   document.querySelectorAll('.btn-icon.star').forEach(function (btn) {
     var sym = btn.dataset.sym;
     var active = isInBriefing(sym);
