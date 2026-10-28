@@ -776,7 +776,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 
 /* one typeface for the whole ladder: volume, price, your orders and the % ruler
    share size and weight (change --ladder-weight to restyle all of them) */
-.fv-dom{--ladder-weight:var(--font-bold);}
+.fv-dom{--ladder-weight:var(--font-normal);}
 .dom-row,.dom-c-price,.dom-row.ask .dom-c-price,.dom-row.bid .dom-c-price,.dom-c-vol b,.dom-mine,.dom-ruler-tag{font-size:var(--text-ladder);font-weight:var(--ladder-weight);}
 
 /* rows with your resting orders: a faint tint across the whole row */
