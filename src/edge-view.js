@@ -37,6 +37,16 @@ function shortDate(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
 // ⓘ with its explanation on hover (our own tooltip — the native title was slow / unreliable)
 function info(text) { return '<span class="edge-info" tabindex="0" data-tip="' + escHtml(text) + '">ⓘ</span>'; }
 
+// What each rule checks (thresholds as in journal/facts.js and journal/edge.js)
+var RULES_HELP = 'Доля сделок, где не нарушено ни одно правило:\n\n'
+  + '• Монета не из брифинга — монеты не было в брифинге (звёздочка) в день входа.\n'
+  + '• Стоп не выдержан — убыток больше 1.2R (1R = рабочий объём × % риска, у тебя 0.50 USDT).\n'
+  + '• Превышение объёма — позиция в сделке больше рабочего объёма из настроек больше чем на 5%.\n'
+  + '• Реванш после убытка — вход в течение 5 минут после убыточной сделки. Выход в пределах ±0.1R — ноль, не убыток.\n'
+  + '• Вход после стоп-крана — вход после двух убыточных сделок подряд за день (нули не считаются).\n'
+  + '• Рост объёма после серии — позиция больше 1.5× обычной за день (медиана прошлых сделок) после двух одинаковых исходов подряд.\n\n'
+  + 'Отметка сетапа — не правило: на процент не влияет.';
+
 // Rule breaks named as what happened (the server sends rule keys)
 var BREAK_LABEL = {
   planned: 'Монета не из брифинга',
@@ -74,7 +84,7 @@ export function bindPeriodPicker(root, onChange) {
 // ── Summary for the period ──────────────────────────────────────────────────
 
 function executionHTML(x) {
-  var head = '<div class="edge-panel"><h4 class="edge-h">Исполнение ' + info('Доля сделок без нарушений твоих правил: брифинг, стоп не больше 1R, объём в лимите, без реванша, без входов после стоп-крана, без роста объёма после серии.') + '</h4>';
+  var head = '<div class="edge-panel"><h4 class="edge-h">Исполнение ' + info(RULES_HELP) + '</h4>';
   if (!x || !x.n) return head + '<div class="edge-empty">Сделок нет</div></div>';
   var broken = x.rules.filter(function (r) { return r.broken; }).sort(function (a, b) { return b.broken - a.broken; });
   var errs = broken.reduce(function (s, r) { return s + r.broken; }, 0);
