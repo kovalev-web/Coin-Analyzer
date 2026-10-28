@@ -159,6 +159,17 @@ function ensureAuthTables() {
       PRIMARY KEY ("user_id", "key")
     )
   `);
+  // Levels drawn on a trade's review chart in the journal — kept per trade, never on the live chart
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS "review_levels" (
+      "user_id" TEXT NOT NULL,
+      "symbol" TEXT NOT NULL,
+      "close_time" INTEGER NOT NULL,
+      "prices" TEXT NOT NULL,
+      "updated_at" INTEGER NOT NULL,
+      PRIMARY KEY ("user_id", "symbol", "close_time")
+    )
+  `);
   // One-off data migrations, applied once and recorded
   sqlite.exec('CREATE TABLE IF NOT EXISTS "migrations" ("name" TEXT PRIMARY KEY, "applied_at" INTEGER NOT NULL)');
   function once(name, fn) {

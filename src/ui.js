@@ -4487,6 +4487,7 @@ function _loadFVReplay(sym, tf) {
     rp.candles = c;
     if (end >= Date.now() - ms) rp.done.fwd = true;
     _setFVData(sym, { status: 'ok', candles: c });
+    if (!rp.levelsLoaded) { rp.levelsLoaded = true; _loadReviewLevels(rp); }
     // Show the trade with some room around it
     var pad = Math.max(60 * ms, (rp.closeTime - rp.openTime));
     try { _fvChart.timeScale().setVisibleRange({ from: Math.floor((rp.openTime - pad) / 1000), to: Math.floor((rp.closeTime + pad) / 1000) }); } catch (e) {}
@@ -4515,10 +4516,31 @@ function _extendFVReplay(sym, back) {
   }).catch(function () { rp.loading = false; });
 }
 
+// Levels drawn on a trade's review chart are kept with that trade (server,
+// review_levels) — never on the live chart
+function _reviewLine(price) {
+  return _fvSeries.createPriceLine({ price: price, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: getCSSVar('--primary'), title: '' });
+}
+function _loadReviewLevels(rp) {
+  fetch(API_BASE + '/api/journal/review-levels?symbol=' + encodeURIComponent(rp.symbol) + '&close=' + rp.closeTime, { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || _fvReplay !== rp || !_fvSeries) return;
+      (d.prices || []).forEach(function (p) { rp.levels.push({ price: p, line: _reviewLine(p) }); });
+    }).catch(function () {});
+}
+function _saveReviewLevels(rp) {
+  fetch(API_BASE + '/api/journal/review-levels', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+    body: JSON.stringify({ symbol: rp.symbol, close: rp.closeTime, prices: rp.levels.map(function (l) { return l.price; }) }),
+  }).catch(function () {});
+}
+
 // Open a coin's chart on one of your trades (from the journal): full history to
 // scroll and any timeframe, nothing live. trade: { openTime, closeTime, execs }
 export function openTradeInChart(sym, trade) {
-  _fvReplay = { openTime: trade.openTime, closeTime: trade.closeTime || trade.openTime, execs: trade.execs || [], candles: [] };
+  _fvReplay = { openTime: trade.openTime, closeTime: trade.closeTime || trade.openTime, execs: trade.execs || [], candles: [],
+    symbol: trade.symbol || String(sym).toUpperCase() + 'USDT', levels: [] };
   window.__fvReplay = true;
   openCoinFullView(sym);
 }
@@ -4710,9 +4732,10 @@ export function openCoinFullView(sym) {
       var lv = _fvReplay.levels = _fvReplay.levels || [];
       for (var ri = 0; ri < lv.length; ri++) {
         var rly = _fvSeries.priceToCoordinate(lv[ri].price);
-        if (rly != null && Math.abs(rly - ry) < 10) { try { _fvSeries.removePriceLine(lv[ri].line); } catch (x) {} lv.splice(ri, 1); return; }
+        if (rly != null && Math.abs(rly - ry) < 10) { try { _fvSeries.removePriceLine(lv[ri].line); } catch (x) {} lv.splice(ri, 1); _saveReviewLevels(_fvReplay); return; }
       }
-      lv.push({ price: rp, line: _fvSeries.createPriceLine({ price: rp, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: getCSSVar('--primary'), title: '' }) });
+      lv.push({ price: rp, line: _reviewLine(rp) });
+      _saveReviewLevels(_fvReplay);
       return;
     }
     var y = e.clientY - rect.top;

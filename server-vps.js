@@ -1617,6 +1617,41 @@ var httpServer = http.createServer(async function (req, res) {
         return;
       }
 
+      // Levels on a trade's review chart: GET ?symbol=AINUSDT&close=<ms> → { prices };
+      // POST { symbol, close, prices: [..] } replaces them (empty list removes)
+      if (req.url.split('?')[0] === '/api/journal/review-levels') {
+        var jrlQ = new URL(req.url, 'https://questtick.com').searchParams;
+        if (req.method === 'POST') {
+          var jrlBody = await new Promise(function (resolve) { var b = ''; req.on('data', function (c) { b += c; if (b.length > 8192) req.destroy(); }); req.on('end', function () { resolve(b); }); });
+          var jrl;
+          try { jrl = JSON.parse(jrlBody || '{}'); } catch (e) { jrl = {}; }
+          var jrlSym = String(jrl.symbol || '').toUpperCase(), jrlClose = Number(jrl.close);
+          var jrlPrices = (Array.isArray(jrl.prices) ? jrl.prices : []).map(Number).filter(function (p) { return p > 0; }).slice(0, 50);
+          if (!/^[A-Z0-9]{2,30}$/.test(jrlSym) || !(jrlClose > 0)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid levels' }));
+            return;
+          }
+          if (jrlPrices.length) {
+            jDb.prepare('INSERT INTO review_levels (user_id, symbol, close_time, prices, updated_at) VALUES (?, ?, ?, ?, ?) '
+              + 'ON CONFLICT(user_id, symbol, close_time) DO UPDATE SET prices = excluded.prices, updated_at = excluded.updated_at')
+              .run(jUserId, jrlSym, Math.floor(jrlClose), JSON.stringify(jrlPrices), Date.now());
+          } else {
+            jDb.prepare('DELETE FROM review_levels WHERE user_id = ? AND symbol = ? AND close_time = ?').run(jUserId, jrlSym, Math.floor(jrlClose));
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ prices: jrlPrices }));
+          return;
+        }
+        var jrlRow = jDb.prepare('SELECT prices FROM review_levels WHERE user_id = ? AND symbol = ? AND close_time = ?')
+          .get(jUserId, String(jrlQ.get('symbol') || '').toUpperCase(), Math.floor(Number(jrlQ.get('close')) || 0));
+        var jrlOut = [];
+        try { jrlOut = jrlRow ? JSON.parse(jrlRow.prices) : []; } catch (e) {}
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ prices: jrlOut }));
+        return;
+      }
+
       // Coin notes: thoughts written while watching a coin, many per coin, each
       // with its time and price. GET ?symbol=AIN (one coin) or ?from=&to= (ms, all coins)
       if (req.method === 'GET' && req.url.split('?')[0] === '/api/journal/notes') {
