@@ -34,7 +34,8 @@ function plural(n, one, few, many) {
 }
 function trades(n) { return n + ' ' + plural(n, 'сделка', 'сделки', 'сделок'); }
 function shortDate(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
-function info(text) { return '<span class="edge-info" title="' + escHtml(text) + '">ⓘ</span>'; }
+// ⓘ with its explanation on hover (our own tooltip — the native title was slow / unreliable)
+function info(text) { return '<span class="edge-info" tabindex="0" data-tip="' + escHtml(text) + '">ⓘ</span>'; }
 
 // Rule breaks named as what happened (the server sends rule keys)
 var BREAK_LABEL = {
