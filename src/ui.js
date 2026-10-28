@@ -6,6 +6,9 @@ import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js'
 import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on, emit } from './events.js';
 import { openSurface, closeSurface, isSurfaceOpen, toast } from './react-bridge.js';
+import { mountIsland, unmountIslands } from './react/islands.jsx';
+import { Topbar } from './react/home/Topbar.jsx';
+import { SortBar } from './react/home/SortBar.jsx';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -240,20 +243,7 @@ export function setUserAvatar(av) {
     _userAvatar = av;
     localStorage.setItem(_userScopedKey('pa_avatar'), av);
   }
-  // Desktop: avatar button in topbar-actions
-  var btn = document.getElementById('avatar-btn');
-  var iconSpan = document.getElementById('avatar-btn-icon');
-  if (iconSpan) {
-    iconSpan.innerHTML = av ? av : icon('user-round', 16);
-    if (btn) btn.classList.toggle('has-emoji', !!av);
-  }
-  // Mobile: logo button in topbar
-  var logoBtn = document.getElementById('topbar-logo-btn');
-  if (logoBtn) {
-    logoBtn.classList.toggle('mob-has-avatar', !!av);
-    var mobAv = logoBtn.querySelector('.logo-mob-av');
-    if (mobAv) mobAv.textContent = av || '';
-  }
+  emit('avatar:changed'); // the React header shows it
 }
 
 function levelsData() {
@@ -1840,8 +1830,6 @@ export { openTVMode, closeTVMode } from './tv.js';
 
 function updateMetricCards() {
   var coins = filteredCoins();
-  var sortCount = document.querySelector('.sort-coin-count');
-  if (sortCount) sortCount.textContent = (_screenerMode ? screenerCoins() : coins).length + ' coins';
   var c1 = document.querySelector('.metric-card:nth-child(1) .value');
   if (c1) c1.textContent = coins.length;
   if (!coins.length) return;
@@ -1870,16 +1858,6 @@ var TRADING_SESSIONS = [
 ];
 
 var SESSION_WHEEL_CIRCUMFERENCE = 2 * Math.PI * 5;
-
-function _sessionWheelSVG(percent) {
-  var offset = SESSION_WHEEL_CIRCUMFERENCE * (1 - percent);
-  return '<svg class="session-wheel" width="14" height="14" viewBox="0 0 14 14">'
-    + '<circle cx="7" cy="7" r="5" fill="none" stroke="var(--steel)" stroke-width="3"/>'
-    + '<circle cx="7" cy="7" r="5" fill="none" stroke="var(--bullish)" stroke-width="3" '
-    + 'stroke-dasharray="' + SESSION_WHEEL_CIRCUMFERENCE + '" stroke-dashoffset="' + offset + '" '
-    + 'stroke-linecap="round" transform="rotate(-90 7 7)"/>'
-    + '</svg>';
-}
 
 function _sessionInfo() {
   var nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
@@ -1920,112 +1898,35 @@ function _localHourStr(utcHour) {
   return tzTimeStr(d);
 }
 
-function _sessionDotsHTML(activeKeys) {
+// Open sessions for the header: { dots: [{ key, label, short, local, percent, ending, circ }], nextText, nextTextShort }
+export function sessionInfo() {
+  var info = _sessionInfo();
   var nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
-  var active = TRADING_SESSIONS.filter(function (s) {
-    return activeKeys.indexOf(s.key) !== -1;
-  });
+  var active = TRADING_SESSIONS.filter(function (s) { return info.activeKeys.indexOf(s.key) !== -1; });
   var minUntilEnd = null;
   active.forEach(function (s) {
     var untilEnd = s.end * 60 - nowMin; if (untilEnd <= 0) untilEnd += 1440;
     if (minUntilEnd === null || untilEnd < minUntilEnd) minUntilEnd = untilEnd;
   });
-  return active.map(function (s) {
-    var local = _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local';
+  info.dots = active.map(function (s) {
     var untilEnd = s.end * 60 - nowMin; if (untilEnd <= 0) untilEnd += 1440;
-    var cls = (active.length > 1 && untilEnd === minUntilEnd) ? 'ending' : 'active';
     var idx = TRADING_SESSIONS.indexOf(s);
     var nextOpen = TRADING_SESSIONS[(idx + 1) % TRADING_SESSIONS.length].start * 60;
     var interval = (nextOpen - s.start * 60 + 1440) % 1440;
     var elapsed = (nowMin - s.start * 60 + 1440) % 1440;
-    var percent = Math.min(elapsed / interval, 1);
-    return '<span class="session-dot ' + cls + '" title="' + s.label + ' ' + local + '">'
-      + _sessionWheelSVG(percent) + s.short + '</span>';
-  }).join('');
-}
-
-function _sessionTimerHTML() {
-  var info = _sessionInfo();
-  return '<div class="session-timer" id="session-timer">'
-    + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
-    + '<span class="session-timer-next">' + info.nextText + '</span>'
-    + '</div>';
-}
-
-function _sessionTimerMobileHTML() {
-  var info = _sessionInfo();
-  return '<div class="burger-dd-footer session-timer-mobile">'
-    + '<span class="session-dots">' + _sessionDotsHTML(info.activeKeys) + '</span>'
-    + '<span class="session-timer-next">' + info.nextTextShort + '</span>'
-    + '</div>';
-}
-
-export function updateSessionTimer() {
-  var info = _sessionInfo();
-  var desktopEl = document.getElementById('session-timer');
-  if (desktopEl) {
-    var dots = desktopEl.querySelector('.session-dots');
-    if (dots) dots.innerHTML = _sessionDotsHTML(info.activeKeys);
-    var next = desktopEl.querySelector('.session-timer-next');
-    if (next) next.textContent = info.nextText;
-  }
-  document.querySelectorAll('.session-timer-mobile').forEach(function (el) {
-    var mDots = el.querySelector('.session-dots');
-    if (mDots) mDots.innerHTML = _sessionDotsHTML(info.activeKeys);
-    var mNext = el.querySelector('.session-timer-next');
-    if (mNext) mNext.textContent = info.nextTextShort;
+    return {
+      key: s.key, label: s.label, short: s.short,
+      local: _localHourStr(s.start) + '–' + _localHourStr(s.end) + ' local',
+      percent: Math.min(elapsed / interval, 1),
+      ending: active.length > 1 && untilEnd === minUntilEnd,
+      circ: SESSION_WHEEL_CIRCUMFERENCE,
+    };
   });
+  return info;
 }
 
-function _topbarHTML() {
-  var _av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')) || '';
-  var _demo = state.isDemoMode;
-  return '<div class="topbar"><div class="filters">'
-    + '<button class="topbar-logo' + (_av ? ' mob-has-avatar' : '') + '" id="topbar-logo-btn" data-action="refresh" title="Refresh">'
-    + '<span class="logo-svg">' + LOGO_SVG + '</span>'
-    + '<span class="logo-mob-av">' + _av + '</span>'
-    + '</button>'
-    + '<button class="nav-pill' + (!_screenerMode ? ' active' : '') + '" data-action="go-main">Tear</button>'
-    + '<button class="nav-pill' + (_screenerMode ? ' active' : '') + '" data-action="go-screener">Gainers</button>'
-    + _sessionTimerHTML()
-    + '<div class="topbar-actions">'
-    + '<button class="btn-topbar" data-action="open-search" title="Search">' + icon('search', 16) + '</button>'
-    + '<button class="btn-topbar" data-action="open-briefing" title="Watchlist">' + icon('bookmark', 16) + '</button>'
-    + (!_demo ? '<a class="btn-topbar desktop-nav-btn" href="/grid" title="Grid screener">' + icon('layout-grid', 16) + '</a>' : '')
-    + '<button class="btn-topbar desktop-nav-btn" data-action="tv" title="TV mode">' + icon('monitor', 16) + '</button>'
-    + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
-    + (!_demo ? '<div class="notif-wrap" id="notif-wrap">'
-    + '<button class="btn-topbar" data-action="toggle-notif" id="notif-btn" title="Notifications">' + icon('bell', 16) + '<span class="notif-badge" id="notif-badge" style="display:none"></span></button>'
-    + '</div>' : '')
-    + '<div class="avatar-wrap">'
-    + (function() { var av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
-    + '<div class="avatar-dd dropdown" id="avatar-dd">'
-    + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
-    + '<a href="/faq" class="burger-dd-item">' + icon('help-circle', 14) + 'FAQ</a>'
-    + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
-    + _sessionTimerMobileHTML()
-    + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
-    + '</div>'
-    + '</div>'
-    + '<div class="burger-wrap">'
-    + '<button class="btn-topbar" data-action="toggle-burger">' + icon('menu', 16) + '</button>'
-    + '<div class="burger-dd dropdown" id="burger-dd">'
-    + (!_demo ? '<button class="burger-dd-item" data-action="open-journal">' + icon('book-open', 14) + 'Journal</button>' : '')
-    + '<button class="burger-dd-item" data-action="toggle-theme">' + (isDark() ? icon('sun', 14) + 'Light' : icon('moon', 14) + 'Dark') + '</button>'
-    + '<button class="burger-dd-item" data-action="tv">' + icon('monitor', 14) + 'TV mode</button>'
-    + '<button class="burger-dd-item" data-action="open-hints">' + icon('info', 14) + 'Interactions</button>'
-    + '<a href="/faq" class="burger-dd-item">' + icon('help-circle', 14) + 'FAQ</a>'
-    + (!_demo ? '<button class="burger-dd-item" data-action="open-account">' + icon('user-round', 14) + 'Account</button>' : '')
-    + _sessionTimerMobileHTML()
-    + (_demo ? '<a href="/login" class="burger-dd-item demo-burger-signup">' + icon('log-in', 14) + 'Sign up</a>' : '')
-    + '</div>'
-    + '</div>'
-    + '</div>'
-    + '</div></div>';
-}
+// The header re-reads sessionInfo() on its own timer; kept for main.js
+export function updateSessionTimer() { emit('timezone:changed'); }
 
 export function injectDemoBanner() {
   if (document.getElementById('demo-banner')) return;
@@ -2038,35 +1939,12 @@ export function injectDemoBanner() {
   document.body.classList.add('demo-mode');
 }
 
-// ── Sort Bar ───────────────────────────────────────────────────────────────
+// ── Global timeframe (every card) ──────────────────────────────────────────
 
-function _sortBarHTML(coins) {
-  var ws = wsConnected;
-  var wsTitle = ws ? 'WebSocket: connected' : 'WebSocket: disconnected';
-  return '<div class="sort-bar">'
-    + (_screenerMode ? '' :
-        '<div class="tier-num-group">'
-        + '<button class="pill' + (state.volTier === 'high' ? ' active' : '') + '" data-action="pick-tier" data-val="high" title=">100M USDT">&gt;100</button>'
-        + '<button class="pill' + (state.volTier === 'mid'  ? ' active' : '') + '" data-action="pick-tier" data-val="mid"  title="50M – 100M USDT">&gt;50</button>'
-        + '<button class="pill' + (state.volTier === 'low'  ? ' active' : '') + '" data-action="pick-tier" data-val="low"  title="12M – 50M USDT">&gt;12</button>'
-        + '</div>')
-    + '<span class="ws-indicator ' + (ws ? 'connected' : 'disconnected') + '" title="' + wsTitle + '"></span>'
-    + '<span class="sort-coin-count">' + coins.length + ' coins</span>'
-    + '<div class="sort-bar-btns">'
-    + '<div class="tf-picker">'
-    + '<button class="pill active" data-action="global-tf-pick">' + state.globalTF + '</button>'
-    + '<div class="tf-dd dropdown">'
-    + ['1m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) {
-        return '<button class="' + (t === state.globalTF ? 'active' : '') + '" data-action="global-tf-opt" data-tf="' + t + '">' + t + '</button>';
-      }).join('')
-    + '</div>'
-    + '</div>'
-    // Gainers are always ranked by 24h change (screenerCoins), so sort buttons don't apply there
-    + (_screenerMode ? '' :
-        '<button class="btn-icon' + (state.sortCol === 'price_change_percentage_24h' ? ' active' : '') + '" data-action="sort" data-col="price_change_percentage_24h" title="Sort by change">' + icon('percent', 16) + '</button>'
-        + '<button class="btn-icon' + (state.sortCol === 'total_volume' ? ' active' : '') + '" data-action="sort" data-col="total_volume" title="Sort by volume">' + icon('bar-chart-2', 16) + '</button>')
-    + '</div>'
-    + '</div>';
+export function setGlobalTF(tf) {
+  state.globalTF = tf;
+  state.coins.forEach(function (c) { state.chartTF[c.symbol] = tf; });
+  document.querySelectorAll('.coin-card[data-sym]').forEach(function (card) { setChartTF(card.dataset.sym, tf); });
 }
 
 // ── Main Render ────────────────────────────────────────────────────────────
@@ -2075,6 +1953,7 @@ export function render() {
   var app = document.getElementById('app');
   if (state.loading) {
     destroyCharts();
+    unmountIslands(app);
     app.innerHTML = '<div class="loading-overlay"><div class="big-spinner"></div><p>Loading data from Binance Futures...</p></div>';
     return;
   }
@@ -2096,13 +1975,16 @@ export function render() {
       + '</div></div>'
     : emptyHtml;
 
+  // Header and filter bar are React (shadcn) islands: src/react/home
+  unmountIslands(app);
   app.innerHTML =
-    _topbarHTML()
+    '<div id="topbar-root"></div>'
     + (_screenerMode ? '' : daySummaryHTML()) // day summary on the main (Tear) screen
-    + _sortBarHTML(coins)
+    + '<div id="sortbar-root"></div>'
     + coinsHtml;
+  mountIsland(document.getElementById('topbar-root'), Topbar, { screener: _screenerMode });
+  mountIsland(document.getElementById('sortbar-root'), SortBar, { screener: _screenerMode });
   initCharts();
-  updateNotifBadge();
 }
 
 
@@ -2123,6 +2005,7 @@ on('ws:status', function () {
     els[i].className = 'ws-indicator ' + (wsConnected ? 'connected' : 'disconnected');
     els[i].title = wsConnected ? 'WebSocket connected' : 'WebSocket disconnected';
   }
+  // the filter bar's dot is React and listens to 'ws:status' itself
 });
 
 // ── Full View ──────────────────────────────────────────────────────────────
@@ -4044,11 +3927,8 @@ export function showNotifToast(entry) {
   toast(entry.message, { duration: 30000 });
 }
 
-export function updateNotifBadge() {
-  var badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  badge.style.display = state.notifUnread > 0 ? 'block' : 'none';
-}
+// The bell's dot is in the React header (src/react/home/Topbar.jsx)
+export function updateNotifBadge() { emit('notifications:updated'); }
 
 // The list under the bell is a shadcn popover (src/react/host/NotificationsPopover.jsx)
 function _renderNotifDropdown() { emit('notifications:updated'); }

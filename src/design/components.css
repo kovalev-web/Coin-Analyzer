@@ -23,7 +23,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-topbar-label svg{margin-left:auto;transition:transform 0.15s;}
 .tf-picker:has(.tf-dd.open) .btn-topbar-label svg{transform:rotate(180deg);}
 .journal-range-btn{width:108px;}
-.desktop-nav-btn{display:none;}
 
 /* ── WS indicator ───────────────────────────────────────────── */
 .ws-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 var(--space-3) 0 0;}
@@ -33,8 +32,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 /* ── Logo ───────────────────────────────────────────────────── */
 .topbar-logo{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-deep);background:transparent;border:none;padding:0;cursor:pointer;height:var(--h-btn-md);}
 .topbar-logo:hover{opacity:0.7;}
-.logo-svg{display:flex;align-items:center;}
-.logo-mob-av{display:none;font-size:24px;line-height:1;}
 @keyframes logo-wiggle{
   0%,100%{transform:rotate(0deg) scale(1);}
   10%{transform:rotate(-14deg) scale(1.08);}
@@ -52,15 +49,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;}
 .nav-pill.active{background:var(--fog);color:var(--ink-deep);}
 
 /* ── Session timer (Asia/Europe/America) ───────────────────── */
-.session-timer{display:flex;align-items:center;gap:var(--space-8);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0 var(--space-8);height:var(--h-btn-md);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;}
-.session-dots{display:inline-flex;align-items:center;gap:var(--space-8);}
-.session-dot{display:inline-flex;align-items:center;gap:var(--space-4);font-weight:var(--font-normal);color:var(--graphite);}
-.session-wheel{flex:none;}
-.session-wheel circle:last-child{transition:stroke-dashoffset 1s linear;}
-.session-dot.active{color:var(--ink-deep);}
-.session-timer-next{color:var(--graphite);font-weight:var(--font-medium);padding-left:var(--space-6);border-left:1px solid var(--steel);}
-.session-dots:empty{display:none;}
-.session-dots:empty + .session-timer-next{border-left:none;padding-left:0;}
 @media(max-width:900px){.session-timer{display:none;}}
 
 /* ── TF picker ──────────────────────────────────────────────── */
@@ -181,17 +169,12 @@ a[href*="tradingview.com"]{outline:none;transform:scale(0.5);transform-origin:bo
 .fv-bottom-bar .tf-dd{top:auto;bottom:calc(100% + var(--space-3));}
 
 /* ── Burger menu ────────────────────────────────────────────── */
-.burger-wrap{position:relative;display:none;}
 .burger-dd,.avatar-dd{top:calc(100% + var(--space-4));border-radius:var(--radius-xl);z-index:500;min-width:160px;}
 .burger-dd-item{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-6) var(--space-8);font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--ink-deep);cursor:pointer;background:transparent;border:none;width:100%;text-align:left;height:auto;border-radius:0;letter-spacing:0;text-decoration:none;}
 .burger-dd-item:hover{background:var(--fog);opacity:1;}
-.burger-dd-footer{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-4);padding:var(--space-6) var(--space-8);border-top:1px solid var(--fog);font-size:var(--text-xs);color:var(--graphite);}
-.burger-dd-footer .session-timer-next{border-left:none;padding-left:0;}
-.session-timer-mobile{display:none;}
 @media(max-width:900px){.session-timer-mobile{display:flex;}}
 
 /* ── Avatar button ──────────────────────────────────────────── */
-.avatar-wrap{position:relative;display:block;}
 .btn-avatar{font-size:var(--text-base);line-height:1;}
 .btn-avatar.has-emoji{background:transparent;border-radius:0;font-size:var(--text-2xl);line-height:1;overflow:hidden;}
 
@@ -354,8 +337,6 @@ select.ds-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .ruler-lbl{position:absolute;pointer-events:none;z-index:6;display:none;white-space:nowrap;font-size:var(--text-2xs);font-weight:var(--font-medium);line-height:12px;font-variant-numeric:tabular-nums;border-radius:var(--radius-md);padding:2px 4px;flex-direction:column;gap:4px;background:var(--ink-deep);color:var(--canvas);}
 
 /* ── Notifications ──────────────────────────────────────────── */
-.notif-wrap{position:relative;}
-.notif-badge{position:absolute;top:var(--space-1);right:var(--space-1);width:8px;height:8px;background:var(--danger);border-radius:var(--radius-full);pointer-events:none;}
 .notif-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--graphite);padding-top:2px;}
 
 /* ── Journal modals ─────────────────────────────────────────── */

@@ -69,17 +69,6 @@ window.addEventListener('keydown', function (e) {
 });
 
 document.body.addEventListener('click', function (e) {
-  // Close burger dropdown on any click outside .burger-wrap
-  var burgerDd = document.getElementById('burger-dd');
-  if (burgerDd && burgerDd.classList.contains('open') && !e.target.closest('.burger-wrap')) {
-    burgerDd.classList.remove('open');
-  }
-  // Close avatar dropdown on any click outside .avatar-wrap
-  var avatarDd = document.getElementById('avatar-dd');
-  if (avatarDd && avatarDd.classList.contains('open') && !e.target.closest('.avatar-wrap')) {
-    avatarDd.classList.remove('open');
-  }
-
   // Close popups on any outside click — runs before data-action check so clicking
   // any button outside a popup (e.g. "expand", "open-ms") also closes it.
   var _aoPopup = document.getElementById('analysis-overlay');
@@ -105,28 +94,9 @@ document.body.addEventListener('click', function (e) {
   var sym = target.dataset.sym;
   var tf = target.dataset.tf;
 
-  // Close burger on any action except its own toggle
-  if (action !== 'toggle-burger' && action !== 'toggle-avatar-dd') {
-    var _bdd = document.getElementById('burger-dd');
-    if (_bdd) _bdd.classList.remove('open');
-    var _add = document.getElementById('avatar-dd');
-    if (_add) _add.classList.remove('open');
-  }
   if (target.dataset.notifId) markNotificationAsRead(target.dataset.notifId);
 
   switch (action) {
-    case 'toggle-burger': {
-      e.stopPropagation();
-      var bDd = document.getElementById('burger-dd');
-      if (bDd) bDd.classList.toggle('open');
-      break;
-    }
-    case 'toggle-avatar-dd': {
-      e.stopPropagation();
-      var aDd = document.getElementById('avatar-dd');
-      if (aDd) aDd.classList.toggle('open');
-      break;
-    }
     case 'toggle-notif': {
       e.stopPropagation();
       toggleNotifDropdown();
@@ -165,31 +135,6 @@ document.body.addEventListener('click', function (e) {
         // On desktop (positioned popup), _lockedScroll is not set — don't touch the lock.
         if (ap._lockedScroll) { ap._lockedScroll = false; forceUnlockScroll(); }
       }
-      break;
-    }
-    case 'global-tf-pick': {
-      e.stopPropagation();
-      var gdd = target.parentElement.querySelector('.tf-dd');
-      if (gdd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-        gdd.classList.toggle('open');
-      }
-      break;
-    }
-    case 'global-tf-opt': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-      var newTf = target.dataset.tf;
-      if (!newTf) break;
-      state.globalTF = newTf;
-      var gPill = document.querySelector('.sort-bar .tf-picker .pill');
-      if (gPill) gPill.textContent = newTf;
-      var gDd = document.querySelector('.sort-bar .tf-picker .tf-dd');
-      if (gDd) gDd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === newTf ? 'active' : ''; });
-      state.coins.forEach(function (c) { state.chartTF[c.symbol] = newTf; });
-      document.querySelectorAll('.coin-card[data-sym]').forEach(function (card) {
-        setChartTF(card.dataset.sym, newTf);
-      });
       break;
     }
     case 'tf-pick': {
@@ -513,7 +458,7 @@ function _briefingRefreshSafe() {
 on('briefing:updated', function () { _briefingRefreshSafe(); });
 
 // Session timer (Asia/Europe/America) — refresh every 30s
-setInterval(updateSessionTimer, 30000);
+// The header (React) refreshes the session timer itself
 
 // Fallback poll every 15s when briefing is open (covers WS gaps/reconnects)
 setInterval(function () {
