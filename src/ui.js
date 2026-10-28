@@ -1,7 +1,6 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
 import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
-import { daySummaryHTML } from './summary.js';
 import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
 import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on, emit } from './events.js';
@@ -9,6 +8,7 @@ import { openSurface, closeSurface, isSurfaceOpen, toast } from './react-bridge.
 import { mountIsland, unmountIslands } from './react/islands.jsx';
 import { Topbar } from './react/home/Topbar.jsx';
 import { SortBar } from './react/home/SortBar.jsx';
+import { DaySummary } from './react/home/DaySummary.jsx';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -1979,10 +1979,11 @@ export function render() {
   unmountIslands(app);
   app.innerHTML =
     '<div id="topbar-root"></div>'
-    + (_screenerMode ? '' : daySummaryHTML()) // day summary on the main (Tear) screen
+    + (_screenerMode ? '' : '<div id="day-summary-root"></div>') // day strip on the main (Tear) screen
     + '<div id="sortbar-root"></div>'
     + coinsHtml;
   mountIsland(document.getElementById('topbar-root'), Topbar, { screener: _screenerMode });
+  if (!_screenerMode) mountIsland(document.getElementById('day-summary-root'), DaySummary);
   mountIsland(document.getElementById('sortbar-root'), SortBar, { screener: _screenerMode });
   initCharts();
 }

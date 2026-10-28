@@ -1129,7 +1129,7 @@ on('trade:event', function (ev) {
   emit('terminal:account');
 });
 
-// ── For the main screen widget (summary.js) ─────────────────────────────────
+// ── For the main screen widget (src/react/home/DaySummary.jsx) ─────────────────────────────────
 
 // null when this account can't trade; else the live trader state for the current mode
 export function tradingSnapshot() {
