@@ -942,14 +942,14 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-sample-bar i{display:block;height:100%;background:var(--level-deep);}
 .edge-h{font-size:var(--text-sm);font-weight:var(--font-bold);color:var(--ink-deep);margin:0 0 var(--space-4);}
 .edge-list{width:100%;table-layout:fixed;border-collapse:collapse;margin-bottom:var(--space-12);font-size:var(--text-sm);font-variant-numeric:tabular-nums;}
-.edge-list th{text-align:left;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);padding:0 var(--space-6) var(--space-3) 0;border-bottom:1px solid var(--steel);white-space:nowrap;}
-.edge-list td{padding:var(--space-4) var(--space-6) var(--space-4) 0;border-bottom:1px solid color-mix(in srgb,var(--steel) 50%,transparent);vertical-align:top;color:var(--ink-deep);}
-.edge-list th:nth-child(n+2):nth-child(-n+5),.edge-list td:nth-child(n+2):nth-child(-n+5){text-align:right;}
-.edge-list td:first-child b{display:block;font-weight:var(--font-semi);}
-.edge-list td:first-child span{font-size:var(--text-2xs);color:var(--graphite);}
-.edge-list th:last-child,.edge-list td:last-child{width:45%;padding-left:var(--space-8);padding-right:0;}
-.edge-list td.up{color:var(--bullish);}
-.edge-list td.dn{color:var(--danger);}
+.edge-list > thead > tr > th{text-align:left;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--graphite);padding:0 var(--space-6) var(--space-3) 0;border-bottom:1px solid var(--steel);white-space:nowrap;}
+.edge-list > tbody > tr > td{padding:var(--space-4) var(--space-6) var(--space-4) 0;border-bottom:1px solid color-mix(in srgb,var(--steel) 50%,transparent);vertical-align:top;color:var(--ink-deep);}
+.edge-list > thead > tr > th:nth-child(n+2):nth-child(-n+5),.edge-list > tbody > tr > td:nth-child(n+2):nth-child(-n+5){text-align:right;}
+.edge-list > tbody > tr > td:first-child b{display:block;font-weight:var(--font-semi);}
+.edge-list > tbody > tr > td:first-child span{font-size:var(--text-2xs);color:var(--graphite);}
+.edge-list > thead > tr > th:last-child,.edge-list > tbody > tr > td:last-child{width:45%;padding-left:var(--space-8);padding-right:0;}
+.edge-list > tbody > tr > td.up{color:var(--bullish);}
+.edge-list > tbody > tr > td.dn{color:var(--danger);}
 .edge-flat{font-size:var(--text-xs);color:var(--graphite);line-height:var(--leading-relaxed);margin-bottom:var(--space-8);}
 .edge-details summary{cursor:pointer;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--graphite);margin-bottom:var(--space-6);}
 .edge-details summary:hover{color:var(--ink-deep);}
@@ -960,12 +960,12 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-panel{background:var(--paper);border:1px solid var(--hairline, var(--steel));border-radius:var(--radius-lg, var(--radius-md));box-shadow:var(--shadow-sm, none);padding:var(--space-8) var(--space-8) var(--space-4);min-width:0;}
 .edge-panel .edge-h{margin-bottom:var(--space-6);}
 .edge-panel .edge-list{margin-bottom:0;}
-.edge-panel .edge-list tr:last-child td{border-bottom:none;}
-.edge-panel .edge-list th:last-child,.edge-panel .edge-list td:last-child{width:40%;padding-left:var(--space-6);padding-right:0;}
+.edge-panel .edge-list > tbody > tr:last-child > td{border-bottom:none;}
+.edge-panel .edge-list > thead > tr > th:last-child,.edge-panel .edge-list > tbody > tr > td:last-child{width:40%;padding-left:var(--space-6);padding-right:0;}
 .edge-panel .edge-empty{margin-bottom:var(--space-4);}
-.edge-list th:first-child,.edge-list td:first-child{width:26%;}
-.edge-list th:nth-child(n+2):nth-child(-n+5),.edge-list td:nth-child(n+2):nth-child(-n+5){width:9%;padding-left:0;padding-right:var(--space-6);}
-.edge-list td:first-child b,.edge-list td:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.edge-list > thead > tr > th:first-child,.edge-list > tbody > tr > td:first-child{width:26%;}
+.edge-list > thead > tr > th:nth-child(n+2):nth-child(-n+5),.edge-list > tbody > tr > td:nth-child(n+2):nth-child(-n+5){width:9%;padding-left:0;padding-right:var(--space-6);}
+.edge-list > tbody > tr > td:first-child b,.edge-list > tbody > tr > td:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* Мой edge: execution and setups panels */
 .edge-big{display:flex;align-items:baseline;gap:var(--space-6);margin-bottom:var(--space-4);}
 .edge-big b{font-size:calc(var(--text-lg) * 2);font-weight:var(--font-bold);font-variant-numeric:tabular-nums;color:var(--ink-deep);line-height:1;}
@@ -976,35 +976,35 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-sub b{color:var(--ink-deep);font-weight:var(--font-semi);}
 .edge-panel .edge-sub:last-child{margin:var(--space-6) 0 var(--space-2);}
 /* rules: two columns */
-.edge-rules th:first-child,.edge-rules td:first-child{width:auto;}
-.edge-rules th:last-child,.edge-rules td:last-child{width:110px;text-align:right;padding-left:0;}
-.edge-rules tr.kept td{color:var(--graphite);}
-.edge-rules tr.broken td:first-child{color:var(--ink-deep);}
-.edge-rules tr.broken td:last-child{color:var(--danger);font-weight:var(--font-semi);}
+.edge-rules > thead > tr > th:first-child,.edge-rules > tbody > tr > td:first-child{width:auto;}
+.edge-rules > thead > tr > th:last-child,.edge-rules > tbody > tr > td:last-child{width:110px;text-align:right;padding-left:0;}
+.edge-rules > tbody > tr.kept > td{color:var(--graphite);}
+.edge-rules > tbody > tr.broken > td:first-child{color:var(--ink-deep);}
+.edge-rules > tbody > tr.broken > td:last-child{color:var(--danger);font-weight:var(--font-semi);}
 /* setups: name + six numbers, all right-aligned under their headers */
-.edge-setups th,.edge-setups td{text-align:right;width:auto;padding-left:0;padding-right:var(--space-4);}
-.edge-setups th:first-child,.edge-setups td:first-child{text-align:left;width:30%;}
-.edge-setups th:last-child,.edge-setups td:last-child{width:auto;padding-left:0;padding-right:0;}
-.edge-setups tr.thin td{opacity:0.55;}
-.edge-setups tr.none td{color:var(--graphite);}
-.edge-setups tr.none td[colspan]{text-align:left;}
-.edge-setups tr.total td{font-weight:var(--font-semi);border-top:1px solid var(--steel);}
+.edge-setups > thead > tr > th,.edge-setups > tbody > tr > td{text-align:right;width:auto;padding-left:0;padding-right:var(--space-4);}
+.edge-setups > thead > tr > th:first-child,.edge-setups > tbody > tr > td:first-child{text-align:left;width:30%;}
+.edge-setups > thead > tr > th:last-child,.edge-setups > tbody > tr > td:last-child{width:auto;padding-left:0;padding-right:0;}
+.edge-setups > tbody > tr.thin > td{opacity:0.55;}
+.edge-setups > tbody > tr.none > td{color:var(--graphite);}
+.edge-setups > tbody > tr.none > td[colspan]{text-align:left;}
+.edge-setups > tbody > tr.total > td{font-weight:var(--font-semi);border-top:1px solid var(--steel);}
 .edge-setups{table-layout:auto;}
-.edge-setups th,.edge-setups td{white-space:nowrap;}
-.edge-setups th:nth-child(n+2),.edge-setups td:nth-child(n+2){padding-right:var(--space-4);padding-left:var(--space-4);}
-.edge-setups th:last-child,.edge-setups td:last-child{padding-right:0;}
+.edge-setups > thead > tr > th,.edge-setups > tbody > tr > td{white-space:nowrap;}
+.edge-setups > thead > tr > th:nth-child(n+2),.edge-setups > tbody > tr > td:nth-child(n+2){padding-right:var(--space-4);padding-left:var(--space-4);}
+.edge-setups > thead > tr > th:last-child,.edge-setups > tbody > tr > td:last-child{padding-right:0;}
 /* trades without a setup type: tag right in the report */
 .edge-untagged{margin-bottom:var(--space-12);}
 .edge-untagged .edge-list{table-layout:auto;}
-.edge-untagged .edge-list th,.edge-untagged .edge-list td{width:auto;text-align:left;white-space:nowrap;padding-left:0;padding-right:var(--space-8);}
-.edge-untagged .edge-list th:nth-child(3),.edge-untagged .edge-list td:nth-child(3){text-align:right;}
-.edge-untagged .edge-list th:last-child,.edge-untagged .edge-list td:last-child{width:100%;padding-left:var(--space-8);padding-right:0;}
+.edge-untagged .edge-list > thead > tr > th,.edge-untagged .edge-list > tbody > tr > td{width:auto;text-align:left;white-space:nowrap;padding-left:0;padding-right:var(--space-8);}
+.edge-untagged .edge-list > thead > tr > th:nth-child(3),.edge-untagged .edge-list > tbody > tr > td:nth-child(3){text-align:right;}
+.edge-untagged .edge-list > thead > tr > th:last-child,.edge-untagged .edge-list > tbody > tr > td:last-child{width:100%;padding-left:var(--space-8);padding-right:0;}
 .edge-tagbtns{display:inline-flex;flex-wrap:wrap;gap:var(--space-2);}
 .edge-tagbtns button{height:var(--h-btn-sm);padding:0 var(--space-4);border:1px solid var(--steel);border-radius:var(--radius-md);background:transparent;color:var(--ink-deep);font-size:var(--text-xs);cursor:pointer;}
 .edge-tagbtns button:hover{background:var(--fog);}
 .edge-tagbtns button:disabled{opacity:0.5;cursor:default;}
-.edge-untagged .edge-list th:nth-child(n),.edge-untagged .edge-list td:nth-child(n){text-align:left;}
-.edge-untagged .edge-list th:nth-child(3),.edge-untagged .edge-list td:nth-child(3){text-align:right;}
+.edge-untagged .edge-list > thead > tr > th:nth-child(n),.edge-untagged .edge-list > tbody > tr > td:nth-child(n){text-align:left;}
+.edge-untagged .edge-list > thead > tr > th:nth-child(3),.edge-untagged .edge-list > tbody > tr > td:nth-child(3){text-align:right;}
 /* setup list editor inside the setups panel */
 .edge-panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-6);}
 .edge-link{border:none;background:none;padding:0;color:var(--primary);font-size:var(--text-xs);font-weight:var(--font-medium);cursor:pointer;white-space:nowrap;}
@@ -1018,7 +1018,7 @@ body.dom-dragging,body.dom-dragging *{cursor:grabbing !important;}
 .edge-cost.dn b{color:var(--danger);}
 .edge-summary b.up{color:var(--bullish);}
 .edge-summary b.dn{color:var(--danger);}
-.edge-setups tr.real td{font-weight:var(--font-bold);border-top:1px solid var(--steel);}
+.edge-setups > tbody > tr.real > td{font-weight:var(--font-bold);border-top:1px solid var(--steel);}
 .edge-conclusions{margin-bottom:var(--space-12);}
 .edge-concl{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--space-4);}
 .edge-concl li{font-size:var(--text-sm);color:var(--ink-deep);line-height:var(--leading-relaxed);}
@@ -1032,17 +1032,17 @@ button[data-setup-diagram]{cursor:pointer;}
 /* journal: PnL per day under the chart */
 .journal-days{margin:var(--space-8) 0;}
 .journal-days .edge-list{table-layout:auto;}
-.journal-days .edge-list th,.journal-days .edge-list td{width:auto;padding-left:0;padding-right:var(--space-8);}
-.journal-days .edge-list th:nth-child(n+2),.journal-days .edge-list td:nth-child(n+2){text-align:right;}
-.journal-days .edge-list th:first-child,.journal-days .edge-list td:first-child{width:100%;text-align:left;}
-.journal-days .edge-list th:last-child,.journal-days .edge-list td:last-child{padding-right:0;}
+.journal-days .edge-list > thead > tr > th,.journal-days .edge-list > tbody > tr > td{width:auto;padding-left:0;padding-right:var(--space-8);}
+.journal-days .edge-list > thead > tr > th:nth-child(n+2),.journal-days .edge-list > tbody > tr > td:nth-child(n+2){text-align:right;}
+.journal-days .edge-list > thead > tr > th:first-child,.journal-days .edge-list > tbody > tr > td:first-child{width:100%;text-align:left;}
+.journal-days .edge-list > thead > tr > th:last-child,.journal-days .edge-list > tbody > tr > td:last-child{padding-right:0;}
 /* My edge: period picker, a setup's trades with notes */
 .edge-ranges{align-items:center;flex-wrap:wrap;}
 .edge-dates{display:inline-flex;align-items:center;gap:var(--space-2);margin-left:var(--space-4);color:var(--graphite);}
 .edge-dates .ds-input{height:var(--h-btn-sm);width:auto;padding:0 var(--space-3);font-size:var(--text-2xs);}
-.edge-setups tr.openable td:first-child{cursor:pointer;}
-.edge-setups tr.openable td:first-child:hover{color:var(--primary);}
-.edge-setups tr.edge-trades-row td{padding:0 0 var(--space-6);white-space:normal;text-align:left;}
+.edge-setups > tbody > tr.openable > td:first-child{cursor:pointer;}
+.edge-setups > tbody > tr.openable > td:first-child:hover{color:var(--primary);}
+.edge-setups > tbody > tr.edge-trades-row > td{padding:0 0 var(--space-6);white-space:normal;text-align:left;}
 .edge-trades{display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4) 0 0 var(--space-6);border-left:2px solid var(--steel);}
 .edge-trade{display:flex;flex-direction:column;gap:var(--space-2);}
 .edge-trade-head{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-6);font-size:var(--text-xs);color:var(--graphite);font-variant-numeric:tabular-nums;}
@@ -1091,20 +1091,20 @@ button[data-setup-diagram]{cursor:pointer;}
 .edge-breaks li b{color:var(--danger);font-weight:var(--font-semi);font-variant-numeric:tabular-nums;}
 .edge-big.small b{font-size:var(--text-lg);}
 .edge-sum{table-layout:auto;}
-.edge-sum th,.edge-sum td{width:auto;padding-left:0;padding-right:var(--space-6);white-space:nowrap;}
-.edge-sum th:nth-child(n+2),.edge-sum td:nth-child(n+2){text-align:right;}
-.edge-sum th:first-child,.edge-sum td:first-child{width:100%;text-align:left;}
-.edge-sum th:last-child,.edge-sum td:last-child{padding-right:0;}
-.edge-sum tr.thin td{opacity:0.6;}
-.edge-sum tr.real td{font-weight:var(--font-semi);border-top:1px solid var(--steel);}
+.edge-sum > thead > tr > th,.edge-sum > tbody > tr > td{width:auto;padding-left:0;padding-right:var(--space-6);white-space:nowrap;}
+.edge-sum > thead > tr > th:nth-child(n+2),.edge-sum > tbody > tr > td:nth-child(n+2){text-align:right;}
+.edge-sum > thead > tr > th:first-child,.edge-sum > tbody > tr > td:first-child{width:100%;text-align:left;}
+.edge-sum > thead > tr > th:last-child,.edge-sum > tbody > tr > td:last-child{padding-right:0;}
+.edge-sum > tbody > tr.thin > td{opacity:0.6;}
+.edge-sum > tbody > tr.real > td{font-weight:var(--font-semi);border-top:1px solid var(--steel);}
 .edge-conclusions{margin-bottom:var(--space-12);}
 .edge-days{table-layout:auto;}
-.edge-days th,.edge-days td{width:auto;padding-left:0;padding-right:var(--space-8);white-space:nowrap;}
-.edge-days th:nth-child(2),.edge-days td:nth-child(2),.edge-days th:nth-child(3),.edge-days td:nth-child(3),.edge-days th:nth-child(4),.edge-days td:nth-child(4){text-align:right;}
-.edge-days th:last-child,.edge-days td:last-child{width:100%;padding-right:0;}
+.edge-days > thead > tr > th,.edge-days > tbody > tr > td{width:auto;padding-left:0;padding-right:var(--space-8);white-space:nowrap;}
+.edge-days > thead > tr > th:nth-child(2),.edge-days > tbody > tr > td:nth-child(2),.edge-days > thead > tr > th:nth-child(3),.edge-days > tbody > tr > td:nth-child(3),.edge-days > thead > tr > th:nth-child(4),.edge-days > tbody > tr > td:nth-child(4){text-align:right;}
+.edge-days > thead > tr > th:last-child,.edge-days > tbody > tr > td:last-child{width:100%;padding-right:0;}
 .edge-days tr.edge-day{cursor:pointer;}
-.edge-days tr.edge-day:hover td{color:var(--primary);}
-.edge-days tr.edge-day-body td{white-space:normal;padding:var(--space-4) 0 var(--space-8);}
+.edge-days > tbody > tr.edge-day:hover > td{color:var(--primary);}
+.edge-days > tbody > tr.edge-day-body > td{white-space:normal;padding:var(--space-4) 0 var(--space-8);}
 .edge-badge{display:inline-block;padding:0 var(--space-3);border-radius:var(--radius-full);background:color-mix(in srgb,var(--level-deep) 18%,transparent);color:var(--level-deep);font-size:var(--text-2xs);font-weight:var(--font-medium);}
 .edge-day-grid{display:grid;grid-template-columns:1fr;gap:var(--space-8);padding-left:var(--space-6);border-left:2px solid var(--steel);}
 @media (min-width:1100px){.edge-day-grid{grid-template-columns:minmax(240px,1fr) 2fr;}}
@@ -1119,3 +1119,12 @@ button[data-setup-diagram]{cursor:pointer;}
 .edge-group-head:hover span:first-child{color:var(--primary);}
 .edge-group .edge-trades{margin-bottom:var(--space-4);}
 .edge-trade-head .muted{color:var(--graphite);}
+/* a trade's chart in the day drill-down (src/trade-chart.js) */
+.edge-chart-btn{margin-left:auto;}
+.trade-chart{margin:var(--space-4) 0;padding:var(--space-4);border:1px solid var(--steel);border-radius:var(--radius-md);background:var(--canvas);}
+.trade-chart-plot{height:240px;}
+.trade-chart-note{margin-top:var(--space-3);font-size:var(--text-xs);color:var(--graphite);font-variant-numeric:tabular-nums;}
+.trade-chart-note b.up{color:var(--bullish);}
+.trade-chart-note b.dn{color:var(--danger);}
+/* the chart library lays itself out with a table: keep the journal tables' cell rules off it */
+.trade-chart td,.trade-chart th{padding:0 !important;border:0 !important;white-space:nowrap !important;text-align:left !important;vertical-align:top !important;opacity:1 !important;}

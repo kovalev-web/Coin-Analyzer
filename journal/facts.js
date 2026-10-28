@@ -5,7 +5,8 @@
 // read them instead of self-reported numbers. Definitions live in
 // docs/TRADER_EDGE.md; keep the two in sync.
 
-var FACTS_VERSION = 2; // 2: exits within ±SCRATCH_R are neither wins nor losses for the rules
+var FACTS_VERSION = 3; // 2: exits within ±SCRATCH_R are neither wins nor losses for the rules; 3: trades keep their fills
+var MAX_TRADE_FILLS = 60;              // fills kept per trade (for its chart)
 var REVENGE_WINDOW_MS = 5 * 60 * 1000;   // entry this soon after a losing trade closed
 var SIZE_UP_FACTOR = 1.5;                // size vs median of the day's earlier trades
 var SCRATCH_R = 0.1;                     // |result| up to this share of 1R = a scratch (out at about zero)
@@ -36,18 +37,23 @@ function buildTrips(fills) {
       var fee = f.commissionAsset === 'USDT' || !f.commissionAsset ? Number(f.commission || 0) : 0;
       var pnl = Number(f.realizedPnl || 0);
       if (!trip) {
-        trip = { symbol: sym, side: signed > 0 ? 'long' : 'short', openTime: f.time, closeTime: null, pnl: 0, fees: 0, fills: 0, maxNotional: 0, entryPrice: price };
+        trip = { symbol: sym, side: signed > 0 ? 'long' : 'short', openTime: f.time, closeTime: null, pnl: 0, fees: 0, fills: 0, maxNotional: 0, entryPrice: price, execs: [] };
       }
+      // Each fill as the trade's chart draws it: time, price, qty, side (a flip splits its qty)
+      var exec = function (t, q) { if (t.execs.length < MAX_TRADE_FILLS) t.execs.push({ t: f.time, p: price, q: q, s: f.side }); };
       // A fill that flips the position: split it into the closing and the opening part
       if (Math.abs(pos) > EPS && Math.sign(pos + signed) !== Math.sign(pos) && Math.abs(pos + signed) > EPS) {
         var closeShare = Math.abs(pos) / qty;
+        exec(trip, Math.abs(pos));
         trip.pnl += pnl; trip.fees += fee * closeShare; trip.fills++;
         trip.closeTime = f.time;
         trips.push(trip);
         pos += signed;
-        trip = { symbol: sym, side: pos > 0 ? 'long' : 'short', openTime: f.time, closeTime: null, pnl: 0, fees: fee * (1 - closeShare), fills: 1, maxNotional: Math.abs(pos) * price, entryPrice: price };
+        trip = { symbol: sym, side: pos > 0 ? 'long' : 'short', openTime: f.time, closeTime: null, pnl: 0, fees: fee * (1 - closeShare), fills: 1, maxNotional: Math.abs(pos) * price, entryPrice: price, execs: [] };
+        exec(trip, Math.abs(pos));
         return;
       }
+      exec(trip, qty);
       pos += signed;
       trip.pnl += pnl; trip.fees += fee; trip.fills++;
       trip.maxNotional = Math.max(trip.maxNotional, Math.abs(pos) * price);
@@ -121,6 +127,7 @@ function computeDayFacts(opts) {
     trades.push({
       symbol: t.symbol,
       side: t.side,
+      execs: t.execs || [],          // the fills themselves (t, p, q, s), for the trade chart
       openTime: t.openTime,
       closeTime: t.closeTime,
       holdSec: t.closeTime ? Math.round((t.closeTime - t.openTime) / 1000) : null,

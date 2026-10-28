@@ -12,7 +12,7 @@ try {
   });
 } catch (e) {}
 const { analyzeCoin } = require('./shared/analyze');
-const { computeDayFacts, zonedDayStart } = require('./journal/facts');
+const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
@@ -1108,7 +1108,7 @@ function dateList(from, to) {
 async function dayFactsCached(userId, date, today) {
   var t = new Date(today + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - 2);
   var final = date <= t.toISOString().slice(0, 10);
-  var key = 'day_facts:' + userId + ':' + date;
+  var key = 'day_facts:v' + FACTS_VERSION + ':' + userId + ':' + date; // a new facts version recounts cached days
   if (final) {
     var c = await redis(['GET', key]);
     if (c && c.result) { try { return JSON.parse(c.result); } catch (e) {} }

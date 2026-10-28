@@ -173,6 +173,7 @@ function computeEdge(days, tags, opts) {
   function listItem(x) {
     return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
       pnlNet: x.t.pnlNet, r: x.r == null ? null : Math.round(x.r * 100) / 100, broken: x.broken || [],
+      execs: x.t.execs || [], notional: x.t.maxNotional || null,
       tag: x.tag ? { pattern: x.tag.pattern || null, setup: x.tag.setup || null, emotion: x.tag.emotion || null } : null };
   }
   var trades = [];

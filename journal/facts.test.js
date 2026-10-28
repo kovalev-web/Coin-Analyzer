@@ -112,3 +112,11 @@ test('scratch: out at about zero (within ±0.1R) is not a loss — re-entering i
   ];
   assert.equal(computeDayFacts(Object.assign({}, base, { fills: two, limits })).violations.tradesAfterCrane, 0);
 });
+
+test('a trade keeps its fills for its chart; a flip splits the fill', () => {
+  const trips = buildTrips([f('AUSDT', 1, 'BUY', 10, 1), f('AUSDT', 2, 'BUY', 5, 1.05), f('AUSDT', 3, 'SELL', 20, 1.1, 1)]);
+  assert.deepEqual(trips[0].execs.map((e) => [e.p, e.q, e.s]), [[1, 10, 'BUY'], [1.05, 5, 'BUY'], [1.1, 15, 'SELL']]);
+  assert.deepEqual(trips[1].execs.map((e) => [e.p, e.q, e.s]), [[1.1, 5, 'SELL']]);
+  const facts = computeDayFacts(Object.assign({}, base, { fills: [f('AUSDT', 10, 'BUY', 10, 1), f('AUSDT', 12, 'SELL', 10, 1.5, 5)] }));
+  assert.equal(facts.trades[0].execs.length, 2);
+});
