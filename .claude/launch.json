@@ -4,20 +4,42 @@
     {
       "name": "Vite Frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:front"],
+      "runtimeArgs": [
+        "run",
+        "dev:front"
+      ],
       "port": 5173
     },
     {
       "name": "API Server",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=.env", "server.js"],
+      "runtimeArgs": [
+        "--env-file=.env",
+        "server.js"
+      ],
       "port": 3000
     },
     {
       "name": "WebSocket Server (VPS)",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:ws"],
+      "runtimeArgs": [
+        "run",
+        "dev:ws"
+      ],
       "port": 3001
+    },
+    {
+      "name": "Stand (prod WS)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5174"
+      ],
+      "env": {
+        "VITE_WS_URL": "wss://api.questtick.com/ws"
+      },
+      "port": 5174
     }
   ]
 }

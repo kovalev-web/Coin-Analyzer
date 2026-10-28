@@ -1,0 +1,35 @@
+/* Tailwind's preflight, only inside the journal (.jr) and shadcn's portals
+   ([data-slot]). Imported before the utilities so they win over it; element
+   rules have the same specificity as the site's (components.css `button{}`)
+   and load later, so they win over those. */
+
+:where(.jr, [data-slot]) *, :where(.jr, [data-slot]) ::before, :where(.jr, [data-slot]) ::after,
+[data-slot]:where(*), [data-slot]::before, [data-slot]::after {
+  border: 0 solid var(--fog);
+}
+:where(.jr, [data-slot]) button, :where(.jr, [data-slot]) input,
+:where(.jr, [data-slot]) select, :where(.jr, [data-slot]) textarea, button:where([data-slot]) {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  border-radius: 0;
+  background-color: transparent;
+  white-space: normal;
+  padding: 0;
+  transition: none;
+  opacity: 1;
+}
+:where(.jr, [data-slot]) button:hover, :where(.jr, [data-slot]) button:disabled,
+button:where([data-slot]):hover, button:where([data-slot]):disabled { opacity: 1; cursor: pointer; }
+:where(.jr, [data-slot]) table { border-collapse: collapse; text-indent: 0; border-color: inherit; }
+:where(.jr, [data-slot]) :where(h1, h2, h3, h4, h5, h6) { font-size: inherit; font-weight: inherit; }
+:where(.jr, [data-slot]) :where(a) { color: inherit; text-decoration: inherit; }
+:where(.jr, [data-slot]) :where(ol, ul, menu) { list-style: none; }
+:where(.jr, [data-slot]) :where(img, svg, video, canvas) { display: block; vertical-align: middle; }
+
+.jr {
+  font-family: var(--font-family);
+  color: var(--ink-deep);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}

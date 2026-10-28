@@ -1,6 +1,6 @@
 // ── "Мой edge" labels ───────────────────────────────────────────────────────
 // Russian names for the report's dimensions and the group keys the server
-// sends in English (journal/edge.js). Used by src/edge-view.js.
+// sends in English (journal/edge.js). Used by src/journal-app (EdgeSummary.jsx).
 // Tests: npm run test:insights
 
 export var DIMENSIONS = {

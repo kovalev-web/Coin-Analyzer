@@ -2,6 +2,16 @@ import { state } from './state.js';
 
 let currentRoute = '/';
 let routeHandlers = {};
+let leaveHandlers = [];
+
+// Called before any route renders (the journal unmounts its React root)
+export function onRouteChange(fn) {
+  leaveHandlers.push(fn);
+}
+
+function leave() {
+  leaveHandlers.forEach(function (fn) { fn(); });
+}
 
 export function registerRoute(path, handler) {
   routeHandlers[path] = handler;
@@ -20,6 +30,7 @@ function routeChanged() {
   var path = window.location.pathname || '/';
   if (path === currentRoute) return;
   currentRoute = path;
+  leave();
   var handler = routeHandlers[path];
   if (handler) {
     handler();
@@ -34,6 +45,7 @@ function routeChanged() {
 export function reloadRoute() {
   var path = window.location.pathname || '/';
   currentRoute = path;
+  leave();
   var handler = routeHandlers[path] || routeHandlers['/404'];
   if (handler) handler();
 }

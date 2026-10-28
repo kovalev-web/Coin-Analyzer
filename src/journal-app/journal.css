@@ -1,0 +1,67 @@
+/* Journal page: Tailwind + shadcn/ui, isolated from the rest of the site.
+   - Only classes found in src/journal-app are generated (source(none) + @source).
+   - Tailwind's theme is "reference + inline": no CSS variables are emitted, so
+     nothing collides with our tokens (--text-sm, --radius-md, --primary…).
+   - shadcn's colours map onto our tokens below, so the dark theme just works.
+   - The reset (preflight.css) applies only inside the journal root and
+     shadcn's portals ([data-slot]), never to the rest of the site. */
+
+@import "tailwindcss/theme.css" theme(reference inline);
+@import "./preflight.css";
+@import "tailwindcss/utilities.css" source(none);
+@import "tw-animate-css";
+@source "./";
+
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) & { @slot; }
+  }
+  :root[data-theme="dark"] & { @slot; }
+}
+
+@theme inline reference {
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink-deep);
+  --color-card: var(--paper);
+  --color-card-foreground: var(--ink-deep);
+  --color-popover: var(--paper);
+  --color-popover-foreground: var(--ink-deep);
+  --color-primary: var(--ink-deep);
+  --color-primary-foreground: var(--canvas);
+  --color-secondary: var(--fog);
+  --color-secondary-foreground: var(--ink-deep);
+  --color-muted: var(--cloud);
+  --color-muted-foreground: var(--graphite);
+  --color-accent: var(--fog);
+  --color-accent-foreground: var(--ink-deep);
+  --color-destructive: var(--danger);
+  --color-border: var(--fog);
+  --color-input: var(--steel);
+  --color-ring: var(--steel);
+  --color-chart-1: var(--primary);
+  --color-chart-2: var(--bullish);
+  --color-chart-3: var(--danger);
+  --color-chart-4: var(--level-deep);
+  --color-chart-5: var(--graphite);
+  --color-bullish: var(--bullish);
+  --color-danger: var(--danger);
+  --color-brand: var(--primary);
+
+  --text-2xs: var(--text-2xs);
+  --text-2xs--line-height: 1.4;
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: var(--radius-md);
+  --radius-lg: 10px;
+  --radius-xl: var(--radius-xl);
+  --shadow-md: var(--shadow-md);
+  --font-sans: var(--font-family);
+}

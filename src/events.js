@@ -5,6 +5,10 @@ export function on(event, fn) {
   handlers[event].push(fn);
 }
 
+export function off(event, fn) {
+  if (handlers[event]) handlers[event] = handlers[event].filter(function (f) { return f !== fn; });
+}
+
 export function emit(event) {
   var args = Array.prototype.slice.call(arguments, 1);
   var fns = handlers[event] || [];

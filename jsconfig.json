@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/journal-app/*"] }
+  },
+  "include": ["src/journal-app"]
+}
