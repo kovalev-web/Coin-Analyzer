@@ -14,7 +14,7 @@ import { on } from './events.js';
 import { dateRangeHTML, bindDateRange } from './date-range.js';
 import { ensureCoinNotes, notesOnDay } from './coin-notes.js';
 import { conclusions } from './edge-insights.js';
-import { openTradeChart, closeTradeChart } from './trade-chart.js';
+import { openTradeInChart } from './ui.js';
 
 var RANGES = [['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']];
 var JOURNAL_START = '2026-10-28';
@@ -24,8 +24,7 @@ var _openGroup = null;   // 'date|setupKey' open inside a day
 var _editing = false;    // setup list editor open
 var _last = null;        // { container, e } — redraw without asking the server
 var _refresh = null;
-var _chartKey = null;    // 'SYMBOL|closeTime' whose chart is open
-var _tradeByKey = {};    // the same key → trade, for the chart
+var _tradeByKey = {};    // 'SYMBOL|closeTime' → trade, to open it on the chart
 
 function money(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2); }
 function rr(n) { return n == null ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(2) + 'R'; }
@@ -178,8 +177,7 @@ function tradesHTML(list) {
       + '<div class="edge-trade-head"><span>' + tzTimeStr(d) + '</span><b>' + coin + ' ' + (t.side === 'long' ? 'лонг' : 'шорт') + '</b>'
       + '<span class="' + ((t.r != null ? t.r : t.pnlNet) >= 0 ? 'up' : 'dn') + '">' + (t.r != null ? rr(t.r) : money(t.pnlNet) + ' USDT') + '</span>'
       + (t.excluded ? '<span class="muted">не считается</span>' : breaks.length ? '<span class="dn">' + breaks.join(', ') + '</span>' : '<span class="muted">по правилам</span>')
-      + '<button type="button" class="edge-link edge-chart-btn" data-trade-chart="' + key + '">' + (_chartKey === key ? 'Скрыть график' : 'График') + '</button></div>'
-      + '<div class="edge-trade-chart" data-chart-host="' + key + '"></div>'
+      + '<button type="button" class="edge-link edge-chart-btn" data-trade-chart="' + key + '">На графике</button></div>'
       + retagHTML(t.tag)
       + '</div>';
   }).join('') + '</div>';
@@ -225,7 +223,6 @@ on('coin-notes:updated', function () {
 // cached: the last report, to redraw without asking the server again
 export function renderEdgeSection(container, cached) {
   if (!container) return;
-  closeTradeChart();
   if (!cached) container.innerHTML = '<div class="edge-section"><span class="big-spinner"></span></div>';
   Promise.all([cached ? Promise.resolve(cached) : fetchJournalEdge(journalPeriod()), ensureSetups()]).then(function (res) {
     var e = res[0];
@@ -255,18 +252,13 @@ export function renderEdgeSection(container, cached) {
         renderEdgeSection(container, e);
       };
     });
-    // A trade's chart: one at a time, built on click
+    // A trade on the coin's chart: the usual full view, opened on that trade
     container.querySelectorAll('[data-trade-chart]').forEach(function (b) {
       b.onclick = function () {
-        var k = b.dataset.tradeChart;
-        _chartKey = _chartKey === k ? null : k;
-        renderEdgeSection(container, e);
+        var t = _tradeByKey[b.dataset.tradeChart];
+        if (t) openTradeInChart(t.symbol.replace(/USDT$/, '').toLowerCase(), t);
       };
     });
-    if (_chartKey) {
-      var host = container.querySelector('[data-chart-host="' + _chartKey + '"]');
-      if (host && _tradeByKey[_chartKey]) openTradeChart(host, _tradeByKey[_chartKey]); else _chartKey = null;
-    }
     // Re-tag a trade; the report recounts once you pause
     container.querySelectorAll('[data-retag]').forEach(function (b) {
       b.onclick = function (ev) {

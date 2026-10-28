@@ -11,7 +11,6 @@
     "dev:server": "node server.js",
     "dev:front": "vite",
     "trader": "node trader/server.js",
-    "test:tradechart": "node --test src/trade-chart.test.mjs",
     "test:insights": "node --test src/edge-insights.test.mjs",
     "test:trader": "node --test trader/*.test.js",
     "test:journal": "node --test journal/*.test.js",

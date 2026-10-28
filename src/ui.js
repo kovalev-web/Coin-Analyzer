@@ -3685,6 +3685,10 @@ on('ws:status', function () {
 
 var _fvRuler = null;
 var _fvTradeMarkersData = [];
+// Review mode: the coin's chart opened from the journal on one trade — history
+// from Binance REST (scroll back and forward loads more), no live updates, the
+// trade's fills as the usual triangles. null when the chart is live.
+var _fvReplay = null; // { openTime, closeTime, execs, loading, done: { back, fwd } }
 var _fvTimerInterval = null;
 
 var _TF_SECS = { '1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'4h':14400,'1d':86400 };
@@ -4390,6 +4394,10 @@ function _drawFVOverlays(ctx, rc, sym) {
 // refetched after each fill), so a plain open of the coin shows where you got in
 function _applyFVTradeMarkers(sym) {
   if (!sym) { _fvTradeMarkersData = []; return; }
+  if (_fvReplay) {
+    _fvTradeMarkersData = (_fvReplay.execs || []).map(function (e) { return { time: Math.floor(e.t / 1000), price: e.p, buy: e.s === 'BUY' }; });
+    return;
+  }
   var _drawer = document.getElementById('fv-briefing-drawer');
   var dates = _drawer && _drawer.classList.contains('open')
     ? (state.briefing || []).filter(function (e) { return e.sym === sym; }).map(function (e) { return e.date; })
@@ -4453,7 +4461,67 @@ function _setFVData(sym, cd) {
   _applyFVTradeMarkers(sym);
 }
 
+var TF_MS = { '1m': 60000, '3m': 180000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h': 3600000, '2h': 7200000, '4h': 14400000, '1d': 86400000 };
+
+// One page of Binance futures candles (REST, no subscription)
+function _fetchKlinesRest(sym, tf, params) {
+  var q = 'symbol=' + String(sym).toUpperCase() + 'USDT&interval=' + tf + '&limit=1000'
+    + (params.endTime ? '&endTime=' + params.endTime : '') + (params.startTime ? '&startTime=' + params.startTime : '');
+  return fetch('https://fapi.binance.com/fapi/v1/klines?' + q).then(function (r) { return r.json(); }).then(function (rows) {
+    return Array.isArray(rows) ? rows.map(function (k) {
+      return { time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2], low: +k[3], close: +k[4], volume: +k[5] };
+    }) : [];
+  });
+}
+
+// Review mode: candles around the trade, then more as you scroll to either edge
+function _loadFVReplay(sym, tf) {
+  var rp = _fvReplay, ms = TF_MS[tf] || 300000;
+  rp.candles = []; rp.done = { back: false, fwd: false }; rp.tf = tf;
+  var end = Math.min(Date.now(), rp.closeTime + 300 * ms);
+  _fetchKlinesRest(sym, tf, { endTime: end }).then(function (c) {
+    if (_fvReplay !== rp || rp.tf !== tf || !c.length) return;
+    rp.candles = c;
+    if (end >= Date.now() - ms) rp.done.fwd = true;
+    _setFVData(sym, { status: 'ok', candles: c });
+    // Show the trade with some room around it
+    var pad = Math.max(60 * ms, (rp.closeTime - rp.openTime));
+    try { _fvChart.timeScale().setVisibleRange({ from: Math.floor((rp.openTime - pad) / 1000), to: Math.floor((rp.closeTime + pad) / 1000) }); } catch (e) {}
+  });
+}
+
+function _extendFVReplay(sym, back) {
+  var rp = _fvReplay;
+  if (!rp || rp.loading || !rp.candles.length || rp.done[back ? 'back' : 'fwd']) return;
+  var tf = rp.tf, ms = TF_MS[tf] || 300000;
+  rp.loading = true;
+  var params = back ? { endTime: rp.candles[0].time * 1000 - 1 } : { startTime: rp.candles[rp.candles.length - 1].time * 1000 + ms };
+  _fetchKlinesRest(sym, tf, params).then(function (c) {
+    rp.loading = false;
+    if (_fvReplay !== rp || rp.tf !== tf) return;
+    if (!c.length) { rp.done[back ? 'back' : 'fwd'] = true; return; }
+    var range = _fvChart.timeScale().getVisibleRange();
+    rp.candles = back ? c.concat(rp.candles) : rp.candles.concat(c);
+    if (!back && c.length < 1000) rp.done.fwd = true;
+    _fvSeries.setData(rp.candles);
+    if (_fvVolSeries) {
+      var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn');
+      _fvVolSeries.setData(rp.candles.map(function (x) { return { time: x.time, value: x.volume || 0, color: x.close >= x.open ? vu : vd }; }));
+    }
+    if (range) try { _fvChart.timeScale().setVisibleRange(range); } catch (e) {}
+  }).catch(function () { rp.loading = false; });
+}
+
+// Open a coin's chart on one of your trades (from the journal): full history to
+// scroll and any timeframe, nothing live. trade: { openTime, closeTime, execs }
+export function openTradeInChart(sym, trade) {
+  _fvReplay = { openTime: trade.openTime, closeTime: trade.closeTime || trade.openTime, execs: trade.execs || [], candles: [] };
+  window.__fvReplay = true;
+  openCoinFullView(sym);
+}
+
 function _loadFVData(sym, tf) {
+  if (_fvReplay) { _loadFVReplay(sym, tf); return; }
   var key = sym + '_' + tf;
   var cd = state.chartData[key];
   if (cd && cd.status === 'ok' && cd.candles.length) {
@@ -4481,7 +4549,7 @@ export function openCoinFullView(sym) {
     (_alerts[_fvSym] || []).forEach(function (a) { _detachFvLine(a); });
   }
   _fvSym = sym;
-  fetchTrades(sym, todayDate()).then(function () { if (_fvSym === sym) _applyFVTradeMarkers(sym); });
+  if (!_fvReplay) fetchTrades(sym, todayDate()).then(function () { if (_fvSym === sym) _applyFVTradeMarkers(sym); });
   closeNotePopover();
   ensureCoinNotes(sym);
 
@@ -4536,17 +4604,27 @@ export function openCoinFullView(sym) {
 
   window.__fvSeries = _fvSeries;
   window.__fvVolSeries = _fvVolSeries;
+  window.__fvChart = _fvChart;
   window.__fvSymbol = sym;
   window.__fvTF = tf;
 
   // Liquidity panel: (re)connect order book + trade tape WS for this symbol
   var _tapeList = document.getElementById('fv-tape-list');
   if (_tapeList) _tapeList.innerHTML = '';
-  connectOrderbook(sym, function (msg) {
-    renderLiquidityMetrics(msg.metrics);
-    if (msg.type === 'trade') appendTapeRow(msg.trade);
-  });
-  terminalOnFVOpen(sym);
+  if (!_fvReplay) {
+    connectOrderbook(sym, function (msg) {
+      renderLiquidityMetrics(msg.metrics);
+      if (msg.type === 'trade') appendTapeRow(msg.trade);
+    });
+    terminalOnFVOpen(sym);
+  } else {
+    // Review mode: scrolling to an edge loads more history
+    _fvChart.timeScale().subscribeVisibleLogicalRangeChange(function (r) {
+      if (!r || !_fvReplay || !_fvReplay.candles.length) return;
+      if (r.from < 30) _extendFVReplay(sym, true);
+      else if (r.to > _fvReplay.candles.length - 30) _extendFVReplay(sym, false);
+    });
+  }
 
   // Enable liq buttons after remaining warmup time (0 if already warm)
   var _liqBtns = document.querySelectorAll('[data-action="toggle-liq-panel"]');
@@ -5133,6 +5211,8 @@ export function openCoinFullView(sym) {
 }
 
 export function closeCoinFullView() {
+  _fvReplay = null;
+  window.__fvReplay = false;
   closeNotePopover();
   clearNoteIcons();
   softDisconnectOrderbook();

@@ -361,7 +361,8 @@ function processKlineUpdate(msg) {
     arr.push(k);
     if (arr.length > 300) arr.shift();
     // Sync FV timer: anchor to browser time when new candle arrives
-    if (window.__fvSymbol === sym && window.__fvTF === tf) {
+    // (not in review mode: a trade opened from the journal shows history only)
+  if (window.__fvSymbol === sym && window.__fvTF === tf && !window.__fvReplay) {
       window.__fvTimerAnchorMs = Date.now();
     }
   } else {
