@@ -5,7 +5,7 @@
   "tsx": false,
   "tailwind": {
     "config": "",
-    "css": "src/journal-app/journal.css",
+    "css": "src/react/shadcn.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""

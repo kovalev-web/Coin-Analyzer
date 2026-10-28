@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   root: '.',
-  // React + Tailwind + shadcn only for the journal page (src/journal-app)
+  // React + Tailwind + shadcn/ui (src/react): journal page, modals, toasts — see CLAUDE.md
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src/journal-app', import.meta.url)) } },
+  resolve: { alias: { '@': fileURLToPath(new URL('./src/react', import.meta.url)) } },
   server: {
     port: 5173,
     proxy: {

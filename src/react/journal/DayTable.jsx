@@ -6,26 +6,18 @@ import { ChevronRight, LineChart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Chips } from '@/shared/chips';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia } from '@/components/ui/item';
-import { saveTradeTag } from '../api.js';
-import { setupButtons } from '../setups.js';
-import { ensureCoinNotes, notesOnDay } from '../coin-notes.js';
-import { tzDateStr, tzTimeStr } from '../utils.js';
-import { openTradeInChart } from '../ui.js';
-import { on, off } from '../events.js';
+import { saveTradeTag } from '../../api.js';
+import { setupButtons } from '../../setups.js';
+import { ensureCoinNotes, notesOnDay } from '../../coin-notes.js';
+import { tzDateStr, tzTimeStr } from '../../utils.js';
+import { openTradeInChart } from '../../ui.js';
+import { on, off } from '../../events.js';
 import { BREAK_LABEL, EMOTIONS, QUALITY, money, rr, rateTone, shortDate, tone, trades } from './format.js';
 import { Breaks, EmptyNote, InfoTip, SetupName } from './EdgeSummary.jsx';
-
-function Chips({ list, value, onChange }) {
-  return (
-    <ToggleGroup type="single" variant="outline" size="sm" spacing={1} value={value || ''} onValueChange={(v) => { if (v) onChange(v); }} className="flex-wrap">
-      {list.map(([k, label]) => <ToggleGroupItem key={k} value={k} className="h-7 px-2.5 text-xs data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">{label}</ToggleGroupItem>)}
-    </ToggleGroup>
-  );
-}
 
 // One trade: time, coin, side, R, rule breaks, chart; tag chips under it
 function Trade({ t, notes, onRetag }) {

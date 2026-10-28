@@ -5,7 +5,8 @@ import { tradingKeysHTML, initTradingKeys } from './trading-keys.js';
 import { daySummaryHTML } from './summary.js';
 import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
 import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
-import { on } from './events.js';
+import { on, emit } from './events.js';
+import { openSurface, closeSurface, isSurfaceOpen, toast } from './react-bridge.js';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -1367,279 +1368,14 @@ export function showAccountModal() {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
-function _journalDmyLabel(dateStr) {
-  var p = dateStr.split('-');
-  return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0].slice(2) : dateStr;
-}
-
-function _autoGrowTextareas(container) {
-  container.querySelectorAll('textarea.ds-input').forEach(function (t) {
-    var grow = function () {
-      t.style.height = 'auto';
-      t.style.height = t.scrollHeight + 'px';
-    };
-    t.addEventListener('input', grow);
-    grow();
-  });
-}
-
-function _journalRadioGroup(name, options, selected) {
-  return '<div class="journal-radio-group">' + options.map(function (o) {
-    return '<label class="journal-radio"><input type="radio" name="' + name + '" value="' + o.value + '"' + (o.value === selected ? ' checked' : '') + '> ' + o.label + '</label>';
-  }).join('') + '</div>';
-}
-
-var JOURNAL_SCALE_1_5 = [
-  { value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5' },
-];
-var JOURNAL_YES_NO = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
-var JOURNAL_YES_NO_NA = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'na', label: 'N/A' }];
-var JOURNAL_CHANNELS_OPTIONS = [{ value: 'closed', label: 'Closed' }, { value: 'open', label: 'Open' }];
-
-function _journalCheckbox(name, label, checked) {
-  return '<label class="journal-checkbox"><input type="checkbox" name="' + name + '"' + (checked ? ' checked' : '') + '><span>' + label + '</span></label>';
-}
-
-function _briefingCoinsHTML(today) {
-  var syms = (state.briefing || []).filter(function (e) { return e.date === today; }).map(function (e) { return e.sym.toUpperCase(); });
-  if (!syms.length) return '<div class="journal-static">Add at least one coin to the watchlist before saving.</div>';
-  return '<div class="journal-static">In briefing today: ' + syms.join(', ') + '</div>';
-}
-
-export function showMorningModal() {
-  if (document.getElementById('morning-journal-modal')) return;
-
-  var today = tzDateStr();
-  var fix = state.journalLastFix;
-  var el = document.createElement('div');
-  el.id = 'morning-journal-modal';
-  el.className = 'journal-modal-overlay';
-  // v2 (docs/TRADER_EDGE.md): separate state scales instead of one "mood" number,
-  // so the edge report can tell which of them actually moves results.
-  el.innerHTML =
-    '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Morning journal</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-morning-journal">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><label>Sleep last night, hours</label><input class="ds-input journal-num" type="number" name="sleepHours" min="0" max="16" step="0.5" inputmode="decimal" placeholder="7"></div>'
-    + '<div class="journal-field"><label>Sleep quality (1 = broken, 5 = deep)</label>' + _journalRadioGroup('sleepQuality', JOURNAL_SCALE_1_5, '') + '</div>'
-    + '<div class="journal-field"><label>Energy (1 = drained, 5 = fresh)</label>' + _journalRadioGroup('energy', JOURNAL_SCALE_1_5, '') + '</div>'
-    + '<div class="journal-field"><label>Carrying yesterday (1 = nothing, 5 = heavy)</label>' + _journalRadioGroup('carryover', JOURNAL_SCALE_1_5, '') + '</div>'
-    + '<div class="journal-field"><label>Focus (1 = scattered, 5 = sharp)</label>' + _journalRadioGroup('focus', JOURNAL_SCALE_1_5, '') + '</div>'
-    + '<div class="journal-hint" data-hint="state" hidden>Risk zone — trade minimally or just observe today.</div>'
-    + '<div class="journal-field"><label>Max volume</label><div class="journal-static">' + (state.tradingLimits.maxVolume != null ? '$' + state.tradingLimits.maxVolume : 'Not set — configure in Account settings') + '</div></div>'
-    + '<div class="journal-field"><label>Allowed loss per trade</label><div class="journal-static">' + (state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : 'Not set — configure in Account settings') + '</div></div>'
-    + '<div class="journal-field"><label>Max trades per day</label><div class="journal-static">' + (state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : 'Not set — configure in Account settings') + '</div></div>'
-    + '<div class="journal-field"><label>Plan for the day</label>' + _briefingCoinsHTML(today) + '<textarea class="ds-input" name="dayPlan" rows="2"></textarea></div>'
-    + '<div class="journal-field"><label>Today\'s rule — if … then …</label>'
-      + (fix ? '<div class="journal-static">Yesterday you wanted to fix: “' + escHtml(fix.text) + '”</div>' : '')
-      + '<input class="ds-input" type="text" name="ifWhen" placeholder="If I take a stop and want to re-enter at once">'
-      + '<input class="ds-input journal-then" type="text" name="ifThen" placeholder="then I step away for 10 minutes"></div>'
-    + '<div class="journal-field"><label>Other info channels (besides your briefing)</label>' + _journalRadioGroup('channelsClosed', JOURNAL_CHANNELS_OPTIONS, '') + '</div>'
-    + '<div class="journal-field"><label>Daily stop-crane</label><div class="journal-static">After 2 stops in a row — the day is closed. No exceptions.</div></div>'
-    + '<button class="btn-cta" data-action="save-morning-journal" disabled>Save and start trading</button>'
-    + '<button class="journal-text-btn" data-action="skip-morning-journal">Not trading today</button>'
-    + '</div>';
-
-  document.body.appendChild(el);
-  lockScroll();
-  _autoGrowTextareas(el);
-
-  var btn = el.querySelector('[data-action="save-morning-journal"]');
-  var hint = el.querySelector('[data-hint="state"]');
-  function val(name) { return (el.querySelector('[name="' + name + '"]:checked') || {}).value || ''; }
-  function _checkFilled() {
-    var sleep = el.querySelector('[name="sleepHours"]').value;
-    var scales = ['sleepQuality', 'energy', 'carryover', 'focus'].map(val);
-    var dayPlan = el.querySelector('[name="dayPlan"]').value.trim();
-    var ifWhen = el.querySelector('[name="ifWhen"]').value.trim();
-    var ifThen = el.querySelector('[name="ifThen"]').value.trim();
-    var hasBriefingCoins = (state.briefing || []).some(function (e) { return e.date === today; });
-    var e = Number(val('energy')), c = Number(val('carryover')), q = Number(val('sleepQuality'));
-    hint.hidden = !((e && e <= 2) || (c && c >= 4) || (q && q <= 2));
-    btn.disabled = !(sleep !== '' && scales.every(Boolean) && dayPlan && ifWhen && ifThen && val('channelsClosed') && hasBriefingCoins);
-  }
-  el.querySelectorAll('input[type="radio"]').forEach(function (r) { r.addEventListener('change', _checkFilled); });
-  ['sleepHours', 'dayPlan', 'ifWhen', 'ifThen'].forEach(function (n) { el.querySelector('[name="' + n + '"]').addEventListener('input', _checkFilled); });
-}
-
-export function hideMorningModal() {
-  var el = document.getElementById('morning-journal-modal');
-  if (!el) return;
-  unlockScroll();
-  el.remove();
-}
-
-export function showEveningModal() {
-  if (document.getElementById('evening-journal-modal')) return;
-
-  var today = tzDateStr();
-  var entry = state.journalToday || {};
-
-  var el = document.createElement('div');
-  el.id = 'evening-journal-modal';
-  el.className = 'journal-modal-overlay';
-  // v2 (docs/TRADER_EDGE.md): numbers and rule checks come from the trades
-  // (facts block); the questions cover only what the data can't know.
-  el.innerHTML =
-    '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Evening review</span><span class="journal-modal-date">' + _journalDmyLabel(today) + '</span><button class="btn-topbar" data-action="close-evening-journal">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field journal-facts" id="evening-facts"><label>Day facts — from your trades</label><div class="journal-static">Loading…</div></div>'
-    + '<div class="journal-field" id="evening-why" hidden><label>What was going on behind the rule breaks above?</label><textarea class="ds-input" name="whyBreaks" rows="2">' + escHtml(entry.whyBreaks || '') + '</textarea></div>'
-    + '<div class="journal-field"><label>One thing I did well today</label><textarea class="ds-input" name="didWell" rows="2">' + escHtml(entry.didWell || '') + '</textarea></div>'
-    + '<div class="journal-field"><label>One thing to fix tomorrow (becomes tomorrow\'s if-then)</label><textarea class="ds-input" name="fixTomorrow" rows="2">' + escHtml(entry.fixTomorrow || '') + '</textarea></div>'
-    + '<div class="journal-field" id="evening-selftalk" hidden><label>After losses, I talked to myself…</label>' + _journalRadioGroup('selfTalk', [{ value: 'harsh', label: 'Harshly' }, { value: 'neutral', label: 'Neutrally' }, { value: 'kind', label: 'Supportively' }], entry.selfTalk) + '</div>'
-    + '<div class="journal-field"><label>Missed in screening (coin / why I didn\'t flag it) — optional</label><textarea class="ds-input" name="missedScreening" rows="2">' + escHtml(entry.missedScreening || '') + '</textarea></div>'
-    + '<div class="journal-field"><label>End-of-day state (1 = drained, 5 = calm)</label>' + _journalRadioGroup('eveningState', JOURNAL_SCALE_1_5, entry.eveningState) + '</div>'
-    + '<div class="journal-field"><label>Free-form notes — optional</label><textarea class="ds-input" name="freeConclusion" rows="2">' + escHtml(entry.freeConclusion || '') + '</textarea></div>'
-    + '<button class="btn-cta" data-action="save-evening-journal" disabled>Save review</button>'
-    + '</div>';
-
-  document.body.appendChild(el);
-  lockScroll();
-  _autoGrowTextareas(el);
-
-  var saveBtn = el.querySelector('[data-action="save-evening-journal"]');
-  function _checkFilled() {
-    var need = ['didWell', 'fixTomorrow'].every(function (n) { return el.querySelector('[name="' + n + '"]').value.trim(); });
-    var why = el.querySelector('#evening-why');
-    if (!why.hidden && !el.querySelector('[name="whyBreaks"]').value.trim()) need = false;
-    var talk = el.querySelector('#evening-selftalk');
-    if (!talk.hidden && !el.querySelector('[name="selfTalk"]:checked')) need = false;
-    if (!el.querySelector('[name="eveningState"]:checked')) need = false;
-    saveBtn.disabled = !(need && el.dataset.factsLoaded);
-  }
-  el.addEventListener('input', _checkFilled);
-  el.addEventListener('change', _checkFilled);
-
-  // Untagged trades can be tagged right in the facts list
-  el.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-jf-tag]');
-    if (!b) return;
-    var row = b.closest('.jf-trade');
-    var body = { symbol: row.dataset.sym, closeTime: Number(row.dataset.close) };
-    body[b.dataset.jfTag] = b.dataset.val;
-    saveTradeTag(body).then(function () {
-      row.querySelectorAll('[data-jf-tag="' + b.dataset.jfTag + '"]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    }).catch(function (err) { showToast(err.message); });
-  });
-
-  Promise.all([fetchJournalFacts(), ensureSetups()]).then(function (res) {
-    var facts = res[0];
-    var box = el.querySelector('#evening-facts');
-    if (!box) return;
-    if (facts) {
-      box.innerHTML = '<label>Day facts — from your trades</label>' + _factsHTML(facts, true);
-      el.dataset.pnl = facts.summary.pnlNet;
-      el.dataset.tradeCount = facts.summary.trades;
-      var v = facts.violations;
-      var anyBreak = v.craneBrokenAt || v.overMaxTrades || v.oversize || v.revenge || v.sizeUpAfterLosses || v.sizeUpAfterWins || v.offPlan;
-      el.querySelector('#evening-why').hidden = !anyBreak;
-      el.querySelector('#evening-selftalk').hidden = !facts.summary.losses;
-    } else {
-      box.innerHTML = '<label>Day facts</label><div class="journal-static">Connect Binance API (Account → Integrations) to get facts from your trades.</div>';
-    }
-    el.dataset.factsLoaded = '1';
-    _checkFilled();
-  });
-}
-
-function _fmtHold(sec) {
-  if (sec == null) return '—';
-  if (sec < 60) return sec + 's';
-  var m = Math.floor(sec / 60), r = sec % 60;
-  return m < 60 ? m + 'm' + (r ? ' ' + r + 's' : '') : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
-}
-
-// Read-only facts block (journal/facts.js output). Only what the data shows.
-function _factsHTML(f, taggable) {
-  var s = f.summary, v = f.violations;
-  var sign = s.pnlNet >= 0 ? '+' : '';
-  var head = s.trades
-    ? s.trades + ' trade' + (s.trades === 1 ? '' : 's') + ' · ' + s.wins + 'W / ' + s.losses + 'L'
-      + (s.winRate != null ? ' · ' + s.winRate + '%' : '')
-      + ' · <span class="journal-pnl ' + (s.pnlNet >= 0 ? 'up' : 'dn') + '">' + sign + s.pnlNet.toFixed(2) + ' USDT</span>'
-      + ' · fees ' + s.fees.toFixed(2) + ' · avg hold ' + _fmtHold(s.avgHoldSec)
-    : 'No closed trades';
-  if (s.open) head += ' · <b>' + s.open + ' still open</b>';
-  var flags = [];
-  if (v.craneBrokenAt) flags.push('Stop-crane broken at ' + tzTimeStr(new Date(v.craneBrokenAt)) + ' — ' + v.tradesAfterCrane + ' trade' + (v.tradesAfterCrane === 1 ? '' : 's') + ' after 2 losses in a row');
-  if (v.overMaxTrades) flags.push('Over max trades per day (' + f.limits.maxTrades + ')');
-  if (v.oversize) flags.push(v.oversize + ' over the volume limit ($' + f.limits.maxVolume + ')');
-  if (v.revenge) flags.push(v.revenge + ' entr' + (v.revenge === 1 ? 'y' : 'ies') + ' within 5 min after a loss');
-  if (v.sizeUpAfterLosses) flags.push(v.sizeUpAfterLosses + ' size-up after losses');
-  if (v.sizeUpAfterWins) flags.push(v.sizeUpAfterWins + ' size-up after wins');
-  if (v.offPlan) flags.push(v.offPlan + ' trade' + (v.offPlan === 1 ? '' : 's') + ' on coins outside the briefing');
-  var rows = f.trades.map(function (t) {
-    var tags = [];
-    tags.push(t.planned ? 'plan' : 'off-plan');
-    if (t.atLevel === true) tags.push('at level');
-    if (t.revenge) tags.push('revenge');
-    if (t.sizeUp) tags.push('size-up');
-    if (t.oversize) tags.push('oversize');
-    if (t.afterCrane) tags.push('after crane');
-    var res = t.result === 'open' ? 'open' : (t.pnlNet >= 0 ? '+' : '') + t.pnlNet.toFixed(2);
-    if (t.tag && t.tag.setup) tags.unshift(t.tag.setup + ' setup');
-    if (t.tag && t.tag.emotion) tags.push(t.tag.emotion);
-    var tagger = '';
-    if (t.tag && t.tag.pattern) tags.unshift(setupName(t.tag.pattern));
-    // Always shown so a tag can be changed; only the setup is required
-    if (taggable && t.closeTime) {
-      tagger = '<div class="jf-tagger">'
-        + setupButtons().map(function (x) {
-            return '<button type="button" data-jf-tag="pattern" data-val="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (t.tag && t.tag.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
-          }).join('')
-        + ['A', 'B', 'C'].map(function (x) { return '<button type="button" data-jf-tag="setup" data-val="' + x + '" class="' + (t.tag && t.tag.setup === x ? 'on' : '') + '">' + x + '</button>'; }).join('')
-        + [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']].map(function (x) {
-            return '<button type="button" data-jf-tag="emotion" data-val="' + x[0] + '" class="' + (t.tag && t.tag.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
-          }).join('')
-        + '</div>';
-    }
-    return '<div class="jf-trade" data-sym="' + t.symbol + '" data-close="' + (t.closeTime || '') + '"><span>' + tzTimeStr(new Date(t.openTime)) + '</span><span>' + t.symbol.replace(/USDT$/, '') + ' ' + t.side + '</span>'
-      + '<span class="' + (t.result === 'win' ? 'up' : t.result === 'loss' ? 'dn' : '') + '">' + res + '</span>'
-      + '<span class="jf-tags">' + tags.join(' · ') + '</span>' + tagger + '</div>';
-  }).join('');
-  return '<div class="journal-static">' + head + '</div>'
-    + (flags.length ? '<ul class="jf-flags">' + flags.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' : (s.trades ? '<div class="jf-clean">No rule breaks found in the data</div>' : ''))
-    + (rows ? '<div class="jf-trades">' + rows + '</div>' : '');
-}
-
-export function hideEveningModal() {
-  var el = document.getElementById('evening-journal-modal');
-  if (!el) return;
-  // Keep the in-progress answers as a local draft so closing (X) doesn't lose them
-  function v(name) { var x = el.querySelector('[name="' + name + '"]'); return x ? x.value.trim() : ''; }
-  state.journalToday = Object.assign({}, state.journalToday || {}, {
-    whyBreaks: v('whyBreaks'), didWell: v('didWell'), fixTomorrow: v('fixTomorrow'),
-    selfTalk: (el.querySelector('[name="selfTalk"]:checked') || {}).value || '',
-    missedScreening: v('missedScreening'),
-    eveningState: (el.querySelector('[name="eveningState"]:checked') || {}).value || '',
-    freeConclusion: v('freeConclusion'),
-  });
-  unlockScroll();
-  el.remove();
-}
-
-export function showWeeklyReportModal(report) {
-  if (document.getElementById('weekly-report-modal')) return;
-
-  var el = document.createElement('div');
-  el.id = 'weekly-report-modal';
-  el.className = 'journal-modal-overlay';
-  el.innerHTML =
-    '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Weekly summary</span><button class="btn-topbar" data-action="close-weekly-report">' + icon('x', 14) + '</button></div>'
-    + '<div class="journal-field"><div class="journal-static" style="white-space:pre-wrap;font-weight:var(--font-normal);">' + escHtml(report || '') + '</div></div>'
-    + '</div>';
-
-  document.body.appendChild(el);
-  lockScroll();
-}
-
-export function hideWeeklyReportModal() {
-  var el = document.getElementById('weekly-report-modal');
-  if (!el) return;
-  unlockScroll();
-  el.remove();
-}
+// Journal cards and the weekly report are shadcn dialogs (src/react/host);
+// who may open the cards — src/journal-cards.js
+export function showMorningModal() { openSurface('morning'); }
+export function hideMorningModal() { closeSurface('morning'); }
+export function showEveningModal() { openSurface('evening'); }
+export function hideEveningModal() { closeSurface('evening'); }
+export function showWeeklyReportModal(report) { openSurface('weekly', { report: report }); }
+export function hideWeeklyReportModal() { closeSurface('weekly'); }
 
 export function renderProfileJournal(container, entries) {
   if (!entries || !entries.length) {
@@ -1693,15 +1429,7 @@ export function renderProfileJournal(container, entries) {
 // ── Toast ──────────────────────────────────────────────────────────────────
 
 export function showToast(message) {
-  var t = document.createElement('div');
-  t.className = 'notif-toast';
-  t.textContent = message;
-  document.body.appendChild(t);
-  setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
-  setTimeout(function () {
-    t.classList.remove('notif-toast--visible');
-    setTimeout(function () { t.remove(); }, 300);
-  }, 3000);
+  toast(message);
 }
 
 export function clearAllAlerts() {
@@ -2168,13 +1896,7 @@ export function loadAlerts() {
 
 function addAlert(sym, price) {
   if (state.isDemoMode) {
-    var t = document.createElement('div');
-    t.className = 'notif-toast';
-    t.style.pointerEvents = 'auto';
-    t.innerHTML = 'Price alerts require an account — <a href="/login" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">Sign up free</a>';
-    document.body.appendChild(t);
-    setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
-    setTimeout(function () { t.classList.remove('notif-toast--visible'); setTimeout(function () { t.remove(); }, 300); }, 4000);
+    toast('Price alerts require an account', { duration: 4000, action: { label: 'Sign up free', onClick: function () { window.location.href = '/login'; } } });
     return;
   }
   if (!_alerts[sym]) _alerts[sym] = [];
@@ -2401,7 +2123,7 @@ export function forceUnlockScroll() {
 
 // Force repaint of all open fixed overlays after orientation change
 export function reapplyOverlayPositions() {
-  var ids = ['fv-overlay', 'bp-popup', 'search-popup', 'analysis-overlay'];
+  var ids = ['fv-overlay', 'bp-popup', 'analysis-overlay'];
   ids.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -3286,7 +3008,6 @@ function _topbarHTML() {
     + '<button class="btn-topbar desktop-nav-btn" data-action="toggle-theme" title="Toggle theme">' + (isDark() ? icon('sun', 16) : icon('moon', 16)) + '</button>'
     + (!_demo ? '<div class="notif-wrap" id="notif-wrap">'
     + '<button class="btn-topbar" data-action="toggle-notif" id="notif-btn" title="Notifications">' + icon('bell', 16) + '<span class="notif-badge" id="notif-badge" style="display:none"></span></button>'
-    + '<div class="notif-dd dropdown" id="notif-dd"></div>'
     + '</div>' : '')
     + '<div class="avatar-wrap">'
     + (function() { var av = _userAvatar || localStorage.getItem(_userScopedKey('pa_avatar')); return '<button class="btn-avatar' + (av ? ' has-emoji' : '') + '" id="avatar-btn" data-action="toggle-avatar-dd" title="Profile"><span id="avatar-btn-icon">' + (av || icon('user-round', 16)) + '</span></button>'; })()
@@ -4438,7 +4159,7 @@ export function openCoinFullView(sym) {
   window.addEventListener('resize', _syncFVCanvas);
   var _fvWrapObs = new ResizeObserver(_syncFVCanvas);
   _fvWrapObs.observe(wrap);
-  function _onEscKey(e) { if (e.key === 'Escape') closeCoinFullView(); }
+  function _onEscKey(e) { if (e.key === 'Escape' && !e.defaultPrevented && !isSurfaceOpen()) closeCoinFullView(); }
   document.addEventListener('keydown', _onEscKey);
   var fvLblEl = document.createElement('div');
   fvLblEl.className = 'ruler-lbl';
@@ -5267,220 +4988,28 @@ export function toggleFVBriefingDrawer() {
   if (drawer.classList.contains('open')) { closeFVBriefingDrawer(); } else { openFVBriefingDrawer(); }
 }
 
-// ── Search Popup ───────────────────────────────────────────────────────────
+// ── Search (shadcn Command dialog, src/react/host/SearchDialog.jsx) ─────────
 
-function _renderSearchList(popup, query) {
-  var listEl = popup.querySelector('.search-popup-list');
-  if (!listEl) return;
-  var _qRaw = (query || '').trim().toLowerCase();
-  var _qStripped = _qRaw.replace(/usdt$|usdc$|busd$|usd$|us$|u$/, '');
-  var q = _qStripped || _qRaw;
-  var coins = state.coins;
-  var PINNED = ['btc', 'eth'];
-
-  function rowHTML(c) {
-    var change = c.price_change_percentage_24h || 0;
-    var chgCls = change >= 0 ? 'up' : 'dn';
-    var chgStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-    return '<button class="search-popup-row" data-action="search-pick" data-sym="' + c.symbol + '">' +
-      '<span class="search-row-sym">' + c.symbol.toUpperCase() + '</span>' +
-      '<span class="search-row-vol">' + fmt(c.total_volume || 0).replace('$', '') + '</span>' +
-      '<span class="search-row-chg ' + chgCls + '">' + chgStr + '</span>' +
-      '</button>';
-  }
-
-  if (q) {
-    var filtered = coins.filter(function (c) {
-      return c.symbol.toLowerCase().indexOf(q) !== -1 ||
-             (c.name && c.name.toLowerCase().indexOf(q) !== -1);
-    }).sort(function (a, b) {
-      var aStarts = a.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-      var bStarts = b.symbol.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-      if (aStarts !== bStarts) return aStarts - bStarts;
-      return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
-    });
-    if (!filtered.length) {
-      listEl.innerHTML = '<div class="search-popup-empty">Nothing found</div>';
-      return;
-    }
-    listEl.innerHTML = filtered.map(rowHTML).join('');
-  } else {
-    var pinned = PINNED.map(function (sym) {
-      return coins.find(function (c) { return c.symbol === sym; });
-    }).filter(Boolean);
-    var rest = coins.filter(function (c) { return PINNED.indexOf(c.symbol) === -1; })
-      .slice().sort(function (a, b) {
-        return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
-      });
-    if (!pinned.length && !rest.length) {
-      listEl.innerHTML = '<div class="search-popup-empty">Nothing found</div>';
-      return;
-    }
-    var html = pinned.map(rowHTML).join('');
-    if (pinned.length && rest.length) html += '<div class="search-divider"></div>';
-    html += rest.map(rowHTML).join('');
-    listEl.innerHTML = html;
-  }
-}
-
-export function openSearchPopup() {
-  var popup = document.getElementById('search-popup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'search-popup';
-    popup.className = 'search-popup popup';
-  }
-  if (popup.parentNode) popup.parentNode.removeChild(popup);
-
-  popup.innerHTML =
-    '<div class="popup-header">' +
-      '<span class="popup-title">Search coin</span>' +
-      '<button class="btn-topbar" data-action="close-search">' + icon('x', 16) + '</button>' +
-    '</div>' +
-    '<div class="popup-body search-popup-input-wrap">' +
-      '<input class="search-popup-input" id="search-popup-input" type="text" placeholder="BTC, Ethereum..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
-    '</div>' +
-    '<div class="search-popup-list"></div>';
-
-  document.body.appendChild(popup);
-  _renderSearchList(popup, '');
-
-  var input = popup.querySelector('.search-popup-input');
-  input.addEventListener('input', function () {
-    _renderSearchList(popup, input.value);
-  });
-
-  popup.style.display = 'flex';
-  popup._isFullscreenMode = _useFullscreenPopup();
-
-  if (_useFullscreenPopup()) {
-    _popupFullscreen(popup);
-    var _list = popup.querySelector('.search-popup-list');
-    if (_list) { _list.style.flex = '1'; _list.style.maxHeight = 'none'; _list.style.overflowY = 'auto'; _list.style.overscrollBehavior = 'contain'; }
-    lockScroll();
-  } else {
-    var btn = document.querySelector('[data-action="open-search"]');
-    if (btn) {
-      var btnRect = btn.getBoundingClientRect();
-      popup.style.top = (btnRect.bottom + window.scrollY + 6) + 'px';
-      popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
-      popup.style.left = 'auto';
-    }
-  }
-
-  setTimeout(function () { if (input) input.focus(); }, 60);
-  _smoothWheelScroll(popup.querySelector('.search-popup-list'));
-}
-
-export function closeSearchPopup() {
-  var popup = document.getElementById('search-popup');
-  if (popup) popup.style.display = 'none';
-  unlockScroll();
-}
+export function openSearchPopup() { openSurface('search'); }
+export function closeSearchPopup() { closeSurface('search'); }
 
 // ── Clear popup ──────────────────────────────────────────────────────────────
 
-export function closeClearPopup() {
-  var o = document.getElementById('clear-popup-overlay');
-  var p = document.getElementById('clear-popup');
-  if (o) o.remove();
-  if (p) p.remove();
-}
+export function closeClearPopup() { closeSurface('clear'); }
 
+// The coin's levels / rays / alerts to clear, anchored to the chart's button
 export function openClearPopup(sym, btn) {
-  closeClearPopup();
-
-  var lCount = (_levels[sym] || []).length;
-  var aCount = (_alerts[sym] || []).length;
-  var rCount = (_rays[sym] || []).length;
-  if (!lCount && !aCount && !rCount) return;
-
-  var overlay = document.createElement('div');
-  overlay.id = 'clear-popup-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;';
-  overlay.addEventListener('click', closeClearPopup);
-  document.body.appendChild(overlay);
-
-  var popup = document.createElement('div');
-  popup.id = 'clear-popup';
-  popup.className = 'clear-popup context-menu';
-  popup.dataset.sym = sym;
-
-  var html = '';
-  if (lCount) html += '<button class="clear-popup-row" data-action="clear-levels" data-sym="' + sym + '">Price levels<span class="clear-count clear-count--level">' + lCount + '</span></button>';
-  if (rCount) html += '<button class="clear-popup-row" data-action="clear-rays" data-sym="' + sym + '">Rays<span class="clear-count clear-count--level">' + rCount + '</span></button>';
-  if (aCount) html += '<button class="clear-popup-row" data-action="clear-alerts" data-sym="' + sym + '">Alerts<span class="clear-count clear-count--alert">' + aCount + '</span></button>';
-  popup.innerHTML = html;
-  document.body.appendChild(popup);
-
-  var btnRect = btn.getBoundingClientRect();
-  var popupW = 220;
-  var viewportH = window.innerHeight;
-  var viewportW = window.innerWidth;
-  var left = Math.min(btnRect.left, viewportW - popupW - 8);
-  popup.style.left = Math.max(8, left) + 'px';
-  if (btnRect.top > viewportH / 2) {
-    popup.style.bottom = (viewportH - btnRect.top + 6) + 'px';
-    popup.style.top = 'auto';
-  } else {
-    popup.style.top = (btnRect.bottom + 6) + 'px';
-    popup.style.bottom = 'auto';
-  }
+  var counts = { levels: (_levels[sym] || []).length, alerts: (_alerts[sym] || []).length, rays: (_rays[sym] || []).length };
+  if (!counts.levels && !counts.alerts && !counts.rays) return;
+  if (isSurfaceOpen('clear')) { closeSurface('clear'); return; }
+  var r = btn.getBoundingClientRect();
+  openSurface('clear', { sym: sym, counts: counts, rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 
 // ── Hints popup ─────────────────────────────────────────────────────────────
 
-export function openHintsPopup() {
-  if (document.getElementById('hints-overlay')) return;
-  var groups = [
-    { title: 'Level', rows: [
-      { label: 'Add',    value: 'Right-click' },
-      { label: 'Remove', value: 'Right-click on line' },
-      { label: 'Move',   value: 'Drag line' },
-    ] },
-    { title: 'Alert', rows: [
-      { label: 'Add',              value: 'Shift + Right-click' },
-      { label: 'Remove',           value: 'Shift + Right-click on line' },
-      { label: 'Move',             value: 'Shift + Right-drag' },
-      { label: 'Move (trackpad)',  value: 'Shift + Alt + Left-drag' },
-    ] },
-    { title: 'Ray', rows: [
-      { label: 'Add',    value: 'Ctrl + Left-click' },
-      { label: 'Move',   value: 'Ctrl + Left-drag on ray' },
-      { label: 'Remove', value: 'Ctrl + Right-click' },
-    ] },
-    { title: 'Ruler', rows: [
-      { label: '', value: 'Alt + Left-drag' },
-    ] },
-  ];
-  var rowsHTML = groups.map(function (g) {
-    if (g.rows.length === 1 && !g.rows[0].label) {
-      return '<div class="hints-group"><div class="hints-section-title hints-title-row"><span>' + g.title + '</span><span class="hints-value">' + g.rows[0].value + '</span></div></div>';
-    }
-    var groupRows = g.rows.map(function (r) {
-      return '<div class="hints-row"><span class="hints-label">' + r.label + '</span><span class="hints-value">' + r.value + '</span></div>';
-    }).join('');
-    return '<div class="hints-group"><div class="hints-section-title">' + g.title + '</div>' + groupRows + '</div>';
-  }).join('');
-
-  var el = document.createElement('div');
-  el.id = 'hints-overlay';
-  el.className = 'journal-modal-overlay';
-  el.innerHTML = '<div class="journal-modal">'
-    + '<div class="popup-header"><span class="popup-title">Chart interactions</span>'
-    + '<button class="btn-topbar" data-action="close-hints">' + icon('x', 16) + '</button></div>'
-    + rowsHTML
-    + '</div>';
-  el.addEventListener('click', function (e) { if (e.target === el) closeHintsPopup(); });
-  document.body.appendChild(el);
-  lockScroll();
-}
-
-export function closeHintsPopup() {
-  var el = document.getElementById('hints-overlay');
-  if (el) el.remove();
-  unlockScroll();
-}
+export function openHintsPopup() { openSurface('hints'); }
+export function closeHintsPopup() { closeSurface('hints'); }
 
 // ── Screener ────────────────────────────────────────────────────────────────
 
@@ -5524,15 +5053,7 @@ export function showNotifToast(entry) {
   if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
     try { new Notification('Pump Analyzer', { body: entry.message, icon: '/apple-touch-icon.png' }); } catch (e) {}
   }
-  var t = document.createElement('div');
-  t.className = 'notif-toast';
-  t.textContent = entry.message;
-  document.body.appendChild(t);
-  setTimeout(function () { t.classList.add('notif-toast--visible'); }, 10);
-  setTimeout(function () {
-    t.classList.remove('notif-toast--visible');
-    setTimeout(function () { t.remove(); }, 300);
-  }, 30000);
+  toast(entry.message, { duration: 30000 });
 }
 
 export function updateNotifBadge() {
@@ -5541,44 +5062,12 @@ export function updateNotifBadge() {
   badge.style.display = state.notifUnread > 0 ? 'block' : 'none';
 }
 
-function _renderNotifDropdown() {
-  var dd = document.getElementById('notif-dd');
-  if (!dd) return;
-  var items = state.notifications;
-  var header = '<div class="popup-header"><span class="popup-title">Notifications</span><button class="btn-topbar" data-action="toggle-notif">' + icon('x', 16) + '</button></div>';
-  var enableBanner = (window.Notification && Notification.permission === 'default')
-    ? '<div class="notif-enable"><span>Get alerts even when this tab isn\'t active</span><button class="acc-row-edit" data-action="enable-desktop-notifs">Enable</button></div>'
-    : '';
-  var body = items.length
-    ? '<div class="notif-scroll">'
-      + items.map(function (n) {
-          var ago = _timeAgo(n.createdAt);
-          var ic = n.type === 'listing' ? icon('trending-up', 14) : n.type === 'alert' ? icon('bell', 14) : icon('file-text', 14);
-          return '<div class="notif-row">'
-            + '<span class="notif-icon">' + ic + '</span>'
-            + '<div class="notif-body">'
-            + '<span class="notif-msg">' + escHtml(n.message) + (!n.read ? '<span class="notif-dot"></span>' : '') + '</span>'
-            + '<span class="notif-time">' + ago + '</span>'
-            + '</div>'
-            + (n.sym ? '<button class="btn-icon" data-action="notif-open" data-notif-id="' + n.id + '" data-sym="' + escHtml(n.sym) + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + (n.type === 'weekly_report' && n.report ? '<button class="btn-icon" data-action="open-weekly-report" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + (n.type === 'journal_reminder' && tzDateStr(new Date(n.createdAt)) === tzDateStr() && !(state.journalToday && (state.journalToday.morningAt || state.journalToday.skipped)) ? '<button class="btn-icon" data-action="open-morning-journal" data-notif-id="' + n.id + '">' + icon('arrow-right', 16) + '</button>' : '')
-            + '</div>';
-        }).join('')
-      + '</div>'
-    : '<div class="notif-empty">No notifications yet</div>';
-  var footer = items.length
-    ? '<div class="notif-footer">'
-      + '<button class="notif-footer-btn" data-action="notif-clear">Clear all</button>'
-      + '</div>'
-    : '';
-  dd.innerHTML = header + enableBanner + body + footer;
-  _smoothWheelScroll(dd.querySelector('.notif-scroll'));
-}
+// The list under the bell is a shadcn popover (src/react/host/NotificationsPopover.jsx)
+function _renderNotifDropdown() { emit('notifications:updated'); }
 
 export function requestDesktopNotifPermission() {
-  if (!window.Notification) return;
-  Notification.requestPermission().then(function () { _renderNotifDropdown(); });
+  if (!window.Notification) return Promise.resolve();
+  return Notification.requestPermission().then(function () { _renderNotifDropdown(); });
 }
 
 
@@ -5605,24 +5094,10 @@ export function clearNotifications() {
 }
 
 export function toggleNotifDropdown() {
-  var dd = document.getElementById('notif-dd');
-  if (!dd) return;
-  var isOpen = dd.classList.contains('open');
-  if (isOpen) {
-    dd.classList.remove('open');
-    if (dd._isFullscreenMode) {
-      dd.style.cssText = '';
-      unlockScroll();
-      dd._isFullscreenMode = false;
-    }
-  } else {
-    _renderNotifDropdown();
-    dd.classList.add('open');
-    dd._isFullscreenMode = _useFullscreenPopup();
-    if (dd._isFullscreenMode) {
-      _popupFullscreen(dd);
-      lockScroll();
-    }
-  }
+  if (isSurfaceOpen('notifications')) { closeSurface('notifications'); return; }
+  var btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  var r = btn.getBoundingClientRect();
+  openSurface('notifications', { rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 

@@ -9,8 +9,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { ru } from 'react-day-picker/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { exportJournalCsv } from '../api.js';
-import { tzDateStr } from '../utils.js';
+import { exportJournalCsv } from '../../api.js';
+import { tzDateStr } from '../../utils.js';
 import { JOURNAL_START, EXPORT_RANGES, shortDate, isoDay } from './format.js';
 import { AiDialog } from './AiDialog.jsx';
 

@@ -4,9 +4,9 @@ import * as React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { state } from '../state.js';
-import { generateJournalAiSummary, loadJournalAiSummaryCache, deleteJournalAiSummary } from '../api.js';
-import { effectiveTZ } from '../utils.js';
+import { state } from '../../state.js';
+import { generateJournalAiSummary, loadJournalAiSummaryCache, deleteJournalAiSummary } from '../../api.js';
+import { effectiveTZ } from '../../utils.js';
 
 // The summary's markdown subset: **bold**, "# " headings, "* " / "- " bullets
 function inline(s) {

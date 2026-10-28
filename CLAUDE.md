@@ -3,12 +3,12 @@
 В этом проекте UI-библиотека — **shadcn/ui** (React + Tailwind v4 + Radix).
 - Любой новый или переделываемый интерфейс собирается из компонентов shadcn (`npx shadcn@latest add <name>`), а не из самописной разметки и CSS.
 - Нужного компонента нет — сначала искать в реестре shadcn (и его блоках), только потом собирать из примитивов shadcn. Самописное — лишь там, где у shadcn ничего нет, и сказать об этом пользователю.
-- Как подключено и изолировано от vanilla-части — раздел «Журнал на shadcn» ниже (`src/journal-app/` — образец). Старые vanilla-экраны переносятся на shadcn, когда до них доходит задача.
+- Как подключено и изолировано от vanilla-части — раздел «shadcn в проекте» ниже (`src/react/` — образец). Старые vanilla-экраны переносятся на shadcn, когда до них доходит задача.
 
 # Архитектура
 
 ## Стек
-- **Frontend**: Vanilla JS, Vite, роутер по pathname (`src/router.js`). Исключение — страница журнала `/journal`: React-остров на **shadcn/ui** (`src/journal-app/`, см. «Журнал на shadcn»)
+- **Frontend**: Vanilla JS, Vite, роутер по pathname (`src/router.js`). Исключение — страница журнала `/journal`: React-остров на **shadcn/ui** (`src/react/journal/`, см. «shadcn в проекте»)
 - **Backend**: Node.js HTTP-сервер `server-vps.js` (продакшн на VPS), `server.js` (локальный dev)
 - **БД**: SQLite через Drizzle ORM. Схема: `db/schema.js`, инициализация: `db/setup.js`, соединение: `db/index.js`
 - **Аутентификация**: better-auth. Таблицы: `user`, `session`, `account`, `verification`
@@ -65,12 +65,15 @@ state.weekSummary      // агрегат за неделю
 state.journalToday     // запись дневника за сегодня (добавляется в задаче журнала)
 ```
 
-## Журнал на shadcn (`src/journal-app/`)
+## shadcn в проекте (`src/react/`)
 Раздел Journal целиком на компонентах shadcn/ui (React 19 + Tailwind v4 + Radix) — образец для остальных экранов. Остальной сайт пока vanilla.
-- Роут `/journal` в `main.js` лениво грузит `journal-app/mount.jsx` (`mountJournal`), уход со страницы — `unmountJournal` через `onRouteChange` в `router.js`.
-- Новые компоненты: `npx shadcn@latest add <name>` (конфиг `components.json`, алиас `@` → `src/journal-app`, файлы в `components/ui/*.jsx`). После `add` проверить импорты: CLI иногда пишет `from "cn"` → заменить на `@/lib/utils`.
-- Изоляция (`journal.css`): Tailwind-тема `reference inline` (ни одной CSS-переменной в `:root`, наши `--text-sm`/`--radius-md`/`--primary` не перетираются), утилиты только из `src/journal-app` (`source(none)` + `@source`), сброс стилей (`preflight.css`) только внутри `.jr` и порталов shadcn (`[data-slot]`). Цвета shadcn (`background`, `primary`, `muted`, `border`…) смаплены на наши токены — тёмная тема работает сама; свои: `text-bullish`, `text-danger`, `text-brand`.
-- Части: `JournalPage.jsx` (данные, период `state.journalPeriod`), `Header.jsx` (период, Calendar, экспорт, AI), `AiDialog.jsx`, `PnlChart.jsx` (shadcn Chart / recharts), `EdgeSummary.jsx` (Исполнение, Сетапы + редактор, Выводы), `DayTable.jsx` (по дням, сделки, пометки, «На графике»), `format.js`.
+- **Окна поверх vanilla-страниц** (диалоги, поповеры, палитра, тосты) — один React-хост `src/react/host/host.jsx`, грузится лениво (предзагрузка на idle). Vanilla-код зовёт его через `src/react-bridge.js`: `openSurface(name, props)`, `closeSurface(name)`, `isSurfaceOpen()`, `toast(msg, opts)` (Sonner). Имена окон — `src/react/host/surfaces.jsx`: `search` (⌘K, Command), `clear`, `hints`, `weekly`, `notifications`, `morning`, `evening`. Поповер у vanilla-кнопки — `rect` кнопки + `AnchorBox` (`host/anchor.jsx`). Слой окон выше полноэкранного графика (z-index в `shadcn.css`); Esc закрывает только окно (`_onEscKey` в `ui.js` пропускает, пока окно открыто).
+- Карточки журнала: кто может открыть — `src/journal-cards.js` (`openMorningJournal` / `openEveningJournal`), после сохранения диалог шлёт событие `journal:saved` ({kind}), vanilla обновляет кнопки в `main.js`. React перерисовывается по событиям `events.js` через `useEvents` (`src/react/shared/use-event.js`).
+- **Страница журнала** `/journal` — `src/react/journal/` (`mount.jsx`), уход со страницы — `unmountJournal` через `onRouteChange` в `router.js`.
+- Общее: `src/react/shared/` (`Chips` — выбор одного из чипов, `Field`, `useSiteTheme`, `useEvents`).
+- Новые компоненты: `npx shadcn@latest add <name>` (конфиг `components.json`, алиас `@` → `src/react`, файлы в `components/ui/*.jsx`; при запросе перезаписать существующий — `-o`). После `add` проверить импорты: CLI иногда пишет `from "cn"` → заменить на `@/lib/utils`.
+- Изоляция (`shadcn.css`): Tailwind-тема `reference inline` (ни одной CSS-переменной в `:root`, наши `--text-sm`/`--radius-md`/`--primary` не перетираются), утилиты только из `src/react` (`source(none)` + `@source`), сброс стилей (`preflight.css`) только внутри `.jr` и порталов shadcn (`[data-slot]`). Цвета shadcn (`background`, `primary`, `muted`, `border`…) смаплены на наши токены — тёмная тема работает сама; свои: `text-bullish`, `text-danger`, `text-brand`.
+- Части журнала (`src/react/journal/`): `JournalPage.jsx` (данные, период `state.journalPeriod`), `Header.jsx` (период, Calendar, экспорт, AI), `AiDialog.jsx`, `PnlChart.jsx` (shadcn Chart / recharts), `EdgeSummary.jsx` (Исполнение, Сетапы + редактор, Выводы), `DayTable.jsx` (по дням, сделки, пометки, «На графике»), `format.js`.
 - Логика и данные — прежние модули (`api.js`, `setups.js`, `coin-notes.js`, `edge-insights.js`, `openTradeInChart` из `ui.js`).
 
 ## Дизайн-система
@@ -105,9 +108,7 @@ state.journalToday     // запись дневника за сегодня (д�
 | Спиннер кнопки | `.btn-loading` (добавить к `<button>`) |
 | Спиннер инлайн | `.spinner` |
 | Оверлей (fullscreen) | `.overlay` (position:fixed;inset:0) |
-| Модалки журнала | `.journal-modal-overlay`, `.journal-modal`, `.journal-modal--morning/evening`, `.journal-field`, `.journal-static`, `.journal-history` |
 
-Модалки журнала **уже есть** в `components.css` — не добавлять повторно в `styles.css`.
 
 ### Анимации
 
@@ -151,7 +152,7 @@ state.journalToday     // запись дневника за сегодня (д�
 ## Журнал и личный edge
 - **Заметки по монете** (`src/coin-notes.js`): много на монету, у каждой время и цена записи. Кнопка в островке графика → поле ввода (Enter сохраняет); заметка добавляет монету в сегодняшний брифинг. На графике — пузырь в точке (время, цена), по наведению текст, скрываются переключателем в окне заметок (`qt_notes_on_chart`); в брифинге — список за день. Сервер: таблица `coin_notes`, `GET/POST /api/journal/notes` (`?symbol=` или `?from=&to=`; POST `{symbol,text,price}` или `{id,delete:true}`). Это шаг 1 «таймлайна монеты»; дальше метка выбора в брифинг + сделки с пометками за любой период, затем экран «Неделя» в журнале.
 Флоу: брифинг = день (карточки, монеты, заметки), журнал = период (график по всем сделкам, «По дням», «Мой edge» за любой период, без зависимости от вечерней карточки). Принцип и определения — `docs/TRADER_EDGE.md` (читать перед любой работой с журналом, отчётами или анализом сделок).
-Журнал (`#/journal`) сверху вниз: один фильтр периода на всю страницу (Неделя / Месяц / Всё время / Свои даты, `state.journalPeriod`) → график PnL по всем сделкам → сводка «Мой edge» за период (`src/journal-app/EdgeSummary.jsx`): **Исполнение** (% по правилам, число и список ошибок) и **Сетапы** (сделки по правилам, по итогу R, + «Все сделки, с ошибками»), пояснения в тултипах ⓘ → **Выводы** (`conclusions` в `src/edge-insights.js`) → таблица **По дням** (дата, сделок, % по правилам, PnL, бейдж «без сетапа»); день раскрывается: исполнение дня (100% или ошибки) и сделки дня по сетапам (все сделки, ошибки отмечены; «Без сетапа», «Не считаются»), внутри — заметки по монете, чипы перепометки и кнопка «На графике» — открывает обычный полноэкранный график монеты в режиме разбора (`openTradeInChart` в `src/ui.js`): история по REST с Binance (докачка при прокрутке к краю), любой таймфрейм, без живых обновлений, стакана и терминала, всегда открывается на участке сделки (даже спустя месяцы); в островке нет инструментов, уровни/лучи/алерты живого графика не показываются и не двигаются; ПКМ ставит/снимает уровень только для этой сделки — сохраняется у неё (таблица `review_levels`, ключ пользователь+символ+время закрытия, `GET/POST /api/journal/review-levels`), на живой график не попадает; заметки по монете видны; исполнения сделки — наши треугольники (`execs` в фактах дня, версия фактов 3). Данные дня — `byDay` из `computeEdge`. AI-сводка доступна для периода Неделя / Месяц.
+Журнал (`#/journal`) сверху вниз: один фильтр периода на всю страницу (Неделя / Месяц / Всё время / Свои даты, `state.journalPeriod`) → график PnL по всем сделкам → сводка «Мой edge» за период (`src/react/journal/EdgeSummary.jsx`): **Исполнение** (% по правилам, число и список ошибок) и **Сетапы** (сделки по правилам, по итогу R, + «Все сделки, с ошибками»), пояснения в тултипах ⓘ → **Выводы** (`conclusions` в `src/edge-insights.js`) → таблица **По дням** (дата, сделок, % по правилам, PnL, бейдж «без сетапа»); день раскрывается: исполнение дня (100% или ошибки) и сделки дня по сетапам (все сделки, ошибки отмечены; «Без сетапа», «Не считаются»), внутри — заметки по монете, чипы перепометки и кнопка «На графике» — открывает обычный полноэкранный график монеты в режиме разбора (`openTradeInChart` в `src/ui.js`): история по REST с Binance (докачка при прокрутке к краю), любой таймфрейм, без живых обновлений, стакана и терминала, всегда открывается на участке сделки (даже спустя месяцы); в островке нет инструментов, уровни/лучи/алерты живого графика не показываются и не двигаются; ПКМ ставит/снимает уровень только для этой сделки — сохраняется у неё (таблица `review_levels`, ключ пользователь+символ+время закрытия, `GET/POST /api/journal/review-levels`), на живой график не попадает; заметки по монете видны; исполнения сделки — наши треугольники (`execs` в фактах дня, версия фактов 3). Данные дня — `byDay` из `computeEdge`. AI-сводка доступна для периода Неделя / Месяц.
 Факты дня считает `journal/facts.js` из сделок (`GET /api/journal/facts`), снимок — `journal_entries.facts_json`. Факты приоритетнее самооценки в карточках.
 
 ---

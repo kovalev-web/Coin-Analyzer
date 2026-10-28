@@ -14,10 +14,10 @@ import { Label } from '@/components/ui/label';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from '@/components/ui/item';
 import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
-import { changeSetup } from '../setups.js';
-import { SETUP_DIAGRAMS } from '../setup-diagrams.js';
-import { conclusions } from '../edge-insights.js';
-import { state } from '../state.js';
+import { changeSetup } from '../../setups.js';
+import { SETUP_DIAGRAMS } from '../../setup-diagrams.js';
+import { conclusions } from '../../edge-insights.js';
+import { state } from '../../state.js';
 import { BREAK_LABEL, RULES_HELP, plural, rr, rateTone, tone, trades } from './format.js';
 
 // ⓘ with its explanation on hover

@@ -2,7 +2,7 @@
 // The router calls mountJournal on /journal; leaving the page unmounts it.
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
-import './journal.css';
+import '../shadcn.css';
 import { JournalPage } from './JournalPage.jsx';
 
 let root = null;

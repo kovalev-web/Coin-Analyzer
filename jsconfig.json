@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": { "@/*": ["./src/journal-app/*"] }
+    "paths": { "@/*": ["./src/react/*"] }
   },
-  "include": ["src/journal-app"]
+  "include": ["src/react"]
 }

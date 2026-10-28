@@ -1,5 +1,5 @@
 /* Journal page: Tailwind + shadcn/ui, isolated from the rest of the site.
-   - Only classes found in src/journal-app are generated (source(none) + @source).
+   - Only classes found in src/react are generated (source(none) + @source).
    - Tailwind's theme is "reference + inline": no CSS variables are emitted, so
      nothing collides with our tokens (--text-sm, --radius-md, --primary…).
    - shadcn's colours map onto our tokens below, so the dark theme just works.
@@ -64,4 +64,12 @@
   --radius-xl: var(--radius-xl);
   --shadow-md: var(--shadow-md);
   --font-sans: var(--font-family);
+}
+
+/* shadcn layers above the site's own (full view 400, note card 1100, setup tip 2000) */
+[data-slot="dialog-overlay"], [data-slot="dialog-content"],
+[data-slot="alert-dialog-overlay"], [data-slot="alert-dialog-content"],
+[data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+[data-slot="hover-card-content"], [data-slot="tooltip-content"] {
+  z-index: 2100;
 }

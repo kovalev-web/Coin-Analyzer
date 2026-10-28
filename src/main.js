@@ -17,13 +17,15 @@ import {
   setUserId, setUserEmail, setUserAvatar, showAccountModal,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
-  showMorningModal, hideMorningModal, showEveningModal, hideEveningModal, renderProfileJournal, showToast,
+  renderProfileJournal, showToast,
   showWeeklyReportModal, hideWeeklyReportModal,
   openHintsPopup, closeHintsPopup,
   updateSessionTimer, injectDemoBanner,
   briefingThisWeekEntries,
 } from './ui.js';
 import { toggleTerminal } from './terminal.js';
+import { openMorningJournal, openEveningJournal } from './journal-cards.js';
+import { preloadReactHost, closeSurface } from './react-bridge.js';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -44,12 +46,12 @@ document.body.addEventListener('touchstart', function (e) {
   }
 }, { passive: true });
 
-// Esc closes the topmost modal (journal cards, order book settings…) through
+// Esc closes the topmost vanilla modal (order book settings…) through
 // its own close button; the coin full view underneath closes only when no
 // modal is open. Capture phase so it runs before the full view's handler.
 window.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
-  var modals = document.querySelectorAll('.journal-modal-overlay, .dom-settings-overlay');
+  var modals = document.querySelectorAll('.dom-settings-overlay');
   var top = modals[modals.length - 1];
   if (!top) return;
   e.preventDefault();
@@ -69,11 +71,6 @@ document.body.addEventListener('click', function (e) {
   if (avatarDd && avatarDd.classList.contains('open') && !e.target.closest('.avatar-wrap')) {
     avatarDd.classList.remove('open');
   }
-  // Close notifications dropdown on any click outside #notif-wrap
-  var notifDd = document.getElementById('notif-dd');
-  if (notifDd && notifDd.classList.contains('open') && !e.target.closest('#notif-wrap')) {
-    notifDd.classList.remove('open');
-  }
 
   // Close popups on any outside click — runs before data-action check so clicking
   // any button outside a popup (e.g. "expand", "open-ms") also closes it.
@@ -85,14 +82,6 @@ document.body.addEventListener('click', function (e) {
   var _bpPopup = document.getElementById('bp-popup');
   if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
     closeBriefingPanel();
-  }
-  var _searchPopup = document.getElementById('search-popup');
-  if (_searchPopup && _searchPopup.style.display !== 'none' && !_searchPopup.contains(e.target) && !e.target.closest('[data-action="open-search"]')) {
-    _searchPopup.style.display = 'none';
-  }
-  var _clearPopup = document.getElementById('clear-popup');
-  if (_clearPopup && !_clearPopup.contains(e.target) && !e.target.closest('[data-action="open-clear-popup"]')) {
-    closeClearPopup();
   }
 
   // Close tf-dd on any click outside .tf-picker
@@ -115,11 +104,6 @@ document.body.addEventListener('click', function (e) {
     var _add = document.getElementById('avatar-dd');
     if (_add) _add.classList.remove('open');
   }
-  if (action !== 'toggle-notif' && action !== 'notif-open' && action !== 'notif-clear') {
-    var _ndd = document.getElementById('notif-dd');
-    if (_ndd) _ndd.classList.remove('open');
-  }
-
   if (target.dataset.notifId) markNotificationAsRead(target.dataset.notifId);
 
   switch (action) {
@@ -138,32 +122,6 @@ document.body.addEventListener('click', function (e) {
     case 'toggle-notif': {
       e.stopPropagation();
       toggleNotifDropdown();
-      break;
-    }
-    case 'notif-open': {
-      var _ndd2 = document.getElementById('notif-dd');
-      if (_ndd2) _ndd2.classList.remove('open');
-      openFV(sym);
-      break;
-    }
-    case 'open-weekly-report': {
-      var _ndd3 = document.getElementById('notif-dd');
-      if (_ndd3) _ndd3.classList.remove('open');
-      var _n = state.notifications.find(function (n) { return n.id === target.dataset.notifId; });
-      if (_n) showWeeklyReportModal(_n.report);
-      break;
-    }
-    case 'close-weekly-report':
-      hideWeeklyReportModal();
-      break;
-    case 'notif-clear': {
-      e.stopPropagation();
-      clearNotifications();
-      break;
-    }
-    case 'enable-desktop-notifs': {
-      e.stopPropagation();
-      requestDesktopNotifPermission();
       break;
     }
     case 'analyze': {
@@ -333,23 +291,8 @@ document.body.addEventListener('click', function (e) {
     case 'open-hints':
       openHintsPopup();
       break;
-    case 'close-hints':
-      closeHintsPopup();
-      break;
     case 'close-tv':
       closeTVMode();
-      break;
-    case 'clear-levels':
-      closeClearPopup();
-      clearLevels(sym);
-      break;
-    case 'clear-rays':
-      closeClearPopup();
-      clearRays(sym);
-      break;
-    case 'clear-alerts':
-      closeClearPopup();
-      clearAlerts(sym);
       break;
     case 'acc-clear-sym': {
       clearLevels(sym);
@@ -372,138 +315,17 @@ document.body.addEventListener('click', function (e) {
     case 'open-search':
       openSearchPopup();
       break;
-    case 'close-search':
-      closeSearchPopup();
-      break;
-    case 'search-pick':
-      closeSearchPopup();
-      openFV(sym);
-      break;
     case 'open-account':
       if (state.isDemoMode) { window.location.href = '/login'; break; }
       showAccountModal();
       break;
     case 'open-evening-journal':
-      if (state.isDemoMode) { window.location.href = '/login'; break; }
-      if (!state.journalToday || !state.journalToday.morningAt) {
-        showToast('Fill in the morning journal first');
-        break;
-      }
-      if (state.journalToday.skipped) {
-        showToast('Today is marked as a no-trading day');
-        break;
-      }
-      showEveningModal();
+      openEveningJournal();
       break;
-    case 'close-evening-journal':
-      hideEveningModal();
+    case 'open-morning-journal':
+      closeSurface('notifications');
+      openMorningJournal();
       break;
-    case 'open-morning-journal': {
-      if (state.isDemoMode) { window.location.href = '/login'; break; }
-      var _mNdd = document.getElementById('notif-dd');
-      if (_mNdd) _mNdd.classList.remove('open');
-      if (state.journalToday && state.journalToday.morningAt) {
-        showToast('Morning journal already filled today');
-        break;
-      }
-      showMorningModal();
-      break;
-    }
-    case 'close-morning-journal':
-      hideMorningModal();
-      break;
-    case 'save-morning-journal': {
-      var mBtn = target;
-      mBtn.disabled = true;
-      var mModal = document.getElementById('morning-journal-modal');
-      var mToday = tzDateStr();
-      var mPlannedCoins = (state.briefing || [])
-        .filter(function (e) { return e.date === mToday; })
-        .map(function (e) { return e.sym.toUpperCase(); })
-        .join(', ');
-      function _mv(n) { return (mModal.querySelector('[name="' + n + '"]:checked') || {}).value || ''; }
-      saveJournalMorning({
-        sleepHours:   mModal.querySelector('[name="sleepHours"]').value,
-        sleepQuality: _mv('sleepQuality'),
-        energy:       _mv('energy'),
-        carryover:    _mv('carryover'),
-        focus:        _mv('focus'),
-        ifThen:       { if: mModal.querySelector('[name="ifWhen"]').value.trim(), then: mModal.querySelector('[name="ifThen"]').value.trim() },
-        volume:       state.tradingLimits.maxVolume != null ? String(state.tradingLimits.maxVolume) : '',
-        stopLevel:    state.tradingLimits.maxDrawdownPct != null ? state.tradingLimits.maxDrawdownPct + '%' : '',
-        maxTrades:    state.tradingLimits.maxTrades != null ? state.tradingLimits.maxTrades : '',
-        dayPlan:      mModal.querySelector('[name="dayPlan"]').value.trim(),
-        plannedCoins: mPlannedCoins,
-        triggerWatch: '', // replaced by the if-then rule (v2)
-        channelsClosed: (mModal.querySelector('[name="channelsClosed"]:checked') || {}).value || '',
-      }).then(function () {
-        hideMorningModal();
-        _refreshJournalHistory();
-        var mBtn2 = document.querySelector('[data-action="open-morning-journal"]');
-        if (mBtn2) { mBtn2.disabled = true; mBtn2.innerHTML = 'Morning' + icon('check', 14); }
-        var eBtn2 = document.querySelector('[data-action="open-evening-journal"]');
-        if (eBtn2) eBtn2.disabled = !!state.journalToday.skipped;
-        state.notifications.forEach(function (n) {
-          if (n.type === 'journal_reminder') markNotificationAsRead(n.id);
-        });
-      }).catch(function () {
-        mBtn.disabled = false;
-        showToast('Network error — please try again');
-      });
-      break;
-    }
-    case 'skip-morning-journal': {
-      if (!confirm('Mark today as a no-trading day? The evening journal will be unavailable.')) break;
-      var skipBtn = target;
-      skipBtn.disabled = true;
-      saveJournalMorning({ skip: true }).then(function () {
-        hideMorningModal();
-        _refreshJournalHistory();
-        var mBtn2 = document.querySelector('[data-action="open-morning-journal"]');
-        if (mBtn2) { mBtn2.disabled = true; mBtn2.innerHTML = 'Morning' + icon('check', 14); }
-        var eBtn2 = document.querySelector('[data-action="open-evening-journal"]');
-        if (eBtn2) eBtn2.disabled = true;
-      }).catch(function () {
-        skipBtn.disabled = false;
-        showToast('Network error — please try again');
-      });
-      break;
-    }
-    case 'journal-trigger-pill': {
-      target.classList.toggle('active');
-      var eOtherText = document.querySelector('#evening-journal-modal [name="triggerOtherText"]');
-      if (target.dataset.trigger === 'triggerOther' && eOtherText) {
-        eOtherText.hidden = !target.classList.contains('active');
-        if (!eOtherText.hidden) eOtherText.dispatchEvent(new Event('input'));
-      }
-      break;
-    }
-    case 'save-evening-journal': {
-      var eBtn = target;
-      eBtn.disabled = true;
-      var eModal = document.getElementById('evening-journal-modal');
-      function _ev(n) { var x = eModal.querySelector('[name="' + n + '"]'); return x ? x.value.trim() : ''; }
-      saveJournalEvening({
-        // v2: trade count / PnL / rule checks come from facts on the server
-        tradeCount:      parseInt(eModal.dataset.tradeCount, 10) || 0,
-        whyBreaks:       _ev('whyBreaks'),
-        didWell:         _ev('didWell'),
-        fixTomorrow:     _ev('fixTomorrow'),
-        selfTalk:        (eModal.querySelector('[name="selfTalk"]:checked') || {}).value || '',
-        missedScreening: _ev('missedScreening'),
-        eveningState:    (eModal.querySelector('[name="eveningState"]:checked') || {}).value || '',
-        freeConclusion:  _ev('freeConclusion'),
-        pnl:             eModal.dataset.pnl != null ? parseFloat(eModal.dataset.pnl) : null,
-      }).then(function () {
-        hideEveningModal();
-        showToast('Review saved');
-        _refreshJournalHistory();
-      }).catch(function (err) {
-        eBtn.disabled = false;
-        showToast(err && err.message && err.message !== 'Failed to fetch' ? err.message : 'Network error — please try again');
-      });
-      break;
-    }
     case 'logout': {
       if (state.isDemoMode) { window.location.replace('/login'); break; }
       var _wsEnv2 = import.meta.env.VITE_WS_URL || '';
@@ -716,8 +538,6 @@ window.addEventListener('orientationchange', function () {
   closeClearPopup();
   // Close only dropdown-mode popups (positions stale after resize).
   // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
-  var _sp = document.getElementById('search-popup');
-  if (_sp && _sp.style.display !== 'none' && !_sp._isFullscreenMode) closeSearchPopup();
   var _bp = document.getElementById('bp-popup');
   if (_bp && _bp.style.display !== 'none' && !_bp._isFullscreenMode) closeBriefingPanel();
   var _ao = document.getElementById('analysis-overlay');
@@ -795,12 +615,28 @@ function _refreshJournalHistory() {
   });
 }
 
-// Journal page: React + shadcn/ui island (src/journal-app), loaded on first visit
+// A journal card was saved (shadcn dialogs, src/react/host): update the
+// header buttons and the history, clear today's reminder
+on('journal:saved', function (ev) {
+  _refreshJournalHistory();
+  if (ev.kind === 'evening') return;
+  var mBtn = document.querySelector('[data-action="open-morning-journal"]');
+  if (mBtn) { mBtn.disabled = true; mBtn.innerHTML = 'Morning' + icon('check', 14); }
+  var eBtn = document.querySelector('[data-action="open-evening-journal"]');
+  if (eBtn) eBtn.disabled = ev.kind === 'skip' || !!(state.journalToday && state.journalToday.skipped);
+  if (ev.kind === 'morning') {
+    state.notifications.forEach(function (n) {
+      if (n.type === 'journal_reminder') markNotificationAsRead(n.id);
+    });
+  }
+});
+
+// Journal page: React + shadcn/ui island (src/react/journal), loaded on first visit
 var _journalApp = null;
 onRouteChange(function () { if (_journalApp) _journalApp.unmountJournal(); });
 registerRoute('/journal', function () {
   var app = document.getElementById('app');
-  import('./journal-app/mount.jsx').then(function (m) {
+  import('./react/journal/mount.jsx').then(function (m) {
     _journalApp = m;
     if (getCurrentRoute() === '/journal') m.mountJournal(app);
   });
@@ -874,5 +710,6 @@ async function _revalidateSession() {
   loadRays();
   if (!state.isDemoMode) fetchNotifications();
   initRouter('/');
+  preloadReactHost();
   if (state.isDemoMode) injectDemoBanner();
 })();
