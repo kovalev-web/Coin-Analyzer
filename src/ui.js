@@ -1892,7 +1892,7 @@ export function renderJournalSummarySection() {
     : '';
   if (statsContainer) statsContainer.innerHTML = statsHTML;
 
-  var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m';
+  var aiEligible = state.journalRange === '1w' || state.journalRange === '2w' || state.journalRange === '1m'; // week / month period only
   var aiText = (state.aiSummary && state.aiSummaryRange === state.journalRange) ? state.aiSummary : null;
 
   if (container) container.innerHTML = '';

@@ -26,7 +26,7 @@ import {
   briefingThisWeekEntries,
 } from './ui.js';
 import { toggleTerminal } from './terminal.js';
-import { renderEdgeSection } from './edge-view.js';
+import { renderEdgeSection, periodPickerHTML, bindPeriodPicker, journalPeriod } from './edge-view.js';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -414,28 +414,6 @@ document.body.addEventListener('click', function (e) {
       e.stopPropagation();
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       exportJournalCsv(target.dataset.range);
-      break;
-    }
-    case 'journal-range-pick': {
-      e.stopPropagation();
-      var _jrdd = document.getElementById('journal-range-dd');
-      if (_jrdd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-        _jrdd.classList.toggle('open');
-      }
-      break;
-    }
-    case 'journal-range-opt': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-      var newRange = target.dataset.range;
-      if (!newRange || newRange === state.journalRange) break;
-      state.journalRange = newRange;
-      var _jrBtnLabel = document.querySelector('[data-action="journal-range-pick"] .tf-label');
-      if (_jrBtnLabel) _jrBtnLabel.textContent = target.textContent;
-      var _jrDd = document.getElementById('journal-range-dd');
-      if (_jrDd) _jrDd.querySelectorAll('button').forEach(function (btn) { btn.classList.toggle('active', btn.dataset.range === newRange); });
-      _refreshJournalSummary();
       break;
     }
     case 'journal-gen-ai': {
@@ -945,12 +923,18 @@ var JOURNAL_RANGE_DAYS = { '1w': 7, '2w': 14, '1m': 30, '2m': 60, '3m': 90, '6m'
 function _renderJournalPnlChart() {
   var daily = (state.journalSummary && state.journalSummary.daily) || [];
   renderJournalChart(document.getElementById('journal-pnl-chart'), daily);
-  renderJournalDays(document.getElementById('journal-days-section'), daily);
+}
+
+// The page's one period → the AI summary range it can do (week / month), else none
+function _syncJournalRange() {
+  var p = journalPeriod();
+  state.journalRange = p.range === 'week' ? '1w' : p.range === 'month' ? '1m' : null;
 }
 
 function _refreshJournalSummary() {
+  _syncJournalRange();
   renderJournalSummarySection();
-  fetchJournalSummary(state.journalRange).then(function () {
+  fetchJournalSummary(journalPeriod()).then(function () {
     renderJournalSummarySection();
     _renderJournalPnlChart();
   });
@@ -963,14 +947,8 @@ registerRoute('/journal', function () {
     '<h2 class="journal-page-title">' +
     '<a href="/" class="btn-icon" title="Back">' + icon('arrow-left', 18) + '</a>Journal</h2>' +
     '<div class="journal-page-actions">' +
-    '<div class="tf-picker">' +
-    '<button data-action="journal-range-pick" class="btn-topbar-label journal-range-btn"><span class="tf-label">' + (JOURNAL_SUMMARY_RANGES.find(function (r) { return r.value === state.journalRange; }) || JOURNAL_SUMMARY_RANGES[0]).label + '</span>' + icon('chevron-down', 16) + '</button>' +
-    '<div class="dropdown tf-dd" id="journal-range-dd">' +
-    JOURNAL_SUMMARY_RANGES.map(function (r) {
-      return '<button class="' + (r.value === state.journalRange ? 'active' : '') + '" data-action="journal-range-opt" data-range="' + r.value + '">' + r.label + '</button>';
-    }).join('') +
-    '</div>' +
-    '</div>' +
+    // One period for the whole page: chart, summary, day table
+    periodPickerHTML() +
     '<div class="tf-picker">' +
     '<button data-action="toggle-journal-export" class="btn-topbar" title="Export CSV">' + icon('clipboard-minus', 16) + '</button>' +
     '<div class="dropdown tf-dd" id="journal-export-dd">' +
@@ -988,12 +966,20 @@ registerRoute('/journal', function () {
     '<div id="journal-stats-col" class="journal-stats-col"></div>' +
     '</div>' +
     '<div id="journal-summary-section"></div>' +
-    '<div id="journal-days-section"></div>' +
     '<div id="journal-edge-section"></div>' +
     '</div>';
+  function _loadJournalPeriod() {
+    var actions = document.querySelector('.journal-page-actions');
+    var picker = actions && actions.querySelector('.edge-ranges');
+    if (picker) { picker.outerHTML = periodPickerHTML(); bindPeriodPicker(actions, _loadJournalPeriod); }
+    renderEdgeSection(document.getElementById('journal-edge-section'));
+    _refreshJournalSummary();
+  }
+  bindPeriodPicker(document.querySelector('.journal-page-actions'), _loadJournalPeriod);
+  _syncJournalRange();
   renderEdgeSection(document.getElementById('journal-edge-section'));
   renderJournalSummarySection();
-  fetchJournalSummary(state.journalRange).then(function () {
+  fetchJournalSummary(journalPeriod()).then(function () {
     renderJournalSummarySection();
     _renderJournalPnlChart();
   });

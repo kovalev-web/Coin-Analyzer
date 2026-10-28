@@ -115,6 +115,48 @@ function edgePeriod(q, today, start) {
   return { from: clamp(d.toISOString().slice(0, 10)), to: today, preset: preset };
 }
 
+// One day as the day table opens it: result, execution (only the breaks that
+// happened), and the day's trades grouped by setup — all trades as they were,
+// breaks marked (the "by the rules" filter is for the period summary).
+// items: { date, t, tag, r, broken, excluded }
+function dayBreakdown(items, setupName, listItem) {
+  var days = {};
+  items.forEach(function (x) {
+    var d = days[x.date] = days[x.date] || { date: x.date, pnl: 0, n: 0, clean: 0, breaks: {}, untagged: 0, groups: {} };
+    d.pnl += x.t.pnlNet || 0;
+    var item = listItem(x);
+    item.excluded = !!x.excluded;
+    var key = x.excluded ? 'excluded' : (x.tag && x.tag.pattern) || 'none';
+    var g = d.groups[key] = d.groups[key] || { key: key, name: key === 'none' ? null : key === 'excluded' ? null : setupName[key] || key, n: 0, totalR: 0, hasR: false, trades: [] };
+    g.trades.push(item);
+    if (x.excluded) return;
+    d.n++;
+    g.n++;
+    if (x.r != null) { g.totalR += x.r; g.hasR = true; }
+    if (!x.broken.length) d.clean++;
+    x.broken.forEach(function (k) { d.breaks[k] = (d.breaks[k] || 0) + 1; });
+    if (key === 'none') d.untagged++;
+  });
+  return Object.keys(days).sort().reverse().map(function (k) {
+    var d = days[k];
+    var groups = Object.keys(d.groups).map(function (g) { return d.groups[g]; });
+    groups.forEach(function (g) {
+      g.totalR = g.hasR ? Math.round(g.totalR * 100) / 100 : null;
+      delete g.hasR;
+      g.trades.sort(function (a, b) { return (a.closeTime || 0) - (b.closeTime || 0); });
+    });
+    // Setups by result, then untagged, then "не считать"
+    var rank = function (g) { return g.key === 'excluded' ? 2 : g.key === 'none' ? 1 : 0; };
+    groups.sort(function (a, b) { return rank(a) - rank(b) || (b.totalR || 0) - (a.totalR || 0); });
+    return {
+      date: d.date, pnl: Math.round(d.pnl * 100) / 100, n: d.n, clean: d.clean,
+      rate: d.n ? Math.round(d.clean / d.n * 100) : null,
+      breaks: Object.keys(d.breaks).map(function (b) { return { key: b, count: d.breaks[b] }; }).sort(function (a, b) { return b.count - a.count; }),
+      untagged: d.untagged, setups: groups,
+    };
+  });
+}
+
 // opts: { riskPct, workingVolume, setups } — risk per trade in % and the
 // working volume in USDT (Account settings); the user's setups [{ key, name, exclude, archived }]. Trades tagged
 // with an excluded setup (misclicks, tests) are left out of the whole report.
@@ -125,6 +167,8 @@ function computeEdge(days, tags, opts) {
   var excludedKeys = {};
   setupList.forEach(function (x) { if (x.exclude) excludedKeys[x.key] = true; });
   var excludedCount = 0, excludedList = [];
+  var setupName = {};
+  setupList.forEach(function (x) { setupName[x.key] = x.name; });
   // A trade as the report lists it (with its current tags, so they can be changed)
   function listItem(x) {
     return { symbol: x.t.symbol, side: x.t.side, openTime: x.t.openTime, closeTime: x.t.closeTime,
@@ -132,6 +176,7 @@ function computeEdge(days, tags, opts) {
       tag: x.tag ? { pattern: x.tag.pattern || null, setup: x.tag.setup || null, emotion: x.tag.emotion || null } : null };
   }
   var trades = [];
+  var dayItems = []; // every trade incl. "не считать" ones, for the per-day breakdown
   var used = new Set();
   (days || []).forEach(function (d) {
     if (!d.facts || !d.facts.trades) return;
@@ -150,11 +195,15 @@ function computeEdge(days, tags, opts) {
         excludedCount++;
         x.r = tradeR(t.pnlNet, riskUsd(riskPct, workingVolume, t.maxNotional));
         excludedList.push(listItem(x));
+        x.excluded = true;
+        x.broken = [];
+        dayItems.push(x);
         return;
       }
       x.r = tradeR(t.pnlNet, riskUsd(riskPct, workingVolume, t.maxNotional));
       x.broken = brokenRules(x);
       trades.push(x);
+      dayItems.push(x);
     });
   });
 
@@ -236,6 +285,7 @@ function computeEdge(days, tags, opts) {
     breaksCostR: Math.round(breaksR * 100) / 100,
     dates: days.filter(function (d) { return d.facts && d.facts.trades; }).map(function (d) { return d.date; }),
     excluded: excludedCount,
+    byDay: dayBreakdown(dayItems, setupName, listItem),
     excludedTrades: excludedList.sort(function (a, b) { return (b.closeTime || 0) - (a.closeTime || 0); }).slice(0, 100),
     noPattern: trades.filter(function (x) { return !x.tag || !x.tag.pattern; }).length,
     // Trades still waiting for a setup type, newest first — tagged right in the report

@@ -39,7 +39,8 @@ export const state = {
   aiSummaryRange: null, // диапазон ('1w'|'2w'|'1m'), за который сгенерирован journal AI-анализ
   journalToday: null,  // { date, morningAt, morningState, ... } | null
   journalEntries: null, // cached /api/journal/recent result for instant render
-  journalRange: '1w',  // выбранный интервал на странице Journal
+  journalRange: null,  // AI-сводка: '1w' | '1m' из периода страницы (неделя/месяц), иначе нет
+  journalPeriod: null, // период страницы Journal: { range: 'week'|'month'|'all' } или { from, to }
   journalSummary: null, // { pnl, tradeCount, winCount, winRate, missed, from, to } за journalRange
   notifications: [],
   notifUnread: 0,

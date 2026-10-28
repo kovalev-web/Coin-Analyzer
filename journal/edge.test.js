@@ -156,3 +156,21 @@ test('each setup lists its trades, breaks included', () => {
   assert.equal(k.n, 1); // only the trade by the rules counts in the numbers
   assert.deepEqual(k.trades.map((t) => [t.closeTime, t.r, t.broken, t.tag.pattern]), [[200, -2, ['stopHeld', 'noRevenge'], 'knife'], [100, 2, [], 'knife']]);
 });
+
+test('day breakdown: result, only the breaks that happened, trades grouped by setup (all trades, breaks marked)', () => {
+  const d = [{ date: '2026-10-28', morning: {}, facts: { trades: [
+    { symbol: 'XUSDT', side: 'long', openTime: 50, closeTime: 100, pnlNet: 1, result: 'win', planned: true, maxNotional: 100 },
+    { symbol: 'XUSDT', side: 'short', openTime: 150, closeTime: 200, pnlNet: -1, result: 'loss', planned: true, maxNotional: 100, revenge: true },
+    { symbol: 'YUSDT', side: 'long', openTime: 25000, closeTime: 30000, pnlNet: 0.5, result: 'win', planned: true, maxNotional: 100 },
+    { symbol: 'YUSDT', side: 'long', openTime: 35000, closeTime: 40000, pnlNet: -0.1, result: 'loss', planned: true, maxNotional: 100 },
+  ] } }];
+  const tg = [
+    { symbol: 'XUSDT', close_time: 100, pattern: 'knife' }, { symbol: 'XUSDT', close_time: 200, pattern: 'knife' },
+    { symbol: 'YUSDT', close_time: 40000, pattern: 'miss' },
+  ];
+  const e = computeEdge(d, tg, { riskPct: 0.5, workingVolume: 100, setups: [{ key: 'knife', name: 'Нож' }, { key: 'miss', name: 'Мисклик', exclude: true }] });
+  const day = e.byDay[0];
+  assert.deepEqual([day.date, day.pnl, day.n, day.clean, day.rate, day.untagged], ['2026-10-28', 0.4, 3, 2, 67, 1]);
+  assert.deepEqual(day.breaks, [{ key: 'stopHeld', count: 1 }, { key: 'noRevenge', count: 1 }]);
+  assert.deepEqual(day.setups.map((g) => [g.key, g.name, g.n, g.totalR, g.trades.length]), [['knife', 'Нож', 2, 0, 2], ['none', null, 1, 1, 1], ['excluded', null, 0, null, 1]]);
+});

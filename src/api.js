@@ -1244,12 +1244,13 @@ export async function fetchTodayTrades() {
 
 // ── Journal: interval-based trading summary + AI analysis ──────────────────
 
-export function fetchJournalSummary(range) {
+// period: the page's { range: 'week' | 'month' | 'all' } or { from, to }; a legacy '1w'… string also works
+export function fetchJournalSummary(period) {
   return fetch(API_BASE + '/api/journal/summary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ range: range }),
+    body: JSON.stringify(typeof period === 'object' && period ? period : { range: period }),
   }).then(function (r) { return r.json(); })
     .then(function (d) { state.journalSummary = d.error ? null : d; return state.journalSummary; })
     .catch(function () { state.journalSummary = null; return null; });

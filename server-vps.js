@@ -1136,10 +1136,18 @@ async function allTradesDaily(userId, fromDate, today) {
   return any ? out : null;
 }
 
+// range: '1w' | '2w' | '1m' | … (AI summary) or a period { from, to } (the
+// journal page's one filter, see edgePeriod)
 async function computeJournalRangeStats(userId, today, range) {
-  var days = JOURNAL_RANGE_DAYS[range];
-  if (!days) throw new Error('Invalid range');
-  var fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  var fromDate;
+  if (range && typeof range === 'object') {
+    fromDate = range.from;
+    today = range.to;
+  } else {
+    var days = JOURNAL_RANGE_DAYS[range];
+    if (!days) throw new Error('Invalid range');
+    fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  }
   if (fromDate < EDGE_START) fromDate = EDGE_START; // the journal starts over on EDGE_START
 
   var briefRes = await redis(['GET', 'briefing:' + userId]);
@@ -1816,7 +1824,11 @@ var httpServer = http.createServer(async function (req, res) {
         req.on('end', async function () {
           try {
             var jParsedS = JSON.parse(jBodyS);
-            var jStats = await computeJournalRangeStats(jUserId, jToday, jParsedS.range);
+            // The page's period (week / month / all / from–to) or a legacy range
+            var jSRange = jParsedS.from || ['week', 'month', 'all'].indexOf(jParsedS.range) !== -1
+              ? edgePeriod({ range: jParsedS.range, from: jParsedS.from, to: jParsedS.to }, jToday, EDGE_START)
+              : jParsedS.range;
+            var jStats = await computeJournalRangeStats(jUserId, jToday, jSRange);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
               pnl: jStats.pnl,
