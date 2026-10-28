@@ -60,6 +60,14 @@ window.addEventListener('keydown', function (e) {
   if (close) close.click();
 }, true);
 
+// ⌘K / Ctrl+K — coin search (shadcn Command dialog)
+window.addEventListener('keydown', function (e) {
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    openSearchPopup();
+  }
+});
+
 document.body.addEventListener('click', function (e) {
   // Close burger dropdown on any click outside .burger-wrap
   var burgerDd = document.getElementById('burger-dd');
