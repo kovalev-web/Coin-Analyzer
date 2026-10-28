@@ -1121,3 +1121,6 @@ button[data-setup-diagram]{cursor:pointer;}
 .edge-trade-head .muted{color:var(--graphite);}
 /* a trade's "На графике" link in the day drill-down */
 .edge-chart-btn{margin-left:auto;}
+/* coin chart in review mode (a trade opened from the journal): no tools in the island */
+#fv-overlay.fv-review .fv-actions > *,#fv-overlay.fv-review .fv-bottom-bar .fv-bb-right > *{display:none !important;}
+#fv-overlay.fv-review .fv-actions::after{content:'Разбор сделки · ПКМ — уровень только здесь';font-size:var(--text-2xs);color:var(--graphite);white-space:nowrap;padding:0 var(--space-4);}

@@ -4354,9 +4354,9 @@ function _drawFVOverlays(ctx, rc, sym) {
   var cssW = rc.width / dpr, cssH = rc.height / dpr;
   var timeAxisH = 0; try { if (_fvChart) timeAxisH = _fvChart.timeScale().height(); } catch (_) {}
   var paneH = cssH - timeAxisH;
-  _drawRays(sym, _fvChart, _fvSeries, ctx, rc);
+  if (!_fvReplay) _drawRays(sym, _fvChart, _fvSeries, ctx, rc);
   // Alert bell icons
-  if (_bellImg && _bellImg.complete) {
+  if (_bellImg && _bellImg.complete && !_fvReplay) {
     (_alerts[sym] || []).forEach(function (a) {
       var y = _fvSeries.priceToCoordinate(a.price);
       var tagW = 16, tagH = 18;
@@ -4448,6 +4448,9 @@ function _setFVData(sym, cd) {
   _fvLastVol = cd.candles[cd.candles.length - 1].volume || 0;
   var _volLbl = document.getElementById('fv-vol-label');
   if (_volLbl) _volLbl.textContent = 'vol. ' + fmt(_fvLastVol).replace('$', '');
+  // Review mode shows the trade (set by _loadFVReplay) and none of the live chart's
+  // levels / rays / alerts — only the review's own levels and your notes
+  if (_fvReplay) { _applyFVTradeMarkers(sym); return; }
   var _fvVisibleCandles = window.innerWidth < 768 ? 120 : 240;
   _fvChart.timeScale().setVisibleLogicalRange({ from: Math.max(0, cd.candles.length - _fvVisibleCandles), to: cd.candles.length + 4 });
   // Attach existing levels and alerts to fv series
@@ -4582,6 +4585,7 @@ export function openCoinFullView(sym) {
     }
   }
   overlay.style.display = 'flex';
+  overlay.classList.toggle('fv-review', !!_fvReplay);
   lockScroll();
 
   // Init chart
@@ -4698,6 +4702,19 @@ export function openCoinFullView(sym) {
   el.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     var rect = el.getBoundingClientRect();
+    if (_fvReplay) {
+      // Review mode: right click adds a level just for this view (never saved to
+      // the live chart); right click on it removes it. No alerts, no rays.
+      var ry = e.clientY - rect.top, rp = _fvSeries.coordinateToPrice(ry);
+      if (rp == null) return;
+      var lv = _fvReplay.levels = _fvReplay.levels || [];
+      for (var ri = 0; ri < lv.length; ri++) {
+        var rly = _fvSeries.priceToCoordinate(lv[ri].price);
+        if (rly != null && Math.abs(rly - ry) < 10) { try { _fvSeries.removePriceLine(lv[ri].line); } catch (x) {} lv.splice(ri, 1); return; }
+      }
+      lv.push({ price: rp, line: _fvSeries.createPriceLine({ price: rp, color: getCSSVar('--primary'), lineWidth: 1, lineStyle: 0, axisLabelVisible: true, axisLabelColor: getCSSVar('--level-label-bg'), axisLabelTextColor: getCSSVar('--primary'), title: '' }) });
+      return;
+    }
     var y = e.clientY - rect.top;
     var price = _fvSeries.coordinateToPrice(y);
     if (price == null) return;
@@ -4731,6 +4748,7 @@ export function openCoinFullView(sym) {
     }
   });
   el.addEventListener('mousedown', function (e) {
+    if (_fvReplay && (e.ctrlKey || e.altKey || e.shiftKey || e.button === 1)) { e.stopPropagation(); e.preventDefault(); return; } // review: no tools
     var rect = el.getBoundingClientRect();
     // Ignore clicks on the price axis (right side) — let chart handle vertical zoom natively
     var priceAxisW = 0;
@@ -4809,6 +4827,7 @@ export function openCoinFullView(sym) {
       }
     }
     if (e.button !== 0) return;
+    if (_fvReplay) return; // review mode: the live chart's levels aren't here — nothing to drag
     var y = e.clientY - rect.top;
     var levels = _levels[sym] || [];
     for (var i = 0; i < levels.length; i++) {
