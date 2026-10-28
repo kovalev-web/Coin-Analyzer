@@ -149,7 +149,7 @@ async function buildDayFacts(userId, dateStr) {
   });
   return computeDayFacts({
     fills: fills, dayStart: dayStart, dayEnd: dayEnd, date: dateStr, tz: tz.iana || 'UTC',
-    limits: { maxVolume: Number(limits.maxVolume) || null, maxTrades: Number(limits.maxTrades) || null },
+    limits: { maxVolume: Number(limits.maxVolume) || null, maxTrades: Number(limits.maxTrades) || null, riskPct: Number(limits.maxDrawdownPct) || null },
     briefingSyms: briefingSyms, levelsBySym: levelsBySym,
   });
 }

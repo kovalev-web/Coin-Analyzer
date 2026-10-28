@@ -5,9 +5,18 @@
 // read them instead of self-reported numbers. Definitions live in
 // docs/TRADER_EDGE.md; keep the two in sync.
 
-var FACTS_VERSION = 1;
+var FACTS_VERSION = 2; // 2: exits within ±SCRATCH_R are neither wins nor losses for the rules
 var REVENGE_WINDOW_MS = 5 * 60 * 1000;   // entry this soon after a losing trade closed
 var SIZE_UP_FACTOR = 1.5;                // size vs median of the day's earlier trades
+var SCRATCH_R = 0.1;                     // |result| up to this share of 1R = a scratch (out at about zero)
+
+// A closed trade's outcome for the rules: a scratch (out at about zero, fees
+// only) is neither — re-entering after it is not revenge, it doesn't feed the
+// stop-crane streak. scratchUsd: SCRATCH_R of 1R in USDT (0 = any minus is a loss).
+function outcome(net, scratchUsd) {
+  var band = scratchUsd > 0 ? scratchUsd : 0;
+  return net > band ? 'win' : net < -band ? 'loss' : 'scratch';
+}
 var LEVEL_PROXIMITY_PCT = 0.5;           // entry within this % of a signal (alert) level
 var OVERSIZE_TOLERANCE = 1.05;           // 5% over the volume limit still counts as ok
 var EPS = 1e-9;
@@ -71,6 +80,8 @@ function hourIn(tz, ms) {
 //         briefingSyms: ['JCTUSDT', ...], levelsBySym: { JCTUSDT: [price, ...] } }
 function computeDayFacts(opts) {
   var limits = opts.limits || {};
+  // 1R = working volume × risk % (Account settings); a scratch is within ±SCRATCH_R of it
+  var scratchUsd = limits.maxVolume > 0 && limits.riskPct > 0 ? limits.maxVolume * limits.riskPct / 100 * SCRATCH_R : 0;
   var planned = {};
   (opts.briefingSyms || []).forEach(function (s) { planned[String(s).toUpperCase()] = true; });
   var levels = opts.levelsBySym || {};
@@ -85,9 +96,10 @@ function computeDayFacts(opts) {
     // Closed trades that finished before this one opened
     var before = day.filter(function (o) { return o.closeTime != null && o.closeTime <= t.openTime && o !== t; })
       .sort(function (a, b) { return a.closeTime - b.closeTime; });
-    var prevResults = before.map(function (o) { return o.pnl - o.fees > 0 ? 'win' : 'loss'; });
+    var prevResults = before.map(function (o) { return outcome(o.pnl - o.fees, scratchUsd); })
+      .filter(function (r) { return r !== 'scratch'; });
     var last2 = prevResults.slice(-2);
-    var lastLoss = before.filter(function (o) { return o.pnl - o.fees <= 0; }).slice(-1)[0];
+    var lastLoss = before.filter(function (o) { return outcome(o.pnl - o.fees, scratchUsd) === 'loss'; }).slice(-1)[0];
     var sizes = before.map(function (o) { return o.maxNotional; });
     var med = median(sizes);
 
@@ -181,5 +193,5 @@ function zonedDayStart(dateStr, tz, offsetHours) {
 
 module.exports = {
   computeDayFacts, buildTrips, zonedDayStart,
-  REVENGE_WINDOW_MS, SIZE_UP_FACTOR, LEVEL_PROXIMITY_PCT, FACTS_VERSION,
+  REVENGE_WINDOW_MS, SIZE_UP_FACTOR, LEVEL_PROXIMITY_PCT, FACTS_VERSION, SCRATCH_R, outcome,
 };

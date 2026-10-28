@@ -87,3 +87,28 @@ test('zonedDayStart: local midnight in the user zone', () => {
   assert.equal(zonedDayStart('2026-10-25', null, 3), Date.UTC(2026, 9, 24, 21));
   assert.equal(zonedDayStart('2026-10-25', 'UTC'), Date.UTC(2026, 9, 25));
 });
+
+test('scratch: out at about zero (within ±0.1R) is not a loss — re-entering is not revenge, no crane', () => {
+  const { outcome } = require('./facts');
+  // 1R = 100 USDT × 0.5% = 0.50 → scratch band ±0.05 USDT
+  assert.equal(outcome(-0.01, 0.05), 'scratch');
+  assert.equal(outcome(-0.06, 0.05), 'loss');
+  assert.equal(outcome(0.04, 0.05), 'scratch');
+  assert.equal(outcome(-0.01, 0), 'loss'); // no risk settings → any minus is a loss
+  const fills = [
+    f('XUSDT', 10, 'BUY', 10, 1, 0, 0.005), f('XUSDT', 11, 'SELL', 10, 1, 0, 0.005), // −0.01: fees only
+    f('XUSDT', 13, 'BUY', 10, 1), f('XUSDT', 14, 'SELL', 10, 1.1, 1),
+  ];
+  const limits = { maxVolume: 100, riskPct: 0.5 };
+  const withRisk = computeDayFacts(Object.assign({}, base, { fills, limits }));
+  assert.deepEqual(withRisk.trades.map((t) => t.revenge), [false, false]);
+  const noRisk = computeDayFacts(Object.assign({}, base, { fills }));
+  assert.deepEqual(noRisk.trades.map((t) => t.revenge), [false, true]);
+  // two scratches in a row don't fire the stop-crane
+  const two = [
+    f('XUSDT', 10, 'BUY', 10, 1, 0, 0.005), f('XUSDT', 11, 'SELL', 10, 1, 0, 0.005),
+    f('XUSDT', 20, 'BUY', 10, 1, 0, 0.005), f('XUSDT', 21, 'SELL', 10, 1, 0, 0.005),
+    f('XUSDT', 40, 'BUY', 10, 1), f('XUSDT', 41, 'SELL', 10, 1.1, 1),
+  ];
+  assert.equal(computeDayFacts(Object.assign({}, base, { fills: two, limits })).violations.tradesAfterCrane, 0);
+});
