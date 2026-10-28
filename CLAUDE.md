@@ -1,3 +1,10 @@
+# ГЛАВНОЕ ПРАВИЛО: UI — только shadcn/ui
+
+В этом проекте UI-библиотека — **shadcn/ui** (React + Tailwind v4 + Radix).
+- Любой новый или переделываемый интерфейс собирается из компонентов shadcn (`npx shadcn@latest add <name>`), а не из самописной разметки и CSS.
+- Нужного компонента нет — сначала искать в реестре shadcn (и его блоках), только потом собирать из примитивов shadcn. Самописное — лишь там, где у shadcn ничего нет, и сказать об этом пользователю.
+- Как подключено и изолировано от vanilla-части — раздел «Журнал на shadcn» ниже (`src/journal-app/` — образец). Старые vanilla-экраны переносятся на shadcn, когда до них доходит задача.
+
 # Архитектура
 
 ## Стек
@@ -59,7 +66,7 @@ state.journalToday     // запись дневника за сегодня (д�
 ```
 
 ## Журнал на shadcn (`src/journal-app/`)
-Раздел Journal делается **только на компонентах shadcn/ui** (React 19 + Tailwind v4 + Radix). Остальной сайт — vanilla, его не трогаем.
+Раздел Journal целиком на компонентах shadcn/ui (React 19 + Tailwind v4 + Radix) — образец для остальных экранов. Остальной сайт пока vanilla.
 - Роут `/journal` в `main.js` лениво грузит `journal-app/mount.jsx` (`mountJournal`), уход со страницы — `unmountJournal` через `onRouteChange` в `router.js`.
 - Новые компоненты: `npx shadcn@latest add <name>` (конфиг `components.json`, алиас `@` → `src/journal-app`, файлы в `components/ui/*.jsx`). После `add` проверить импорты: CLI иногда пишет `from "cn"` → заменить на `@/lib/utils`.
 - Изоляция (`journal.css`): Tailwind-тема `reference inline` (ни одной CSS-переменной в `:root`, наши `--text-sm`/`--radius-md`/`--primary` не перетираются), утилиты только из `src/journal-app` (`source(none)` + `@source`), сброс стилей (`preflight.css`) только внутри `.jr` и порталов shadcn (`[data-slot]`). Цвета shadcn (`background`, `primary`, `muted`, `border`…) смаплены на наши токены — тёмная тема работает сама; свои: `text-bullish`, `text-danger`, `text-brand`.
