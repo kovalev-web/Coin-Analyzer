@@ -6,6 +6,10 @@ import { WeeklyReportDialog } from './WeeklyReportDialog.jsx';
 import { NotificationsPopover } from './NotificationsPopover.jsx';
 import { MorningDialog } from './MorningDialog.jsx';
 import { EveningDialog } from './EveningDialog.jsx';
+import * as React from 'react';
+
+// Loaded on first open (QR codes, selects, code inputs — not needed for the rest)
+const AccountDialog = React.lazy(() => import('./account/AccountDialog.jsx').then((m) => ({ default: m.AccountDialog })));
 
 export const SURFACES = {
   search: SearchDialog,
@@ -15,4 +19,5 @@ export const SURFACES = {
   notifications: NotificationsPopover,
   morning: MorningDialog,
   evening: EveningDialog,
+  account: AccountDialog,
 };

@@ -20,7 +20,7 @@ function Host() {
     <TooltipProvider delayDuration={150}>
       {Object.entries(open).map(([name, props]) => {
         const Surface = SURFACES[name];
-        return Surface ? <Surface key={name} {...props} onClose={() => close(name)} /> : null;
+        return Surface ? <React.Suspense key={name} fallback={null}><Surface {...props} onClose={() => close(name)} /></React.Suspense> : null;
       })}
       <Toaster position="bottom-center" />
     </TooltipProvider>

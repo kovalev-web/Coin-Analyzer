@@ -302,21 +302,6 @@ document.body.addEventListener('click', function (e) {
     case 'close-tv':
       closeTVMode();
       break;
-    case 'acc-clear-sym': {
-      clearLevels(sym);
-      clearAlerts(sym);
-      clearRays(sym);
-      var row = target.closest('.acc-levels-row');
-      if (row) row.remove();
-      var accList = document.getElementById('acc-levels-list');
-      var remaining = accList ? accList.querySelectorAll('.acc-levels-row').length : 0;
-      if (accList && !remaining) {
-        accList.innerHTML = '<span class="acc-row-val" style="color:var(--graphite)">No levels or alerts set</span>';
-      }
-      var accCount = document.getElementById('acc-levels-count');
-      if (accCount) accCount.textContent = remaining ? remaining + ' coin' + (remaining === 1 ? '' : 's') : 'No levels or alerts set';
-      break;
-    }
     case 'open-clear-popup':
       openClearPopup(sym, target);
       break;
