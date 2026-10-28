@@ -4,6 +4,8 @@
 import * as React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { EmptyNote } from './EdgeSummary.jsx';
 import { Skeleton } from '@/components/ui/skeleton';
 import { state } from '../state.js';
 import { fetchJournalEdge, fetchJournalSummary, fetchJournalToday } from '../api.js';
@@ -17,7 +19,7 @@ import { JOURNAL_START, shortDate } from './format.js';
 function period() { return state.journalPeriod || (state.journalPeriod = { range: 'all' }); }
 
 function Empty({ children }) {
-  return <Card><CardContent className="text-sm text-muted-foreground">{children}</CardContent></Card>;
+  return <Card><CardContent><EmptyNote>{children}</EmptyNote></CardContent></Card>;
 }
 
 export function JournalPage() {
@@ -55,7 +57,7 @@ export function JournalPage() {
       <div className="jr mx-auto w-full max-w-6xl space-y-4 px-4 py-6">
         <Header period={p} onPeriod={onPeriod} aiRange={aiRange} />
         {state.isDemoMode
-          ? <Empty><a href="/login" className="font-medium text-brand underline-offset-4 hover:underline">Зарегистрируйся</a> и подключи Binance API, чтобы видеть свои сделки.</Empty>
+          ? <Empty><Button variant="link" className="h-auto p-0" asChild><a href="/login">Зарегистрируйся</a></Button> и подключи Binance API, чтобы видеть свои сделки.</Empty>
           : <>
               <PnlChart summary={summary} loading={loading && !summary} />
               {loading && !edge

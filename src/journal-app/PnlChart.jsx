@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tzDateStr } from '../utils.js';
 import { money, tone } from './format.js';
@@ -26,17 +27,13 @@ function series(daily, to) {
 
 function label(iso, opts) { return new Date(iso + 'T00:00:00Z').toLocaleDateString('ru-RU', { timeZone: 'UTC', ...opts }); }
 
-function DayTip({ active, payload }) {
-  if (!active || !payload || !payload.length) return null;
-  const p = payload[0].payload;
-  return (
-    <div className="grid min-w-44 gap-1 rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
-      <div className="text-muted-foreground">{label(p.date, { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-      <div className="flex justify-between gap-4"><span>PnL за день</span><b className={tone(p.pnl)}>{money(p.pnl)}</b></div>
-      <div className="flex justify-between gap-4"><span>Сделок</span><b>{p.n}</b></div>
-      <div className="flex justify-between gap-4"><span>Итог</span><b className={tone(p.total)}>{money(p.total)}</b></div>
-    </div>
+// Rows of the chart's tooltip: the day, its trades, the running total
+function dayRows(value, name, item) {
+  const p = item.payload;
+  const row = (title, v, cls) => (
+    <div key={title} className="flex w-full justify-between gap-4"><span className="text-muted-foreground">{title}</span><span className={'font-medium tabular-nums ' + (cls || '')}>{v}</span></div>
   );
+  return [row('PnL за день', money(p.pnl), tone(p.pnl)), row('Сделок', p.n), row('Итог', money(p.total), tone(p.total))];
 }
 
 function Stat({ title, value, className }) {
@@ -71,7 +68,7 @@ export function PnlChart({ summary, loading }) {
           {loading
             ? <Skeleton className="h-64 w-full" />
             : !data.length
-              ? <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Сделок за период пока нет</div>
+              ? <Empty className="h-64"><EmptyHeader><EmptyDescription>Сделок за период пока нет</EmptyDescription></EmptyHeader></Empty>
               : (
                 <ChartContainer config={config} className="aspect-auto h-64 w-full">
                   <AreaChart data={data} margin={{ left: 4, right: 4, top: 8 }}>
@@ -84,7 +81,7 @@ export function PnlChart({ summary, loading }) {
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} tickFormatter={(v) => label(v, { day: 'numeric', month: 'short' })} />
                     <YAxis orientation="right" tickLine={false} axisLine={false} width={56} tickFormatter={(v) => v.toFixed(2)} />
-                    <ChartTooltip cursor={false} content={<DayTip />} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent className="min-w-44" labelFormatter={(_, p) => label(p[0].payload.date, { day: 'numeric', month: 'short', year: 'numeric' })} formatter={dayRows} />} />
                     <Area dataKey="total" type="monotone" stroke="var(--color-total)" strokeWidth={2} fill="url(#jr-pnl)" />
                   </AreaChart>
                 </ChartContainer>

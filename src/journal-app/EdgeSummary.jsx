@@ -9,7 +9,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from '@/components/ui/item';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
 import { changeSetup } from '../setups.js';
 import { SETUP_DIAGRAMS } from '../setup-diagrams.js';
 import { conclusions } from '../edge-insights.js';
@@ -21,9 +25,9 @@ export function InfoTip({ children }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" className="inline-flex align-middle text-muted-foreground hover:text-foreground" aria-label="Пояснение">
-          <Info className="size-3.5" />
-        </button>
+        <Button variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label="Пояснение">
+          <Info />
+        </Button>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm whitespace-pre-line text-left">{children}</TooltipContent>
     </Tooltip>
@@ -34,25 +38,37 @@ export function InfoTip({ children }) {
 export function SetupName({ setupKey, children }) {
   if (!SETUP_DIAGRAMS[setupKey]) return children;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild><span className="cursor-help underline decoration-dotted underline-offset-4">{children}</span></TooltipTrigger>
-      <TooltipContent className="w-[560px] max-w-[calc(100vw-32px)] border bg-popover p-2 text-popover-foreground [&_svg]:h-auto [&_svg]:w-full">
+    <HoverCard openDelay={150} closeDelay={50}>
+      <HoverCardTrigger asChild><span className="cursor-help underline decoration-dotted underline-offset-4">{children}</span></HoverCardTrigger>
+      <HoverCardContent className="w-xl max-w-screen p-2 [&_svg]:h-auto [&_svg]:w-full">
         <div dangerouslySetInnerHTML={{ __html: SETUP_DIAGRAMS[setupKey] }} />
-      </TooltipContent>
-    </Tooltip>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+// "Nothing here yet" inside a card
+export function EmptyNote({ children }) {
+  return (
+    <Empty className="p-4 md:p-6">
+      <EmptyHeader><EmptyDescription>{children}</EmptyDescription></EmptyHeader>
+    </Empty>
   );
 }
 
 export function Breaks({ list }) {
   return (
-    <ul className="divide-y text-sm">
-      {list.map((b) => (
-        <li key={b.key} className="flex items-center justify-between py-1.5">
-          <span>{BREAK_LABEL[b.key] || b.label || b.key}</span>
-          <b className="tabular-nums text-danger">{b.count}</b>
-        </li>
+    <ItemGroup>
+      {list.map((b, i) => (
+        <React.Fragment key={b.key}>
+          {i > 0 && <ItemSeparator />}
+          <Item size="sm" className="px-0 py-1.5">
+            <ItemContent><ItemTitle className="font-normal">{BREAK_LABEL[b.key] || b.label || b.key}</ItemTitle></ItemContent>
+            <ItemActions className="font-semibold tabular-nums text-danger">{b.count}</ItemActions>
+          </Item>
+        </React.Fragment>
       ))}
-    </ul>
+    </ItemGroup>
   );
 }
 
@@ -67,7 +83,7 @@ function Execution({ x }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {!x || !x.n
-          ? <p className="text-sm text-muted-foreground">Сделок нет</p>
+          ? <EmptyNote>Сделок нет</EmptyNote>
           : <>
               <div className="flex items-baseline gap-2">
                 <span className={'text-3xl font-semibold tabular-nums ' + rateTone(x.rate)}>{x.rate}%</span>
@@ -124,9 +140,9 @@ function Setups({ e, onChanged }) {
       <CardContent className="space-y-3">
         {editing && <SetupEditor onChanged={onChanged} />}
         {!e.riskPct
-          ? <p className="text-sm text-muted-foreground">Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</p>
+          ? <EmptyNote>Укажи риск на сделку в настройках аккаунта (Trading limits → % per trade) — без него R не посчитать.</EmptyNote>
           : !rows.length
-            ? <p className="text-sm text-muted-foreground">Пока нет сделок по правилам с отмеченным сетапом.</p>
+            ? <EmptyNote>Пока нет сделок по правилам с отмеченным сетапом.</EmptyNote>
             : (
               <Table>
                 <TableHeader>
@@ -174,17 +190,21 @@ function Conclusions({ e }) {
       </CardHeader>
       <CardContent>
         {!list.length
-          ? <p className="text-sm text-muted-foreground">Пока не из чего: разницы между группами нет или в них меньше 2 сделок. Заполняй утро и пометки — появятся.</p>
+          ? <EmptyNote>Пока не из чего: разницы между группами нет или в них меньше 2 сделок. Заполняй утро и пометки — появятся.</EmptyNote>
           : (
-            <ul className="space-y-2 text-sm">
+            <ItemGroup className="gap-2">
               {list.map((c, i) => (
-                <li key={i}>
-                  <b>{c.title}:</b> лучше — «{c.best.label}» (<span className={tone(c.best.avgR)}>{rr(c.best.avgR)}</span> на сделку, {trades(c.best.n)}),
-                  {' '}хуже — «{c.worst.label}» (<span className={tone(c.worst.avgR)}>{rr(c.worst.avgR)}</span>, {trades(c.worst.n)}).
-                  {c.early && <span className="text-muted-foreground"> Предварительно.</span>}
-                </li>
+                <Item key={i} variant="outline" size="sm">
+                  <ItemContent>
+                    <ItemTitle>{c.title}{c.early && <Badge variant="outline">предварительно</Badge>}</ItemTitle>
+                    <ItemDescription className="line-clamp-none text-foreground">
+                      лучше — «{c.best.label}» (<span className={tone(c.best.avgR)}>{rr(c.best.avgR)}</span> на сделку, {trades(c.best.n)}),
+                      {' '}хуже — «{c.worst.label}» (<span className={tone(c.worst.avgR)}>{rr(c.worst.avgR)}</span>, {trades(c.worst.n)})
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
               ))}
-            </ul>
+            </ItemGroup>
           )}
       </CardContent>
     </Card>

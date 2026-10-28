@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia } from '@/components/ui/item';
 import { saveTradeTag } from '../api.js';
 import { setupButtons } from '../setups.js';
 import { ensureCoinNotes, notesOnDay } from '../coin-notes.js';
@@ -17,7 +17,7 @@ import { tzDateStr, tzTimeStr } from '../utils.js';
 import { openTradeInChart } from '../ui.js';
 import { on, off } from '../events.js';
 import { BREAK_LABEL, EMOTIONS, QUALITY, money, rr, rateTone, shortDate, tone, trades } from './format.js';
-import { Breaks, InfoTip, SetupName } from './EdgeSummary.jsx';
+import { Breaks, EmptyNote, InfoTip, SetupName } from './EdgeSummary.jsx';
 
 function Chips({ list, value, onChange }) {
   return (
@@ -40,9 +40,14 @@ function Trade({ t, notes, onRetag }) {
   return (
     <div className="space-y-2 py-3">
       {notes.length > 0 && (
-        <ul className="space-y-1 rounded-md bg-muted/60 px-3 py-2 text-xs">
-          {notes.map((n) => <li key={n.id || n.ts}><span className="mr-2 text-muted-foreground tabular-nums">{tzTimeStr(new Date(n.ts))}</span>{n.text}</li>)}
-        </ul>
+        <ItemGroup className="gap-1">
+          {notes.map((n) => (
+            <Item key={n.id || n.ts} variant="muted" size="sm" className="py-2">
+              <ItemMedia className="text-xs text-muted-foreground tabular-nums">{tzTimeStr(new Date(n.ts))}</ItemMedia>
+              <ItemContent><ItemDescription className="line-clamp-none text-xs text-foreground">{n.text}</ItemDescription></ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
       )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <span className="text-muted-foreground tabular-nums">{tzTimeStr(d)}</span>
@@ -101,11 +106,11 @@ function DayBody({ d, onRetag }) {
   }, [d]);
   const notesSeen = new Set();
   return (
-    <div className="grid gap-6 p-4 md:grid-cols-[minmax(220px,1fr)_3fr]">
+    <div className="grid gap-6 p-4 lg:grid-cols-4">
       <div className="space-y-3">
         <h4 className="text-sm font-medium">Исполнение</h4>
         {!d.breaks.length
-          ? <p className={'text-sm ' + (d.n ? 'text-bullish' : 'text-muted-foreground')}>{d.n ? '100% — все сделки по правилам' : 'Сделок в отчёте нет'}</p>
+          ? d.n ? <p className="text-sm text-bullish">100% — все сделки по правилам</p> : <EmptyNote>Сделок в отчёте нет</EmptyNote>
           : <>
               <div className="flex items-baseline gap-2">
                 <span className={'text-2xl font-semibold tabular-nums ' + rateTone(d.rate)}>{d.rate}%</span>
@@ -114,13 +119,13 @@ function DayBody({ d, onRetag }) {
               <Breaks list={d.breaks} />
             </>}
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 lg:col-span-3">
         <h4 className="flex items-center gap-1.5 text-sm font-medium">
           Сделки <InfoTip>Все сделки дня по сетапам, как они были; ошибки отмечены у сделки. Клик по сетапу — сделки, заметки и смена пометок.</InfoTip>
         </h4>
         {d.setups.length
           ? d.setups.map((g) => <Group key={g.key} g={g} onRetag={onRetag} notesSeen={notesSeen} />)
-          : <p className="text-sm text-muted-foreground">Сделок нет</p>}
+          : <EmptyNote>Сделок нет</EmptyNote>}
       </div>
     </div>
   );
