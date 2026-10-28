@@ -1412,8 +1412,12 @@ function _drawRuler() {
   var ladder = document.getElementById('dom-ladder');
   if (!panel || !ladder) return;
   var box = document.getElementById('dom-ruler');
+  var ghost = document.getElementById('dom-ghost');
+  // The hovered row's volume number gives its place to the % (restored when the mouse moves on)
+  if (T.rulerCell && T.rulerCell.lastChild) { T.rulerCell.lastChild.style.visibility = ''; T.rulerCell = null; }
   if (T.hoverRow == null || !T.rules || !T.bids.length || !T.asks.length || !ladder.children.length || ladder.querySelector('.dom-empty')) {
     if (box) box.style.display = 'none';
+    if (ghost) ghost.style.display = 'none';
     return;
   }
   if (!box) {
@@ -1425,20 +1429,60 @@ function _drawRuler() {
   }
   var step = _step();
   var ref = T.lastTrade ? T.lastTrade.price : (T.bids[0][0] + T.asks[0][0]) / 2;
-  var refIdx = Math.round(ref / step);
   // Row under the cursor, not a remembered price: the ladder may recenter under a still mouse
-  var rHover = T.hoverRow, hoverIdx = T.top - rHover, rRef = T.top - refIdx;
+  var rHover = T.hoverRow, hoverIdx = T.top - rHover;
   var last = ladder.children.length - 1;
-  rRef = Math.max(0, Math.min(last, rRef));
-  if (rHover < 0 || rHover > last) { box.style.display = 'none'; return; }
-  // Just the number, on the hovered row
-  var rect = ladder.children[rHover].getBoundingClientRect();
+  if (rHover < 0 || rHover > last) { box.style.display = 'none'; if (ghost) ghost.style.display = 'none'; return; }
+  var row = ladder.children[rHover], pRect = panel.getBoundingClientRect();
+  // The % from the current price, in the Volume cell of the hovered row
+  var vol = row.children[1], vRect = vol.getBoundingClientRect();
   var pct = (_priceOf(hoverIdx) - ref) / ref * 100;
   box.style.display = 'block';
-  box.style.top = (rect.top - panel.getBoundingClientRect().top) + 'px';
-  box.style.height = rect.height + 'px';
-  var tag = box.firstChild;
-  tag.textContent = (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(2) + '%';
+  box.style.top = (vRect.top - pRect.top) + 'px';
+  box.style.left = (vRect.left - pRect.left) + 'px';
+  box.style.width = vRect.width + 'px';
+  box.style.height = vRect.height + 'px';
+  box.firstChild.textContent = (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(2) + '%';
+  if (vol.lastChild) { vol.lastChild.style.visibility = 'hidden'; T.rulerCell = vol; }
+  _drawGhost(panel, row, hoverIdx, pRect);
+}
+
+// Option / Shift held over the ladder: the order a click would place shows in
+// the Mine column of the hovered row — stop entry (BS / SS with the chosen
+// size) or SL / TP — so you see the key is down before you click.
+function _drawGhost(panel, row, idx, pRect) {
+  var ghost = document.getElementById('dom-ghost');
+  var g = T.mods && (T.mods.alt || T.mods.shift) ? _ghostOrder(idx, T.mods.alt) : null;
+  if (!g) { if (ghost) ghost.style.display = 'none'; return; }
+  if (!ghost) {
+    ghost = document.createElement('div');
+    ghost.id = 'dom-ghost';
+    ghost.className = 'dom-ghost';
+    panel.appendChild(ghost);
+  }
+  var mine = row.children[0], mRect = mine.getBoundingClientRect();
+  ghost.style.display = 'flex';
+  ghost.style.top = (mRect.top - pRect.top) + 'px';
+  ghost.style.left = (mRect.left - pRect.left) + 'px';
+  ghost.style.width = mRect.width + 'px';
+  ghost.style.height = mRect.height + 'px';
+  ghost.innerHTML = '<span class="dom-mine ' + (g.kind ? g.kind.toLowerCase() : 'none') + '">' + g.label + '</span>';
+}
+
+// What Option (stop entry) / Shift (SL / TP) + click would place at this level
+function _ghostOrder(idx, stopEntry) {
+  var price = _priceOf(idx), bid = T.bids[0][0], ask = T.asks[0][0];
+  if (stopEntry) {
+    var side = price > ask ? 'BUY' : price < bid ? 'SELL' : null;
+    if (!side) return { kind: null, label: 'за спредом' };
+    var k = side === 'BUY' ? 'BS' : 'SS';
+    return { kind: k, label: k + ' ' + _fmtQty(T.size) };
+  }
+  var pos = _position();
+  if (!pos) return { kind: null, label: 'нет позиции' };
+  var long = Number(pos.amount) > 0;
+  var type = long ? (price < bid ? 'SL' : price > ask ? 'TP' : null) : (price > ask ? 'SL' : price < bid ? 'TP' : null);
+  return type ? { kind: type, label: type } : { kind: null, label: 'за спредом' };
 }
 
 function _makeRow() {
@@ -2026,13 +2070,29 @@ function _cancelAll() {
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
+// Option / Shift state (for the ghost order in Mine). true when it changed.
+function _modsChanged(e) {
+  var m = { alt: !!e.altKey, shift: !!e.shiftKey };
+  var was = T.mods || {};
+  T.mods = m;
+  return m.alt !== !!was.alt || m.shift !== !!was.shift;
+}
+['keydown', 'keyup'].forEach(function (type) {
+  document.addEventListener(type, function (e) {
+    if (e.key !== 'Alt' && e.key !== 'Shift') return;
+    if (_modsChanged(e) && T.hover) _drawRuler();
+  });
+});
+window.addEventListener('blur', function () { T.mods = null; _drawRuler(); });
+
 function _bindPanel(panel) {
   panel.addEventListener('mouseenter', function () { T.hover = true; });
   panel.addEventListener('mouseleave', function () { T.hover = false; T.pinned = false; T.hoverRow = null; _drawRuler(); _queueRender(); });
   panel.addEventListener('mousemove', function (e) {
     var row = e.target.closest('.dom-row');
     var r = row ? Array.prototype.indexOf.call(row.parentNode.children, row) : null;
-    if (r !== T.hoverRow) { T.hoverRow = r; _drawRuler(); }
+    var mods = _modsChanged(e);
+    if (r !== T.hoverRow || mods) { T.hoverRow = r; _drawRuler(); }
   });
 
   panel.addEventListener('click', function (e) {
