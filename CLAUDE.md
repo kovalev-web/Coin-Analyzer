@@ -3,7 +3,7 @@
 В этом проекте UI-библиотека — **shadcn/ui** (React + Tailwind v4 + Radix).
 - Любой новый или переделываемый интерфейс собирается из компонентов shadcn (`npx shadcn@latest add <name>`), а не из самописной разметки и CSS.
 - Нужного компонента нет — сначала искать в реестре shadcn (и его блоках), только потом собирать из примитивов shadcn. Самописное — лишь там, где у shadcn ничего нет, и сказать об этом пользователю.
-- Как подключено и изолировано от vanilla-части — раздел «shadcn в проекте» ниже (`src/react/` — образец). Старые vanilla-экраны переносятся на shadcn, когда до них доходит задача.
+- Как подключено и изолировано от vanilla-части — раздел «shadcn в проекте» ниже (`src/react/` — образец). Старые vanilla-экраны переносятся на shadcn, когда до них доходит задача. Общий React-каркас вместо островов решили не делать: острова остаются (vanilla — график, стакан, карточки внутри).
 
 # Архитектура
 
@@ -99,22 +99,9 @@ state.journalToday     // запись дневника за сегодня (д�
 **Высоты кнопок/инпутов:** `--h-btn-sm` (26), `--h-btn-md` (30), `--h-btn-lg` (36), `--h-input` (40)
 **Тень:** `--shadow-md`
 
-### Готовые компоненты (`src/design/components.css`)
+### Старые классы (`src/design/components.css`)
 
-| Что | Класс |
-|-----|-------|
-| Инпут (text, textarea) | `.ds-input` |
-| Select (нативный) | `select.ds-input` |
-| Select (кастомный) | `.ds-select` + `.ds-select-btn` + `.ds-select-dd` + `.ds-select-item` |
-| Popup/модалка | `.popup` → `.popup-header` → `.popup-title` → `.popup-body` → `.popup-footer` |
-| CTA-кнопка | `.btn-cta` (`.danger` модификатор для деструктивных) |
-| Иконка-кнопка | `.btn-icon` |
-| Переключатель вкл/выкл | `.ds-switch` > `<input type="checkbox">` + `<i></i>` |
-| Кнопка в шапке | `.btn-topbar` |
-| Спиннер кнопки | `.btn-loading` (добавить к `<button>`) |
-| Спиннер инлайн | `.spinner` |
-| Оверлей (fullscreen) | `.overlay` (position:fixed;inset:0) |
-
+Новый UI — только компоненты shadcn. Vanilla-классы остались для того, что ещё не переведено (вход / регистрация / сброс пароля, `/grid`) и для vanilla-частей (график, стакан, карточки): `.ds-input`, `.popup` → `.popup-header` → `.popup-body` → `.popup-footer`, `.btn-icon`, `.btn-loading`, `.spinner`, `.overlay`. Неиспользуемые правила удалены вместе с витриной `design.html` (2026-10-29); новые vanilla-стили не добавлять.
 
 ### Анимации
 

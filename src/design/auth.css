@@ -266,7 +266,7 @@ body {
 .auth-demo-link:hover { color: var(--primary); opacity: 0.8; }
 
 /* ── Login form spacing — bespoke gaps, scoped to #login-card only
-   so they don't leak into reset-password.html / design.html, which
+   so they don't leak into reset-password.html, which
    reuse the same .auth-card/.popup-footer/.auth-btn-primary classes.
    Each value below neutralizes the shared class's own margin first,
    so gaps don't stack on top of each other. ─────────────────────── */
