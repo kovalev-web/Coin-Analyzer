@@ -92,9 +92,9 @@ export function Topbar({ screener }) {
         {!demo && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="hidden md:inline-flex" asChild><a href="/grid" aria-label="Grid screener"><LayoutGrid /></a></Button>
+              <Button variant="ghost" size="icon" className="hidden md:inline-flex" asChild><a href="/grid" aria-label="In play"><LayoutGrid /></a></Button>
             </TooltipTrigger>
-            <TooltipContent>Grid screener</TooltipContent>
+            <TooltipContent>In play</TooltipContent>
           </Tooltip>
         )}
         <IconAction label="TV mode" action="tv" className="hidden md:inline-flex"><Monitor /></IconAction>
@@ -112,6 +112,7 @@ export function Topbar({ screener }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             {!demo && <DropdownMenuItem data-action="open-journal"><BookOpen /> Journal</DropdownMenuItem>}
+            {!demo && <DropdownMenuItem asChild><a href="/grid"><LayoutGrid /> In play</a></DropdownMenuItem>}
             <DropdownMenuItem data-action="toggle-theme"><ThemeIcon /> {theme === 'dark' ? 'Light' : 'Dark'}</DropdownMenuItem>
             <DropdownMenuItem data-action="tv"><Monitor /> TV mode</DropdownMenuItem>
             <DropdownMenuItem data-action="open-hints"><Info /> Interactions</DropdownMenuItem>
