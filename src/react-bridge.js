@@ -2,6 +2,8 @@
 // The React host (src/react/host) loads on idle after start or on first use;
 // calls made before it's ready are queued. Names: src/react/host/surfaces.jsx.
 
+import { emit } from './events.js';
+
 var _host = null;
 var _open = {};          // name → true while a surface is open (for Esc / outside logic)
 
@@ -14,7 +16,20 @@ export function preloadReactHost() {
   if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 2000);
 }
 
+// Popovers anchored to a button: only one at a time — opening one closes the others
+var POPOVERS = { search: 1, notifications: 1, briefing: 1, notes: 1, analysis: 1, clear: 1 };
+
+export function closePopovers(except) {
+  Object.keys(POPOVERS).forEach(function (n) {
+    if (n !== except && _open[n]) {
+      closeSurface(n);
+      if (n === 'briefing') emit('briefing:changed'); // the full view's star comes back
+    }
+  });
+}
+
 export function openSurface(name, props) {
+  if (POPOVERS[name]) closePopovers(name);
   _open[name] = true;
   return host().then(function (h) { h.open(name, props); });
 }

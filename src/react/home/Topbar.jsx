@@ -11,6 +11,7 @@ import { useEvents } from '@/shared/use-event';
 import { useSiteTheme } from '@/shared/use-site-theme';
 import { state } from '../../state.js';
 import { LOGO_SVG, getUserAvatar, sessionInfo } from '../../ui.js';
+import { closePopovers } from '../../react-bridge.js';
 
 // The logo with a size class, so the button's default icon size doesn't shrink it.
 // Read at render time: ui.js imports this file, so its exports aren't ready at load.
@@ -104,7 +105,8 @@ export function Topbar({ screener }) {
             {state.notifUnread > 0 && <span className="absolute top-2 right-2 size-2 rounded-full bg-danger ring-2 ring-card" aria-label="unread" />}
           </IconAction>
         )}
-        <DropdownMenu>
+        {/* The profile menu is one of the header's popovers too: opening it closes the others */}
+        <DropdownMenu onOpenChange={(o) => { if (o) closePopovers(); }}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Profile" className={'max-md:size-8 ' + (avatar ? 'text-2xl' : '')}>{avatar || <UserRound />}</Button>
           </DropdownMenuTrigger>
