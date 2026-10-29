@@ -8,9 +8,9 @@
 import { state } from './state.js';
 import { escHtml, icon, tzDateStr, tzTimeStr } from './utils.js';
 import { on } from './events.js';
-import { fetchCoinNotes, addCoinNote, deleteCoinNote } from './api.js';
+import { fetchCoinNotes, addCoinNote } from './api.js';
 
-var N = { hits: [], canvas: null, loading: {}, pop: null, popSym: null, onSaved: null };
+var N = { hits: [], canvas: null, loading: {} };
 
 function _cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -23,7 +23,7 @@ var SHOW_KEY = 'qt_notes_on_chart';
 export function notesOnChart() {
   try { return localStorage.getItem(SHOW_KEY) !== '0'; } catch (e) { return true; }
 }
-function _setNotesOnChart(on) {
+export function setNotesOnChart(on) {
   try { localStorage.setItem(SHOW_KEY, on ? '1' : '0'); } catch (e) {}
   if (!on) clearNoteIcons();
 }
@@ -46,9 +46,6 @@ export function notesOnDay(sym, date) {
   return notesFor(sym).filter(function (n) { return tzDateStr(new Date(n.ts)) === date; });
 }
 
-export function noteButtonHTML(sym) {
-  return '<button class="btn-icon btn-fv-note" data-action="fv-note" data-sym="' + sym + '" title="Note">' + icon('message-square-plus', 16) + '</button>';
-}
 
 // Read-only list for the briefing row: "09:15  text"
 export function notesListHTML(sym, date) {
@@ -77,89 +74,13 @@ document.addEventListener('keydown', function (e) {
   }).catch(function () { inp.disabled = false; });
 });
 
-// ── Popover under the island: write a note, see and delete this coin's notes ──
-
-function _currentPrice(sym) {
-  try {
-    var last = window.__fvSeries && window.__fvSeries.dataByIndex(1e9, -1);
-    if (last && last.close > 0) return last.close;
-  } catch (e) {}
-  var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  return coin && coin.current_price > 0 ? coin.current_price : null;
-}
-
-function _renderPopList() {
-  if (!N.pop) return;
-  var box = N.pop.querySelector('.cn-pop-list');
-  var list = notesFor(N.popSym).slice().reverse();
-  box.innerHTML = list.map(function (n) {
-    var d = new Date(n.ts);
-    var day = tzDateStr(d) === tzDateStr() ? '' : tzDateStr(d).slice(5).replace('-', '.') + ' ';
-    return '<div class="cn-item"><span class="cn-time">' + day + tzTimeStr(d) + '</span><span class="cn-text">' + escHtml(n.text) + '</span>'
-      + '<button class="btn-icon cn-del" data-note-del="' + n.id + '" title="Delete">' + icon('x', 14) + '</button></div>';
-  }).join('');
-}
-
 // Chart closed: forget the icon positions and hide the tooltip
 export function clearNoteIcons() {
   N.hits = [];
   _hideTip();
 }
 
-export function closeNotePopover() {
-  if (N.pop) N.pop.remove();
-  N.pop = null; N.popSym = null; N.onSaved = null;
-}
-
-// sym: the coin; onSaved: called after a note is stored (the caller adds the coin to the briefing)
-export function toggleNotePopover(sym, onSaved) {
-  if (N.pop && N.popSym === sym) { closeNotePopover(); return; }
-  closeNotePopover();
-  var wrap = document.querySelector('#fv-overlay .fv-chart-wrap');
-  if (!wrap) return;
-  ensureCoinNotes(sym);
-  var pop = document.createElement('div');
-  pop.className = 'cn-pop';
-  pop.innerHTML = '<label class="cn-show"><span>Show notes on chart</span>'
-    + '<span class="ds-switch"><input type="checkbox" data-notes-show="1"' + (notesOnChart() ? ' checked' : '') + '><i></i></span></label>'
-    + '<textarea class="ds-input cn-input" rows="2" placeholder="What do you see? Enter saves, Shift+Enter new line"></textarea>'
-    + '<div class="cn-pop-list"></div>';
-  wrap.appendChild(pop);
-  var island = wrap.querySelector('.fv-coin-info');
-  if (island) pop.style.top = (island.offsetTop + island.offsetHeight + 8) + 'px';
-  N.pop = pop; N.popSym = sym; N.onSaved = onSaved || null;
-  _renderPopList();
-  var ta = pop.querySelector('textarea');
-  ta.focus();
-  ta.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); closeNotePopover(); return; }
-    if (e.key !== 'Enter' || e.shiftKey) return;
-    e.preventDefault();
-    var text = ta.value.trim();
-    if (!text || ta.disabled) return;
-    ta.disabled = true;
-    var cb = N.onSaved;
-    addCoinNote(sym, text, _currentPrice(sym)).then(function () {
-      ta.value = '';
-      ta.disabled = false;
-      ta.focus();
-      if (cb) cb();
-    }).catch(function (err) {
-      ta.disabled = false;
-      import('./ui.js').then(function (ui) { ui.showToast(err.message); });
-    });
-  });
-  pop.querySelector('[data-notes-show]').addEventListener('change', function (e) { _setNotesOnChart(e.target.checked); });
-  pop.addEventListener('click', function (e) {
-    var del = e.target.closest('[data-note-del]');
-    if (!del) return;
-    deleteCoinNote(sym, Number(del.dataset.noteDel)).catch(function () {});
-  });
-}
-
-on('coin-notes:updated', function (S) {
-  if (N.pop && _S(N.popSym) === S) _renderPopList();
-});
+// The notes popover of the full view is shadcn: src/react/host/NotesPopover.jsx
 
 // ── Icons on the chart ──────────────────────────────────────────────────────
 // A small speech bubble pointing at the note's candle and price. Called from the

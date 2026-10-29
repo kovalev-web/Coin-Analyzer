@@ -1,8 +1,8 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
 import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
-import { terminalOnFVOpen, terminalOnFVClose, terminalButtonHTML } from './terminal.js';
+import { terminalOnFVOpen, terminalOnFVClose } from './terminal.js';
 import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
-import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
+import { noteInputHTML, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on, emit } from './events.js';
 import { openSurface, closeSurface, isSurfaceOpen, toast } from './react-bridge.js';
 import { mountIsland, unmountIsland, unmountIslands } from './react/islands.jsx';
@@ -11,6 +11,7 @@ import { SortBar } from './react/home/SortBar.jsx';
 import { DaySummary } from './react/home/DaySummary.jsx';
 import { CardHead } from './react/home/CardHead.jsx';
 import { BriefingDrawer } from './react/home/Briefing.jsx';
+import { FvControls, FvStats } from './react/fullview/FvControls.jsx';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -90,38 +91,6 @@ export function renderCards() {
   applyLivePriceUpdates();
 }
 
-export function updateCardBadge(symbol) {
-  // Card heads (React) have no analysis badge — this finds the full view's
-  var el = document.querySelector('[data-ck="' + symbol + '"]');
-  if (!el) el = document.querySelector('[data-action="open-analysis"][data-sym="' + symbol + '"]');
-  if (!el) el = document.querySelector('[data-action="analyze"][data-sym="' + symbol + '"]');
-  var cache = state.analysisCache[symbol];
-  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
-  var signal = hasA ? cache.result.signal : null;
-  var tag = 'span';
-  var html = '';
-  if (isE) { tag = 'button'; html = 'Retry'; }
-  else if (hasA) { tag = 'span'; html = signalLabel(signal); }
-  else { tag = 'button'; html = '' + icon('zap', 16) + ''; }
-
-  var newEl = document.createElement(tag);
-  if (isE) { newEl.className = 'btn-retry'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
-  else if (hasA) { newEl.className = 'signal-badge ' + signal; newEl.dataset.action = 'open-analysis'; newEl.dataset.sym = symbol; }
-  else { newEl.className = 'btn-icon analyze'; newEl.dataset.action = 'analyze'; newEl.dataset.sym = symbol; }
-  newEl.innerHTML = html;
-
-  if (el && el.parentNode) {
-    var ckAttr = document.createAttribute('data-ck');
-    ckAttr.value = symbol;
-    newEl.setAttributeNode(ckAttr);
-    el.parentNode.replaceChild(newEl, el);
-  }
-
-  var coins = filteredCoins();
-  var bc = coins.filter(function (c) { return state.analysisCache[c.symbol] && state.analysisCache[c.symbol].result && state.analysisCache[c.symbol].result.signal === 'bullish'; }).length;
-  var metric = document.querySelector('.metric-card:nth-child(4) .value');
-  if (metric) metric.textContent = bc;
-}
 
 // ── Page mode ──────────────────────────────────────────────────────────────
 
@@ -147,7 +116,6 @@ var _fvChart = null, _fvSeries = null, _fvVolSeries = null, _fvSym = null, _fvLa
 var _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 // Fullscreen popups only on narrow viewports (phones + small tablets).
 // Checked at open-time so orientation changes are handled correctly.
-function _useFullscreenPopup() { return window.innerWidth < 768; }
 
 // Pre-render alert tag as SVG image for canvas drawing.
 // Shape: flat left edge (against left wall), rounded right (into chart). 18×20px.
@@ -434,15 +402,12 @@ export function clearLevels(sym) {
   updateLevelsBtn(sym);
 }
 
-function updateClearBtn(sym) {
-  var lCount = (_levels[sym] || []).length;
-  var aCount = (_alerts[sym] || []).length;
-  var rCount = (_rays[sym] || []).length;
-  var show = (lCount || aCount || rCount) ? 'inline-flex' : 'none';
-  document.querySelectorAll('.btn-icon.clear[data-sym="' + sym + '"]').forEach(function (btn) {
-    btn.style.display = show;
-  });
+// Levels + alerts + rays of a coin (the full view's clear button shows when > 0)
+export function drawingsCount(sym) {
+  return (_levels[sym] || []).length + (_alerts[sym] || []).length + (_rays[sym] || []).length;
 }
+
+function updateClearBtn() { emit('drawings:changed'); }
 
 function updateLevelsBtn(sym) { updateClearBtn(sym); }
 
@@ -1016,15 +981,7 @@ function updateChart(symbol) {
 export function setChartTF(symbol, tf) {
   state.chartTF[symbol] = tf;
   clearRuler(symbol);
-  var card = document.querySelector('.coin-card[data-sym="' + symbol + '"]');
-  if (card) {
-    var pill = card.querySelector('.pill');
-    if (pill) pill.textContent = tf;
-    card.querySelectorAll('.tf-dd button').forEach(function (btn) {
-      btn.className = btn.dataset.tf === tf ? 'active' : '';
-    });
-  }
-  fetchChart(symbol, tf);
+  fetchChart(symbol, tf); // the card head (React) shows the new timeframe on its tick
 }
 
 export function clearAllCrosshairs() {
@@ -1072,7 +1029,7 @@ export function forceUnlockScroll() {
 
 // Force repaint of all open fixed overlays after orientation change
 export function reapplyOverlayPositions() {
-  var ids = ['fv-overlay', 'analysis-overlay'];
+  var ids = ['fv-overlay'];
   ids.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -1599,199 +1556,11 @@ window._chartDiag = function () {
 
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
-function _smoothWheelScroll(el) {
-  if (!el) return;
-  var target = el.scrollTop;
-  var animating = false;
-  function step() {
-    var diff = target - el.scrollTop;
-    if (Math.abs(diff) < 0.5) {
-      el.scrollTop = target;
-      animating = false;
-      return;
-    }
-    el.scrollTop += diff * 0.35;
-    requestAnimationFrame(step);
-  }
-  el.addEventListener('wheel', function (e) {
-    var max = el.scrollHeight - el.clientHeight;
-    target = Math.max(0, Math.min(max, target + e.deltaY));
-    e.preventDefault();
-    if (!animating) {
-      animating = true;
-      requestAnimationFrame(step);
-    }
-  }, { passive: false });
-}
-
-function _popupFullscreen(popup) {
-  popup.style.position = 'fixed';
-  popup.style.top = '0';
-  popup.style.left = '0';
-  popup.style.right = '0';
-  popup.style.bottom = '0';
-  popup.style.width = '100%';
-  popup.style.maxWidth = '100%';
-  popup.style.maxHeight = '100%';
-  popup.style.borderRadius = '0';
-  popup.style.border = 'none';
-  popup.style.overscrollBehavior = 'contain';
-}
-
-function getPopupHost() {
-  var el = document.getElementById('popup-host');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'popup-host';
-    el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;overflow:hidden;';
-    document.body.appendChild(el);
-  }
-  return el;
-}
-
-function getOverlay() {
-  var el = document.getElementById('analysis-overlay');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'analysis-overlay';
-    el.className = 'analysis-overlay popup';
-    el.innerHTML =
-      '<div class="popup-header"><span class="popup-title">Analysis</span>' +
-        '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
-      '</div>' +
-      '<div class="popup-body">' +
-        '<div class="ao-spinner"><span class="spinner"></span></div>' +
-        '<div class="ao-content"></div>' +
-      '</div>';
-    getPopupHost().appendChild(el);
-  }
-  return el;
-}
-
+// AI analysis of a coin — shadcn popover (src/react/host/AnalysisPopover.jsx)
 export function openAnalysisPopup(sym, btn) {
-  var existingPopup = document.getElementById('analysis-overlay');
-  if (existingPopup && existingPopup._popupCard) {
-    existingPopup._popupCard.style.overflow = '';
-    existingPopup._popupCard = null;
-  }
-  if (existingPopup) existingPopup.style.display = 'none';
-  var card = btn.closest('.coin-card');
-
-  var popup = document.getElementById('analysis-overlay');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'analysis-overlay';
-    popup.className = 'analysis-overlay popup';
-    popup.innerHTML =
-      '<div class="popup-header"><span class="popup-title">Analysis</span>' +
-        '<button class="btn-topbar" data-action="close-analysis">' + icon('x', 16) + '</button>' +
-      '</div>' +
-      '<div class="popup-body">' +
-        '<div class="ao-spinner"><span class="spinner"></span></div>' +
-        '<div class="ao-content"></div>' +
-      '</div>';
-  }
-  if (popup.parentNode) popup.parentNode.removeChild(popup);
-
-  popup._popupCard = card;
-
-  if (_useFullscreenPopup()) {
-    document.body.appendChild(popup);
-    _popupFullscreen(popup);
-    popup.style.height = '100%';
-    popup.style.overflowY = 'auto';
-    popup.style.zIndex = '99999';
-    popup._lockedScroll = true;
-    lockScroll();
-  } else if (card) {
-    // Normal card mode
-    card.style.overflow = 'visible';
-    card.style.position = 'relative';
-    card.appendChild(popup);
-    var cardRect = card.getBoundingClientRect();
-    var btnRect = btn.getBoundingClientRect();
-    var topOffset = (btnRect.bottom - cardRect.top) + 6;
-    popup.style.position = 'absolute';
-    popup.style.top = topOffset + 'px';
-    popup.style.right = '0';
-    popup.style.left = 'auto';
-    popup.style.width = '67%';
-    popup.style.maxWidth = 'none';
-    popup.style.zIndex = '1000';
-  } else {
-    // Full View mode — fixed above fv-overlay (z-index:400)
-    document.body.appendChild(popup);
-    var btnRect2 = btn.getBoundingClientRect();
-    var viewportW = document.documentElement.clientWidth;
-    var viewportH = document.documentElement.clientHeight;
-    var popupW = Math.min(380, viewportW - 16);
-    var leftIfRightAligned = btnRect2.right - popupW;
-    popup.style.position = 'fixed';
-    popup.style.width = popupW + 'px';
-    popup.style.maxWidth = 'none';
-    if (btnRect2.bottom > viewportH / 2) {
-      popup.style.top = 'auto';
-      popup.style.bottom = (viewportH - btnRect2.top + 6) + 'px';
-    } else {
-      popup.style.top = (btnRect2.bottom + 6) + 'px';
-      popup.style.bottom = 'auto';
-    }
-    if (leftIfRightAligned < 8) {
-      popup.style.left = '8px';
-      popup.style.right = 'auto';
-    } else {
-      popup.style.right = Math.max(8, viewportW - btnRect2.right) + 'px';
-      popup.style.left = 'auto';
-    }
-    popup.style.zIndex = '99999';
-  }
-
-  popup.style.transform = 'none';
-  popup.style.margin = '0';
-
-  var cache = state.analysisCache[sym];
-  var spinner = popup.querySelector('.ao-spinner');
-  var content = popup.querySelector('.ao-content');
-  spinner.style.display = 'flex';
-  content.style.display = 'none';
-  popup.style.display = 'block';
-  popup.dataset.sym = sym;
-  if (cache && cache.status === 'loading') return;
-  if (cache && (cache.status === 'ok' || cache.status === 'error')) { updateAnalysisPopup(sym); return; }
-  analyzeCoinBySymbol(sym);
-}
-
-export function updateAnalysisPopup(sym) {
-  var popup = document.getElementById('analysis-overlay');
-  if (!popup || popup.style.display !== 'block' || popup.dataset.sym !== sym) return;
-  var cache = state.analysisCache[sym];
-  var content = popup.querySelector('.ao-content');
-  var spinner = popup.querySelector('.ao-spinner');
-  if (!cache || cache.status === 'loading') return;
-  spinner.style.display = 'none';
-  content.style.display = 'block';
-  if (cache.status === 'ok' && cache.result) {
-    var r = cache.result;
-    var ts = cache.timestamp ? new Date(cache.timestamp).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: effectiveTZ() }) : '';
-    var extIcon = icon('external-link', 11, 'vertical-align:middle;margin-left:3px;margin-bottom:1px');
-    var newsBlock = '';
-    if (r.news_summary) {
-      var hasRealNews = r.news_url && !r.news_summary.toLowerCase().includes('not found');
-      if (hasRealNews) {
-        newsBlock = '<div class="ao-row"><a href="' + escHtml(r.news_url) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:var(--font-bold);text-decoration:none;">News' + extIcon + '</a><br>' + escHtml(r.news_summary) + '</div>';
-      } else {
-        newsBlock = '<div class="ao-row">' + escHtml(r.news_summary) + '</div>';
-      }
-    }
-    content.innerHTML = '<div style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--ink-deep);letter-spacing:0.4px;margin-bottom:var(--space-5);">' + escHtml(sym.toUpperCase()) + '</div>' +
-      '<div class="ao-row"><strong>Catalyst:</strong> ' + escHtml(r.catalyst) + '</div>' +
-      newsBlock +
-      (ts ? '<div style="margin-top:var(--space-6);font-size:var(--text-xs);color:var(--graphite);font-weight:var(--font-semi);">Analysis: ' + ts + '</div>' : '') +
-      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Re-analyze</button>';
-  } else {
-    content.innerHTML = '<div class="ao-err">' + (cache.error || 'Error') + '</div>' +
-      '<button class="btn-cta" style="width:100%;margin-top:var(--space-8)" data-action="reanalyze" data-sym="' + sym + '">Re-analyze</button>';
-  }
+  if (isSurfaceOpen('analysis')) { closeSurface('analysis'); return; }
+  var r = btn.getBoundingClientRect();
+  openSurface('analysis', { sym: sym, rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 
 
@@ -1970,7 +1739,6 @@ on('render', function () {
   if (route === '/' || route === '/gainers') render();
 });
 on('cards:sync', renderCards);
-on('card:update', function (sym) { updateCardBadge(sym); updateAnalysisPopup(sym); });
 on('metrics:update', updateMetricCards);
 on('ws:status', function () {
   var els = document.querySelectorAll('.ws-indicator');
@@ -2252,8 +2020,7 @@ export function openBriefingPanel() {
     : Array.from(document.querySelectorAll('[data-action="open-briefing"]'));
   var btn = _btns.find(function (b) { return b.offsetParent !== null; });
   var r = btn ? btn.getBoundingClientRect() : { left: window.innerWidth - 48, top: 8, width: 36, height: 36 };
-  var _fvStar = document.querySelector('.btn-fv-star');
-  if (_fvStar) _fvStar.style.display = 'none';
+  emit('briefing:changed'); // the full view hides its star while the panel is open
   openSurface('briefing', { rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
   refreshBriefingFromServer();
   // Subscribe all briefing coins to kline stream so the server pushes per-trade
@@ -2266,90 +2033,28 @@ export function openBriefingPanel() {
 
 export function closeBriefingPanel() {
   closeSurface('briefing');
-  var _fvStar = document.querySelector('.btn-fv-star');
-  if (_fvStar) _fvStar.style.display = '';
+  emit('briefing:changed');
 }
 
 export function isBriefingPanelOpen() { return isSurfaceOpen('briefing'); }
 
 export function renderBriefingPanel() { emit('briefing:render'); }
 
-function _fvBottomBarHTML(sym, tf) {
-  var cache = state.analysisCache[sym];
-  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
-  var signal = hasA ? cache.result.signal : null;
-  var fvBadge = '';
-  if (!state.isDemoMode) {
-    if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
-    else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-    else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
-  }
-  var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
-  var levelCount = (_levels[sym] && _levels[sym].length) || 0;
-  return '<div class="fv-bottom-bar">'
-    + '<div class="fv-bb-left">'
-    + '<button class="btn-icon" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
-    + '<div class="tf-picker"><button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd dropdown">'
-    + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
-    + '</div></div>'
-    + '</div>'
-    + '<div class="fv-bb-right">'
-    + '<button class="btn-icon warming" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
-    + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '">' + icon('star', 16) + '</button>'
-    + noteButtonHTML(sym)
-    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
-    + fvBadge
-    + '</div>'
-    + '</div>';
+// Full-view chrome is shadcn (src/react/fullview/FvControls.jsx): the island
+// over the chart (desktop), the bottom bar (phones) and the stats line —
+// placeholders here, mounted by _mountFvChrome
+function _fvBottomBarHTML() { return '<div class="fv-bottom-bar" data-fv-bar></div>'; }
+
+function _fvCoinInfoHTML() {
+  return '<div class="fv-coin-info" data-fv-island></div><div class="fv-info-stats" data-fv-stats></div>';
 }
 
-function _fvCoinInfoHTML(sym, tf) {
-  var coin = state.coins.find(function (c) { return c.symbol === sym; });
-  var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0)
-    ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-    : (coin.price_change_percentage_24h || 0)) : 0;
-  var nd = natrDisplay(sym);
-
-  var cache = state.analysisCache[sym];
-  var hasA = cache && cache.status === 'ok', isE = cache && cache.status === 'error';
-  var signal = hasA ? cache.result.signal : null;
-  var fvBadge = '';
-  if (!state.isDemoMode) {
-    if (isE) fvBadge = '<button class="btn-retry" data-action="analyze" data-sym="' + sym + '">Retry</button>';
-    else if (hasA) fvBadge = '<span class="signal-badge ' + signal + '" data-action="open-analysis" data-sym="' + sym + '">' + signalLabel(signal) + '</span>';
-    else fvBadge = '<button class="btn-icon analyze" data-action="analyze" data-sym="' + sym + '">' + icon('zap', 16) + '</button>';
-  }
-
-  var alertCount = (_alerts[sym] && _alerts[sym].length) || 0;
-  var levelCount = (_levels[sym] && _levels[sym].length) || 0;
-
-  return '<div class="fv-coin-info">'
-    + '<div class="fv-info-top">'
-    + '<button class="btn-icon" data-action="close-fv" title="Back">' + icon('arrow-left', 16) + '</button>'
-    + '<span class="fv-sym-label fv-sym-gap" data-action="copy-sym" data-sym="' + sym + '" title="Copy ticker">' + sym.toUpperCase() + '</span>'
-    + '<div class="tf-picker fv-tf-gap">'
-    + '<button class="pill" data-action="fv-tf-pick">' + tf + '</button>'
-    + '<div class="tf-dd fv-tf-dd dropdown">'
-    + ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'].map(function (t) { return '<button class="' + (t === tf ? 'active' : '') + '" data-action="fv-tf-opt" data-tf="' + t + '">' + t + '</button>'; }).join('')
-    + '</div>'
-    + '</div>'
-    + '<div class="fv-actions">'
-    + terminalButtonHTML()
-    + '<button class="btn-icon warming" id="fv-liq-btn" data-action="toggle-liq-panel" disabled title="Orderbook">' + icon('activity', 16) + '</button>'
-    + '<button class="btn-icon star btn-fv-star' + (isInBriefing(sym) ? ' active' : '') + '" data-action="toggle-briefing" data-sym="' + sym + '" title="' + (isInBriefing(sym) ? 'Remove from watchlist' : 'Add to watchlist') + '">' + icon('star', 16) + '</button>'
-    + noteButtonHTML(sym)
-    + '<button class="btn-icon clear" data-action="open-clear-popup" data-sym="' + sym + '" style="display:' + ((alertCount || levelCount) ? 'inline-flex' : 'none') + '" title="Delete">' + icon('trash', 16) + '</button>'
-    + fvBadge
-    + '</div>'
-    + '</div>'
-    + '</div>'
-    + '<div class="fv-info-stats">'
-    + '<span class="stat-val ' + (change >= 0 ? 'up' : 'dn') + '">' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>'
-    + '<span class="stat-val ' + nd.cls + '">' + nd.val + '</span>'
-    + '<span class="stat-val">' + fmt(coin ? coin.total_volume : 0).replace('$', '') + '</span>'
-    + '</div>';
+function _mountFvChrome(overlay, sym) {
+  unmountIslands(); // the previous coin's (detached)
+  var review = !!_fvReplay;
+  mountIsland(overlay.querySelector('[data-fv-island]'), FvControls, { sym: sym, review: review });
+  mountIsland(overlay.querySelector('[data-fv-bar]'), FvControls, { sym: sym, review: review, bar: true });
+  mountIsland(overlay.querySelector('[data-fv-stats]'), FvStats, { sym: sym });
 }
 
 var TAPE_MAX_ROWS = 20;
@@ -2531,10 +2236,14 @@ export function applyFVTradeMarkers() { _applyFVTradeMarkers(_fvSym); }
 
 // Note button in the island: write a note; a note also puts the coin into
 // today's briefing (writing a thought about it means you're watching it)
+// Notes on the coin — shadcn popover under the note button (src/react/host/NotesPopover.jsx);
+// a note also puts the coin into today's briefing
 export function openFVNote(sym) {
-  toggleNotePopover(sym, function () {
-    if (!isInBriefing(sym)) toggleBriefing(sym);
-  });
+  if (isSurfaceOpen('notes')) { closeSurface('notes'); return; }
+  var btn = Array.from(document.querySelectorAll('#fv-overlay [data-action="fv-note"]')).find(function (b) { return b.offsetParent !== null; });
+  if (!btn) return;
+  var r = btn.getBoundingClientRect();
+  openSurface('notes', { sym: sym, addToBriefing: true, rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 
 function _setFVData(sym, cd) {
@@ -2678,7 +2387,7 @@ export function openCoinFullView(sym) {
   }
   _fvSym = sym;
   if (!_fvReplay) fetchTrades(sym, todayDate()).then(function () { if (_fvSym === sym) _applyFVTradeMarkers(sym); });
-  closeNotePopover();
+  closeSurface('notes');
   ensureCoinNotes(sym);
 
   var overlay = document.getElementById('fv-overlay');
@@ -2691,26 +2400,27 @@ export function openCoinFullView(sym) {
     // First open — build full structure including drawer
     overlay.innerHTML = '<div class="fv-body">'
       + '<div class="fv-chart-wrap">'
-      + _fvCoinInfoHTML(sym, tf)
+      + _fvCoinInfoHTML()
       + '<div id="fv-chart"></div>'
       + _fvLiquidityHTML()
       + '</div>'
       + '</div>'
-      + _fvBottomBarHTML(sym, tf)
+      + _fvBottomBarHTML()
       + '<div id="fv-briefing-drawer"></div>';
   } else {
     // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
     if (_chartWrap) {
-      _chartWrap.innerHTML = _fvCoinInfoHTML(sym, tf) + '<div id="fv-chart"></div>' + _fvLiquidityHTML();
+      _chartWrap.innerHTML = _fvCoinInfoHTML() + '<div id="fv-chart"></div>' + _fvLiquidityHTML();
       var _bb = overlay.querySelector('.fv-bottom-bar');
-      if (_bb) _bb.outerHTML = _fvBottomBarHTML(sym, tf);
+      if (_bb) _bb.outerHTML = _fvBottomBarHTML();
       var _fvdEl = document.getElementById('fv-briefing-drawer');
       if (_fvdEl && _fvdEl.classList.contains('open')) renderFVBriefingDrawer();
     }
   }
   overlay.style.display = 'flex';
   overlay.classList.toggle('fv-review', !!_fvReplay);
+  _mountFvChrome(overlay, sym);
   lockScroll();
 
   // Init chart
@@ -2755,19 +2465,7 @@ export function openCoinFullView(sym) {
     });
   }
 
-  // Enable liq buttons after remaining warmup time (0 if already warm)
-  var _liqBtns = document.querySelectorAll('[data-action="toggle-liq-panel"]');
-  var _ms = msUntilWarm();
-  function _enableLiqBtns() {
-    _liqBtns.forEach(function (b) { b.disabled = false; b.classList.remove('warming'); });
-  }
-  if (_ms === 0) {
-    _enableLiqBtns();
-  } else {
-    setTimeout(function () {
-      if (_liqBtns[0] && _liqBtns[0].isConnected) _enableLiqBtns();
-    }, _ms);
-  }
+  // The liquidity button waits for the order book to warm up by itself (FvControls)
 
   // Volume label overlay
   var wrap = document.querySelector('.fv-chart-wrap');
@@ -3358,7 +3056,7 @@ export function openCoinFullView(sym) {
 export function closeCoinFullView() {
   _fvReplay = null;
   window.__fvReplay = false;
-  closeNotePopover();
+  closeSurface('notes');
   clearNoteIcons();
   softDisconnectOrderbook();
   terminalOnFVClose();
@@ -3380,8 +3078,7 @@ export function closeCoinFullView() {
   _fvSym = null;
   var overlay = document.getElementById('fv-overlay');
   if (overlay) overlay.style.display = 'none';
-  var ap = document.getElementById('analysis-overlay');
-  if (ap) { ap.style.display = 'none'; if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; } }
+  closeSurface('analysis');
   forceUnlockScroll();
   initCharts();
 }
@@ -3391,10 +3088,7 @@ export function setFVChartTF(tf) {
   state.chartTF[_fvSym] = tf;
   window.__fvTF = tf;
   _startFVTimer(tf);
-  document.querySelectorAll('#fv-overlay .pill').forEach(function (pill) { pill.textContent = tf; });
-  document.querySelectorAll('#fv-overlay .fv-tf-dd').forEach(function (dd) {
-    dd.querySelectorAll('button').forEach(function (btn) { btn.className = btn.dataset.tf === tf ? 'active' : ''; });
-  });
+  emit('fv:tf');
   // Remove price lines from series before reload to prevent duplicate orphaned lines
   (_levels[_fvSym] || []).forEach(function (l) { if (l.fvLine) { try { _fvSeries.removePriceLine(l.fvLine); } catch (e) {} l.fvLine = null; } });
   (_rays[_fvSym] || []).forEach(function (r) { if (r.fvLine) { try { _fvSeries.removePriceLine(r.fvLine); } catch (e) {} r.fvLine = null; } });

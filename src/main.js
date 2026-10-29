@@ -70,11 +70,6 @@ window.addEventListener('keydown', function (e) {
 document.body.addEventListener('click', function (e) {
   // Close popups on any outside click — runs before data-action check so clicking
   // any button outside a popup (e.g. "expand", "open-ms") also closes it.
-  var _aoPopup = document.getElementById('analysis-overlay');
-  if (_aoPopup && _aoPopup.style.display === 'block' && !_aoPopup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
-    if (_aoPopup._popupCard) { _aoPopup._popupCard.style.overflow = ''; _aoPopup._popupCard = null; }
-    _aoPopup.style.display = 'none';
-  }
 
   // Close tf-dd on any click outside .tf-picker
   if (!e.target.closest('.tf-picker')) {
@@ -107,28 +102,6 @@ document.body.addEventListener('click', function (e) {
       if (state.isDemoMode) { window.location.href = '/login'; break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
       openAnalysisPopup(sym, target);
-      break;
-    }
-    case 'reanalyze': {
-      if (state.isDemoMode) { window.location.href = '/login'; break; }
-      delete state.analysisCache[sym];
-      var popup = document.getElementById('analysis-overlay');
-      if (popup) {
-        popup.querySelector('.ao-spinner').style.display = 'flex';
-        popup.querySelector('.ao-content').style.display = 'none';
-      }
-      analyzeCoinBySymbol(sym);
-      break;
-    }
-    case 'close-analysis': {
-      var ap = document.getElementById('analysis-overlay');
-      if (ap) {
-        if (ap._popupCard) { ap._popupCard.style.overflow = ''; ap._popupCard = null; }
-        ap.style.display = 'none';
-        // Only unlock if this popup called lockScroll (touch-fullscreen mode).
-        // On desktop (positioned popup), _lockedScroll is not set — don't touch the lock.
-        if (ap._lockedScroll) { ap._lockedScroll = false; forceUnlockScroll(); }
-      }
       break;
     }
     case 'analyze-all': {
@@ -191,23 +164,6 @@ document.body.addEventListener('click', function (e) {
           setTimeout(function () { if (_tip.parentNode) _tip.remove(); }, 1400);
         }
       }
-      break;
-    }
-    case 'fv-tf-pick': {
-      e.stopPropagation();
-      var _ao = document.getElementById('analysis-overlay');
-      if (_ao && _ao.style.display === 'block') { if (_ao._popupCard) { _ao._popupCard.style.overflow = ''; _ao._popupCard = null; } _ao.style.display = 'none'; }
-      var fvDd = target.closest('.tf-picker').querySelector('.tf-dd');
-      if (fvDd) {
-        document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-        fvDd.classList.toggle('open');
-      }
-      break;
-    }
-    case 'fv-tf-opt': {
-      e.stopPropagation();
-      document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
-      setFVChartTF(target.dataset.tf);
       break;
     }
     case 'toggle-theme':
@@ -401,11 +357,6 @@ window.addEventListener('orientationchange', function () {
   closeClearPopup();
   // Close only dropdown-mode popups (positions stale after resize).
   // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
-  var _ao = document.getElementById('analysis-overlay');
-  if (_ao && _ao.style.display !== 'none' && !_ao._lockedScroll) {
-    _ao.style.display = 'none';
-    if (_ao._popupCard) { _ao._popupCard.style.overflow = ''; _ao._popupCard = null; }
-  }
   var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });

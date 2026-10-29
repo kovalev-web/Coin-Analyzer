@@ -220,13 +220,18 @@ function _switchMode(m) {
 
 // ── Full view hooks (called from ui.js) ─────────────────────────────────────
 
+// The order book button in the full view (React, src/react/fullview) reads this
+export function terminalButton() { return { visible: !!T.fvBtnVisible, active: !!T.open }; }
+
 export function terminalOnFVOpen(shortSym) {
   var sym = shortSym.toUpperCase() + 'USDT';
+  T.fvBtnVisible = false;
+  emit('terminal:button');
   if (window.innerWidth < 900) return; // desktop only for now
   checkAccess().then(function (s) {
     if (!s) return;
-    var btn = document.getElementById('fv-dom-btn');
-    if (btn) { btn.style.display = 'inline-flex'; btn.classList.toggle('active', T.open); }
+    T.fvBtnVisible = true;
+    emit('terminal:button');
     if (T.open) _openPanel(sym);
   });
 }
@@ -241,8 +246,7 @@ export function toggleTerminal() {
   if (!sym) return;
   T.open = true;
   _lsSet('qt_term_open', '1');
-  var btn = document.getElementById('fv-dom-btn');
-  if (btn) btn.classList.add('active');
+  emit('terminal:button');
   _openPanel(sym);
 }
 
@@ -314,8 +318,7 @@ function _closePanel(userAction) {
   if (userAction) {
     T.open = false;
     _lsSet('qt_term_open', '0');
-    var btn = document.getElementById('fv-dom-btn');
-    if (btn) btn.classList.remove('active');
+    emit('terminal:button');
   }
   _disconnectDepth();
   _clearLines();
@@ -2298,6 +2301,3 @@ document.addEventListener('keydown', function (e) {
 
 window.addEventListener('resize', function () { if (T.sym) { T.top = null; _queueRender(); } });
 
-export function terminalButtonHTML() {
-  return '<button class="btn-icon" id="fv-dom-btn" data-action="toggle-terminal" style="display:none" title="Order book">' + icon('list-ordered', 16) + '</button>';
-}
