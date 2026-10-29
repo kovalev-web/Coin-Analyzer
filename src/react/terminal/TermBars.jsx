@@ -5,16 +5,22 @@
 //    with Lock. Cancels, kill and reduce-only always work (the trader enforces it).
 //  - TermTag: after a trade closes — its setup (required), quality A/B/C and
 //    emotion (optional); the row stays until ОК, × skips it.
+// And two under the ladder:
+//  - TermSizes: the order size slots, USDT (keys 1…6 pick them too).
+//  - TermFoot: position (side, size, entry, breakeven, PnL), available balance
+//    and the status line (last error / confirmation, or the kill switch).
 // State and actions: termLock / termUnlock / termLockNow, termTag / termTagSet /
-// termTagDone / termTagSkip in terminal.js; redraws on 'term:lock' / 'term:tag'.
+// termTagDone / termTagSkip, termSizes / termPickSize, termFoot in terminal.js;
+// redraws on 'term:lock' / 'term:tag' / 'term:sizes' / 'term:foot'.
 import * as React from 'react';
 import { Lock, LockOpen, ShieldAlert, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEvents } from '@/shared/use-event';
-import { termLock, termLockNow, termUnlock, termTag, termTagDone, termTagSet, termTagSkip } from '../../terminal.js';
+import { termFoot, termLock, termLockNow, termPickSize, termSizes, termUnlock, termTag, termTagDone, termTagSet, termTagSkip } from '../../terminal.js';
 
 const hhmm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
@@ -98,6 +104,50 @@ export function TermTag() {
         <Pick list={q.setups.map((x) => [x, x])} value={q.setup} kind="setup" />
         <Pick list={q.emotions} value={q.emotion} kind="emotion" />
       </div>
+    </div>
+  );
+}
+
+export function TermSizes() {
+  useEvents(['term:sizes']);
+  const { sizes, size } = termSizes();
+  return (
+    <div className="jr flex flex-wrap items-center gap-1 border-t px-2 py-1.5">
+      <ToggleGroup type="single" size="sm" spacing={1} value={String(size)} className="flex-wrap"
+        onValueChange={(v) => { if (v) termPickSize(v); }}>
+        {sizes.map((v, i) => (
+          <ToggleGroupItem key={v} value={String(v)} aria-label={v + ' USDT, key ' + (i + 1)}
+            className="h-6 min-w-6 bg-muted px-2 text-2xs font-medium tabular-nums text-muted-foreground data-[state=on]:bg-foreground data-[state=on]:text-background">{v}</ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <span className="ml-1 text-2xs text-muted-foreground">USDT</span>
+    </div>
+  );
+}
+
+function Line({ label, tip, children }) {
+  const name = <span className="text-muted-foreground">{label}</span>;
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      {tip ? <Tooltip><TooltipTrigger asChild><span className="cursor-default">{name}</span></TooltipTrigger><TooltipContent>{tip}</TooltipContent></Tooltip> : name}
+      <b className="font-medium tabular-nums">{children}</b>
+    </div>
+  );
+}
+
+export function TermFoot() {
+  useEvents(['term:foot']);
+  const f = termFoot();
+  if (!f) return null;
+  const p = f.pos;
+  return (
+    <div className="jr grid gap-1 border-t px-2 py-1.5 text-xs">
+      <Line label="Position">{p ? <span className={p.long ? 'text-bullish' : 'text-danger'}>{(p.long ? 'Long ' : 'Short ') + p.usd + ' USDT'}</span> : 'Flat'}</Line>
+      {p && <Line label="Entry">{p.entry}</Line>}
+      {p && p.breakEven && <Line label="Breakeven" tip="Where the whole trade, closed part and fees included, comes out at zero">{p.breakEven}</Line>}
+      {p && <Line label="PnL">{p.pnl ? <span className={'text-sm ' + (p.up ? 'text-bullish' : 'text-danger')}>{p.pnl}</span> : '—'}</Line>}
+      <Line label="Available">{f.avail} USDT</Line>
+      <p className={'min-h-3.5 text-2xs ' + (f.status && f.status.err ? 'text-danger' : 'text-muted-foreground')}>{f.status ? f.status.msg : ''}</p>
     </div>
   );
 }

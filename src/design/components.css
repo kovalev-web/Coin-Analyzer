@@ -339,10 +339,6 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .fv-dom{width:calc(270px + var(--ven-w, 0px));flex:0 0 calc(270px + var(--ven-w, 0px));display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
 .dom-env{font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:color-mix(in srgb,var(--level-deep) 18%,transparent);color:var(--ink-deep);}
 .dom-env.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
-.dom-sizes{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;}
-.dom-size{height:var(--h-btn-sm);min-width:var(--h-btn-sm);padding:0 var(--space-2);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;}
-.dom-size.active{background:var(--ink-deep);color:var(--paper);}
-.dom-unit{color:var(--graphite);font-size:var(--text-2xs);margin-left:var(--space-1);}
 .dom-cols{padding:var(--space-2) var(--space-4);color:var(--graphite);font-size:var(--text-ladder);border-bottom:1px solid var(--steel);}
 .dom-cols span:nth-child(3){text-align:center;}
 .dom-ladder{flex:1;min-height:0;overflow:hidden;padding:0 var(--space-4);}
@@ -364,21 +360,12 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-mine.s,.dom-mine.sl{background:color-mix(in srgb,var(--danger) 22%,transparent);color:var(--danger);}
 .dom-c-mine.has:hover .dom-mine{text-decoration:line-through;}
 .dom-empty{padding:var(--space-8);color:var(--graphite);text-align:center;}
-.dom-foot{border-top:1px solid var(--steel);padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;gap:var(--space-2);}
-.dom-pos-row{display:flex;justify-content:space-between;}
-.dom-pos-row span{color:var(--graphite);}
-.dom-pos-row b{font-weight:var(--font-medium);font-variant-numeric:tabular-nums;}
-.dom-pos-row b.up{color:var(--bullish);}
-.dom-pos-row b.dn{color:var(--danger);}
-.dom-status{min-height:14px;color:var(--graphite);font-size:var(--text-2xs);}
-.dom-status.err{color:var(--danger);}
 .dom-hint{color:var(--graphite);font-size:var(--text-2xs);line-height:var(--leading-relaxed);}
 #fv-dom-btn.active{background:var(--fog);color:var(--primary);}
 .dom-row.pnl-up{--row-tint:color-mix(in srgb,var(--bullish) 12%,transparent);}
 .dom-row.pnl-dn{--row-tint:color-mix(in srgb,var(--danger) 12%,transparent);}
 .dom-row.pnl-up:hover,.dom-row.pnl-dn:hover{background:var(--fog);}
 .dom-mine.pos{background:var(--primary);color:var(--paper);}
-.dom-pnl{font-size:var(--text-sm);}
 .dom-mine.pending{opacity:0.5;}
 .dom-mine.cancelling{opacity:0.4;text-decoration:line-through;}
 .dom-row.last-buy .dom-c-price,.dom-row.last-sell .dom-c-price{box-shadow:inset 0 0 0 1px var(--ink-deep);}
@@ -412,7 +399,6 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* Journal: My edge */
 
 /* ladder settings: price scale label, gear, sizes under the ladder */
-.fv-dom .dom-sizes{flex:0 0 auto;padding:var(--space-3) var(--space-4);border-top:1px solid var(--steel);flex-wrap:wrap;}
 
 /* chart marks on the ladder: level (solid, primary), horizontal ray (solid,
    level-deep), alert (dashed, danger, bell by the price) — same as the chart */

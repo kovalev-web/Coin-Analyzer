@@ -20,7 +20,7 @@ import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { openSurface, isSurfaceOpen } from './react-bridge.js';
 import { mountIsland, unmountIsland } from './react/islands.jsx';
 import { TermHeader } from './react/terminal/TermHeader.jsx';
-import { TermLock, TermTag } from './react/terminal/TermBars.jsx';
+import { TermLock, TermTag, TermSizes, TermFoot } from './react/terminal/TermBars.jsx';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
@@ -305,7 +305,7 @@ function _openPanel(sym) {
     });
     booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
-  ['dom-headbar', 'dom-lock', 'dom-tag'].forEach(function (id) { unmountIsland(document.getElementById(id)); }); // rebuilt below
+  TERM_ISLANDS.forEach(function (id) { unmountIsland(document.getElementById(id)); }); // rebuilt below
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
   _renderLock();
@@ -316,6 +316,8 @@ function _openPanel(sym) {
   mountIsland(document.getElementById('dom-headbar'), TermHeader);
   mountIsland(document.getElementById('dom-lock'), TermLock);
   mountIsland(document.getElementById('dom-tag'), TermTag);
+  mountIsland(document.getElementById('dom-sizes'), TermSizes);
+  mountIsland(document.getElementById('dom-foot'), TermFoot);
   startLatency(_renderPing);
   _renderPing();
   _syncVenueCols();
@@ -337,10 +339,12 @@ function _closePanel(userAction) {
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
-  if (panel) { ['dom-headbar', 'dom-lock', 'dom-tag'].forEach(function (id) { unmountIsland(document.getElementById(id)); }); panel.remove(); }
+  if (panel) { TERM_ISLANDS.forEach(function (id) { unmountIsland(document.getElementById(id)); }); panel.remove(); }
   var body = document.querySelector('#fv-overlay .fv-body');
   if (body) body.classList.remove('has-dom');
 }
+
+var TERM_ISLANDS = ['dom-headbar', 'dom-lock', 'dom-tag', 'dom-sizes', 'dom-foot'];
 
 function _isTestnet() { return !(T.access && T.access.env === 'mainnet'); }
 function _viewOnly() { return _isTestnet() && T.viewLive; }
@@ -358,18 +362,14 @@ function _panelHTML() {
         return '<b data-vcol="' + v.id + '" title="' + v.title + ' order book — click to fold / unfold">' + v.name + '</b>';
       }).join('') + '</span></div>'
     + '<div class="dom-ladder" id="dom-ladder"></div>'
-    + '<div class="dom-sizes" id="dom-sizes">' + _sizesHTML() + '</div>'
-    + '<div class="dom-foot">'
-    + '<div class="dom-pos" id="dom-pos"></div>'
-    + '<div class="dom-status" id="dom-status"></div>'
-    + '</div>';
+    // Order size slots and the position / status footer: React islands (TermBars.jsx)
+    + '<div class="dom-sizes" id="dom-sizes"></div>'
+    + '<div class="dom-foot" id="dom-foot"></div>';
 }
 
-function _sizesHTML() {
-  return S.sizes.map(function (v) {
-    return '<button class="dom-size' + (v === T.size ? ' active' : '') + '" data-size="' + v + '">' + v + '</button>';
-  }).join('') + '<span class="dom-unit">USDT</span>';
-}
+// Order size slots for TermSizes; a click → termPickSize
+export function termSizes() { return { sizes: S.sizes.slice(), size: T.size }; }
+export function termPickSize(v) { _pickSize(Number(v)); }
 
 // Settings — a shadcn dialog (src/react/host/TermSettingsDialog.jsx), per coin.
 // It reads termSettings() and changes one setting at a time with
@@ -420,8 +420,7 @@ export function setTermSetting(key, value) {
     });
     S.sizes = vals.length ? vals.sort(function (a, b) { return a - b; }) : SIZE_DEFAULTS.slice();
     if (S.sizes.indexOf(T.size) === -1) { T.size = _savedSize(); _lsSet('qt_term_size_' + T.sym, String(T.size)); }
-    var box = document.getElementById('dom-sizes');
-    if (box) box.innerHTML = _sizesHTML();
+    emit('term:sizes');
   } else {
     return termSettings();
   }
@@ -1412,39 +1411,32 @@ function _setVol(cell, v, r, dim, tiny) {
   if (cell.lastChild.textContent !== t) cell.lastChild.textContent = t;
 }
 
+// Position, available balance and the status line for TermFoot. Rebuilt every
+// render (PnL moves with the book) but redrawn only when the text changed.
 function _renderFoot() {
-  var el = document.getElementById('dom-pos');
-  if (!el) return;
+  if (!document.getElementById('dom-foot')) return;
   var pos = _position();
   var usdt = T.account.balances.find(function (b) { return b.asset === 'USDT'; });
-  var avail = usdt && usdt.availableBalance != null ? Number(usdt.availableBalance).toFixed(2) : '—';
-  var html;
-  if (!pos) {
-    html = '<div class="dom-pos-row"><span>Position</span><b>Flat</b></div>'
-      + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
-  } else {
+  var foot = { avail: usdt && usdt.availableBalance != null ? Number(usdt.availableBalance).toFixed(2) : '—', pos: null };
+  if (pos) {
     var amt = Number(pos.amount);
     var info = _pnlInfo();
-    var pnlHtml = info
-      ? '<b class="dom-pnl ' + (info.up ? 'up' : 'dn') + '">' + _fmtPnl(info) + '</b>'
-      : '<b>—</b>';
-    html = '<div class="dom-pos-row"><span>Position</span><b class="' + (amt > 0 ? 'up' : 'dn') + '">' + (amt > 0 ? 'Long ' : 'Short ') + _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)) + ' USDT</b></div>'
-      + '<div class="dom-pos-row"><span>Entry</span><b>' + pos.entryPrice + '</b></div>'
-      + (info && Math.abs(info.entry - info.avgEntry) > 1e-12
-          ? '<div class="dom-pos-row" title="Where the whole trade, closed part and fees included, comes out at zero"><span>Breakeven</span><b>'
-            + Number(info.entry.toFixed(_decimals(T.rules ? T.rules.tickSize : 0.0001) + 1)) + '</b></div>'
-          : '')
-      + '<div class="dom-pos-row"><span>PnL</span>' + pnlHtml + '</div>'
-      + '<div class="dom-pos-row"><span>Available</span><b>' + avail + ' USDT</b></div>';
+    foot.pos = {
+      long: amt > 0, usd: _fmtUsd(Math.abs(amt) * Number(pos.entryPrice)), entry: pos.entryPrice,
+      breakEven: info && Math.abs(info.entry - info.avgEntry) > 1e-12 ? String(Number(info.entry.toFixed(_decimals(T.rules ? T.rules.tickSize : 0.0001) + 1))) : null,
+      pnl: info ? _fmtPnl(info) : null, up: info ? info.up : null,
+    };
   }
-  // Rebuilt only on change: the order rows are clickable and must not be replaced under the mouse
-  if (el._html !== html) { el.innerHTML = html; el._html = html; }
-  var st = document.getElementById('dom-status');
-  if (st && T.access && !T.access.tradingEnabled) {
-    st.textContent = 'Trading is disabled by the kill switch';
-    st.className = 'dom-status err';
-  }
+  // The kill switch stays on the status line while no other message is there
+  foot.status = T.status || (T.access && !T.access.tradingEnabled ? { msg: 'Trading is disabled by the kill switch', err: true } : null);
+  var key = JSON.stringify(foot);
+  if (key === T.footKey) return;
+  T.footKey = key;
+  T.foot = foot;
+  emit('term:foot');
 }
+
+export function termFoot() { return T.foot || null; }
 
 // Your orders outside the visible ladder: a small badge at the top / bottom of
 // the Mine column ("↑ S 50 · TP"), summed per kind; a click scrolls to the
@@ -1626,12 +1618,11 @@ function _syncBand() {
 }
 
 function _setStatus(msg, isErr) {
-  var st = document.getElementById('dom-status');
-  if (!st) return;
-  st.textContent = msg;
-  st.className = 'dom-status' + (isErr ? ' err' : '');
-  clearTimeout(st._t);
-  st._t = setTimeout(function () { if (st.isConnected) { st.textContent = ''; st.className = 'dom-status'; _renderFoot(); } }, 5000);
+  if (!document.getElementById('dom-foot')) return;
+  T.status = { msg: msg, err: !!isErr };
+  clearTimeout(T.statusTimer);
+  T.statusTimer = setTimeout(function () { T.status = null; _renderFoot(); }, 5000);
+  _renderFoot();
 }
 
 // ── Chart lines (orders and position on the full view chart) ───────────────
@@ -1991,9 +1982,6 @@ function _bindPanel(panel) {
     var md = e.target.closest('[data-mode]');
     if (md) { _switchMode(md.dataset.mode); return; }
     if (e.target.closest('[data-settings]')) { _openSettings(); return; }
-    // Only the order size buttons: shadcn buttons in the panel carry data-size too (their own size)
-    var size = e.target.closest('.dom-size[data-size]');
-    if (size) { _pickSize(Number(size.dataset.size)); return; }
     var sc = e.target.closest('[data-scale]');
     if (sc) { _changeScale(Number(sc.dataset.scale)); return; }
   });
@@ -2046,7 +2034,7 @@ function _pickSize(v) {
   if (!_validSize(v) || S.sizes.indexOf(v) === -1) return; // never an order size that isn't one of the slots
   T.size = v;
   _lsSet('qt_term_size_' + T.sym, String(v));
-  document.querySelectorAll('#dom-sizes .dom-size').forEach(function (b) { b.classList.toggle('active', Number(b.dataset.size) === v); });
+  emit('term:sizes');
 }
 
 // −1 finer, +1 coarser; remembered per coin
