@@ -25,7 +25,7 @@ function DateRangePicker({ period, onChange }) {
       <PopoverTrigger asChild>
         <Button variant={set ? 'secondary' : 'outline'} size="sm">
           <CalendarIcon />
-          {set ? shortDate(period.from) + ' — ' + shortDate(period.to) : 'Свои даты'}
+          {set ? shortDate(period.from) + ' — ' + shortDate(period.to) : <span className="max-sm:sr-only">Свои даты</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">
@@ -54,24 +54,28 @@ function DateRangePicker({ period, onChange }) {
 export function Header({ period, onPeriod, aiRange }) {
   const [aiOpen, setAiOpen] = React.useState(false);
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 max-sm:gap-2">
       <Button variant="ghost" size="icon-sm" asChild>
         <a href="/" aria-label="Назад"><ArrowLeft /></a>
       </Button>
       <h1 className="text-lg font-semibold">Журнал</h1>
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      {/* Period: next to the title on desktop, its own full-width row on phones */}
+      <div className="order-3 flex w-full items-center gap-2 sm:order-2 sm:ml-auto sm:w-auto">
         <ToggleGroup
           type="single"
           variant="outline"
           size="sm"
           value={period.range || ''}
           onValueChange={(v) => { if (v) onPeriod({ range: v }); }}
+          className="max-sm:flex-1"
         >
-          <ToggleGroupItem value="week" className="px-3">Неделя</ToggleGroupItem>
-          <ToggleGroupItem value="month" className="px-3">Месяц</ToggleGroupItem>
-          <ToggleGroupItem value="all" className="px-3">Всё время</ToggleGroupItem>
+          <ToggleGroupItem value="week" className="px-3 max-sm:flex-1 max-sm:px-2">Неделя</ToggleGroupItem>
+          <ToggleGroupItem value="month" className="px-3 max-sm:flex-1 max-sm:px-2">Месяц</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="px-3 max-sm:flex-1 max-sm:px-2">Всё время</ToggleGroupItem>
         </ToggleGroup>
         <DateRangePicker key={period.from || 'none'} period={period} onChange={onPeriod} />
+      </div>
+      <div className="order-2 ml-auto flex items-center gap-2 sm:order-3 sm:ml-0">
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>

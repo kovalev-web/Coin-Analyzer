@@ -6,6 +6,8 @@
 :where(.jr, [data-slot]) *, :where(.jr, [data-slot]) ::before, :where(.jr, [data-slot]) ::after,
 [data-slot]:where(*), [data-slot]::before, [data-slot]::after {
   border: 0 solid var(--fog);
+  margin: 0;
+  padding: 0;
 }
 :where(.jr, [data-slot]) button, :where(.jr, [data-slot]) input,
 :where(.jr, [data-slot]) select, :where(.jr, [data-slot]) textarea, button:where([data-slot]) {

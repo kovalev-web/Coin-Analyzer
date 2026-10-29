@@ -144,7 +144,7 @@ function Setups({ e, onChanged }) {
           : !rows.length
             ? <EmptyNote>Пока нет сделок по правилам с отмеченным сетапом.</EmptyNote>
             : (
-              <Table>
+              <Table className="max-sm:[&_td]:px-1.5 max-sm:[&_th]:px-1.5">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Сетап</TableHead>
@@ -156,7 +156,7 @@ function Setups({ e, onChanged }) {
                 <TableBody>
                   {rows.map((s) => (
                     <TableRow key={s.key} className={s.enough ? '' : 'text-muted-foreground'}>
-                      <TableCell><SetupName setupKey={s.key}>{s.name || s.key}</SetupName></TableCell>
+                      <TableCell className="whitespace-normal"><SetupName setupKey={s.key}>{s.name || s.key}</SetupName></TableCell>
                       <TableCell className="text-right tabular-nums">{s.n}</TableCell>
                       <TableCell className="text-right tabular-nums">{s.winRate}%</TableCell>
                       <TableCell className={'text-right font-semibold tabular-nums ' + tone(s.totalR)}>{rr(s.totalR)}</TableCell>
@@ -164,7 +164,7 @@ function Setups({ e, onChanged }) {
                   ))}
                   {e.allTrades && e.allTrades.n > 0 && (
                     <TableRow className="bg-muted/50">
-                      <TableCell className="text-muted-foreground">Все сделки, с ошибками</TableCell>
+                      <TableCell className="whitespace-normal text-muted-foreground">Все сделки, с ошибками</TableCell>
                       <TableCell className="text-right tabular-nums">{e.allTrades.n}</TableCell>
                       <TableCell className="text-right tabular-nums">{e.allTrades.winRate}%</TableCell>
                       <TableCell className={'text-right font-semibold tabular-nums ' + tone(e.allTrades.totalR)}>{rr(e.allTrades.totalR)}</TableCell>
@@ -214,7 +214,7 @@ function Conclusions({ e }) {
 export function EdgeSummary({ e, onChanged }) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Execution x={e.execution} />
         <Setups e={e} onChanged={onChanged} />
       </div>

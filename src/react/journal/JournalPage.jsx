@@ -54,7 +54,7 @@ export function JournalPage() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="jr mx-auto w-full max-w-6xl space-y-4 px-4 py-6">
+      <div className="jr mx-auto w-full max-w-6xl space-y-4 px-4 py-6 max-sm:space-y-3 max-sm:px-3 max-sm:py-4 max-sm:[&_[data-slot=card]]:py-4 max-sm:[&_[data-slot=card-content]]:px-4 max-sm:[&_[data-slot=card-header]]:px-4">
         <Header period={p} onPeriod={onPeriod} aiRange={aiRange} />
         {state.isDemoMode
           ? <Empty><Button variant="link" className="h-auto p-0" asChild><a href="/login">Зарегистрируйся</a></Button> и подключи Binance API, чтобы видеть свои сделки.</Empty>

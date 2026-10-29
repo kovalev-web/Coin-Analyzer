@@ -38,9 +38,9 @@ function dayRows(value, name, item) {
 
 function Stat({ title, value, className }) {
   return (
-    <Card className="gap-1 py-4">
-      <CardHeader className="px-4"><CardDescription>{title}</CardDescription></CardHeader>
-      <CardContent className={'px-4 text-xl font-semibold tabular-nums ' + (className || '')}>{value}</CardContent>
+    <Card className="gap-1 py-4 max-sm:!py-3">
+      <CardHeader className="px-4 max-sm:!px-3"><CardDescription>{title}</CardDescription></CardHeader>
+      <CardContent className={'px-4 text-xl font-semibold tabular-nums max-sm:!px-3 max-sm:text-lg ' + (className || '')}>{value}</CardContent>
     </Card>
   );
 }
@@ -49,7 +49,7 @@ export function PnlChart({ summary, loading }) {
   const data = React.useMemo(() => series(summary && summary.daily, summary && summary.to), [summary]);
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 max-sm:gap-3 md:grid-cols-4 [&>*]:min-w-0">
         {loading
           ? [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)
           : <>

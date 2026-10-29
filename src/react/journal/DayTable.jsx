@@ -98,7 +98,7 @@ function DayBody({ d, onRetag }) {
   }, [d]);
   const notesSeen = new Set();
   return (
-    <div className="grid gap-6 p-4 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-6 p-4 max-sm:gap-4 max-sm:p-3 lg:grid-cols-4 [&>*]:min-w-0">
       <div className="space-y-3">
         <h4 className="text-sm font-medium">Исполнение</h4>
         {!d.breaks.length
@@ -133,11 +133,12 @@ function DayRow({ d, onRetag }) {
             <ChevronRight className={'size-4 text-muted-foreground transition-transform ' + (open ? 'rotate-90' : '')} />
             {shortDate(d.date)}
           </span>
+          {d.untagged > 0 && <span className="block pl-5.5 text-2xs font-normal text-muted-foreground sm:hidden">{d.untagged} без сетапа</span>}
         </TableCell>
         <TableCell className="text-right tabular-nums">{d.n}</TableCell>
         <TableCell className={'text-right tabular-nums ' + (d.rate === 100 ? 'text-bullish' : d.rate != null && d.rate < 50 ? 'text-danger' : '')}>{d.rate != null ? d.rate + '%' : '—'}</TableCell>
         <TableCell className={'text-right tabular-nums ' + tone(d.pnl)}>{money(d.pnl)}</TableCell>
-        <TableCell className="text-right">{d.untagged > 0 && <Badge variant="outline">{d.untagged} без сетапа</Badge>}</TableCell>
+        <TableCell className="text-right max-sm:hidden">{d.untagged > 0 && <Badge variant="outline">{d.untagged} без сетапа</Badge>}</TableCell>
       </TableRow>
       {open && (
         <TableRow className="hover:bg-transparent">
@@ -154,14 +155,14 @@ export function DayTable({ days, onRetag }) {
     <Card className="gap-2">
       <CardHeader><CardTitle>По дням</CardTitle></CardHeader>
       <CardContent className="px-2 sm:px-6">
-        <Table>
+        <Table className="max-sm:[&_td]:px-1.5 max-sm:[&_th]:px-1.5">
           <TableHeader>
             <TableRow>
               <TableHead>Дата</TableHead>
               <TableHead className="text-right">Сделок</TableHead>
-              <TableHead className="text-right">По правилам</TableHead>
-              <TableHead className="text-right">PnL, USDT</TableHead>
-              <TableHead />
+              <TableHead className="text-right">По <span className="max-sm:hidden">правилам</span><span className="sm:hidden">прав.</span></TableHead>
+              <TableHead className="text-right">PnL<span className="max-sm:hidden">, USDT</span></TableHead>
+              <TableHead className="max-sm:hidden" />
             </TableRow>
           </TableHeader>
           <TableBody>

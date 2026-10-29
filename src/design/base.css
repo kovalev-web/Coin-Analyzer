@@ -4,10 +4,19 @@
 
 *, *::before, *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+/* Margin / padding reset for the site's own markup only — shadcn islands and
+   portals (.jr, [data-slot]) have their own reset (src/react/preflight.css);
+   this one would otherwise wipe their space-y / padding utilities, since the
+   two stylesheets load in a different order in dev and in the build */
+:where(*:not(.jr, .jr *, [data-slot], [data-slot] *)),
+:where(*:not(.jr, .jr *, [data-slot], [data-slot] *))::before,
+:where(*:not(.jr, .jr *, [data-slot], [data-slot] *))::after {
+  margin: 0;
+  padding: 0;
 }
 
 * {
