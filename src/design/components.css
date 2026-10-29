@@ -337,14 +337,12 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* ── Order book terminal (DOM ladder) in full view ───────────────── */
 .fv-body.has-dom{flex-direction:row;}
 .fv-dom{width:calc(270px + var(--ven-w, 0px));flex:0 0 calc(270px + var(--ven-w, 0px));display:flex;flex-direction:column;min-height:0;background:var(--paper);border-left:1px solid var(--steel);font-size:var(--text-xs);color:var(--ink-deep);user-select:none;}
-.dom-head{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--steel);}
 .dom-env{font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:color-mix(in srgb,var(--level-deep) 18%,transparent);color:var(--ink-deep);}
 .dom-env.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
 .dom-sizes{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;}
-.dom-size,.dom-scale button{height:var(--h-btn-sm);min-width:var(--h-btn-sm);padding:0 var(--space-2);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;}
+.dom-size{height:var(--h-btn-sm);min-width:var(--h-btn-sm);padding:0 var(--space-2);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;}
 .dom-size.active{background:var(--ink-deep);color:var(--paper);}
 .dom-unit{color:var(--graphite);font-size:var(--text-2xs);margin-left:var(--space-1);}
-.dom-scale{display:flex;gap:var(--space-1);}
 .dom-cols{padding:var(--space-2) var(--space-4);color:var(--graphite);font-size:var(--text-ladder);border-bottom:1px solid var(--steel);}
 .dom-cols span:nth-child(3){text-align:center;}
 .dom-ladder{flex:1;min-height:0;overflow:hidden;padding:0 var(--space-4);}
@@ -387,10 +385,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-row.flash.last-buy .dom-c-price,.dom-row.flash.last-sell .dom-c-price{box-shadow:inset 0 0 0 2px var(--ink-deep);}
 .dom-book{height:var(--h-btn-sm);padding:0 var(--space-3);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-medium);cursor:pointer;white-space:nowrap;}
 .dom-book.active{background:var(--danger);color:var(--paper);}
-.dom-viewonly{padding:var(--space-2) var(--space-4);background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);font-size:var(--text-2xs);font-weight:var(--font-medium);text-align:center;}
 .fv-dom.view-only .dom-row{cursor:default;}
-.dom-head{flex-wrap:wrap;row-gap:var(--space-2);}
-.dom-head .dom-sizes{flex:1 1 auto;min-width:auto;}
 
 /* compact ladder: Mine | Volume (heat-filled) | Price */
 .dom-cols,.dom-row{display:grid;grid-template-columns:52px 1fr 72px var(--ven-w, 0px);align-items:center;}
@@ -431,12 +426,7 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 /* Journal: My edge */
 
 /* ladder settings: price scale label, gear, sizes under the ladder */
-.dom-scale{align-items:center;margin-left:auto;}
-.dom-scale-val{min-width:36px;text-align:center;font-size:var(--text-2xs);font-weight:var(--font-medium);color:var(--ink-deep);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.dom-gear{flex:0 0 auto;display:flex;align-items:center;justify-content:center;height:var(--h-btn-sm);width:var(--h-btn-sm);border:none;border-radius:var(--radius-md);background:var(--fog);color:var(--graphite);cursor:pointer;}
-.dom-gear.active{background:var(--ink-deep);color:var(--paper);}
 .fv-dom .dom-sizes{flex:0 0 auto;padding:var(--space-3) var(--space-4);border-top:1px solid var(--steel);flex-wrap:wrap;}
-.dom-gear svg{flex:0 0 auto;}
 
 /* chart marks on the ladder: level (solid, primary), horizontal ray (solid,
    level-deep), alert (dashed, danger, bell by the price) — same as the chart */
@@ -457,10 +447,6 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 .dom-mine.ss{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger);}
 
 /* Live / Test switch in the order book head */
-.dom-mode{display:inline-flex;padding:var(--space-1);gap:var(--space-1);border-radius:var(--radius-full);background:var(--fog);}
-.dom-mode button{height:20px;padding:0 var(--space-3);border:none;border-radius:var(--radius-full);background:transparent;color:var(--graphite);font-size:var(--text-2xs);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
-.dom-mode button.active.live{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger);}
-.dom-mode button.active.test{background:color-mix(in srgb,var(--level-deep) 22%,transparent);color:var(--ink-deep);}
 
 /* click area for orders: Volume and Price columns only */
 .dom-row{cursor:default;}
@@ -488,12 +474,6 @@ body.demo-mode{padding-bottom:var(--h-btn-lg);}
 }
 .dom-row.has-order:hover{background:var(--fog);}
 
-/* head on one row: Live/Test · ping · scale · settings. The ping badge gives
-   way first (city truncates) so the settings button never wraps */
-.dom-head{flex-wrap:nowrap;gap:var(--space-2);}
-.dom-mode,.dom-scale,.dom-gear{flex:none;}
-.dom-scale button{min-width:22px;padding:0 var(--space-1);}
-.dom-scale-val{min-width:28px;}
 
 /* drag your order to another level */
 .dom-c-mine.has .dom-mine[data-kind]{cursor:grab;}
@@ -646,4 +626,3 @@ button[data-setup-diagram]{cursor:pointer;}
 /* a trade's "На графике" link in the day drill-down */
 /* coin chart in review mode (a trade opened from the journal): no tools in the island */
 
-.dom-ping{display:inline-flex;min-width:0;flex:0 1 auto;}

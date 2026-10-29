@@ -19,7 +19,7 @@ import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { openSurface, isSurfaceOpen } from './react-bridge.js';
 import { mountIsland, unmountIsland } from './react/islands.jsx';
-import { PingBadge } from './react/terminal/PingBadge.jsx';
+import { TermHeader } from './react/terminal/TermHeader.jsx';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
@@ -202,6 +202,7 @@ function _setMode(m) {
 function _markMode() {
   var panel = document.getElementById('fv-dom');
   if (panel) panel.classList.toggle('mode-test', T.mode === 'test');
+  emit('term:header');
 }
 
 // Live ↔ Test: different trader, account, book and orders — rebuild the panel from scratch
@@ -303,7 +304,7 @@ function _openPanel(sym) {
     });
     booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
-  unmountIsland(document.getElementById('dom-ping')); // the header is rebuilt below
+  unmountIsland(document.getElementById('dom-headbar')); // the header is rebuilt below
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
   T.lockKey = null;
@@ -312,7 +313,7 @@ function _openPanel(sym) {
   _refreshDay();
   clearInterval(T.dayTimer);
   T.dayTimer = setInterval(_refreshDay, 30000);
-  mountIsland(document.getElementById('dom-ping'), PingBadge);
+  mountIsland(document.getElementById('dom-headbar'), TermHeader);
   startLatency(_renderPing);
   _renderPing();
   _syncVenueCols();
@@ -334,7 +335,7 @@ function _closePanel(userAction) {
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
-  if (panel) { unmountIsland(document.getElementById('dom-ping')); panel.remove(); }
+  if (panel) { unmountIsland(document.getElementById('dom-headbar')); panel.remove(); }
   var body = document.querySelector('#fv-overlay .fv-body');
   if (body) body.classList.remove('has-dom');
 }
@@ -343,17 +344,9 @@ function _isTestnet() { return !(T.access && T.access.env === 'mainnet'); }
 function _viewOnly() { return _isTestnet() && T.viewLive; }
 
 function _panelHTML() {
-  return '<div class="dom-head">'
-    + '<span class="dom-mode" title="Live: real account · Test: Binance Demo, practice money">'
-    + '<button data-mode="live" class="' + (T.mode === 'live' ? 'active live' : '') + '">Live</button>'
-    + '<button data-mode="test" class="' + (T.mode === 'test' ? 'active test' : '') + '">Test</button></span>'
-    + '<span class="dom-ping" id="dom-ping"></span>' // React island (src/react/terminal/PingBadge.jsx)
-    + '<div class="dom-scale" title="Price scale: one row = exchange tick × multiplier">'
-    + '<button data-scale="-1" title="Finer">−</button><span class="dom-scale-val" id="dom-scale-val"></span>'
-    + '<button data-scale="1" title="Coarser">+</button></div>'
-    + '<button class="dom-gear" data-settings="1" title="Order book settings">' + icon('settings', 14) + '</button>'
-    + '</div>'
-    + (_viewOnly() ? '<div class="dom-viewonly">Live market · view only — trading is off</div>' : '')
+  // Header (Live / Test, connection, scale, settings, view-only line):
+  // a React island, src/react/terminal/TermHeader.jsx
+  return '<div class="dom-headbar" id="dom-headbar"></div>'
     + '<div class="dom-lock" id="dom-lock"></div>'
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
@@ -1089,11 +1082,17 @@ function _autoScale() {
   T.scaleIdx = i;
 }
 
+// The header (React) shows the scale; tell it only when it changes (this runs every frame)
 function _renderScale() {
-  var el = document.getElementById('dom-scale-val');
-  if (!el || !T.rules || T.scaleIdx == null) return;
-  var t = '×' + SCALES[T.scaleIdx];
-  if (el.textContent !== t) el.textContent = t;
+  var t = T.rules && T.scaleIdx != null ? '×' + SCALES[T.scaleIdx] : '';
+  if (t === T.scaleText) return;
+  T.scaleText = t;
+  emit('term:header');
+}
+
+// What the header shows: mode, scale, view-only
+export function termHeader() {
+  return { mode: T.mode, scale: T.scaleText || '', viewOnly: _viewOnly() };
 }
 
 // Compact number for the ladder: sizes are in USDT everywhere (volume, orders)
@@ -2007,7 +2006,8 @@ function _bindPanel(panel) {
     var md = e.target.closest('[data-mode]');
     if (md) { _switchMode(md.dataset.mode); return; }
     if (e.target.closest('[data-settings]')) { _openSettings(); return; }
-    var size = e.target.closest('[data-size]');
+    // Only the order size buttons: shadcn buttons in the panel carry data-size too (their own size)
+    var size = e.target.closest('.dom-size[data-size]');
     if (size) { _pickSize(Number(size.dataset.size)); return; }
     var ts = e.target.closest('[data-tag-setup]');
     if (ts) { _tagClick('setup', ts.dataset.tagSetup); return; }
@@ -2072,6 +2072,7 @@ function _bindPanel(panel) {
 
 // Order size slot (button or digit key); remembered per coin
 function _pickSize(v) {
+  if (!_validSize(v) || S.sizes.indexOf(v) === -1) return; // never an order size that isn't one of the slots
   T.size = v;
   _lsSet('qt_term_size_' + T.sym, String(v));
   document.querySelectorAll('#dom-sizes .dom-size').forEach(function (b) { b.classList.toggle('active', Number(b.dataset.size) === v); });
