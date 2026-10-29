@@ -20,6 +20,7 @@ import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { openSurface, isSurfaceOpen } from './react-bridge.js';
 import { mountIsland, unmountIsland } from './react/islands.jsx';
 import { TermHeader } from './react/terminal/TermHeader.jsx';
+import { TermLock, TermTag } from './react/terminal/TermBars.jsx';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
@@ -304,16 +305,17 @@ function _openPanel(sym) {
     });
     booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
-  unmountIsland(document.getElementById('dom-headbar')); // the header is rebuilt below
+  ['dom-headbar', 'dom-lock', 'dom-tag'].forEach(function (id) { unmountIsland(document.getElementById(id)); }); // rebuilt below
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
-  T.lockKey = null;
   _renderLock();
   _renderTag();
   _refreshDay();
   clearInterval(T.dayTimer);
   T.dayTimer = setInterval(_refreshDay, 30000);
   mountIsland(document.getElementById('dom-headbar'), TermHeader);
+  mountIsland(document.getElementById('dom-lock'), TermLock);
+  mountIsland(document.getElementById('dom-tag'), TermTag);
   startLatency(_renderPing);
   _renderPing();
   _syncVenueCols();
@@ -335,7 +337,7 @@ function _closePanel(userAction) {
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
-  if (panel) { unmountIsland(document.getElementById('dom-headbar')); panel.remove(); }
+  if (panel) { ['dom-headbar', 'dom-lock', 'dom-tag'].forEach(function (id) { unmountIsland(document.getElementById(id)); }); panel.remove(); }
   var body = document.querySelector('#fv-overlay .fv-body');
   if (body) body.classList.remove('has-dom');
 }
@@ -347,7 +349,7 @@ function _panelHTML() {
   // Header (Live / Test, connection, scale, settings, view-only line):
   // a React island, src/react/terminal/TermHeader.jsx
   return '<div class="dom-headbar" id="dom-headbar"></div>'
-    + '<div class="dom-lock" id="dom-lock"></div>'
+    + '<div class="dom-lock" id="dom-lock"></div>' // React islands: src/react/terminal/TermBars.jsx
     + '<div class="dom-tag" id="dom-tag"></div>'
     + '<div class="dom-cols"><span>Mine</span><span>Volume, $</span><span>Price</span>'
     + '<span class="dom-cols-cl" id="dom-cols-cl" data-cl-tf="1" title="Clusters: traded volume per price for each period. Click to change the period">'
@@ -1009,7 +1011,7 @@ on('trade:event', function (ev) {
     acc.balances.push(ev.balance);
   } else if (ev.type === 'status') {
     T.access = Object.assign({}, T.access, ev.status);
-    _renderLock(true);
+    _renderLock();
   } else if (ev.type === 'local-stop') {
     // The trader closed the position itself the moment a trade hit your SL / TP
     var ls = ev.stop;
@@ -1742,25 +1744,23 @@ function _queueTag(symbol, eventTime) {
   _renderTag();
 }
 
+// The row is React (src/react/terminal/TermBars.jsx): it reads termTag() and redraws on 'term:tag'
 function _renderTag() {
-  var el = document.getElementById('dom-tag');
-  if (!el) return;
   var q = T.tagQueue[T.tagQueue.length - 1];
-  if (!q) { el.innerHTML = ''; return; }
-  if (!state.setups) { ensureSetups().then(_renderTag); }
-  el.innerHTML = '<span class="dom-tag-sym">' + q.symbol.replace(/USDT$/, '') + (q.pattern ? ' — сетап сохранён, дополни и нажми ОК' : ' closed — какой сетап?') + '</span>'
-    + '<span class="dom-tag-group">' + setupButtons().map(function (x) {
-        return '<button data-tag-pattern="' + x[0] + '"' + diagramAttr(x[0]) + ' class="' + (q.pattern === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
-      }).join('') + '</span>'
-    + '<span class="dom-tag-group">' + TAG_SETUPS.map(function (x) {
-        return '<button data-tag-setup="' + x + '" class="' + (q.setup === x ? 'on' : '') + '">' + x + '</button>';
-      }).join('') + '</span>'
-    + '<span class="dom-tag-group">' + TAG_EMOTIONS.map(function (x) {
-        return '<button data-tag-emotion="' + x[0] + '" class="' + (q.emotion === x[0] ? 'on' : '') + '">' + x[1] + '</button>';
-      }).join('') + '</span>'
-    + (q.pattern ? '<button class="dom-tag-ok" data-tag-ok="1">ОК</button>' : '')
-    + '<button class="dom-tag-skip" data-tag-skip="1" title="Skip">×</button>';
+  if (q && !state.setups) { ensureSetups().then(_renderTag); }
+  emit('term:tag');
 }
+
+// The trade waiting for its tags (the newest), or null
+export function termTag() {
+  var q = T.tagQueue[T.tagQueue.length - 1];
+  return q ? { symbol: q.symbol, pattern: q.pattern || null, setup: q.setup || null, emotion: q.emotion || null,
+    patterns: setupButtons(), setups: TAG_SETUPS, emotions: TAG_EMOTIONS } : null;
+}
+
+export function termTagSet(kind, value) { if (kind === 'pattern' || kind === 'setup' || kind === 'emotion') _tagClick(kind, value); }
+export function termTagDone() { _dropTag(T.tagQueue[T.tagQueue.length - 1]); }
+export function termTagSkip() { T.tagQueue.pop(); _renderTag(); }
 
 function _tagClick(kind, value) {
   var q = T.tagQueue[T.tagQueue.length - 1];
@@ -1791,7 +1791,7 @@ function _refreshDay() {
   tradeRequest('GET', 'day').then(function (d) {
     var changed = !T.day || T.day.open !== d.open || T.day.reason !== d.reason;
     T.day = d;
-    if (changed) _renderLock(true);
+    if (changed) _renderLock();
   }).catch(function () {});
 }
 
@@ -1803,57 +1803,42 @@ function _lockState() {
   return f.unlockedUntil > Date.now() ? 'open' : 'locked';
 }
 
-function _renderLock(force) {
-  var el = document.getElementById('dom-lock');
-  if (!el) return;
+// The bar is React (src/react/terminal/TermBars.jsx): it reads termLock() and redraws on
+// 'term:lock'. While unlocked, a timer redraws it when the unlock runs out.
+function _renderLock() {
   var st = _lockState();
   var f = (T.access && T.access.twoFactor) || {};
-  var key = st + ':' + (f.unlockedUntil || 0);
-  if (!force && key === T.lockKey) return; // keep a half-typed code intact
-  T.lockKey = key;
   clearTimeout(T.lockTimer);
-  if (st === 'none') { el.innerHTML = ''; el.className = 'dom-lock'; return; }
-  if (st === 'day') {
-    el.className = 'dom-lock warn';
-    el.textContent = T.day.reason;
-    return;
-  }
-  if (st === 'setup') {
-    el.className = 'dom-lock warn';
-    el.innerHTML = 'Set up 2FA in Account → Integrations to trade live';
-    return;
-  }
-  if (st === 'open') {
-    var t = new Date(f.unlockedUntil);
-    el.className = 'dom-lock open';
-    el.innerHTML = 'Unlocked until ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0')
-      + ' <button data-lock="1">Lock</button>';
-    T.lockTimer = setTimeout(function () { _renderLock(true); }, Math.max(1000, f.unlockedUntil - Date.now() + 500));
-    return;
-  }
-  el.className = 'dom-lock locked';
-  el.innerHTML = 'Locked · <input id="dom-unlock-code" inputmode="numeric" maxlength="6" placeholder="2FA code" autocomplete="one-time-code">'
-    + ' <button data-unlock="1">Unlock</button>';
+  if (st === 'open') T.lockTimer = setTimeout(_renderLock, Math.max(1000, f.unlockedUntil - Date.now() + 500));
+  emit('term:lock');
 }
 
-function _unlock() {
-  var input = document.getElementById('dom-unlock-code');
-  var code = input ? input.value.trim() : '';
-  if (!/^\d{6}$/.test(code)) { _setStatus('Enter the 6-digit code from your authenticator', true); return; }
-  tradeRequest('POST', 'unlock', { code: code }).then(function (f) {
+// { state: none | day | setup | open | locked, reason (day), unlockedUntil (open) }
+export function termLock() {
+  var st = _lockState();
+  var f = (T.access && T.access.twoFactor) || {};
+  return { state: st, reason: st === 'day' && T.day ? T.day.reason : '', unlockedUntil: st === 'open' ? f.unlockedUntil : null };
+}
+
+// code: the 6 digits from the authenticator; resolves true when unlocked
+export function termUnlock(code) {
+  code = String(code || '').trim();
+  if (!/^\d{6}$/.test(code)) { _setStatus('Enter the 6-digit code from your authenticator', true); return Promise.resolve(false); }
+  return tradeRequest('POST', 'unlock', { code: code }).then(function (f) {
     T.access = Object.assign({}, T.access, { twoFactor: f });
-    _renderLock(true);
+    _renderLock();
     _setStatus('Trading unlocked', false);
+    return true;
   }).catch(function (e) {
-    if (input) input.value = '';
     _setStatus(e.message, true);
+    return false;
   });
 }
 
-function _lock() {
-  tradeRequest('POST', 'lock', {}).then(function (f) {
+export function termLockNow() {
+  return tradeRequest('POST', 'lock', {}).then(function (f) {
     T.access = Object.assign({}, T.access, { twoFactor: f });
-    _renderLock(true);
+    _renderLock();
   }).catch(function (e) { _setStatus(e.message, true); });
 }
 
@@ -2009,16 +1994,6 @@ function _bindPanel(panel) {
     // Only the order size buttons: shadcn buttons in the panel carry data-size too (their own size)
     var size = e.target.closest('.dom-size[data-size]');
     if (size) { _pickSize(Number(size.dataset.size)); return; }
-    var ts = e.target.closest('[data-tag-setup]');
-    if (ts) { _tagClick('setup', ts.dataset.tagSetup); return; }
-    var tp = e.target.closest('[data-tag-pattern]');
-    if (tp) { _tagClick('pattern', tp.dataset.tagPattern); return; }
-    var te = e.target.closest('[data-tag-emotion]');
-    if (te) { _tagClick('emotion', te.dataset.tagEmotion); return; }
-    if (e.target.closest('[data-tag-skip]')) { T.tagQueue.pop(); _renderTag(); return; }
-    if (e.target.closest('[data-tag-ok]')) { _dropTag(T.tagQueue[T.tagQueue.length - 1]); return; }
-    if (e.target.closest('[data-unlock]')) { _unlock(); return; }
-    if (e.target.closest('[data-lock]')) { _lock(); return; }
     var sc = e.target.closest('[data-scale]');
     if (sc) { _changeScale(Number(sc.dataset.scale)); return; }
   });
@@ -2041,10 +2016,6 @@ function _bindPanel(panel) {
     // Orders only from the Volume and Price columns; the Mine column and the gaps do nothing
     if (!e.target.closest('.dom-c-vol, .dom-c-price')) return;
     _onLevelClick(idx, e.button === 0 ? 'BUY' : 'SELL', e.shiftKey, e.altKey);
-  });
-
-  panel.addEventListener('keydown', function (e) {
-    if (e.target.id === 'dom-unlock-code' && e.key === 'Enter') { e.preventDefault(); _unlock(); }
   });
 
   panel.addEventListener('contextmenu', function (e) {
