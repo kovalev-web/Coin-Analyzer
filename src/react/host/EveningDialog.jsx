@@ -17,29 +17,34 @@ import { ensureSetups, setupButtons, setupName } from '../../setups.js';
 import { emit } from '../../events.js';
 import { toast } from '../../react-bridge.js';
 
-const SELF_TALK = [['harsh', 'Harshly'], ['neutral', 'Neutrally'], ['kind', 'Supportively']];
+const SELF_TALK = [['harsh', 'Жёстко'], ['neutral', 'Нейтрально'], ['kind', 'Поддерживающе']];
 const QUALITY = [['A', 'A'], ['B', 'B'], ['C', 'C']];
-const EMOTIONS = [['plan', 'By plan'], ['fomo', 'FOMO'], ['revenge', 'Revenge'], ['boredom', 'Boredom'], ['fear', 'Fear']];
+const EMOTIONS = [['plan', 'По плану'], ['fomo', 'FOMO'], ['revenge', 'Отыгрыш'], ['boredom', 'Скука'], ['fear', 'Страх']];
 const TEXT_FIELDS = ['whyBreaks', 'didWell', 'fixTomorrow', 'missedScreening', 'freeConclusion'];
 
 function hold(sec) {
   if (sec == null) return '—';
-  if (sec < 60) return sec + 's';
+  if (sec < 60) return sec + ' с';
   const m = Math.floor(sec / 60), r = sec % 60;
-  return m < 60 ? m + 'm' + (r ? ' ' + r + 's' : '') : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  return m < 60 ? m + ' мин' + (r ? ' ' + r + ' с' : '') : Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин';
 }
-const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+// plural(5, ['сделка', 'сделки', 'сделок']) → '5 сделок'
+const plural = (n, [one, few, many]) => {
+  const d = n % 10, h = n % 100;
+  return n + ' ' + (d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many);
+};
+const TRADES = ['сделка', 'сделки', 'сделок'];
 
 // Rule breaks found in the day's trades (journal/facts.js)
 function flags(f) {
   const v = f.violations, out = [];
-  if (v.craneBrokenAt) out.push('Stop-crane broken at ' + tzTimeStr(new Date(v.craneBrokenAt)) + ' — ' + plural(v.tradesAfterCrane, 'trade') + ' after 2 losses in a row');
-  if (v.overMaxTrades) out.push('Over max trades per day (' + f.limits.maxTrades + ')');
-  if (v.oversize) out.push(v.oversize + ' over the volume limit ($' + f.limits.maxVolume + ')');
-  if (v.revenge) out.push(v.revenge + ' entr' + (v.revenge === 1 ? 'y' : 'ies') + ' within 5 min after a loss');
-  if (v.sizeUpAfterLosses) out.push(v.sizeUpAfterLosses + ' size-up after losses');
-  if (v.sizeUpAfterWins) out.push(v.sizeUpAfterWins + ' size-up after wins');
-  if (v.offPlan) out.push(plural(v.offPlan, 'trade') + ' on coins outside the briefing');
+  if (v.craneBrokenAt) out.push('Стоп-кран нарушен в ' + tzTimeStr(new Date(v.craneBrokenAt)) + ' — ' + plural(v.tradesAfterCrane, TRADES) + ' после 2 убытков подряд');
+  if (v.overMaxTrades) out.push('Превышен лимит сделок в день (' + f.limits.maxTrades + ')');
+  if (v.oversize) out.push(plural(v.oversize, TRADES) + ' сверх лимита объёма ($' + f.limits.maxVolume + ')');
+  if (v.revenge) out.push(plural(v.revenge, ['вход', 'входа', 'входов']) + ' в течение 5 мин после убытка');
+  if (v.sizeUpAfterLosses) out.push('Увеличение объёма после убытков: ' + v.sizeUpAfterLosses);
+  if (v.sizeUpAfterWins) out.push('Увеличение объёма после прибыльных: ' + v.sizeUpAfterWins);
+  if (v.offPlan) out.push(plural(v.offPlan, TRADES) + ' по монетам вне брифинга');
   return out;
 }
 
@@ -49,15 +54,15 @@ function FactTrade({ t }) {
     .then(() => setTag((x) => ({ ...x, [kind]: val }))).catch((err) => toast(err.message));
   const labels = [];
   if (tag.pattern) labels.push(setupName(tag.pattern));
-  if (tag.setup) labels.push(tag.setup + ' setup');
-  labels.push(t.planned ? 'plan' : 'off-plan');
-  if (t.atLevel === true) labels.push('at level');
-  if (t.revenge) labels.push('revenge');
-  if (t.sizeUp) labels.push('size-up');
-  if (t.oversize) labels.push('oversize');
-  if (t.afterCrane) labels.push('after crane');
-  if (tag.emotion) labels.push(tag.emotion);
-  const res = t.result === 'open' ? 'open' : (t.pnlNet >= 0 ? '+' : '') + t.pnlNet.toFixed(2);
+  if (tag.setup) labels.push('сетап ' + tag.setup);
+  labels.push(t.planned ? 'по плану' : 'вне плана');
+  if (t.atLevel === true) labels.push('от уровня');
+  if (t.revenge) labels.push('отыгрыш');
+  if (t.sizeUp) labels.push('увеличение объёма');
+  if (t.oversize) labels.push('сверх объёма');
+  if (t.afterCrane) labels.push('после стоп-крана');
+  if (tag.emotion) labels.push((EMOTIONS.find((e) => e[0] === tag.emotion) || [, tag.emotion])[1]);
+  const res = t.result === 'open' ? 'открыта' : (t.pnlNet >= 0 ? '+' : '') + t.pnlNet.toFixed(2);
   return (
     <Item variant="outline" size="sm" className="items-start">
       <ItemContent className="gap-2">
@@ -81,19 +86,19 @@ function FactTrade({ t }) {
 
 function Facts({ facts }) {
   if (facts === undefined) return <div className="space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-16 w-full" /></div>;
-  if (!facts) return <p className="text-sm text-muted-foreground">Connect Binance API (Account → Integrations) to get facts from your trades.</p>;
+  if (!facts) return <p className="text-sm text-muted-foreground">Подключите Binance API (Account → Integrations), чтобы видеть факты по сделкам.</p>;
   const s = facts.summary, list = flags(facts);
   return (
     <div className="space-y-3">
       <p className="text-sm">
         {s.trades
-          ? <>{plural(s.trades, 'trade')} · {s.wins}W / {s.losses}L{s.winRate != null && ' · ' + s.winRate + '%'} · <span className={s.pnlNet >= 0 ? 'text-bullish' : 'text-danger'}>{(s.pnlNet >= 0 ? '+' : '') + s.pnlNet.toFixed(2)} USDT</span> · fees {s.fees.toFixed(2)} · avg hold {hold(s.avgHoldSec)}</>
-          : 'No closed trades'}
-        {s.open > 0 && <b> · {s.open} still open</b>}
+          ? <>{plural(s.trades, TRADES)} · {s.wins} в плюс / {s.losses} в минус{s.winRate != null && ' · ' + s.winRate + '%'} · <span className={s.pnlNet >= 0 ? 'text-bullish' : 'text-danger'}>{(s.pnlNet >= 0 ? '+' : '') + s.pnlNet.toFixed(2)} USDT</span> · комиссии {s.fees.toFixed(2)} · в среднем в сделке {hold(s.avgHoldSec)}</>
+          : 'Закрытых сделок нет'}
+        {s.open > 0 && <b> · ещё открыто: {s.open}</b>}
       </p>
       {list.length
         ? <div className="flex flex-wrap gap-1.5">{list.map((x) => <Badge key={x} variant="destructive" className="whitespace-normal">{x}</Badge>)}</div>
-        : s.trades ? <Badge variant="secondary">No rule breaks found in the data</Badge> : null}
+        : s.trades ? <Badge variant="secondary">По данным нарушений нет</Badge> : null}
       {facts.trades.length > 0 && <ItemGroup className="gap-2">{facts.trades.map((t) => <FactTrade key={t.symbol + (t.closeTime || t.openTime)} t={t} />)}</ItemGroup>}
     </div>
   );
@@ -136,12 +141,12 @@ export function EveningDialog({ onClose }) {
       freeConclusion: f.freeConclusion.trim(),
       pnl: facts ? facts.summary.pnlNet : null,
     }).then(() => {
-      toast('Review saved');
+      toast('Разбор сохранён');
       emit('journal:saved', { kind: 'evening' });
       onClose();
     }).catch((err) => {
       setBusy(false);
-      toast(err && err.message && err.message !== 'Failed to fetch' ? err.message : 'Network error — please try again');
+      toast(err && err.message && err.message !== 'Failed to fetch' ? err.message : 'Ошибка сети — попробуйте ещё раз');
     });
   };
 
@@ -149,21 +154,21 @@ export function EveningDialog({ onClose }) {
     <Dialog open onOpenChange={(o) => { if (!o) close(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Evening review</DialogTitle>
+          <DialogTitle>Вечерний разбор</DialogTitle>
           <DialogDescription>{dmy(today)}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-5">
-          <Field label="Day facts — from your trades"><Facts facts={facts} /></Field>
-          {anyBreak && <Field label="What was going on behind the rule breaks above?"><Textarea rows={2} value={f.whyBreaks} onChange={set('whyBreaks')} /></Field>}
-          <Field label="One thing I did well today"><Textarea rows={2} value={f.didWell} onChange={set('didWell')} /></Field>
-          <Field label="One thing to fix tomorrow (becomes tomorrow's if-then)"><Textarea rows={2} value={f.fixTomorrow} onChange={set('fixTomorrow')} /></Field>
-          {hadLosses && <Field label="After losses, I talked to myself…"><Chips list={SELF_TALK} value={f.selfTalk} onChange={set('selfTalk')} /></Field>}
-          <Field label="Missed in screening (coin / why I didn't flag it) — optional"><Textarea rows={2} value={f.missedScreening} onChange={set('missedScreening')} /></Field>
-          <Field label="End-of-day state (1 = drained, 5 = calm)"><Chips list={SCALE_1_5} value={f.eveningState} onChange={set('eveningState')} /></Field>
-          <Field label="Free-form notes — optional"><Textarea rows={2} value={f.freeConclusion} onChange={set('freeConclusion')} /></Field>
+          <Field label="Факты дня — по вашим сделкам"><Facts facts={facts} /></Field>
+          {anyBreak && <Field label="Что стояло за нарушениями выше?"><Textarea rows={2} value={f.whyBreaks} onChange={set('whyBreaks')} /></Field>}
+          <Field label="Одно, что сегодня получилось хорошо"><Textarea rows={2} value={f.didWell} onChange={set('didWell')} /></Field>
+          <Field label="Одно, что исправить завтра (станет завтрашним правилом «если … то …»)"><Textarea rows={2} value={f.fixTomorrow} onChange={set('fixTomorrow')} /></Field>
+          {hadLosses && <Field label="После убытков мой внутренний голос звучал…"><Chips list={SELF_TALK} value={f.selfTalk} onChange={set('selfTalk')} /></Field>}
+          <Field label="Упущено в скрининге (монета / почему не отмечена) — необязательно"><Textarea rows={2} value={f.missedScreening} onChange={set('missedScreening')} /></Field>
+          <Field label="Состояние в конце дня (1 — без сил, 5 — спокойствие)"><Chips list={SCALE_1_5} value={f.eveningState} onChange={set('eveningState')} /></Field>
+          <Field label="Свободные заметки — необязательно"><Textarea rows={2} value={f.freeConclusion} onChange={set('freeConclusion')} /></Field>
         </div>
         <DialogFooter>
-          <Button disabled={!ready || busy} onClick={save}>Save review</Button>
+          <Button disabled={!ready || busy} onClick={save}>Сохранить разбор</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
