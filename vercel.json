@@ -3,8 +3,7 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "functions": {
-    "api/fapi.js":  { "regions": ["sin1"] },
-    "api/kdata.js": { "regions": ["sin1"] }
+    "api/fapi.js":  { "regions": ["sin1"] }
   },
   "rewrites": [
     { "source": "/grid",          "destination": "/grid.html" },

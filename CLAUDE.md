@@ -41,6 +41,7 @@ document.body.addEventListener('click', function (e) {
 ## Роуты фронтенда
 - `#/` — основной экран с карточками монет
 - `#/screener` — скринер
+- `/grid` — in-play скринер (React + shadcn, см. «In play»)
 - `/journal` — журнал (React + shadcn)
 - `#/profile` — профиль (сейчас заглушка, будет журнал)
 - `/settings` — настройки аккаунта (React + shadcn)
@@ -73,7 +74,8 @@ state.journalToday     // запись дневника за сегодня (д�
 - **Полноэкранный график**: обвязка — `src/react/fullview/FvControls.jsx` (островок сверху на ПК, нижняя панель на телефоне, режим разбора сделки — только назад/тикер/ТФ и подпись) и `FvStats` (24h / NATR / объём в углу); плейсхолдеры `[data-fv-island]`, `[data-fv-bar]`, `[data-fv-stats]`, монтирует `_mountFvChrome` в `openCoinFullView`. Сам график, уровни, лучи, алерты, линейка и таймер свечи — vanilla; панель ликвидности — поповер `liquidity`. Состояния извне — события: `terminal:button` (кнопка стакана, `terminalButton()`), `drawings:changed` (`drawingsCount`), `card:update` (анализ), `fv:tf`, `briefing:changed`.
 - **Поповеры одной механикой**: вотчлист, поиск, уведомления, заметки, анализ, ликвидность, очистка — все привязаны к кнопке, которой открыты (`rect` кнопки + `AnchorBox`, повторный клик закрывает — `keepOpenOn`), без затемнения; открыт только один — `openSurface` закрывает остальные (`closePopovers` в `react-bridge.js`), меню профиля тоже. На телефоне любой поповер — на всю ширину экрана (8px от краёв) и не выходит за экран: это задано в самом `PopoverContent` (`components/ui/popover.jsx`, `collisionPadding` 8 + классы `max-sm:`), у `DropdownMenuContent` тоже `collisionPadding` 8. Модальные окна (Dialog) — только формы и чтение: карточки журнала, недельный отчёт, подсказки, подтверждения.
 - **Настройки аккаунта** — страница `/settings` (`src/react/account/`, `mount.jsx` → `AccountPage.jsx`, вкладка в URL `?tab=integrations|security`), не модалка: ключи, пароль и 2FA. Торговые ключи и 2FA — `TradingKeys.jsx`, только торговому аккаунту, только по HTTP. В демо-режиме роут уводит на `/login`.
-- **Статичные страницы** FAQ / Privacy / Terms — свой HTML с `#root` и React-страница `src/react/static/` (`StaticPage.jsx`: назад, заголовок, разделы, `PROSE` для текста; FAQ — Accordion). Тексты правятся в `faq.jsx` / `privacy.jsx` / `terms.jsx`. Вход, регистрация, сброс пароля, подтверждение почты и `/grid` пока vanilla (по решению пользователя).
+- **Статичные страницы** FAQ / Privacy / Terms — свой HTML с `#root` и React-страница `src/react/static/` (`StaticPage.jsx`: назад, заголовок, разделы, `PROSE` для текста; FAQ — Accordion). Тексты правятся в `faq.jsx` / `privacy.jsx` / `terms.jsx`. Вход, регистрация, сброс пароля и подтверждение почты пока vanilla (по решению пользователя).
+- **In play** `/grid` (`grid.html` → `src/react/inplay/`): 9 ячеек с монетами, активными сейчас против своей нормы, и таблица кандидатов. Сервер (`inplay/feed.js` в `server-vps.js`, работает, пока страница открыта хоть у кого-то, +15 мин): 1m-свечи всех USDT-перпов (4 ч REST при старте, потом `kline_1m`), раз в 2 с — `{type:'inplay'}` по WS подписчикам (`subscribe_inplay`), топ-60. Формулы — `inplay/metrics.js`: окно 5 мин против медианы своих минут за 4 ч — объём $ (rv), сделки (tr), размах 1m (vr), ход в обычных размахах (move); score = 0.35·log2 rv + 0.35·log2 tr + 0.2·log2 vr + 0.1·log2(1+move), EMA 30 с; ворота: медиана ≥ $15K/мин, сейчас ≥ $100K/мин, размах 1m ≥ 0.25%. Кто в ячейке — `src/inplay-grid.js` в браузере: вход при score ≥ 1, выход после 60 с ниже 0.6, минимум 3 мин в сетке, замена слабейшей только при +25%, ячейки не переставляются; закреплённые (клик по строке таблицы или булавка) — `localStorage qt_inplay_pins`. Графики ячеек — свечи 1m прямо с Binance (REST + WS из браузера). Тесты: `npm run test:inplay`.
 - **Страница журнала** `/journal` — `src/react/journal/` (`mount.jsx`), уход со страницы — `unmountJournal` через `onRouteChange` в `router.js`.
 - Общее: `src/react/shared/` (`Chips` — выбор одного из чипов, `Field`, `useSiteTheme`, `useEvents`).
 - Новые компоненты: `npx shadcn@latest add <name>` (конфиг `components.json`, алиас `@` → `src/react`, файлы в `components/ui/*.jsx`; при запросе перезаписать существующий — `-o`). После `add` проверить импорты: CLI иногда пишет `from "cn"` → заменить на `@/lib/utils`.
@@ -101,7 +103,7 @@ state.journalToday     // запись дневника за сегодня (д�
 
 ### Старые классы (`src/design/components.css`)
 
-Новый UI — только компоненты shadcn. Vanilla-классы остались для того, что ещё не переведено (вход / регистрация / сброс пароля, `/grid`) и для vanilla-частей (график, стакан, карточки): `.ds-input`, `.popup` → `.popup-header` → `.popup-body` → `.popup-footer`, `.btn-icon`, `.btn-loading`, `.spinner`, `.overlay`. Неиспользуемые правила удалены вместе с витриной `design.html` (2026-10-29); новые vanilla-стили не добавлять.
+Новый UI — только компоненты shadcn. Vanilla-классы остались для того, что ещё не переведено (вход / регистрация / сброс пароля) и для vanilla-частей (график, стакан, карточки): `.ds-input`, `.popup` → `.popup-header` → `.popup-body` → `.popup-footer`, `.btn-icon`, `.btn-loading`, `.spinner`, `.overlay`. Неиспользуемые правила удалены вместе с витриной `design.html` (2026-10-29); новые vanilla-стили не добавлять.
 
 ### Анимации
 

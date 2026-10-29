@@ -14,6 +14,7 @@ try {
 const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
+const { createInplayFeed } = require('./inplay/feed');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -537,6 +538,41 @@ setInterval(function() {
     bootstrapD1Opens();
   }
 }, 60000);
+
+// ── In play (/grid): активность монет против их нормы, inplay/feed.js ─────
+// Работает, только пока /grid открыт хоть у кого-то (+15 мин после ухода последнего)
+
+var inplayLast = null;
+var inplayStopTimer = null;
+var inplayFeed = createInplayFeed({
+  fetchJson: fetchBinance,
+  log: function (m) { console.log(m); },
+  onUpdate: function (p) {
+    inplayLast = JSON.stringify(Object.assign({ type: 'inplay' }, p));
+    clients.forEach(function (c) { if (c._inplay && c.readyState === WebSocket.OPEN) c.send(inplayLast); });
+  },
+});
+
+function inplayWatchers() {
+  var n = 0;
+  clients.forEach(function (c) { if (c._inplay) n++; });
+  return n;
+}
+
+function inplaySubscribe(ws, on) {
+  ws._inplay = !!on;
+  if (on) {
+    clearTimeout(inplayStopTimer);
+    inplayStopTimer = null;
+    inplayFeed.start();
+    if (inplayLast) ws.send(inplayLast);
+  } else if (!inplayWatchers() && inplayFeed.running && !inplayStopTimer) {
+    inplayStopTimer = setTimeout(function () {
+      inplayStopTimer = null;
+      if (!inplayWatchers()) { inplayFeed.stop(); inplayLast = null; }
+    }, 15 * 60000);
+  }
+}
 
 // ── Binance WS: индивидуальные @ticker подписки (работают на VPS) ────────
 
@@ -2803,6 +2839,10 @@ wss.on('connection', function (ws, upgradeReq) {
         ws.send(JSON.stringify({ type: 'pong', _id: msg._id, t: Date.now(), binanceMs: binanceRttMs(), route: ws._route, edge: ws._edge, country: ws._country || _ipCountry.get(ws._ip) || null }));
       }
 
+      else if (msg.type === 'subscribe_inplay' || msg.type === 'unsubscribe_inplay') {
+        inplaySubscribe(ws, msg.type === 'subscribe_inplay');
+      }
+
       else if (msg.type === 'get_ticker') {
         var cur = Object.values(tickerCache);
         if (cur.length) ws.send(JSON.stringify({ type: 'ticker', _id: msg._id, data: cur }));
@@ -2914,7 +2954,7 @@ wss.on('connection', function (ws, upgradeReq) {
     }
   });
 
-  ws.on('close', function () { clients.delete(ws); console.log('[Server] Client disconnected (' + clients.size + ' total)'); });
+  ws.on('close', function () { clients.delete(ws); if (ws._inplay) inplaySubscribe(ws, false); console.log('[Server] Client disconnected (' + clients.size + ' total)'); });
   ws.on('error', function () { clients.delete(ws); });
 });
 

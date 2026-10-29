@@ -3,120 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Grid Scanner</title>
+  <title>In play</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/geist-sans-variable.woff2" crossorigin />
+  <script>
+    try { var t = localStorage.getItem('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js" defer></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      background: #0f1114;
-      color: #c0c8cc;
-      font-family: 'Menlo', 'Consolas', monospace;
-      font-size: 12px;
-      overflow: hidden;
-    }
-
-    /* ── Topbar ── */
-    #topbar {
-      height: 36px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 0 12px;
-      background: #141920;
-      border-bottom: 1px solid #1e262c;
-      flex-shrink: 0;
-    }
-    #topbar a {
-      color: #5a6872;
-      text-decoration: none;
-      font-size: 11px;
-    }
-    #topbar a:hover { color: #c0c8cc; }
-    #g-title { font-weight: bold; color: #c0c8cc; font-size: 12px; }
-    #g-meta  { color: #3d4f5a; margin-left: auto; font-size: 11px; }
-
-    /* ── Layout ── */
-    body { display: flex; flex-direction: column; }
-
-    #g-body {
-      flex: 1;
-      min-height: 0;
-      padding: 6px;
-    }
-
-    #g-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 6px;
-      height: 100%;
-    }
-
-    /* ── Card ── */
-    .g-card {
-      background: #141920;
-      border: 1px solid #1e262c;
-      border-radius: 4px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    .g-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 10px;
-      border-bottom: 1px solid #1e262c;
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-
-    .g-sym   { font-weight: bold; color: #e0e8ec; font-size: 12px; }
-    .g-delta { font-weight: bold; font-size: 12px; }
-    .g-delta.up { color: #4dab90; }
-    .g-delta.dn { color: #d9534f; }
-
-    .g-label { color: #3d4f5a; font-size: 10px; }
-    .g-natr  { color: #7a9aaa; font-size: 11px; }
-    .g-rvol  { color: #7a9aaa; font-size: 11px; }
-
-    .g-chart {
-      flex: 1;
-      min-height: 0;
-      position: relative;
-    }
-
-    /* ── Mobile ── */
-    @media (max-width: 800px) {
-      #g-grid {
-        grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: none;
-        height: auto;
-        overflow-y: auto;
-      }
-      #g-body { overflow-y: auto; }
-      .g-chart { min-height: 150px; }
-    }
-    @media (max-width: 500px) {
-      #g-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link rel="stylesheet" href="/src/design/tokens.css" />
+  <link rel="stylesheet" href="/src/design/base.css" />
 </head>
 <body>
-  <div id="topbar">
-    <a href="/">← back</a>
-    <span id="g-title">Grid · Scanner</span>
-    <span id="g-meta">loading…</span>
-  </div>
-  <div id="g-body">
-    <div id="g-grid"></div>
-  </div>
-  <script type="module" src="/src/grid-main.js"></script>
+  <!-- "In play" screener — React + shadcn/ui: src/react/inplay/ -->
+  <div id="root"></div>
+  <script type="module" src="/src/react/inplay/mount.jsx"></script>
 </body>
 </html>
