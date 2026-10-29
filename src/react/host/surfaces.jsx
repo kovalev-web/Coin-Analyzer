@@ -11,6 +11,7 @@ import { NotesPopover } from './NotesPopover.jsx';
 import { AnalysisPopover } from './AnalysisPopover.jsx';
 import { TermSettingsDialog } from './TermSettingsDialog.jsx';
 import { LiquidityPopover } from './LiquidityPopover.jsx';
+import { ChartTouchMenu } from './ChartTouchMenu.jsx';
 
 
 export const SURFACES = {
@@ -25,5 +26,6 @@ export const SURFACES = {
   notes: NotesPopover,
   analysis: AnalysisPopover,
   liquidity: LiquidityPopover,
+  'chart-menu': ChartTouchMenu,
   'term-settings': TermSettingsDialog,
 };

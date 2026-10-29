@@ -2757,59 +2757,30 @@ export function openCoinFullView(sym) {
   };
 
 
+  // The menu itself is a shadcn dropdown (src/react/host/ChartTouchMenu.jsx),
+  // opened under the touch point at the right edge of the chart
   function _fvTMShowMenu(y, price, delMode, delIdx, time1) {
-    _fvTMHideMenu();
     var p = price.toFixed(calcPriceFormat(price).precision);
-    var m = document.createElement('div');
-    m.id = 'fv-touch-menu';
-    m.className = 'fv-touch-menu context-menu';
-    var html;
-    if (delMode === 'level') {
-      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-level" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete level · ' + p + '</span></button>';
-    } else if (delMode === 'alert') {
-      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-alert" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete alert · ' + p + '</span></button>';
-    } else if (delMode === 'ray') {
-      html = '<button class="fv-touch-menu-item fv-tmi-danger" data-tm="del-ray" data-idx="' + delIdx + '">' +
-        '<span class="fv-tmi-icon">' + icon('trash', 16) + '</span><span>Delete ray · ' + p + '</span></button>';
-    } else {
-      html = '<button class="fv-touch-menu-item" data-tm="level">' +
-          '<span class="fv-tmi-icon">' + icon('minus', 16) + '</span><span>Price level · ' + p + '</span></button>' +
-        '<button class="fv-touch-menu-item" data-tm="alert">' +
-          '<span class="fv-tmi-icon">' + icon('bell', 16) + '</span><span>Add alert · ' + p + '</span></button>' +
-        '<button class="fv-touch-menu-item" data-tm="ray" data-time="' + time1 + '">' +
-          '<span class="fv-tmi-icon">' + icon('arrow-right', 16) + '</span><span>Ray · ' + p + '</span></button>';
-    }
-    m.innerHTML = html;
-    var menuH = delMode ? 54 : 162;
-    var chartH = wrap.offsetHeight;
-    var top = (y + 10 + menuH > chartH) ? Math.max(4, y - menuH - 10) : y + 10;
-    m.style.top = top + 'px';
-    wrap.appendChild(m);
-    m.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-tm]');
-      if (!btn) { _fvTMHideMenu(); return; }
-      var a = btn.dataset.tm, idx = parseInt(btn.dataset.idx);
-      if (a === 'level') addLevel(sym, price);
-      else if (a === 'alert') addAlert(sym, price);
-      else if (a === 'ray') { var t1 = parseFloat(btn.dataset.time); if (!isNaN(t1)) addRay(sym, t1, price); }
-      else if (a === 'del-level') removeLevel(sym, idx);
-      else if (a === 'del-alert') removeAlert(sym, idx);
-      else if (a === 'del-ray') removeRay(sym, idx);
-      _fvTMHideMenu();
+    var items = delMode
+      ? [{ key: 'del', danger: true, label: 'Delete ' + delMode + ' · ' + p }]
+      : [{ key: 'level', label: 'Price level · ' + p }, { key: 'alert', label: 'Add alert · ' + p }, { key: 'ray', label: 'Ray · ' + p }];
+    var r = el.getBoundingClientRect();
+    var psW = (_fvChart && _fvChart.priceScale('right').width) ? _fvChart.priceScale('right').width() : 75;
+    openSurface('chart-menu', {
+      rect: { left: r.left + el.offsetWidth - psW, top: r.top + y, width: 0, height: 0 },
+      items: items,
+      onPick: function (a) {
+        if (a === 'level') addLevel(sym, price);
+        else if (a === 'alert') addAlert(sym, price);
+        else if (a === 'ray') { if (time1 != null && !isNaN(time1)) addRay(sym, time1, price); }
+        else if (delMode === 'level') removeLevel(sym, delIdx);
+        else if (delMode === 'alert') removeAlert(sym, delIdx);
+        else if (delMode === 'ray') removeRay(sym, delIdx);
+      },
     });
-    // Close on next touchstart outside the menu (not touchend — that fires
-    // when the user lifts from the long-press before they can tap a menu item)
-    function _cTM(ev) {
-      var m2 = document.getElementById('fv-touch-menu');
-      if (!m2) { document.removeEventListener('touchstart', _cTM); return; }
-      if (!m2.contains(ev.target)) { _fvTMHideMenu(); document.removeEventListener('touchstart', _cTM); }
-    }
-    document.addEventListener('touchstart', _cTM);
   }
 
-  function _fvTMHideMenu() { var m = document.getElementById('fv-touch-menu'); if (m) m.remove(); }
+  function _fvTMHideMenu() { closeSurface('chart-menu'); }
   function _fvTMShowHandle(y) {
     var h = document.getElementById('fv-drag-handle');
     if (!h) { h = document.createElement('div'); h.id = 'fv-drag-handle'; h.className = 'fv-drag-handle'; wrap.appendChild(h); }

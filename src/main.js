@@ -336,7 +336,8 @@ window.addEventListener('orientationchange', function () {
   closeClearPopup();
   // Close only dropdown-mode popups (positions stale after resize).
   // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
-  var ids = ['fv-touch-menu', 'fv-add-btn', 'fv-drag-handle'];
+  closeSurface('chart-menu');
+  var ids = ['fv-add-btn', 'fv-drag-handle'];
   ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
   document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
   clearAllCrosshairs();

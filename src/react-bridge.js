@@ -17,7 +17,7 @@ export function preloadReactHost() {
 }
 
 // Popovers anchored to a button: only one at a time — opening one closes the others
-var POPOVERS = { search: 1, notifications: 1, briefing: 1, notes: 1, analysis: 1, liquidity: 1, clear: 1 };
+var POPOVERS = { search: 1, notifications: 1, briefing: 1, notes: 1, analysis: 1, liquidity: 1, 'chart-menu': 1, clear: 1 };
 
 export function closePopovers(except) {
   Object.keys(POPOVERS).forEach(function (n) {
