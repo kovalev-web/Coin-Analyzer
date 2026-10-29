@@ -9,6 +9,7 @@ import { mountIsland, unmountIsland, unmountIslands } from './react/islands.jsx'
 import { Topbar } from './react/home/Topbar.jsx';
 import { SortBar } from './react/home/SortBar.jsx';
 import { DaySummary } from './react/home/DaySummary.jsx';
+import { HomeState, DemoBanner } from './react/home/HomeState.jsx';
 import { CardHead } from './react/home/CardHead.jsx';
 import { BriefingDrawer } from './react/home/Briefing.jsx';
 import { FvControls, FvStats } from './react/fullview/FvControls.jsx';
@@ -1670,10 +1671,8 @@ export function injectDemoBanner() {
   if (document.getElementById('demo-banner')) return;
   var el = document.createElement('div');
   el.id = 'demo-banner';
-  el.className = 'demo-banner';
-  el.innerHTML = '<span class="demo-banner-text">Sync watchlist · Price alerts · Track PnL · Journal · AI analysis</span>'
-    + '<a href="/login" class="demo-banner-cta">Sign up free →</a>';
   document.body.appendChild(el);
+  mountIsland(el, DemoBanner); // src/react/home/HomeState.jsx
   document.body.classList.add('demo-mode');
 }
 
@@ -1692,20 +1691,18 @@ export function render() {
   if (state.loading) {
     destroyCharts();
     unmountIslands(app);
-    app.innerHTML = '<div class="loading-overlay"><div class="big-spinner"></div><p>Loading data from Binance Futures...</p></div>';
+    app.innerHTML = '<div id="home-state-root"></div>';
+    mountIsland(document.getElementById('home-state-root'), HomeState, { kind: 'loading', text: 'Loading data from Binance Futures…' });
     return;
   }
   var coins = _screenerMode ? screenerCoins() : filteredCoins();
 
   destroyCharts();
-  var emptyHtml;
-  if (state.error) {
-    emptyHtml = '<div class="error-banner">' + state.error + '</div>';
-  } else if (state.coins.length === 0) {
-    emptyHtml = '<div class="error-banner">Waiting for server data...</div>';
-  } else {
-    emptyHtml = '<div class="empty-state">No coins match the current filter.</div>';
-  }
+  // No cards: a React island says why (src/react/home/HomeState.jsx)
+  var empty = state.error ? { kind: 'error', text: state.error }
+    : state.coins.length === 0 ? { kind: 'waiting', text: 'Waiting for server data…' }
+    : { kind: 'empty', text: 'No coins match the current filter.' };
+  var emptyHtml = '<div id="home-state-root"></div>';
   var coinsHtml = coins.length
     ? '<div class="cards-area">'
       + '<div class="cards-grid" id="cards-grid">'
@@ -1723,6 +1720,7 @@ export function render() {
   mountIsland(document.getElementById('topbar-root'), Topbar, { screener: _screenerMode });
   if (!_screenerMode) mountIsland(document.getElementById('day-summary-root'), DaySummary);
   mountIsland(document.getElementById('sortbar-root'), SortBar, { screener: _screenerMode });
+  if (!coins.length) mountIsland(document.getElementById('home-state-root'), HomeState, empty);
   mountCardHeads(app);
   initCharts();
 }
