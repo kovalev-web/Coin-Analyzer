@@ -81,17 +81,18 @@
   --shadow-md: 0 2px 12px rgba(26, 26, 26, 0.06);
 
   /* ── Color: Surface ────────────────────────────────────────── */
+  /* Neutral palette, as shadcn/ui's default theme (neutral-50…950) */
   --canvas:  #ffffff;   /* page background, chart bg         */
   --paper:   #ffffff;   /* card / popup surface              */
-  --cloud:   #f4f5f5;   /* page bg, hover fills              */
-  --fog:     #e8e8e8;   /* muted fills, secondary controls   */
+  --cloud:   #f5f5f5;   /* page bg, hover fills              */
+  --fog:     #e5e5e5;   /* muted fills, secondary controls   */
 
   /* ── Color: Border ─────────────────────────────────────────── */
-  --steel:    #c2c2c2;  /* input borders, scrollbar          */
+  --steel:    #d4d4d4;  /* input borders, scrollbar          */
 
   /* ── Color: Text ───────────────────────────────────────────── */
-  --ink-deep: #000000;  /* maximum contrast                  */
-  --graphite: #636363;  /* muted / placeholder text          */
+  --ink-deep: #0a0a0a;  /* maximum contrast                  */
+  --graphite: #737373;  /* muted / placeholder text          */
 
   /* ── Color: Brand ──────────────────────────────────────────── */
   --primary: #277cc2;
@@ -103,9 +104,9 @@
 
   /* ── Color: Chart ──────────────────────────────────────────── */
   --candle-up:   #242424;
-  --candle-dn:   #9badb8;
-  --vol-up:      rgba(20, 24, 46, 0.26);
-  --vol-dn:      rgba(155, 173, 184, 0.25);
+  --candle-dn:   #a3a3a3;
+  --vol-up:      rgba(10, 10, 10, 0.22);
+  --vol-dn:      rgba(163, 163, 163, 0.25);
 
   /* ── Color: Level price line ───────────────────────────────── */
   --level-label-bg: #C3DEF3;  /* axis label bg, light theme     */
@@ -117,21 +118,21 @@
 /* ── Dark mode: system preference ────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas:   #111518;
-    --paper:    #181d21;
-    --cloud:    #0a0d0f;
-    --fog:      #1e252a;
-    --steel:    #2d3940;
+    --canvas:   #121212;
+    --paper:    #171717;
+    --cloud:    #0a0a0a;
+    --fog:      #262626;
+    --steel:    #404040;
 
-    --ink-deep: #f2f6f8;
-    --graphite: #637880;
+    --ink-deep: #fafafa;
+    --graphite: #a1a1a1;
 
     --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.25);
 
-    --candle-up: #c2ccd0;
-    --candle-dn: #3b4b54;
-    --vol-up:    rgba(167, 197, 209, 0.18);
-    --vol-dn:    rgba(59, 75, 84, 0.20);
+    --candle-up: #d4d4d4;
+    --candle-dn: #525252;
+    --vol-up:    rgba(212, 212, 212, 0.16);
+    --vol-dn:    rgba(82, 82, 82, 0.22);
 
     --level-label-bg: #0B293D;
     --ray-label-bg: #3D2A0B;
@@ -141,21 +142,21 @@
 /* ── Dark mode: manual override ──────────────────────────────── */
 /* Keep in sync with media query block above.                     */
 :root[data-theme="dark"] {
-  --canvas:   #111518;
-  --paper:    #181d21;
-  --cloud:    #0a0d0f;
-  --fog:      #1e252a;
-  --steel:    #2d3940;
+  --canvas:   #121212;
+  --paper:    #171717;
+  --cloud:    #0a0a0a;
+  --fog:      #262626;
+  --steel:    #404040;
 
-  --ink-deep: #f2f6f8;
-  --graphite: #637880;
+  --ink-deep: #fafafa;
+  --graphite: #a1a1a1;
 
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
 
-  --candle-up: #c2ccd0;
-  --candle-dn: #3b4b54;
-  --vol-up:    rgba(167, 197, 209, 0.18);
-  --vol-dn:    rgba(59, 75, 84, 0.20);
+  --candle-up: #d4d4d4;
+  --candle-dn: #525252;
+  --vol-up:    rgba(212, 212, 212, 0.16);
+  --vol-dn:    rgba(82, 82, 82, 0.22);
 
   --level-label-bg: #0B293D;
   --ray-label-bg: #3D2A0B;
