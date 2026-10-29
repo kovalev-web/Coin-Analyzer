@@ -1422,7 +1422,11 @@ function _renderFoot() {
   if (!document.getElementById('dom-foot')) return;
   var pos = _position();
   var usdt = T.account.balances.find(function (b) { return b.asset === 'USDT'; });
-  var foot = { avail: usdt && usdt.availableBalance != null ? Number(usdt.availableBalance).toFixed(2) : '—', pos: null };
+  var foot = {
+    wallet: usdt && usdt.walletBalance != null ? Number(usdt.walletBalance).toFixed(2) : '—',
+    avail: usdt && usdt.availableBalance != null ? Number(usdt.availableBalance).toFixed(2) : '—', // minus margin of positions and orders, all coins
+    pos: null,
+  };
   if (pos) {
     var amt = Number(pos.amount);
     var info = _pnlInfo();

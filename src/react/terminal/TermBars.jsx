@@ -7,7 +7,7 @@
 //    emotion (optional); the row stays until ОК, × skips it.
 // And two under the ladder:
 //  - TermSizes: the order size slots, USDT (keys 1…6 pick them too).
-//  - TermFoot: position (side, size, entry, breakeven, PnL), available balance
+//  - TermFoot: position (side, size, entry, breakeven, PnL), wallet and available balance
 //    and the status line (last error / confirmation, or the kill switch).
 // State and actions: termLock / termUnlock / termLockNow, termTag / termTagSet /
 // termTagDone / termTagSkip, termSizes / termPickSize, termFoot in terminal.js;
@@ -146,7 +146,8 @@ export function TermFoot() {
       {p && <Line label="Entry">{p.entry}</Line>}
       {p && p.breakEven && <Line label="Breakeven" tip="Where the whole trade, closed part and fees included, comes out at zero">{p.breakEven}</Line>}
       {p && <Line label="PnL">{p.pnl ? <span className={'text-sm ' + (p.up ? 'text-bullish' : 'text-danger')}>{p.pnl}</span> : '—'}</Line>}
-      <Line label="Available">{f.avail} USDT</Line>
+      <Line label="Balance" tip="Wallet balance, USDT">{f.wallet} USDT</Line>
+      <Line label="Available" tip="What new orders can use: the balance minus the margin of open positions and orders on every coin, with unrealized PnL">{f.avail} USDT</Line>
       <p className={'min-h-3.5 text-2xs ' + (f.status && f.status.err ? 'text-danger' : 'text-muted-foreground')}>{f.status ? f.status.msg : ''}</p>
     </div>
   );

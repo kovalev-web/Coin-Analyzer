@@ -135,6 +135,9 @@ class Trader extends EventEmitter {
     if (msg.e === 'ORDER_TRADE_UPDATE') {
       var o = st.applyOrderUpdate(this.state, msg.o, msg.E);
       if (o) this.emit('event', { type: 'order', order: o });
+      // A placed / cancelled / amended order reserves or frees margin, and no
+      // ACCOUNT_UPDATE comes for it — available balance must be fetched
+      this._scheduleBalanceRefresh();
       if (msg.o.x === 'TRADE') {
         this._scheduleRealized(msg.o.s);
         this.emit('event', {
@@ -157,8 +160,8 @@ class Trader extends EventEmitter {
     }
   }
 
-  // ACCOUNT_UPDATE has wallet balance but not available balance — fetch it,
-  // debounced so a burst of fills costs one request.
+  // Neither ACCOUNT_UPDATE nor order updates carry the available balance — fetch
+  // it, debounced so a burst of fills or clicks costs one request.
   _scheduleBalanceRefresh() {
     if (this._balanceTimer) return;
     var self = this;

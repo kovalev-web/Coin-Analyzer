@@ -157,6 +157,25 @@ test('balance change from the stream triggers one available-balance refresh', as
   assert.equal(t.state.balances.USDT.availableBalance, '4880');
 });
 
+test('a placed or cancelled order refreshes the available balance (margin it holds)', async () => {
+  let balanceCalls = 0, avail = '4880';
+  const { t } = await makeTrader({
+    'GET /fapi/v2/balance': () => { balanceCalls++; return [{ asset: 'USDT', balance: '5000', crossWalletBalance: '5000', availableBalance: avail, updateTime: 9 }]; },
+  });
+  balanceCalls = 0;
+  const o = { s: 'BTCUSDT', i: 5, c: 'qt-5', S: 'BUY', o: 'LIMIT', f: 'GTC', p: '100', ap: '0', q: '1', z: '0', R: false, ps: 'BOTH', T: 2000 };
+  avail = '4780';
+  t.handleStreamEvent({ e: 'ORDER_TRADE_UPDATE', E: 2000, o: Object.assign({ x: 'NEW', X: 'NEW' }, o) });
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.equal(balanceCalls, 1);
+  assert.equal(t.state.balances.USDT.availableBalance, '4780');
+  avail = '4880';
+  t.handleStreamEvent({ e: 'ORDER_TRADE_UPDATE', E: 3000, o: Object.assign({ x: 'CANCELED', X: 'CANCELED' }, o, { T: 3000 }) });
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.equal(balanceCalls, 2);
+  assert.equal(t.state.balances.USDT.availableBalance, '4880');
+});
+
 test('stream events during resync are buffered and applied after the snapshot', async () => {
   let release;
   const { t } = await makeTrader();
