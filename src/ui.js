@@ -1,5 +1,5 @@
 import { state, filteredCoins, STABLE_SYMBOLS, SCREENER_EXCLUDE } from './state.js';
-import { fmt, fmtPrice, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzTimeStrSec, tzParts, effectiveTZ } from './utils.js';
+import { fmt, escHtml, signalLabel, icon, tzDateStr, tzTimeStr, tzParts, effectiveTZ } from './utils.js';
 import { terminalOnFVOpen, terminalOnFVClose } from './terminal.js';
 import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js';
 import { noteInputHTML, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
@@ -2067,88 +2067,48 @@ function _tapeMedian(arr) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function _fvLiquidityHTML() {
+// Liquidity panel (spread, depth, aggression, big trades): a shadcn popover
+// under its button (src/react/host/LiquidityPopover.jsx). The order book feed
+// fills _liq; the popover reads liquidityData() and redraws on 'liq:update',
+// at most once a frame and only while it's open.
+var _liq = { metrics: null, tape: [], n: 0 };
+var _liqQueued = false;
+
+function _resetLiquidity() {
   _tapeNotionals = [];
-  return '<div class="fv-liquidity" id="fv-liquidity">'
-    + '<div class="popup-header"><span class="popup-title">Orderbook</span>'
-    + '<button class="btn-topbar" data-action="close-liq-panel">' + icon('x', 14) + '</button></div>'
-    + '<div class="liq-metrics">'
-    + '<div class="liq-row"><div class="liq-row-head"><span>Spread</span><span class="liq-value" id="fv-liq-spread">—</span></div></div>'
-    + '<div class="liq-row"><div class="liq-row-head"><span>Bid depth</span><span class="liq-value" id="fv-liq-bid-val">—</span></div><div class="liq-bar-track"><div class="liq-bar bid" id="fv-liq-bid-bar" style="width:0%"></div></div></div>'
-    + '<div class="liq-row"><div class="liq-row-head"><span>Ask depth</span><span class="liq-value" id="fv-liq-ask-val">—</span></div><div class="liq-bar-track"><div class="liq-bar ask" id="fv-liq-ask-bar" style="width:0%"></div></div></div>'
-    + '<div class="liq-row"><div class="liq-row-head"><span>Aggression</span><span class="liq-value" id="fv-liq-tps">—</span></div><div class="liq-aggr-track"><div class="liq-aggr-buy" id="fv-liq-aggr-buy" style="width:50%"></div><div class="liq-aggr-sell" id="fv-liq-aggr-sell" style="width:50%"></div></div></div>'
-    + '</div>'
-    + '<div class="tape-list" id="fv-tape-list"></div>'
-    + '</div>';
+  _liq = { metrics: null, tape: [], n: 0 };
+  closeSurface('liquidity');
 }
 
-function _fmtDepth(n) {
-  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-  return '$' + n.toFixed(0);
+export function liquidityData() { return _liq; }
+
+export function openLiquidityPopup(btn) {
+  if (isSurfaceOpen('liquidity')) { closeSurface('liquidity'); return; }
+  var r = btn.getBoundingClientRect();
+  openSurface('liquidity', { rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 
-function _spreadClass(bps) {
-  if (bps < 10) return 'narrow';
-  if (bps > 30) return 'wide';
-  return '';
+function _liqChanged() {
+  if (_liqQueued || !isSurfaceOpen('liquidity')) return;
+  _liqQueued = true;
+  requestAnimationFrame(function () { _liqQueued = false; emit('liq:update'); });
 }
 
 function renderLiquidityMetrics(metrics) {
-  var spreadEl = document.getElementById('fv-liq-spread');
-  if (!spreadEl) return;
-  if (metrics.spread != null) {
-    spreadEl.textContent = metrics.spread.toFixed(1) + ' bps';
-    spreadEl.className = 'liq-value ' + _spreadClass(metrics.spread);
-  }
-
-  var maxDepth = Math.max(metrics.depthBid, metrics.depthAsk, 1);
-  var bidBar = document.getElementById('fv-liq-bid-bar');
-  var askBar = document.getElementById('fv-liq-ask-bar');
-  var bidVal = document.getElementById('fv-liq-bid-val');
-  var askVal = document.getElementById('fv-liq-ask-val');
-  if (bidBar) bidBar.style.width = (metrics.depthBid / maxDepth * 100) + '%';
-  if (askBar) askBar.style.width = (metrics.depthAsk / maxDepth * 100) + '%';
-  if (bidVal) bidVal.textContent = _fmtDepth(metrics.depthBid);
-  if (askVal) askVal.textContent = _fmtDepth(metrics.depthAsk);
-
-  var aggr = metrics.aggression;
-  var buyBar = document.getElementById('fv-liq-aggr-buy');
-  var sellBar = document.getElementById('fv-liq-aggr-sell');
-  var tpsEl = document.getElementById('fv-liq-tps');
-  if (buyBar) buyBar.style.width = (aggr.ratio * 100) + '%';
-  if (sellBar) sellBar.style.width = ((1 - aggr.ratio) * 100) + '%';
-  if (tpsEl) tpsEl.textContent = aggr.tradesPerSec.toFixed(1) + ' tps';
-}
-
-function _fmtQty(n) {
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  if (n >= 1) return n.toFixed(2);
-  return n.toFixed(4);
+  _liq.metrics = metrics;
+  _liqChanged();
 }
 
 function appendTapeRow(trade) {
   var notional = trade.price * trade.qty;
   if (notional < TAPE_MIN_USDT) return;
-  var list = document.getElementById('fv-tape-list');
-  if (!list) return;
-
   // "Large" is relative to this coin's own recent trades, not a fixed USDT amount —
   // a $500 trade is huge on a thin altcoin and unremarkable on BTC.
   var isLarge = _tapeNotionals.length >= 5 && notional >= _tapeMedian(_tapeNotionals) * TAPE_LARGE_MULTIPLIER;
   _tapeNotionals.push(notional);
   if (_tapeNotionals.length > TAPE_NOTIONAL_WINDOW) _tapeNotionals.shift();
-
-  var row = document.createElement('div');
-  row.className = 'tape-row' + (isLarge ? ' large ' + (trade.isBuy ? 'buy' : 'sell') : '');
-  var hms = tzTimeStrSec(new Date(trade.ts)).split(':');
-  var hh = hms[0], mm = hms[1], ss = hms[2];
-  row.innerHTML = '<span class="tape-time">' + hh + ':' + mm + ':' + ss + '</span>'
-    + '<span class="tape-price">' + fmtPrice(trade.price).replace('$', '') + '</span>'
-    + '<span class="tape-qty">' + _fmtQty(trade.qty) + '</span>';
-  list.insertBefore(row, list.firstChild);
-  while (list.children.length > TAPE_MAX_ROWS) list.removeChild(list.lastChild);
+  _liq.tape = [{ id: ++_liq.n, price: trade.price, qty: trade.qty, large: isLarge, buy: trade.isBuy }].concat(_liq.tape.slice(0, TAPE_MAX_ROWS - 1));
+  _liqChanged();
 }
 
 // Draw alert bells + trade triangles on the FV canvas overlay.
@@ -2400,7 +2360,6 @@ export function openCoinFullView(sym) {
       + '<div class="fv-chart-wrap">'
       + _fvCoinInfoHTML()
       + '<div id="fv-chart"></div>'
-      + _fvLiquidityHTML()
       + '</div>'
       + '</div>'
       + _fvBottomBarHTML()
@@ -2409,7 +2368,7 @@ export function openCoinFullView(sym) {
     // Switching coins — update chart-wrap only, leave drawer untouched
     var _chartWrap = overlay.querySelector('.fv-chart-wrap');
     if (_chartWrap) {
-      _chartWrap.innerHTML = _fvCoinInfoHTML() + '<div id="fv-chart"></div>' + _fvLiquidityHTML();
+      _chartWrap.innerHTML = _fvCoinInfoHTML() + '<div id="fv-chart"></div>';
       var _bb = overlay.querySelector('.fv-bottom-bar');
       if (_bb) _bb.outerHTML = _fvBottomBarHTML();
       var _fvdEl = document.getElementById('fv-briefing-drawer');
@@ -2446,8 +2405,7 @@ export function openCoinFullView(sym) {
   window.__fvTF = tf;
 
   // Liquidity panel: (re)connect order book + trade tape WS for this symbol
-  var _tapeList = document.getElementById('fv-tape-list');
-  if (_tapeList) _tapeList.innerHTML = '';
+  _resetLiquidity();
   if (!_fvReplay) {
     connectOrderbook(sym, function (msg) {
       renderLiquidityMetrics(msg.metrics);
@@ -3055,6 +3013,7 @@ export function closeCoinFullView() {
   _fvReplay = null;
   window.__fvReplay = false;
   closeSurface('notes');
+  closeSurface('liquidity');
   clearNoteIcons();
   softDisconnectOrderbook();
   terminalOnFVClose();

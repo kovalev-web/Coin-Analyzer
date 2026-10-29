@@ -10,6 +10,7 @@ import { BriefingPopover } from '../home/Briefing.jsx';
 import { NotesPopover } from './NotesPopover.jsx';
 import { AnalysisPopover } from './AnalysisPopover.jsx';
 import { TermSettingsDialog } from './TermSettingsDialog.jsx';
+import { LiquidityPopover } from './LiquidityPopover.jsx';
 
 
 export const SURFACES = {
@@ -23,5 +24,6 @@ export const SURFACES = {
   briefing: BriefingPopover,
   notes: NotesPopover,
   analysis: AnalysisPopover,
+  liquidity: LiquidityPopover,
   'term-settings': TermSettingsDialog,
 };

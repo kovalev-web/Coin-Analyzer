@@ -7,7 +7,7 @@ import {
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent,
 } from './api.js';
 import {
-  render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
+  render, openAnalysisPopup, openLiquidityPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   isBriefingPanelOpen,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -205,16 +205,9 @@ document.body.addEventListener('click', function (e) {
     case 'close-briefing':
       closeBriefingPanel();
       break;
-    case 'toggle-liq-panel': {
-      var liqPanel = document.getElementById('fv-liquidity');
-      if (liqPanel) liqPanel.classList.toggle('open');
+    case 'toggle-liq-panel':
+      openLiquidityPopup(target);
       break;
-    }
-    case 'close-liq-panel': {
-      var liqPanelClose = document.getElementById('fv-liquidity');
-      if (liqPanelClose) liqPanelClose.classList.remove('open');
-      break;
-    }
     case 'go-briefing': {
       var today = tzDateStr();
       var weekEntries = briefingThisWeekEntries();
