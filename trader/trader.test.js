@@ -321,3 +321,39 @@ test('move: a limit moved through the market is refused, nothing is modified', a
   await assert.rejects(t.move({ symbol: 'BTCUSDT', orderId: 7, price: '80000' }), /fill at once/);
   assert.equal(callsTo(client, 'PUT', '/fapi/v1/order').length, 0);
 });
+
+// ── After an SL / TP closes the position every order of the coin is cancelled ──
+const SHORT = [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '-0.010', entryPrice: '81000', updateTime: 1 }];
+const flatUpd = (E) => ({ e: 'ACCOUNT_UPDATE', E, a: { B: [], P: [{ s: 'BTCUSDT', pa: '0', ep: '0', up: '0', mt: 'cross', ps: 'BOTH' }] } });
+const algoUpd = (E, X, over) => ({ e: 'ALGO_UPDATE', E, o: Object.assign({ aid: 9, caid: 'sl', s: 'BTCUSDT', S: 'BUY', o: 'STOP_MARKET', X, q: '0', tp: '82000', p: '0', R: false, cp: true, ps: 'BOTH', wt: 'CONTRACT_PRICE' }, over) });
+const cleanupCalls = (client) => callsTo(client, 'DELETE', '/fapi/v1/allOpenOrders').length + callsTo(client, 'DELETE', '/fapi/v1/algoOpenOrders').length;
+const shortTrader = () => makeTrader({ 'GET /fapi/v2/positionRisk': () => SHORT, 'GET /fapi/v1/userTrades': () => [] });
+
+test('stop fired on the exchange, then the position is flat → all orders of the coin cancelled', async () => {
+  const { t, client } = await shortTrader();
+  t.handleStreamEvent(algoUpd(2000, 'TRIGGERED'));
+  t.handleStreamEvent(flatUpd(2001));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(callsTo(client, 'DELETE', '/fapi/v1/allOpenOrders')[0].params.symbol, 'BTCUSDT');
+  assert.equal(cleanupCalls(client), 2);
+});
+
+test('position flat first, then our local stop fill (ls-) → cancelled once', async () => {
+  const { t, client } = await shortTrader();
+  t.handleStreamEvent(flatUpd(2000));
+  t.handleStreamEvent({ e: 'ORDER_TRADE_UPDATE', E: 2001, o: { s: 'BTCUSDT', c: 'ls-9', S: 'BUY', o: 'MARKET', f: 'GTC', q: '0.010', p: '0', ap: '82010', x: 'TRADE', X: 'FILLED', i: 55, l: '0.010', z: '0.010', L: '82010', rp: '-10', n: '0.3', N: 'USDT', T: 2001, R: true, ps: 'BOTH' } });
+  t.handleStreamEvent(algoUpd(2002, 'CANCELED'));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(cleanupCalls(client), 2);
+});
+
+test('a manual close or a partial TP cancels nothing', async () => {
+  const { t, client } = await shortTrader();
+  t.handleStreamEvent(algoUpd(2000, 'FINISHED', { o: 'TAKE_PROFIT_MARKET', cp: false, R: true, q: '0.005' }));
+  t.handleStreamEvent({ e: 'ACCOUNT_UPDATE', E: 2001, a: { B: [], P: [{ s: 'BTCUSDT', pa: '-0.005', ep: '81000', up: '0', mt: 'cross', ps: 'BOTH' }] } });
+  const { t: t2, client: c2 } = await shortTrader();
+  t2.handleStreamEvent(flatUpd(3000));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(cleanupCalls(client), 0);
+  assert.equal(cleanupCalls(c2), 0);
+});

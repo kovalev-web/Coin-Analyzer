@@ -9,10 +9,13 @@ var fs = require('fs');
 var path = require('path');
 var st = require('./state');
 var { parseExchangeInfo, applyFilters, toStep } = require('./filters');
+var { isProtective } = require('./localstops');
 
 var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 var BALANCE_REFRESH_DEBOUNCE_MS = 1000;
 var REALIZED_REFRESH_DEBOUNCE_MS = 400; // after a fill, recount the position's realized PnL (breakeven)
+var STOP_FIRED = { TRIGGERING: true, TRIGGERED: true, FINISHED: true }; // algo statuses once an SL / TP fired
+var STOP_CLEANUP_WINDOW_MS = 15000; // SL / TP fired and the position went flat within this → cancel the coin's orders
 var MISSING_RETRY_MS = [200, 400]; // waits before retrying "Order does not exist" on a just-placed algo order
 
 // Binance answers "Order does not exist" (-2013) for an algo order placed a moment
@@ -164,16 +167,50 @@ class Trader extends EventEmitter {
         if (moved) this.emit('event', { type: 'position', position: moved });
         this._scheduleRealized(msg.o.s);
         this.emit('event', { type: 'fill', fill: fill });
+        if (/^ls-/.test(fill.clientOrderId || '')) this._stopHit(fill.symbol); // our local stop closed it
       }
     } else if (msg.e === 'ALGO_UPDATE') {
       var a = st.applyAlgoUpdate(this.state, msg.o, msg.E);
       if (a) this.emit('event', { type: 'algo', algo: a });
+      // The exchange fired an SL / TP
+      if (a && isProtective(a) && STOP_FIRED[a.status]) this._stopHit(a.symbol);
     } else if (msg.e === 'ACCOUNT_UPDATE') {
       var ch = st.applyAccountUpdate(this.state, msg.a, msg.E);
-      ch.positions.forEach(function (p) { self.emit('event', { type: 'position', position: p }); });
+      ch.positions.forEach(function (p) {
+        self.emit('event', { type: 'position', position: p });
+        if (Number(p.amount) === 0) self._flatAt(p.symbol);
+      });
       ch.balances.forEach(function (b) { self.emit('event', { type: 'balance', balance: b }); });
       if (ch.balances.length) this._scheduleBalanceRefresh();
     }
+  }
+
+  // After an SL / TP closes the position, nothing of the trade should stay on the
+  // book: every order of the coin (limits, stop entries, the other SL / TP) is
+  // cancelled. Needs both: a stop fired (exchange or local) and the position flat,
+  // in either order, within STOP_CLEANUP_WINDOW_MS. A partial TP leaves a position
+  // and cancels nothing.
+  _stopHit(symbol) {
+    this._stopHits = this._stopHits || {};
+    this._stopHits[symbol] = Date.now();
+    var flat = !Object.values(this.state.positions).some(function (p) { return p.symbol === symbol && Number(p.amount) !== 0; });
+    if (flat && this._flats && Date.now() - (this._flats[symbol] || 0) < STOP_CLEANUP_WINDOW_MS) this._cleanupAfterStop(symbol);
+  }
+
+  _flatAt(symbol) {
+    this._flats = this._flats || {};
+    this._flats[symbol] = Date.now();
+    if (this._stopHits && Date.now() - (this._stopHits[symbol] || 0) < STOP_CLEANUP_WINDOW_MS) this._cleanupAfterStop(symbol);
+  }
+
+  _cleanupAfterStop(symbol) {
+    delete this._stopHits[symbol];
+    delete this._flats[symbol];
+    var req = { symbol: symbol }, c = this.client;
+    this._audited('cancel-after-stop', req, Promise.all([
+      c.request('DELETE', '/fapi/v1/allOpenOrders', req),
+      c.request('DELETE', '/fapi/v1/algoOpenOrders', req),
+    ])).catch(function (e) { console.error('[Trader] cancel after stop failed for ' + symbol + ':', e.message); });
   }
 
   // Neither ACCOUNT_UPDATE nor order updates carry the available balance — fetch
