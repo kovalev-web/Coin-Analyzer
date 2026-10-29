@@ -1,6 +1,8 @@
 import { state, filteredCoins } from './state.js';
 import { getCSSVar, getChartOpts, getSeriesColors, calcPriceFormat } from './ui.js';
 import { fetchChartData } from './api.js';
+import { mountIsland, unmountIslands } from './react/islands.jsx';
+import { TvHead, TvExit } from './react/home/TvHead.jsx';
 
 // ── TV Mode ────────────────────────────────────────────────────────────────
 
@@ -37,18 +39,7 @@ function _tvRefresh() {
     return;
   }
 
-  // Same coins — just refresh headers
-  newCoins.forEach(function (c) {
-    var head = overlay.querySelector('.tv-slot-head[data-tv-sym="' + c.symbol + '"]');
-    if (!head) return;
-    var ch = (c.open_24h > 0 && c.current_price > 0)
-      ? (c.current_price - c.open_24h) / c.open_24h * 100
-      : (c.price_change_percentage_24h || 0);
-    var chgEl = head.querySelector('.tv-chg');
-    if (chgEl) { chgEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; chgEl.className = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn'); }
-    var priceEl = head.querySelector('.tv-price');
-    if (priceEl) priceEl.textContent = c.current_price || '';
-  });
+  // Same coins — the heads (React islands) redraw themselves
 }
 
 export function openTVMode() {
@@ -63,21 +54,20 @@ export function openTVMode() {
     document.body.appendChild(overlay);
   }
 
+  // Slot heads and the exit button are React islands (src/react/home/TvHead.jsx)
+  unmountIslands(overlay);
   overlay.innerHTML =
-    '<button class="tv-exit-btn" data-action="close-tv">Выйти из TV</button>' +
+    '<div class="tv-exit"></div>' +
     '<div class="tv-grid">' +
     coins.map(function (c) {
-      var ch = c.price_change_percentage_24h || 0;
       return '<div class="tv-slot">' +
-        '<div class="tv-slot-head" data-tv-sym="' + c.symbol + '">' +
-          '<span class="tv-sym">' + c.symbol.toUpperCase() + '</span>' +
-          '<span class="tv-chg ' + (ch >= 0 ? 'up' : 'dn') + '">' + (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%</span>' +
-          '<span class="tv-price">' + (c.current_price || '') + '</span>' +
-        '</div>' +
+        '<div class="tv-slot-head" data-tv-sym="' + c.symbol + '"></div>' +
         '<div class="tv-chart" id="tvchart-' + c.symbol + '"></div>' +
       '</div>';
     }).join('') +
     '</div>';
+  mountIsland(overlay.querySelector('.tv-exit'), TvExit);
+  overlay.querySelectorAll('.tv-slot-head').forEach(function (el) { mountIsland(el, TvHead, { sym: el.dataset.tvSym }); });
 
   overlay.style.display = 'block';
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -154,7 +144,7 @@ export function openTVMode() {
 export function closeTVMode() {
   if (_tvInterval) { clearInterval(_tvInterval); _tvInterval = null; }
   var overlay = document.getElementById('tv-overlay');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) { overlay.style.display = 'none'; unmountIslands(overlay); }
   if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
   else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
   Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
@@ -169,6 +159,7 @@ document.addEventListener('fullscreenchange', function () {
     var overlay = document.getElementById('tv-overlay');
     if (overlay && overlay.style.display !== 'none') {
       overlay.style.display = 'none';
+      unmountIslands(overlay);
       Object.keys(_tvCharts).forEach(function (sym) { try { _tvCharts[sym].remove(); } catch (e) {} });
       _tvCharts = {};
       window.__tvChartSeries = {};
