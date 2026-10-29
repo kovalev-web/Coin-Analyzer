@@ -18,6 +18,8 @@ import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
 import { openSurface, isSurfaceOpen } from './react-bridge.js';
+import { mountIsland, unmountIsland } from './react/islands.jsx';
+import { PingBadge } from './react/terminal/PingBadge.jsx';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
@@ -301,6 +303,7 @@ function _openPanel(sym) {
     });
     booksStart(sym, function () { _syncVenueCols(); window.dispatchEvent(new Event('resize')); });
   }
+  unmountIsland(document.getElementById('dom-ping')); // the header is rebuilt below
   panel.innerHTML = _panelHTML();
   panel.classList.toggle('view-only', _viewOnly());
   T.lockKey = null;
@@ -309,6 +312,7 @@ function _openPanel(sym) {
   _refreshDay();
   clearInterval(T.dayTimer);
   T.dayTimer = setInterval(_refreshDay, 30000);
+  mountIsland(document.getElementById('dom-ping'), PingBadge);
   startLatency(_renderPing);
   _renderPing();
   _syncVenueCols();
@@ -330,7 +334,7 @@ function _closePanel(userAction) {
   clearInterval(T.dayTimer);
   T.sym = null;
   var panel = document.getElementById('fv-dom');
-  if (panel) panel.remove();
+  if (panel) { unmountIsland(document.getElementById('dom-ping')); panel.remove(); }
   var body = document.querySelector('#fv-overlay .fv-body');
   if (body) body.classList.remove('has-dom');
 }
@@ -343,7 +347,7 @@ function _panelHTML() {
     + '<span class="dom-mode" title="Live: real account · Test: Binance Demo, practice money">'
     + '<button data-mode="live" class="' + (T.mode === 'live' ? 'active live' : '') + '">Live</button>'
     + '<button data-mode="test" class="' + (T.mode === 'test' ? 'active test' : '') + '">Test</button></span>'
-    + '<span class="dom-ping" id="dom-ping" tabindex="0"><i></i><b>— ms</b><span class="dom-ping-pop" id="dom-ping-pop"></span></span>'
+    + '<span class="dom-ping" id="dom-ping"></span>' // React island (src/react/terminal/PingBadge.jsx)
     + '<div class="dom-scale" title="Price scale: one row = exchange tick × multiplier">'
     + '<button data-scale="-1" title="Finer">−</button><span class="dom-scale-val" id="dom-scale-val"></span>'
     + '<button data-scale="1" title="Coarser">+</button></div>'
@@ -833,35 +837,13 @@ function _setVenueBars(box, i, view) {
 
 // ── Connection indicator (next to the env badge) ────────────────────────────
 
-function _ms(v) { return v == null ? '—' : Math.round(v) + ' ms'; }
+// Connection stats for the header's indicator (React, src/react/terminal/PingBadge.jsx)
+export function termPing() { return T.ping || null; }
 
 function _renderPing(s) {
-  var el = document.getElementById('dom-ping');
-  if (!el) return;
-  s = s || null;
-  var g = s ? grade(s) : 'unknown';
-  if (el.dataset.grade !== g) { el.dataset.grade = g; }
-  var main = !s ? '— ms' : s.down ? 'offline' : _ms(s.last) + (s.edgeCity ? ' · ' + s.edgeCity : '');
-  var b = el.querySelector('b');
-  if (b.textContent !== main) b.textContent = main;
-  var pop = document.getElementById('dom-ping-pop');
-  if (!pop || !s) return;
-  var ago = s.order ? Math.round((Date.now() - s.order.at) / 1000) : null;
-  pop.innerHTML = '<span class="dom-ping-title">Connection</span>'
-    + _pingRow('Entry point', s.route === 'direct' ? 'Tokyo server, direct'
-        : s.edgeCity ? s.edgeCity + ' (Cloudflare ' + s.edge + ')' : '—')
-    + _pingRow('Your traffic exits in', s.country || '—')
-    + _pingRow('You ↔ server', _ms(s.last) + ' · p50 ' + _ms(s.p50) + ' · p95 ' + _ms(s.p95))
-    + _pingRow('Jitter', _ms(s.jitter))
-    + _pingRow('Lost pings', s.samples || s.loss ? Math.round(s.loss * 100) + '%' : '—')
-    + _pingRow('Server ↔ Binance', s.binance == null ? '—' : s.binance.toFixed(1) + ' ms')
-    + _pingRow('Order book delay', _ms(s.book) + (s.bookP95 != null ? ' · p95 ' + _ms(s.bookP95) : ''))
-    + _pingRow('Last order, click → accepted', s.order ? _ms(s.order.ms) + ' · ' + (ago < 60 ? ago + ' s' : Math.round(ago / 60) + ' min') + ' ago' : '—')
-    + _pingRow('Reconnects', String(s.reconnects))
-    + '<span class="dom-ping-note">Last 2 min, ping every 2 s over the order socket.</span>';
+  T.ping = s || null;
+  emit('term:ping');
 }
-
-function _pingRow(k, v) { return '<span class="dom-ping-row"><span>' + k + '</span><b>' + v + '</b></span>'; }
 
 // ── Order book (trader's environment) ───────────────────────────────────────
 // Full local book, maintained the way Binance documents it: a REST snapshot
