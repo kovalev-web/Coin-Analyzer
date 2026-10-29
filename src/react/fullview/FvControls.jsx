@@ -14,6 +14,7 @@ import { state } from '../../state.js';
 import { fmt } from '../../utils.js';
 import { msUntilWarm } from '../../orderbook.js';
 import { terminalButton } from '../../terminal.js';
+import { closePopovers } from '../../react-bridge.js';
 import { drawingsCount, isBriefingPanelOpen, isInBriefing, setFVChartTF } from '../../ui.js';
 
 const TFS = ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -32,9 +33,9 @@ function Act({ label, children, ...rest }) {
 
 function Tf({ tf, up }) {
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(o) => { if (o) closePopovers(); }}>
       <DropdownMenuTrigger asChild>
-        <Button variant="secondary" size="xs" className="gap-0.5 px-2" aria-label="Timeframe">{tf}<ChevronDown className="opacity-60" /></Button>
+        <Button variant="secondary" size="xs" className="group gap-0.5 px-2" aria-label="Timeframe">{tf}<ChevronDown className="opacity-60 transition-transform duration-150 group-data-[state=open]:rotate-180" /></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side={up ? 'top' : 'bottom'} className="min-w-24">
         <DropdownMenuRadioGroup value={tf} onValueChange={setFVChartTF}>

@@ -12,6 +12,7 @@ import { useEvents } from '@/shared/use-event';
 import { state } from '../../state.js';
 import { fmt } from '../../utils.js';
 import { isInBriefing, setChartTF } from '../../ui.js';
+import { closePopovers } from '../../react-bridge.js';
 
 const TFS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
 
@@ -60,9 +61,9 @@ export function CardHead({ sym }) {
         <Stat tip="24h trading volume" className="text-muted-foreground">{fmt(coin.total_volume).replace('$', '')}</Stat>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-0.5">
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(o) => { if (o) closePopovers(); }}>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="xs" className="gap-0.5 px-2" aria-label="Timeframe">{tf}<ChevronDown className="opacity-60" /></Button>
+            <Button variant="secondary" size="xs" className="group gap-0.5 px-2" aria-label="Timeframe">{tf}<ChevronDown className="opacity-60 transition-transform duration-150 group-data-[state=open]:rotate-180" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-24">
             <DropdownMenuRadioGroup value={tf} onValueChange={(v) => setChartTF(sym, v)}>

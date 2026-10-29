@@ -10,6 +10,7 @@ import { useEvents } from '@/shared/use-event';
 import { state, filteredCoins } from '../../state.js';
 import { wsConnected } from '../../api.js';
 import { screenerCoins, setGlobalTF } from '../../ui.js';
+import { closePopovers } from '../../react-bridge.js';
 
 const TIERS = [['high', '>100', '>100M USDT 24h volume'], ['mid', '>50', '50M – 100M USDT'], ['low', '>12', '12M – 50M USDT']];
 const TFS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -42,9 +43,9 @@ export function SortBar({ screener }) {
       <span className="text-xs whitespace-nowrap text-muted-foreground">{count}<span className="max-[400px]:hidden"> coins</span></span>
 
       <div className="ml-auto flex items-center gap-1 max-md:gap-0.5">
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(o) => { if (o) closePopovers(); }}>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="sm" className="gap-1 px-2.5">{tf}<ChevronDown className="size-3.5 opacity-60" /></Button>
+            <Button variant="secondary" size="sm" className="group gap-1 px-2.5">{tf}<ChevronDown className="size-3.5 opacity-60 transition-transform duration-150 group-data-[state=open]:rotate-180" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-28">
             <DropdownMenuLabel className="text-xs text-muted-foreground">All charts</DropdownMenuLabel>
