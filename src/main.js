@@ -26,6 +26,8 @@ import {
 import { toggleTerminal } from './terminal.js';
 import { openMorningJournal, openEveningJournal } from './journal-cards.js';
 import { preloadReactHost, closeSurface } from './react-bridge.js';
+import { mountIsland, unmountIslands } from './react/islands.jsx';
+import { NotFound } from './react/home/HomeState.jsx';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -438,10 +440,9 @@ registerRoute('/journal', function () {
 
 registerRoute('/404', function () {
   var app = document.getElementById('app');
-  app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">404 — Page not found</h2>' +
-    '<a href="/" style="color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
-    '</div>';
+  unmountIslands(app);
+  app.innerHTML = '<div id="not-found-root"></div>';
+  mountIsland(document.getElementById('not-found-root'), NotFound); // src/react/home/HomeState.jsx
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
