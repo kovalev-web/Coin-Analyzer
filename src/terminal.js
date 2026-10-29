@@ -1019,7 +1019,12 @@ on('trade:event', function (ev) {
     var f = ev.fill;
     if (T.sym === f.symbol || T.open) showToast('Filled ' + f.side + ' ' + f.symbol.replace(/USDT$/, '') + ' ' + _fmtUsd(Number(f.quantity) * Number(f.price)) + ' USDT @ ' + f.price);
     T.lastFillAt[f.symbol] = f.time;
-    if (T.mode === 'live' && /USDT$/.test(f.symbol)) refreshTradesAfterFill(f.symbol.replace(/USDT$/, '').toLowerCase());
+    if (T.mode === 'live' && /USDT$/.test(f.symbol)) {
+      var short = f.symbol.replace(/USDT$/, '').toLowerCase();
+      // The chart's triangle right away; the trades refetch below replaces it
+      emit('fill:live', { sym: short, time: Number(f.time), price: Number(f.price), buy: f.side === 'BUY' });
+      refreshTradesAfterFill(short);
+    }
   }
   _queueRender();
   emit('terminal:account');

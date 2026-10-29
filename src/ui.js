@@ -2193,8 +2193,19 @@ function _applyFVTradeMarkers(sym) {
       });
     });
   });
-  _fvTradeMarkersData = markers;
+  // Fills that just happened and aren't in the fetched trades yet
+  var last = markers.reduce(function (m, x) { return Math.max(m, x.time); }, 0);
+  _liveFills[sym] = (_liveFills[sym] || []).filter(function (f) { return f.time > last; });
+  _fvTradeMarkersData = markers.concat(_liveFills[sym]);
 }
+
+// A fill on the live account (terminal.js): draw its triangle at once instead
+// of waiting ~2 s for the trades refetch (refreshTradesAfterFill)
+var _liveFills = {};
+on('fill:live', function (f) {
+  (_liveFills[f.sym] || (_liveFills[f.sym] = [])).push({ time: Math.floor(f.time / 1000), price: f.price, buy: f.buy });
+  if (_fvSym === f.sym && !_fvReplay) _applyFVTradeMarkers(f.sym);
+});
 
 // Briefing rows list the coin's notes of that day; redraw when they change
 on('coin-notes:updated', function () {
