@@ -871,11 +871,26 @@ function initTheme() {
   if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
 }
 
+// Theme follows the system (no saved choice) and the system switches
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+    if (document.documentElement.dataset.theme) return; // a theme picked on the site wins
+    emit('render'); // the home cards, only on the home routes
+    _recolorCharts();
+  });
+}
+
 export function toggleTheme() {
   var next = isDark() ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
   localStorage.setItem('theme', next);
   render();
+  _recolorCharts();
+}
+
+// Charts read their colors when created: after a theme change the cards are
+// re-rendered and the full-view chart gets its colors anew
+function _recolorCharts() {
   reattachAllLevels();
   if (_fvChart) {
     var fc = getChartColors();
