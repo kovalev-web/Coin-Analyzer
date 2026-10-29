@@ -45,20 +45,6 @@ document.body.addEventListener('touchstart', function (e) {
   }
 }, { passive: true });
 
-// Esc closes the topmost vanilla modal (order book settings…) through
-// its own close button; the coin full view underneath closes only when no
-// modal is open. Capture phase so it runs before the full view's handler.
-window.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var modals = document.querySelectorAll('.dom-settings-overlay');
-  var top = modals[modals.length - 1];
-  if (!top) return;
-  e.preventDefault();
-  e.stopPropagation();
-  var close = top.querySelector('[data-set-close], .popup-header [data-action^="close-"]');
-  if (close) close.click();
-}, true);
-
 // ⌘K / Ctrl+K — coin search (shadcn Command dialog)
 window.addEventListener('keydown', function (e) {
   if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {

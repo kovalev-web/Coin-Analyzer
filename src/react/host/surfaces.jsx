@@ -9,6 +9,7 @@ import { EveningDialog } from './EveningDialog.jsx';
 import { BriefingPopover } from '../home/Briefing.jsx';
 import { NotesPopover } from './NotesPopover.jsx';
 import { AnalysisPopover } from './AnalysisPopover.jsx';
+import { TermSettingsDialog } from './TermSettingsDialog.jsx';
 
 
 export const SURFACES = {
@@ -22,4 +23,5 @@ export const SURFACES = {
   briefing: BriefingPopover,
   notes: NotesPopover,
   analysis: AnalysisPopover,
+  'term-settings': TermSettingsDialog,
 };

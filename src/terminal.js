@@ -17,6 +17,7 @@ import { state } from './state.js';
 import { on, emit } from './events.js';
 import { icon } from './utils.js';
 import { showToast, getCSSVar, chartMarks } from './ui.js';
+import { openSurface, isSurfaceOpen } from './react-bridge.js';
 import { startLatency, stopLatency, noteBookEvent, noteOrder, grade } from './latency.js';
 import { levelPercentile, smoothScale, AUTO_PERCENTILE, parseUsd, formatUsdShort, colorThreshold, barRatio, trackMax } from './ladder-scale.js';
 import { venuesStart, venuesStop, VENUES } from './venues.js';
@@ -371,147 +372,63 @@ function _sizesHTML() {
   }).join('') + '<span class="dom-unit">USDT</span>';
 }
 
-// Settings modal: changes apply as you type (on change), Done just closes it
+// Settings — a shadcn dialog (src/react/host/TermSettingsDialog.jsx), per coin.
+// It reads termSettings() and changes one setting at a time with
+// setTermSetting(key, value); the logic is the same as the old modal's.
 function _openSettings() {
-  if (document.getElementById('dom-settings-modal')) return;
-  var ov = document.createElement('div');
-  ov.id = 'dom-settings-modal';
-  ov.className = 'overlay dom-settings-overlay';
-  ov.innerHTML = '<div class="popup dom-settings-popup" role="dialog" aria-label="Order book settings">'
-    + '<div class="popup-header"><span class="popup-title">Order book settings · ' + T.sym.replace(/USDT$/, '') + '</span><button class="btn-topbar" data-set-close="1">' + icon('x', 14) + '</button></div>'
-    + '<div class="popup-body">' + _settingsHTML() + '</div>'
-    + '<div class="popup-footer"><button class="btn-cta" data-set-close="1">Done</button></div>'
-    + '</div>';
-  document.body.appendChild(ov);
-  ov.addEventListener('change', function (e) { if (e.target.closest('#dom-settings')) _applySettingInput(e.target); });
-  ov.addEventListener('click', function (e) {
-    var chip = e.target.closest('[data-chip]');
-    if (chip) { _applyChip(chip); return; }
-    if (e.target === ov || e.target.closest('[data-set-close]')) _closeSettings();
-  });
-  document.addEventListener('keydown', _settingsKey);
-  var first = ov.querySelector('input');
-  if (first) first.focus();
+  if (isSurfaceOpen('term-settings')) return;
+  openSurface('term-settings', { sym: T.sym });
 }
 
-function _closeSettings() {
-  var ov = document.getElementById('dom-settings-modal');
-  if (!ov) return;
-  // Apply a value typed but not yet committed (no blur before Done/Esc)
-  var a = document.activeElement;
-  if (a && ov.contains(a) && a.tagName === 'INPUT') _applySettingInput(a);
-  ov.remove();
-  document.removeEventListener('keydown', _settingsKey);
+export function termSettings() {
+  return {
+    sym: T.sym,
+    sizes: S.sizes.slice(), sizeMin: SIZE_MIN, sizeMax: SIZE_MAX, sizeSlots: SIZE_DEFAULTS.length,
+    fullScale: S.fullScale, autoFull: T.autoFull,
+    highlight: S.highlight,
+    tape: !!S.tape, tapeMin: S.tapeMin, tapeAuto: TAPE_AUTO, autoTapeMin: S.tapeMin === TAPE_AUTO ? _tapeMinFor('BF') : null,
+    venues: !!S.venues, venueFull: !!S.venueFull,
+    hitMin: S.hitMin,
+    clusterTf: S.clusterTf, clusterTfs: Object.keys(CLUSTER_TFS),
+    hotkeys: HOTKEYS,
+  };
 }
 
-function _settingsKey(e) {
-  // Esc is handled globally in main.js (topmost modal first)
-  if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); _closeSettings(); }
-}
-
-// Quick values under a field; the active one is highlighted
-function _chipsHTML(kind, current, list) {
-  return '<div class="dom-chips">' + list.map(function (c) {
-    return '<button type="button" class="dom-chip' + (Number(current) === c[0] ? ' active' : '') + '" data-chip="' + kind + '" data-value="' + c[0] + '">' + c[1] + '</button>';
-  }).join('') + '</div>';
-}
-
-function _switchHTML(key, label, on) {
-  return '<label class="dom-set-switch"><span>' + label + '</span>'
-    + '<span class="ds-switch"><input type="checkbox" data-set-' + key + '="1"' + (on ? ' checked' : '') + '><i></i></span></label>';
-}
-
-function _settingsHTML() {
-  return '<div class="dom-settings" id="dom-settings">'
-    + '<div class="dom-set-row"><span>Order sizes, USDT</span><div class="dom-set-sizes">'
-    + SIZE_DEFAULTS.map(function (_, i) {
-        return '<input class="ds-input" type="number" inputmode="decimal" min="' + SIZE_MIN + '" max="' + SIZE_MAX + '" data-set-size="' + i + '" value="' + (S.sizes[i] != null ? S.sizes[i] : '') + '">';
-      }).join('')
-    + '</div></div>'
-    + '<div class="dom-set-row"><span>Volume bar is full at, $</span>'
-    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-full="1" placeholder="Auto' + (T.autoFull ? ' · now ≈ ' + formatUsdShort(T.autoFull) : '') + '" value="' + formatUsdShort(S.fullScale) + '">'
-    + _chipsHTML('full', S.fullScale, [[0, 'Auto'], [250e3, '250K'], [500e3, '500K'], [1e6, '1M'], [2e6, '2M'], [5e6, '5M']])
-    + '<span class="dom-set-note">Type 2M, 500K or 1.5M. Empty or Auto — set from the levels on screen.</span></div>'
-    + '<div class="dom-set-row"><span>Colored from, % of a full bar</span>'
-    + _chipsHTML('hl', S.highlight, [[50, '50%'], [60, '60%'], [65, '65%'], [70, '70%'], [80, '80%'], [90, '90%']])
-    + '<span class="dom-set-note">Smaller levels stay grey. In Auto a level is also colored only if it\'s ≥ 3× the typical one — a flat book stays grey.</span></div>'
-    + _switchHTML('tape', 'Trades tape', S.tape)
-    + '<div class="dom-set-row"><span>Tape: hide trades under, $</span>'
-    + '<input class="ds-input" type="text" inputmode="text" autocomplete="off" data-set-tape-min="1" placeholder="'
-      + (S.tapeMin === TAPE_AUTO ? 'Auto · now ≈ ' + (formatUsdShort(_tapeMinFor('BF')) || '10') : 'Show all') + '" value="' + (S.tapeMin > 0 ? formatUsdShort(S.tapeMin) : '') + '">'
-    + _chipsHTML('tmin', S.tapeMin, [[TAPE_AUTO, 'Auto'], [0, 'All'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']])
-    + '<span class="dom-set-note">Auto — bigger than most trades on that venue lately.</span></div>'
-    + _switchHTML('venues', 'Other venues: books and their trades on the tape', S.venues)
-    + _switchHTML('venue-full', 'Other venues as full books (bars like ours)', S.venueFull)
-    + '<div class="dom-set-row"><span>Frames on other venues from, $</span>'
-    + _chipsHTML('hitmin', S.hitMin, [[0, 'Auto'], [1e3, '1K'], [5e3, '5K'], [1e4, '10K'], [5e4, '50K']])
-    + '<span class="dom-set-note">Auto — a hit bigger than 90% of that venue\'s recent trades, or one that ate 20%+ of the level.</span></div>'
-    + '<div class="dom-set-row"><span>Clusters period</span><select class="ds-input" data-set-cluster="1">'
-    + Object.keys(CLUSTER_TFS).map(function (k) { return '<option value="' + k + '"' + (k === S.clusterTf ? ' selected' : '') + '>' + (k === 'off' ? 'Off' : k) + '</option>'; }).join('')
-    + '</select></div>'
-    + '<div class="dom-set-hint">Order sizes ' + SIZE_MIN + '–' + SIZE_MAX + ' USDT, an empty slot hides it.</div>'
-    + '<div class="dom-set-row"><span>Hotkeys · all coins</span><div class="dom-keys">'
-    + HOTKEYS.map(function (k) { return '<kbd>' + k[0] + '</kbd><span>' + k[1] + '</span>'; }).join('')
-    + '</div></div>'
-    + '</div>';
-}
-
-// Re-draw the modal body (chips' active state) keeping the focused field
-function _refreshSettings() {
-  var box = document.getElementById('dom-settings');
-  if (box) box.outerHTML = _settingsHTML();
-}
-
-function _applyChip(btn) {
-  var v = Number(btn.dataset.value);
-  if (btn.dataset.chip === 'full') S.fullScale = v;
-  else if (btn.dataset.chip === 'hl') S.highlight = v;
-  else if (btn.dataset.chip === 'tmin') S.tapeMin = v;
-  else if (btn.dataset.chip === 'hitmin') S.hitMin = v;
-  _saveSettings();
-  _refreshSettings();
-  _queueRender();
-}
-
-function _applySettingInput(inp) {
-  if (inp.dataset.setCluster) {
-    _setClusterTf(inp.value);
-    return;
-  } else if (inp.dataset.setVenueFull) {
-    S.venueFull = inp.checked;
+// key: sizes (array of slot texts) | fullScale | tapeMin (text or number) |
+// highlight | hitMin (number) | tape | venues | venueFull (bool) | clusterTf
+export function setTermSetting(key, value) {
+  if (!T.sym) return termSettings();
+  if (key === 'clusterTf') { _setClusterTf(value); return termSettings(); }
+  if (key === 'venueFull' || key === 'venues') {
+    S[key] = !!value;
     _syncVenueCols();
     window.dispatchEvent(new Event('resize'));
-  } else if (inp.dataset.setVenues) {
-    S.venues = inp.checked;
-    _syncVenueCols();
-    window.dispatchEvent(new Event('resize'));
-  } else if (inp.dataset.setTape) {
-    S.tape = inp.checked;
+  } else if (key === 'tape') {
+    S.tape = !!value;
     _syncClusterLayout();
     window.dispatchEvent(new Event('resize'));
-  } else if (inp.dataset.setTapeMin) {
-    S.tapeMin = parseUsd(inp.value);
-    inp.value = formatUsdShort(S.tapeMin);
-    _refreshSettings();
-  } else if (inp.dataset.setFull) {
-    S.fullScale = parseUsd(inp.value); // "2M", "500K" or plain dollars; empty = auto
-    inp.value = formatUsdShort(S.fullScale);
-    _refreshSettings();
-  } else {
+  } else if (key === 'tapeMin' || key === 'fullScale') {
+    S[key] = typeof value === 'number' ? value : parseUsd(value); // "2M", "500K" or plain dollars; empty = auto / all
+  } else if (key === 'highlight' || key === 'hitMin') {
+    S[key] = Number(value);
+  } else if (key === 'sizes') {
     var vals = [];
-    document.querySelectorAll('#dom-settings [data-set-size]').forEach(function (el) {
-      if (el.value === '') return;
-      var v = Number(el.value);
-      if (!_validSize(v)) { el.value = ''; showToast('Order size must be ' + SIZE_MIN + '–' + SIZE_MAX + ' USDT'); return; }
+    value.forEach(function (text) {
+      if (text === '' || text == null) return;
+      var v = Number(text);
+      if (!_validSize(v)) { showToast('Order size must be ' + SIZE_MIN + '–' + SIZE_MAX + ' USDT'); return; }
       if (vals.indexOf(v) === -1) vals.push(v);
     });
     S.sizes = vals.length ? vals.sort(function (a, b) { return a - b; }) : SIZE_DEFAULTS.slice();
     if (S.sizes.indexOf(T.size) === -1) { T.size = _savedSize(); _lsSet('qt_term_size_' + T.sym, String(T.size)); }
     var box = document.getElementById('dom-sizes');
     if (box) box.innerHTML = _sizesHTML();
+  } else {
+    return termSettings();
   }
   _saveSettings();
   _queueRender();
+  return termSettings();
 }
 
 // Binance Demo lists fewer coins than the real exchange (≈560 of ≈750)
@@ -2280,9 +2197,12 @@ document.addEventListener('keydown', function (e) {
     return;
   }
   if (!T.sym) return;
+  // While a dialog or popover is open (settings, notes, journal cards…) the
+  // order book's keys are off: Space there must never close the position
+  if (isSurfaceOpen()) return;
   // + / − change the price scale whenever the terminal is open (same as the buttons).
   // By physical key, so it works on any layout; Cmd/Ctrl +/− stays browser zoom.
-  if (!e.metaKey && !e.ctrlKey && !e.altKey && !document.getElementById('dom-settings-modal')) {
+  if (!e.metaKey && !e.ctrlKey && !e.altKey) {
     var dir = e.code === 'Equal' || e.code === 'NumpadAdd' ? 1 : e.code === 'Minus' || e.code === 'NumpadSubtract' ? -1 : 0;
     var t = (e.target && e.target.tagName) || '';
     var typing = t === 'INPUT' || t === 'TEXTAREA' || e.target.isContentEditable;
