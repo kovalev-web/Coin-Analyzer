@@ -78,6 +78,7 @@ var T = {
   bbo: null,             // latest bookTicker {b, B, a, A, u}: top of book, real-time
   lastTrade: null,       // {price, buy, at} from aggTrade
   pending: {},           // clientOrderId → {idx, kind, qty, at}: shown before the exchange confirms
+  protQueue: {},         // SL / TP → price Shift+clicked while the previous SL / TP request was in flight
   cancelling: {},
   closedIds: {},
   lastFillAt: {},         // symbol → exchange time of its latest fill
@@ -216,7 +217,7 @@ function _switchMode(m) {
   _clearBand();
   T.access = null;
   T.account = { balances: [], positions: [], orders: [], algoOrders: [] };
-  T.pending = {}; T.cancelling = {}; T.closedIds = {}; T.tagQueue = [];
+  T.pending = {}; T.protQueue = {}; T.cancelling = {}; T.closedIds = {}; T.tagQueue = [];
   T.sym = null;
   checkAccess().then(function (s) {
     if (s && sym) _openPanel(sym);
@@ -272,6 +273,7 @@ function _openPanel(sym) {
   _markMode();
   if (T.sym !== sym) {
     T.sym = sym;
+    T.protQueue = {}; // queued SL / TP clicks belong to the coin they were made on
     S = _loadSettings(sym);
     T.size = _savedSize();
     T.rules = null; T.rulesError = null; T.bids = []; T.asks = []; T.scaleIdx = null; T.top = null; T.autoFull = null; T.autoMed = null; T.autoMax = null;
@@ -1714,6 +1716,7 @@ function _placeOptimistic(body, price, kind, okMsg) {
     }
   }).catch(function () {}).finally(function () {
     delete T.pending[id];
+    _flushProtective(kind);
     _queueRender();
   });
 }
@@ -1911,8 +1914,8 @@ function _placeProtective(price, bestBid, bestAsk) {
   var existing = T.account.algoOrders.filter(function (a) {
     return a.symbol === T.sym && a.closePosition && a.type === type && !T.cancelling['a' + a.algoId];
   });
-  var inFlight = Object.keys(T.pending).some(function (k) { return T.pending[k].kind === kind; });
-  if (inFlight) { _setStatus(kind + ' is being placed — one moment', true); return; }
+  // Quick Shift+clicks: one SL / TP request at a time, the last click wins once it's done
+  if (_protInFlight(kind)) { T.protQueue[kind] = price; return; }
   if (existing.length) {
     if (existing.some(function (a) { return Number(a.triggerPrice) === price; })) return; // already there
     _moveItems(existing.slice(0, 1).map(function (a) { return { algo: a, kind: kind }; }), kind, price);
@@ -1922,6 +1925,18 @@ function _placeProtective(price, bestBid, bestAsk) {
     clientOrderId: _clientId(), symbol: T.sym, side: long ? 'SELL' : 'BUY', type: type,
     triggerPrice: String(price), closePosition: true, workingType: STOP_TRIGGER,
   }, price, type === 'STOP_MARKET' ? 'SL' : 'TP', (type === 'STOP_MARKET' ? 'Stop-loss at ' : 'Take-profit at ') + price);
+}
+
+function _protInFlight(kind) {
+  return Object.keys(T.pending).some(function (k) { return T.pending[k].kind === kind; });
+}
+
+// The SL / TP request finished: place / move to the price clicked meanwhile, if any
+function _flushProtective(kind) {
+  var price = T.protQueue[kind];
+  if (price == null || _protInFlight(kind)) return;
+  delete T.protQueue[kind];
+  if (T.bids.length && T.asks.length) _placeProtective(price, T.bids[0][0], T.asks[0][0]);
 }
 
 function _cancelAtLevel(idx) {
@@ -2148,6 +2163,7 @@ function _moveItems(items, kind, price) {
     }).finally(function () {
       delete T.cancelling[key];
       delete T.pending[ghost];
+      _flushProtective(kind);
       _queueRender();
     });
   });

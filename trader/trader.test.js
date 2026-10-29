@@ -235,6 +235,19 @@ test('move: a stop-loss is cancelled and placed again at the new trigger', async
   assert.equal(r.algo.triggerPrice, '78500.0');
 });
 
+test('move: a stop placed a moment ago ("Order does not exist") is retried, then moved', async () => {
+  let gets = 0;
+  const { t, client } = await makeTrader({
+    'GET /fapi/v1/algoOrder': () => { if (++gets === 1) throw new BinanceError('Order does not exist.', { status: 400, code: -2013 }); return SL; },
+    'GET /fapi/v1/premiumIndex': () => ({ markPrice: '80000' }),
+    'DELETE /fapi/v1/algoOrder': () => ({ code: 200 }),
+  });
+  const r = await t.move({ symbol: 'BTCUSDT', algoId: 5, price: '78500' });
+  assert.equal(gets, 2);
+  assert.equal(callsTo(client, 'DELETE', '/fapi/v1/algoOrder').length, 1);
+  assert.equal(r.algo.triggerPrice, '78500.0');
+});
+
 test('move: a trigger that would fire at once is refused before anything is cancelled', async () => {
   const { t, client } = await makeTrader({
     'GET /fapi/v1/algoOrder': () => SL,

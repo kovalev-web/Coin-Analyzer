@@ -13,6 +13,21 @@ var { parseExchangeInfo, applyFilters, toStep } = require('./filters');
 var IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 var BALANCE_REFRESH_DEBOUNCE_MS = 1000;
 var REALIZED_REFRESH_DEBOUNCE_MS = 400; // after a fill, recount the position's realized PnL (breakeven)
+var MISSING_RETRY_MS = [200, 400]; // waits before retrying "Order does not exist" on a just-placed algo order
+
+// Binance answers "Order does not exist" (-2013) for an algo order placed a moment
+// ago; it shows up shortly. Retry a couple of times before giving up.
+function retryMissing(fn) {
+  var i = 0;
+  function attempt() {
+    return fn().catch(function (e) {
+      var missing = e && (e.code === -2013 || /does not exist/i.test(e.message || ''));
+      if (!missing || i >= MISSING_RETRY_MS.length) throw e;
+      return new Promise(function (r) { setTimeout(r, MISSING_RETRY_MS[i++]); }).then(attempt);
+    });
+  }
+  return attempt();
+}
 var CLIENT_ID_RE = /^[\.A-Za-z0-9:\/_-]{1,36}$/; // Binance's allowed newClientOrderId charset
 var SYMBOL_RE = /^[A-Z0-9]{2,30}$/;
 var MOVABLE_ORDER = { NEW: true, PARTIALLY_FILLED: true };
@@ -344,7 +359,9 @@ class Trader extends EventEmitter {
     }
 
     if (!input.algoId) throw new TraderError(400, 'orderId or algoId is required');
-    var a = st.algoFromRest(await c.request('GET', '/fapi/v1/algoOrder', { algoId: input.algoId }));
+    // A stop placed a moment ago (the previous move) may not be visible to Binance's
+    // algo service yet: "Order does not exist" for a few hundred ms — retry
+    var a = st.algoFromRest(await retryMissing(function () { return c.request('GET', '/fapi/v1/algoOrder', { algoId: input.algoId }); }));
     if (a.symbol !== symbol || a.status !== 'NEW') throw new TraderError(400, 'Only waiting stop orders can be moved');
     if (!a.closePosition && !a.reduceOnly) { this._requireTrading(); guard(); }
     var ref = await this._refPrice(symbol, a.workingType);
@@ -353,7 +370,7 @@ class Trader extends EventEmitter {
     if (firesUp ? !(Number(to) > ref) : !(Number(to) < ref)) {
       throw new TraderError(400, 'At ' + to + ' the order would trigger at once (' + (a.workingType === 'CONTRACT_PRICE' ? 'last' : 'mark') + ' price ' + ref + ')');
     }
-    await this._audited('cancel-algo', { algoId: a.algoId }, c.request('DELETE', '/fapi/v1/algoOrder', { algoId: a.algoId }));
+    await this._audited('cancel-algo', { algoId: a.algoId }, retryMissing(function () { return c.request('DELETE', '/fapi/v1/algoOrder', { algoId: a.algoId }); }));
     var self = this;
     function place(trigger, tag) {
       var p = {
