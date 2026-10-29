@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Separator } from '@/components/ui/separator';
-import { state } from '../../../state.js';
-import { tzDateStr } from '../../../utils.js';
-import { API_BASE } from '../../../api.js';
-import { AVATAR_PRESETS, LOGO_SVG, accLevelsSyms, clearLevels, clearAlerts, clearRays, getUserAvatar, getUserEmail, renderBriefingPanel, setUserAvatar } from '../../../ui.js';
-import { toast } from '../../../react-bridge.js';
+import { state } from '../../state.js';
+import { tzDateStr } from '../../utils.js';
+import { API_BASE } from '../../api.js';
+import { AVATAR_PRESETS, LOGO_SVG, accLevelsSyms, clearLevels, clearAlerts, clearRays, getUserAvatar, getUserEmail, renderBriefingPanel, setUserAvatar } from '../../ui.js';
+import { toast } from '../../react-bridge.js';
 import { FieldRow, Msg, SettingRow, accountPost } from './parts.jsx';
 
 const TZ_LIST = [

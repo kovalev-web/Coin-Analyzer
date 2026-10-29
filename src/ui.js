@@ -280,8 +280,6 @@ export function accLevelsSyms() {
   return Object.keys(syms).sort();
 }
 
-// Account settings — a shadcn dialog (src/react/host/account)
-export function showAccountModal() { openSurface('account'); }
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
@@ -3145,7 +3143,14 @@ export function toggleFVBriefingDrawer() {
 
 // ── Search (shadcn Command dialog, src/react/host/SearchDialog.jsx) ─────────
 
-export function openSearchPopup() { openSurface('search'); }
+// Coin search — a popover under the visible search button (src/react/host/SearchPopover.jsx);
+// from ⌘K with no button on screen (full view) it opens at the top centre
+export function openSearchPopup() {
+  if (isSurfaceOpen('search')) { closeSurface('search'); return; }
+  var btn = Array.from(document.querySelectorAll('[data-action="open-search"]')).find(function (b) { return b.offsetParent !== null; });
+  var r = btn ? btn.getBoundingClientRect() : { left: window.innerWidth / 2 + 192, top: 12, width: 0, height: 36 };
+  openSurface('search', { rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+}
 export function closeSearchPopup() { closeSurface('search'); }
 
 // ── Clear popup ──────────────────────────────────────────────────────────────

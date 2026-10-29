@@ -5,7 +5,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from '@/co
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { API_BASE } from '../../../api.js';
+import { API_BASE } from '../../api.js';
 
 // POST /api/account { action, … } → JSON (throws with the server's message)
 export function accountPost(body) {

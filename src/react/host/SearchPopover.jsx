@@ -1,10 +1,14 @@
-// Coin search (⌘K): BTC / ETH pinned, the rest by 24h change; picks open the coin's full view
+// Coin search (⌘K): a popover under the search button, like the watchlist and
+// notifications. BTC / ETH pinned, the rest by 24h change; picks open the
+// coin's full view. Opened by ⌘K where there's no visible button: at the top.
 import * as React from 'react';
-import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { Popover, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { state } from '../../state.js';
 import { fmt } from '../../utils.js';
 import { openCoinFullView } from '../../ui.js';
 import { fetchNATR } from '../../api.js';
+import { AnchorBox, keepOpenOn } from './anchor.jsx';
 
 const PINNED = ['btc', 'eth'];
 const byChange = (a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
@@ -20,7 +24,7 @@ function Row({ c, onPick }) {
   );
 }
 
-export function SearchDialog({ onClose }) {
+export function SearchPopover({ rect, onClose }) {
   const [query, setQuery] = React.useState('');
   const coins = state.coins || [];
   const raw = query.trim().toLowerCase();
@@ -45,14 +49,19 @@ export function SearchDialog({ onClose }) {
   }
 
   return (
-    <CommandDialog open onOpenChange={(o) => { if (!o) onClose(); }} title="Search coin" description="Find a coin by ticker or name" shouldFilter={false} className="sm:max-w-md">
-      <CommandInput placeholder="BTC, Ethereum..." value={query} onValueChange={setQuery} />
-      <CommandList className="max-h-96">
-        <CommandEmpty>Nothing found</CommandEmpty>
-        {pinned.length > 0 && <CommandGroup>{pinned.map((c) => <Row key={c.symbol} c={c} onPick={pick} />)}</CommandGroup>}
-        {pinned.length > 0 && rest.length > 0 && <CommandSeparator />}
-        {rest.length > 0 && <CommandGroup>{rest.map((c) => <Row key={c.symbol} c={c} onPick={pick} />)}</CommandGroup>}
-      </CommandList>
-    </CommandDialog>
+    <Popover open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <AnchorBox rect={rect} />
+      <PopoverContent align="end" className="w-sm max-w-[calc(100vw-1rem)] p-0" onInteractOutside={keepOpenOn('[data-action="open-search"]')}>
+        <Command shouldFilter={false}>
+          <CommandInput autoFocus placeholder="BTC, Ethereum..." value={query} onValueChange={setQuery} />
+          <CommandList className="max-h-96">
+            <CommandEmpty>Nothing found</CommandEmpty>
+            {pinned.length > 0 && <CommandGroup>{pinned.map((c) => <Row key={c.symbol} c={c} onPick={pick} />)}</CommandGroup>}
+            {pinned.length > 0 && rest.length > 0 && <CommandSeparator />}
+            {rest.length > 0 && <CommandGroup>{rest.map((c) => <Row key={c.symbol} c={c} onPick={pick} />)}</CommandGroup>}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

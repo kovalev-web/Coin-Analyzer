@@ -12,8 +12,8 @@ import { Item, ItemContent, ItemDescription } from '@/components/ui/item';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { tradeRequest } from '../../../api.js';
-import { checkAccess } from '../../../terminal.js';
+import { tradeRequest } from '../../api.js';
+import { checkAccess } from '../../terminal.js';
 import { Code, FieldRow, Msg, SettingRow } from './parts.jsx';
 
 const ENV_LABEL = { testnet: 'Testnet', mainnet: 'Live' };

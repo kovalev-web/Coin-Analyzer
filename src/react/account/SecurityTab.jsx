@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { API_BASE } from '../../../api.js';
-import { getUserEmail, setUserEmail } from '../../../ui.js';
+import { API_BASE } from '../../api.js';
+import { getUserEmail, setUserEmail } from '../../ui.js';
 import { Code, FieldRow, Msg, SettingRow, accountPost } from './parts.jsx';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

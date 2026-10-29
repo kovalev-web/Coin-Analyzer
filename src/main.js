@@ -14,7 +14,7 @@ import {
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
   forceUnlockScroll, reapplyOverlayPositions, resyncChartLayouts,
-  setUserId, setUserEmail, setUserAvatar, showAccountModal,
+  setUserId, setUserEmail, setUserAvatar,
   loadLevels, fetchServerLevels, loadRays, fetchServerRays,
   toggleNotifDropdown, updateNotifBadge, showNotifToast, clearNotifications, markNotificationAsRead, requestDesktopNotifPermission,
   renderProfileJournal, showToast,
@@ -186,7 +186,7 @@ document.body.addEventListener('click', function (e) {
       break;
     case 'open-account':
       if (state.isDemoMode) { window.location.href = '/login'; break; }
-      showAccountModal();
+      navigate('/settings');
       break;
     case 'open-evening-journal':
       openEveningJournal();
@@ -409,14 +409,16 @@ registerRoute('/gainers', function () {
 });
 
 
+// Account settings page (src/react/account), loaded on first visit
+var _accountApp = null;
+onRouteChange(function () { if (_accountApp) _accountApp.unmountAccount(); });
 registerRoute('/settings', function () {
+  if (state.isDemoMode) { window.location.replace('/login'); return; }
   var app = document.getElementById('app');
-  app.innerHTML = '<div class="topbar" style="padding:var(--space-12) var(--space-16);margin:var(--space-10) var(--space-16) 0;">' +
-    '<h2 style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-6);">⚙️ Settings</h2>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);">Settings page — coming soon.</p>' +
-    '<p style="color:var(--graphite);font-size:var(--text-sm);margin-top:var(--space-4);">Planned: notifications, default filters, subscription management.</p>' +
-    '<a href="/" style="display:inline-block;margin-top:var(--space-8);color:var(--primary);font-weight:var(--font-semi);text-decoration:none;">← Back to home</a>' +
-    '</div>';
+  import('./react/account/mount.jsx').then(function (m) {
+    _accountApp = m;
+    if (getCurrentRoute() === '/settings') m.mountAccount(app);
+  });
 });
 
 function _refreshJournalHistory() {
