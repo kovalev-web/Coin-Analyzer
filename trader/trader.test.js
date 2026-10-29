@@ -283,6 +283,36 @@ test('move: a buy stop entry needs the unlock and must stay above the price', as
   await assert.rejects(t.move({ symbol: 'BTCUSDT', algoId: 9, price: '79900' }), /trigger at once/);
 });
 
+test('move: a closing limit moved through the market is replaced by a reduce-only limit there (fills at once)', async () => {
+  const { t, client } = await makeTrader({
+    'GET /fapi/v2/positionRisk': () => [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '-0.010', entryPrice: '81000', updateTime: 1 }],
+    'GET /fapi/v1/userTrades': () => [],
+    'GET /fapi/v1/order': () => ({ orderId: 7, symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', status: 'NEW', origQty: '0.005', executedQty: '0', price: '79000.0', reduceOnly: false }),
+    'GET /fapi/v1/ticker/bookTicker': () => ({ bidPrice: '79990.0', askPrice: '80000.0' }),
+    'DELETE /fapi/v1/order': () => ({ orderId: 7, status: 'CANCELED' }),
+  });
+  const r = await t.move({ symbol: 'BTCUSDT', orderId: 7, price: '80100' });
+  const post = callsTo(client, 'POST', '/fapi/v1/order')[0].params;
+  assert.deepEqual([post.side, post.type, post.price, post.quantity, post.reduceOnly], ['BUY', 'LIMIT', '80100.0', '0.005', 'true']);
+  assert.equal(callsTo(client, 'DELETE', '/fapi/v1/order').length, 1);
+  assert.equal(callsTo(client, 'PUT', '/fapi/v1/order').length, 0);
+  assert.equal(r.replaced, 7);
+});
+
+test('move: a closing limit whose replacement is rejected goes back to its price', async () => {
+  let n = 0;
+  const { t, client } = await makeTrader({
+    'GET /fapi/v2/positionRisk': () => [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '-0.010', entryPrice: '81000', updateTime: 1 }],
+    'GET /fapi/v1/userTrades': () => [],
+    'GET /fapi/v1/order': () => ({ orderId: 7, symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', status: 'NEW', origQty: '0.005', executedQty: '0', price: '79000.0', reduceOnly: false }),
+    'GET /fapi/v1/ticker/bookTicker': () => ({ bidPrice: '79990.0', askPrice: '80000.0' }),
+    'DELETE /fapi/v1/order': () => ({ orderId: 7, status: 'CANCELED' }),
+    'POST /fapi/v1/order': (p) => { if (++n === 1) throw new BinanceError('ReduceOnly Order is rejected.', { status: 400, code: -2022 }); return { orderId: 8, symbol: p.symbol, side: p.side, type: 'LIMIT', status: 'NEW', origQty: p.quantity, price: p.price }; },
+  });
+  await assert.rejects(t.move({ symbol: 'BTCUSDT', orderId: 7, price: '80100' }), /back at 79000.0/);
+  assert.equal(callsTo(client, 'POST', '/fapi/v1/order')[1].params.price, '79000.0');
+});
+
 test('move: a limit moved through the market is refused, nothing is modified', async () => {
   const { t, client } = await makeTrader({
     'GET /fapi/v1/order': () => ({ orderId: 7, symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', status: 'NEW', origQty: '0.005', price: '79000.0', reduceOnly: false }),

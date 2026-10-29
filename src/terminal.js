@@ -2120,9 +2120,18 @@ function _moveLevel(fromIdx, kind, toIdx) {
   if (!items.length) return;
   var price = _priceOf(toIdx);
   var bestBid = T.bids[0][0], bestAsk = T.asks[0][0];
-  // The exchange is the judge; this only stops the obvious mistakes early
-  var bad = kind === 'B' && price >= bestAsk ? 'A buy limit must stay below the ask'
-    : kind === 'S' && price <= bestBid ? 'A sell limit must stay above the bid'
+  // The exchange is the judge; this only stops the obvious mistakes early.
+  // A limit that closes the position may go through the market: it fills at once
+  // (the trader replaces it with a reduce-only limit there)
+  var pos = _position();
+  var closing = function (o) {
+    if (o.reduceOnly) return true;
+    var amt = pos ? Number(pos.amount) : 0;
+    return amt !== 0 && (amt > 0) !== (o.side === 'BUY') && Number(o.origQty) - Number(o.executedQty || 0) <= Math.abs(amt) + 1e-12;
+  };
+  var cross = kind === 'B' ? price >= bestAsk : kind === 'S' ? price <= bestBid : false;
+  var bad = cross && !items.every(function (x) { return x.order && closing(x.order); })
+    ? (kind === 'B' ? 'A buy limit must stay below the ask' : 'A sell limit must stay above the bid')
     : null;
   if (!bad && items[0].algo) {
     var a = items[0].algo;
@@ -2151,8 +2160,10 @@ function _moveItems(items, kind, price) {
     if (x.order) body.orderId = x.order.orderId; else body.algoId = x.algo.algoId;
     _send('move', body, kind + ' moved to ' + price).then(function (r) {
       if (r && r.order) {
-        T.account.orders = T.account.orders.filter(function (o) { return o.orderId !== r.order.orderId; });
-        T.account.orders.push(r.order);
+        // r.replaced: a closing limit dragged through the market came back as a new order
+        T.account.orders = T.account.orders.filter(function (o) { return o.orderId !== r.order.orderId && o.orderId !== r.replaced; });
+        if (r.replaced) T.closedIds['o' + r.replaced] = Date.now();
+        if (OPEN_ORDER[r.order.status] && !T.closedIds['o' + r.order.orderId]) T.account.orders.push(r.order);
       } else if (r && r.algo) {
         T.closedIds[key] = Date.now();
         T.account.algoOrders = T.account.algoOrders.filter(function (o) { return o.algoId !== x.algo.algoId && o.algoId !== r.algo.algoId; });

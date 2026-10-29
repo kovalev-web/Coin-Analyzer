@@ -347,11 +347,15 @@ class Trader extends EventEmitter {
       var o = await c.request('GET', '/fapi/v1/order', { symbol: symbol, orderId: input.orderId });
       if (o.type !== 'LIMIT' || !MOVABLE_ORDER[o.status]) throw new TraderError(400, 'Only open limit orders can be moved');
       if (!o.reduceOnly) { this._requireTrading(); guard(); }
-      // A limit moved through the market would fill at once: refuse instead
       var bt = await c.request('GET', '/fapi/v1/ticker/bookTicker', { symbol: symbol }, false);
       if (o.side === 'BUY' ? Number(to) >= Number(bt.askPrice) : Number(to) <= Number(bt.bidPrice)) {
-        throw new TraderError(400, 'At ' + to + ' the ' + (o.side === 'BUY' ? 'buy' : 'sell') + ' limit would fill at once ('
-          + (o.side === 'BUY' ? 'ask ' + bt.askPrice : 'bid ' + bt.bidPrice) + ')');
+        // Through the market it fills at once. Fine for a limit that closes the
+        // position (taking the profit now); an entry is refused — a slip of the drag.
+        if (!this._closesPosition(symbol, o)) {
+          throw new TraderError(400, 'At ' + to + ' the ' + (o.side === 'BUY' ? 'buy' : 'sell') + ' limit would fill at once ('
+            + (o.side === 'BUY' ? 'ask ' + bt.askPrice : 'bid ' + bt.bidPrice) + ')');
+        }
+        return this._replaceLimit(o, to, rules);
       }
       var req = { symbol: symbol, orderId: o.orderId, side: o.side, quantity: o.origQty, price: to };
       var res = await this._audited('move', req, c.request('PUT', '/fapi/v1/order', req));
@@ -389,6 +393,47 @@ class Trader extends EventEmitter {
       try {
         await place(a.triggerPrice, 'rb');
         e.message += ' — the order is back at ' + a.triggerPrice;
+      } catch (e2) {
+        e.message += ' — and it could not be put back: the order is GONE, place it again';
+        e.lost = true;
+      }
+      throw e;
+    }
+  }
+
+  // The limit only closes (part of) the position: reduce-only, or the opposite
+  // side of it and not bigger than what is left of it
+  _closesPosition(symbol, o) {
+    if (o.reduceOnly) return true;
+    var p = Object.values(this.state.positions).find(function (x) { return x.symbol === symbol; });
+    var amt = p ? Number(p.amount) : 0;
+    var left = Number(o.origQty) - Number(o.executedQty || 0);
+    return amt !== 0 && (amt > 0) !== (o.side === 'BUY') && left <= Math.abs(amt) + 1e-12;
+  }
+
+  // A closing limit moved through the market: cancel it and place a reduce-only
+  // limit at the new price — it fills at once as far as the book allows, the rest
+  // waits there. Cancelled first so the two never close more than the position;
+  // if the new one is rejected the old one is put back.
+  async _replaceLimit(o, price, rules) {
+    var c = this.client, symbol = o.symbol;
+    var qty = toStep(Number(o.origQty) - Number(o.executedQty || 0), rules.stepSize, 'floor');
+    var cancel = { symbol: symbol, orderId: o.orderId };
+    await this._audited('cancel', cancel, c.request('DELETE', '/fapi/v1/order', cancel));
+    var self = this;
+    function place(at, tag) {
+      var p = {
+        symbol: symbol, side: o.side, type: 'LIMIT', timeInForce: 'GTC', quantity: qty, price: at,
+        reduceOnly: 'true', newClientOrderId: tag + '-' + Date.now(), newOrderRespType: 'RESULT',
+      };
+      return self._audited('move-cross', p, c.request('POST', '/fapi/v1/order', p));
+    }
+    try {
+      return { order: st.orderFromRest(await place(price, 'mv')), replaced: o.orderId };
+    } catch (e) {
+      try {
+        await place(o.price, 'rb');
+        e.message += ' — the order is back at ' + o.price;
       } catch (e2) {
         e.message += ' — and it could not be put back: the order is GONE, place it again';
         e.lost = true;
