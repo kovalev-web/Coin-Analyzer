@@ -9,7 +9,7 @@ import {
 import {
   render, openAnalysisPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
-  briefingNavDate, briefingCycleStatus, briefingRemove, briefingClearNote, toggleBpExpand, toggleFvExpand, briefingNoteAction,
+  isBriefingPanelOpen,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
   openSearchPopup, closeSearchPopup, renderScreener, setScreenerMode, screenerCoins,
   openClearPopup, closeClearPopup, clearAllCrosshairs,
@@ -74,10 +74,6 @@ document.body.addEventListener('click', function (e) {
   if (_aoPopup && _aoPopup.style.display === 'block' && !_aoPopup.contains(e.target) && !e.target.closest('[data-action="open-analysis"]') && !e.target.closest('[data-action="analyze"]')) {
     if (_aoPopup._popupCard) { _aoPopup._popupCard.style.overflow = ''; _aoPopup._popupCard = null; }
     _aoPopup.style.display = 'none';
-  }
-  var _bpPopup = document.getElementById('bp-popup');
-  if (_bpPopup && _bpPopup.style.display !== 'none' && !_bpPopup.contains(e.target) && !e.target.closest('[data-action="open-briefing"]')) {
-    closeBriefingPanel();
   }
 
   // Close tf-dd on any click outside .tf-picker
@@ -277,24 +273,6 @@ document.body.addEventListener('click', function (e) {
       if (liqPanelClose) liqPanelClose.classList.remove('open');
       break;
     }
-    case 'bp-prev-date':
-      briefingNavDate(-1);
-      fetchBriefingTrades(state.briefingViewDate || tzDateStr());
-      break;
-    case 'bp-next-date':
-      briefingNavDate(+1);
-      fetchBriefingTrades(state.briefingViewDate || tzDateStr());
-      break;
-    case 'bp-cycle-status': {
-      var bStatusDate = target.dataset.date;
-      briefingCycleStatus(sym, bStatusDate);
-      break;
-    }
-    case 'bp-open':
-      closeBriefingPanel();
-      openFV(sym);
-      setTimeout(function () { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
-      break;
     case 'go-briefing': {
       var today = tzDateStr();
       var weekEntries = briefingThisWeekEntries();
@@ -315,34 +293,6 @@ document.body.addEventListener('click', function (e) {
     case 'close-fv-briefing':
       closeFVBriefingDrawer();
       break;
-    case 'bp-remove': {
-      var bRemoveDate = target.dataset.date;
-      briefingRemove(sym, bRemoveDate);
-      break;
-    }
-    case 'bp-clear-note': {
-      var bClearDate = target.dataset.date;
-      briefingClearNote(sym, bClearDate, target.closest('.bp-note-row'));
-      break;
-    }
-    case 'bp-expand': {
-      var bExpandDate = target.dataset.date;
-      toggleBpExpand(sym, bExpandDate);
-      break;
-    }
-    case 'bp-note-action': {
-      var bNoteDate = target.dataset.date;
-      briefingNoteAction(sym, bNoteDate, target.closest('.bp-note-row'), target);
-      break;
-    }
-    case 'fvbd-expand': {
-      var fvExpandDate = target.dataset.date;
-      toggleFvExpand(sym, fvExpandDate);
-      // Already viewing this coin — don't reopen it (would reset chart zoom and close the orderbook popup).
-      var _fvCurrentRow = document.querySelector('.bp-row.fvbd-current');
-      if (!_fvCurrentRow || _fvCurrentRow.dataset.sym !== sym) openFV(sym);
-      break;
-    }
     case 'toggle-fv-briefing':
       toggleFVBriefingDrawer();
       fetchAllBriefingTrades();
@@ -394,10 +344,7 @@ on('natr:force-refresh', function () {
 // Re-render briefing pills when trade data arrives
 on('trades:updated', function () {
   autoSetTradedStatus();
-  var popup = document.getElementById('bp-popup');
-  if (popup && popup.style.display !== 'none') renderBriefingPanel();
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (drawer && drawer.classList.contains('open')) renderFVBriefingDrawer();
+  renderBriefingPanel(); // the shadcn list redraws itself (panel and drawer)
   applyFVTradeMarkers();
 });
 
@@ -442,9 +389,8 @@ on('briefing:updated', function () { _briefingRefreshSafe(); });
 // Fallback poll every 15s when briefing is open (covers WS gaps/reconnects)
 setInterval(function () {
   if (document.hidden) return;
-  var popup = document.getElementById('bp-popup');
   var drawer = document.getElementById('fv-briefing-drawer');
-  if ((popup && popup.style.display !== 'none') || (drawer && drawer.classList.contains('open'))) {
+  if (isBriefingPanelOpen() || (drawer && drawer.classList.contains('open'))) {
     _briefingRefreshSafe();
   }
 }, 15000);
@@ -455,8 +401,6 @@ window.addEventListener('orientationchange', function () {
   closeClearPopup();
   // Close only dropdown-mode popups (positions stale after resize).
   // Fullscreen-mode popups (_isFullscreenMode / _lockedScroll) stay open — reapplyOverlayPositions handles them.
-  var _bp = document.getElementById('bp-popup');
-  if (_bp && _bp.style.display !== 'none' && !_bp._isFullscreenMode) closeBriefingPanel();
   var _ao = document.getElementById('analysis-overlay');
   if (_ao && _ao.style.display !== 'none' && !_ao._lockedScroll) {
     _ao.style.display = 'none';

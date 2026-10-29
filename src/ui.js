@@ -5,11 +5,12 @@ import { ensureSetups, setupButtons, setupName, diagramAttr } from './setups.js'
 import { noteButtonHTML, noteInputHTML, toggleNotePopover, closeNotePopover, clearNoteIcons, ensureCoinNotes, drawNoteIcons, notesListHTML, notesOnDay } from './coin-notes.js';
 import { on, emit } from './events.js';
 import { openSurface, closeSurface, isSurfaceOpen, toast } from './react-bridge.js';
-import { mountIsland, unmountIslands } from './react/islands.jsx';
+import { mountIsland, unmountIsland, unmountIslands } from './react/islands.jsx';
 import { Topbar } from './react/home/Topbar.jsx';
 import { SortBar } from './react/home/SortBar.jsx';
 import { DaySummary } from './react/home/DaySummary.jsx';
 import { CardHead } from './react/home/CardHead.jsx';
+import { BriefingDrawer } from './react/home/Briefing.jsx';
 import { getCurrentRoute } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
@@ -1071,7 +1072,7 @@ export function forceUnlockScroll() {
 
 // Force repaint of all open fixed overlays after orientation change
 export function reapplyOverlayPositions() {
-  var ids = ['fv-overlay', 'bp-popup', 'analysis-overlay'];
+  var ids = ['fv-overlay', 'analysis-overlay'];
   ids.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -2025,18 +2026,9 @@ function _startFVTimer(tf) {
 var _briefingUserCode = null; // set by setUserId()
 var _briefingServerLoaded = false; // true after first successful server GET
 var _briefingSyncTimer = null;
-var _expandedBpKey = null; // sym:date of currently expanded popup row
-var _expandedFvKey = null; // sym:date of currently expanded FV drawer row
 
 function todayDate() {
   return tzDateStr();
-}
-
-function fmtBriefingDate(iso) {
-  var parts = iso.split('-');
-  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-  return days[d.getDay()] + ', ' + parts[2] + '.' + parts[1] + '.' + parts[0];
 }
 
 // `d` is always a UTC-midnight-anchored Date produced by _currentWeekMonday() —
@@ -2216,27 +2208,6 @@ export function toggleBriefing(sym) {
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
 }
 
-function briefingStatusLabel(status) {
-  if (status === 'traded')   return icon('check-check', 16);
-  if (status === 'skip')     return icon('ban', 16);
-  if (status === 'missed')   return icon('clock', 16);
-  return icon('eye', 16);
-}
-
-function briefingStatusText(status) {
-  if (status === 'traded')   return 'Traded';
-  if (status === 'skip')     return 'Skipped';
-  if (status === 'missed')   return 'Missed';
-  return 'Watching';
-}
-
-function briefingStatusClass(status) {
-  if (status === 'traded')   return 'bp-s-traded';
-  if (status === 'skip')     return 'bp-s-skip';
-  if (status === 'missed')   return 'bp-s-missed';
-  return 'bp-s-watching';
-}
-
 function cycleBriefingStatus(sym, date) {
   var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
   if (!entry) return;
@@ -2245,8 +2216,6 @@ function cycleBriefingStatus(sym, date) {
   entry.status = order[(cur + 1) % order.length];
   saveBriefingLocal();
   syncBriefingNow();
-  // Both render functions already restore the expanded row (and textarea height)
-  // from _expandedBpKey/_expandedFvKey — no need to track/force-redisplay rows here.
   renderBriefingPanel();
   var _fvd = document.getElementById('fv-briefing-drawer');
   if (_fvd && _fvd.classList.contains('open')) renderFVBriefingDrawer();
@@ -2271,206 +2240,39 @@ function updateAllStarButtons() {
   });
 }
 
-// ── Trade pill helper ──────────────────────────────────────────────────────
-
-function _tradePillHTML(sym, date) {
-  var t = state.trades[sym + ':' + date];
-  if (!t) return '<span class="bp-trade-pill bp-trade-loading">···</span>';
-  if (t.status === 'loading') return '<span class="bp-trade-pill bp-trade-loading">···</span>';
-  if (t.status === 'error' || t.count === 0) return '<span class="bp-trade-pill bp-trade-none">—</span>';
-  var sign = t.pnl >= 0 ? '+' : '';
-  var cls = t.pnl >= 0 ? 'bp-trade-pos' : 'bp-trade-neg';
-  var title = t.count + ' сд.';
-  if (t.entries && t.entries.length) {
-    var first = t.entries[0], last = t.entries[t.entries.length - 1];
-    title += ' · entry $' + parseFloat(first.price).toFixed(2) + ' → $' + parseFloat(last.price).toFixed(2);
-  }
-  return '<span class="bp-trade-pill ' + cls + '" title="' + escHtml(title) + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
-}
-
-// Inline trade result for popup compact row (no pill background, just colored text)
-function _tradeInlineHTML(sym, date) {
-  var t = state.trades[sym + ':' + date];
-  if (!t || t.status === 'loading' || t.status === 'error' || t.count === 0) return null;
-  var sign = t.pnl >= 0 ? '+' : '';
-  var cls = t.pnl >= 0 ? 'up' : 'dn';
-  return '<span class="bp-trade-inline stat-val ' + cls + '">' + sign + '$' + Math.abs(t.pnl).toFixed(2) + '</span>';
-}
-
-var _refreshBriefingPctLast = 0;
-function _refreshBriefingPct() {
-  var now = Date.now();
-  if (now - _refreshBriefingPctLast < 500) return;
-  _refreshBriefingPctLast = now;
-  var popup = document.getElementById('bp-popup');
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if ((!popup || popup.style.display === 'none') && (!drawer || !drawer.classList.contains('open'))) return;
-  var coinMap = {};
-  state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
-  // Expose for mobile USB debugging: window._bpDiag()
-  window._bpDiag = function () {
-    var rows = document.querySelectorAll('.bp-row[data-sym]');
-    return {
-      rowCount: rows.length,
-      syms: Array.from(rows).map(function (r) { return r.dataset.sym; }),
-      coinMapSize: Object.keys(coinMap).length,
-      matchCount: Array.from(rows).filter(function (r) { return !!(coinMap[r.dataset.sym] || coinMap[(r.dataset.sym || '').toLowerCase()]); }).length,
-    };
-  };
-  document.querySelectorAll('.bp-row[data-sym]').forEach(function (row) {
-    var coin = coinMap[row.dataset.sym] || coinMap[(row.dataset.sym || '').toLowerCase()];
-    if (!coin) return;
-    var span = row.querySelector('.bp-chg');
-    var addedPrice = parseFloat(row.dataset.addedPrice);
-    if (span && addedPrice > 0 && coin.current_price > 0) {
-      var d = (coin.current_price - addedPrice) / addedPrice * 100;
-      span.textContent = (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
-    }
-  });
-}
-setInterval(_refreshBriefingPct, 500);
-on('metrics:update', _refreshBriefingPct); // also fires on every WS push (reliable on iOS)
-
-// ── Briefing Panel ─────────────────────────────────────────────────────────
+// ── Briefing panel and drawer: shadcn (src/react/home/Briefing.jsx) ─────────
+// The list redraws on 'briefing:render'; these keep their old names for callers.
 
 export function openBriefingPanel() {
   if (!state.briefingViewDate) state.briefingViewDate = todayDate();
+  if (isSurfaceOpen('briefing')) { closeBriefingPanel(); return; }
   var fvOverlay = document.getElementById('fv-overlay');
   var _btns = fvOverlay && fvOverlay.style.display !== 'none'
     ? Array.from(fvOverlay.querySelectorAll('[data-action="open-briefing"]'))
     : Array.from(document.querySelectorAll('[data-action="open-briefing"]'));
   var btn = _btns.find(function (b) { return b.offsetParent !== null; });
-
-  var popup = document.getElementById('bp-popup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'bp-popup';
-    popup.className = 'bp-popup popup';
-    document.body.appendChild(popup);
-  } else if (!popup.parentNode || popup.parentNode !== document.body) {
-    document.body.appendChild(popup);
-  }
-  popup.style.display = 'block';
+  var r = btn ? btn.getBoundingClientRect() : { left: window.innerWidth - 48, top: 8, width: 36, height: 36 };
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = 'none';
-  renderBriefingPanel();
+  openSurface('briefing', { rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
   refreshBriefingFromServer();
-  popup._isFullscreenMode = _useFullscreenPopup();
-
   // Subscribe all briefing coins to kline stream so the server pushes per-trade
   // kline_update messages for them. Without this, only coins previously viewed in
   // FV (with loaded chart data) get per-trade price updates; the rest only update
-  // on the slow bulk ticker, making them appear frozen in the popup.
+  // on the slow bulk ticker, making them appear frozen in the panel.
   var _bpSyms = Array.from(new Set((state.briefing || []).map(function (e) { return e.sym; })));
   if (_bpSyms.length) sendWS({ type: 'subscribe_klines', symbols: _bpSyms, tf: '5m' });
-
-  if (_useFullscreenPopup()) {
-    _popupFullscreen(popup);
-    popup.style.height = '100%';
-    popup.style.overflowY = 'auto';
-    lockScroll();
-  } else if (btn) {
-    var btnRect = btn.getBoundingClientRect();
-    var inFixed = !!btn.closest('#fv-overlay');
-    popup.style.position = inFixed ? 'fixed' : 'absolute';
-    popup.style.top = (btnRect.bottom + (inFixed ? 0 : window.scrollY) + 6) + 'px';
-    popup.style.right = (document.documentElement.clientWidth - btnRect.right) + 'px';
-    popup.style.left = 'auto';
-    popup.style.width = '420px';
-  }
 }
 
 export function closeBriefingPanel() {
-  var popup = document.getElementById('bp-popup');
-  if (popup) popup.style.display = 'none';
-  _expandedBpKey = null;
-  unlockScroll();
+  closeSurface('briefing');
   var _fvStar = document.querySelector('.btn-fv-star');
   if (_fvStar) _fvStar.style.display = '';
 }
 
-export function renderBriefingPanel() {
-  var popup = document.getElementById('bp-popup');
-  if (!popup || popup.style.display === 'none') return;
-  var viewDate = state.briefingViewDate || todayDate();
-  var today = todayDate();
-  var entries = briefingForDate(viewDate);
-  var dates = briefingDates();
-  if (dates.indexOf(today) < 0) dates.unshift(today);
-  if (dates.indexOf(viewDate) < 0) dates.unshift(viewDate);
-  var dateIdx = dates.indexOf(viewDate);
-  var canPrev = dateIdx < dates.length - 1;
-  var canNext = dateIdx > 0;
-  var isToday = viewDate === today;
-  var todayEntries = briefingForDate(today);
+export function isBriefingPanelOpen() { return isSurfaceOpen('briefing'); }
 
-  var rowsHTML = entries.length ? entries.map(function (e) {
-    var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
-    var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
-    var addedDelta = (e.addedPrice && coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
-    var tradeInline = _tradeInlineHTML(e.sym, e.date);
-    var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
-    var isExpanded = _expandedBpKey === e.sym + ':' + e.date;
-    var hasNote = !!e.note;
-    var hasNotes = notesOnDay(e.sym, e.date).length > 0;
-    ensureCoinNotes(e.sym);
-    return '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">' +
-      '<button class="bp-sym-btn" data-action="bp-open" data-sym="' + e.sym + '">' + e.sym.toUpperCase() + '</button>' +
-      (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>') +
-      (tradeInline || '<span class="bp-row-status ' + briefingStatusClass(e.status) + '">' + briefingStatusLabel(e.status) + '</span>') +
-      '<button class="btn-icon bp-note-btn' + (hasNotes ? ' has-note' : '') + '" data-action="bp-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>' +
-      '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>' +
-      '</div>' +
-      '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>' +
-        '<div class="bp-expand-bar">' +
-          (tradeLocked
-            ? '<span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>'
-            : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>') +
-        '</div>' +
-        notesListHTML(e.sym, e.date) +
-        (e.date === today ? noteInputHTML(e.sym) : '') +
-      '</div>';
-  }).join('') : '<div class="bp-empty">No coins for today — star them on the dashboard</div>';
-
-  var demoNotice = state.isDemoMode
-    ? '<div class="bp-demo-notice"><span class="notif-icon">' + icon('cloud-off', 14) + '</span>Saves locally — <a href="/login" class="bp-demo-link">sign up to sync</a></div>'
-    : '';
-  popup.innerHTML =
-    '<div class="popup-header">' +
-      '<span class="popup-title">Watchlist</span>' +
-      '<button class="btn-topbar" data-action="close-briefing">' + icon('x', 16) + '</button>' +
-    '</div>' +
-    '<div class="popup-body bp-list">' + rowsHTML + '</div>' +
-    '<div class="popup-footer">' +
-      (briefingThisWeekEntries().length ? '<button class="btn-cta" style="width:100%" data-action="go-briefing">Watchlist mode</button>' : '') +
-      demoNotice +
-    '</div>';
-
-  _refreshBriefingPct();
-  // Re-attach note textarea listeners
-  popup.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
-    ta.addEventListener('input', function () {
-      ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
-      var sym = ta.dataset.sym, date = ta.dataset.date;
-      var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-      if (entry) { entry.note = ta.value; entry.noteUpdatedAt = Date.now(); saveBriefingLocal(); }
-      var noteBtn = popup.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
-      if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
-    });
-    ta.addEventListener('blur', function () { syncBriefingNow(); });
-  });
-  // Restore textarea height for expanded row after re-render
-  if (_expandedBpKey) {
-    var _bpParts = _expandedBpKey.split(':');
-    var _bpSym = _bpParts[0], _bpDate = _bpParts.slice(1).join(':');
-    var _bpNoteRow = popup.querySelector('[id="bp-note-' + _bpSym + '-' + _bpDate + '"]');
-    if (_bpNoteRow) {
-      var _bpTa = _bpNoteRow.querySelector('textarea');
-      if (_bpTa) { _bpTa.style.height = 'auto'; _bpTa.style.height = _bpTa.scrollHeight + 'px'; }
-    }
-  }
-}
+export function renderBriefingPanel() { emit('briefing:render'); }
 
 function _fvBottomBarHTML(sym, tf) {
   var cache = state.analysisCache[sym];
@@ -3576,7 +3378,6 @@ export function closeCoinFullView() {
     setChartTF(_fvSym, state.chartTF[_fvSym] || '5m');
   }
   _fvSym = null;
-  _expandedFvKey = null;
   var overlay = document.getElementById('fv-overlay');
   if (overlay) overlay.style.display = 'none';
   var ap = document.getElementById('analysis-overlay');
@@ -3602,115 +3403,16 @@ export function setFVChartTF(tf) {
   _loadFVData(_fvSym, tf);
 }
 
-export function briefingNavDate(dir) {
-  var today = todayDate();
-  var dates = briefingDates();
-  if (dates.indexOf(today) < 0) dates.unshift(today);
-  var cur = state.briefingViewDate || today;
-  var ci = dates.indexOf(cur);
-  var ni = ci - dir; // dir=+1 means next (newer), dir=-1 means prev (older)
-  if (ni >= 0 && ni < dates.length) state.briefingViewDate = dates[ni];
-  renderBriefingPanel();
-}
-
 export function briefingCycleStatus(sym, date) {
   cycleBriefingStatus(sym, date);
 }
 
-export function briefingClearNote(sym, date, noteRow) {
-  var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-  if (!entry) return;
-  entry.note = '';
-  entry.noteUpdatedAt = Date.now();
-  saveBriefingLocal();
-  syncBriefingNow();
-  if (noteRow) {
-    var ta = noteRow.querySelector('textarea'); if (ta) ta.value = '';
-    var clrBtn = noteRow.querySelector('.bp-note-clear'); if (clrBtn) clrBtn.style.display = 'none';
-  }
-  document.querySelectorAll('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]')
-    .forEach(function (btn) { btn.classList.remove('has-note'); });
-}
-
-// Handle "Add note" / "Delete note" button in popup expand bar
-export function briefingNoteAction(sym, date, noteRow, actionBtn) {
-  var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-  if (!entry || !noteRow) return;
-  var noteWrap = noteRow.querySelector('.bp-note-wrap');
-  var ta = noteRow.querySelector('textarea');
-  var isShowing = noteWrap && noteWrap.style.display !== 'none';
-  if (isShowing) {
-    entry.note = '';
-    entry.noteUpdatedAt = Date.now();
-    saveBriefingLocal();
-    syncBriefingNow();
-    if (ta) ta.value = '';
-    if (noteWrap) noteWrap.style.display = 'none';
-    if (actionBtn) actionBtn.textContent = 'Add note';
-    var compactRow = noteRow.previousElementSibling;
-    if (compactRow) { var nb = compactRow.querySelector('.bp-note-btn'); if (nb) nb.classList.remove('has-note'); }
-  } else {
-    if (noteWrap) noteWrap.style.display = '';
-    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.focus(); }
-    if (actionBtn) actionBtn.textContent = 'Delete note';
-  }
-}
-
-export function toggleBpExpand(sym, date) {
-  var key = sym + ':' + date;
-  var popup = document.getElementById('bp-popup');
-  if (!popup) return;
-  var isExpanded = _expandedBpKey === key;
-  // Collapse all
-  popup.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; el.classList.remove('bp-row-active'); });
-  popup.querySelectorAll('.bp-row.bp-row-active').forEach(function (el) { el.classList.remove('bp-row-active'); });
-  popup.classList.remove('bp-has-expanded');
-  _expandedBpKey = null;
-  if (isExpanded) return;
-  // Expand target
-  var noteRow = document.getElementById('bp-note-' + sym + '-' + date);
-  if (noteRow) {
-    noteRow.style.display = '';
-    noteRow.classList.add('bp-row-active');
-    var ta = noteRow.querySelector('textarea');
-    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-    var compactRow = noteRow.previousElementSibling;
-    if (compactRow) compactRow.classList.add('bp-row-active');
-  }
-  popup.classList.add('bp-has-expanded');
-  _expandedBpKey = key;
-}
-
-export function toggleFvExpand(sym, date) {
-  var key = sym + ':' + date;
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (!drawer) return;
-  var isExpanded = _expandedFvKey === key;
-  // Collapse all
-  drawer.querySelectorAll('.bp-note-row').forEach(function (el) { el.style.display = 'none'; el.classList.remove('bp-row-active'); });
-  drawer.querySelectorAll('.bp-row.bp-row-active').forEach(function (el) { el.classList.remove('bp-row-active'); });
-  drawer.classList.remove('fvbd-has-expanded');
-  _expandedFvKey = null;
-  if (isExpanded) return;
-  // Expand target
-  var noteRow = drawer.querySelector('[id="bp-note-' + sym + '-' + date + '"]');
-  if (noteRow) {
-    noteRow.style.display = '';
-    noteRow.classList.add('bp-row-active');
-    var ta = noteRow.querySelector('textarea');
-    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-    var compactRow = noteRow.previousElementSibling;
-    if (compactRow) compactRow.classList.add('bp-row-active');
-  }
-  drawer.classList.add('fvbd-has-expanded');
-  _expandedFvKey = key;
-}
-
-export function briefingRemove(sym, date) {
+// force: already confirmed (the React list asks with a dialog)
+export function briefingRemove(sym, date, force) {
   var idx = (state.briefing || []).findIndex(function (e) { return e.sym === sym && e.date === date; });
   if (idx >= 0) {
     var entry = state.briefing[idx];
-    if (entry.note && entry.note.trim()) {
+    if (!force && entry.note && entry.note.trim()) {
       if (!confirm('Remove ' + sym + ' from watchlist?')) return;
     }
     state.briefing.splice(idx, 1);
@@ -3723,107 +3425,21 @@ export function briefingRemove(sym, date) {
   }
 }
 
-function _fvbdJournalActionsHTML() {
-  if (state.isDemoMode) return '';
-  var morningFilled = !!(state.journalToday && state.journalToday.morningAt);
-  var eveningDisabled = !state.journalToday || !state.journalToday.morningAt || !!state.journalToday.skipped;
-  return '<div class="fvbd-journal-actions">'
-    + '<button data-action="open-morning-journal" class="btn-cta"' + (morningFilled ? ' disabled' : '') + '>Morning' + (morningFilled ? icon('check', 14) : '') + '</button>'
-    + '<button data-action="open-evening-journal" class="btn-cta"' + (eveningDisabled ? ' disabled' : '') + '>Evening</button>'
-    + '</div>';
-}
-
-export function renderFVBriefingDrawer() {
-  var drawer = document.getElementById('fv-briefing-drawer');
-  if (!drawer) return;
-  var today = todayDate();
-  var weekMonday = _dateStr(_currentWeekMonday());
-  var weekSunday = (function () { var d = _currentWeekMonday(); d.setUTCDate(d.getUTCDate() + 6); return _dateStr(d); })();
-  var allEntries = (state.briefing || []).filter(function (e) { return e.date >= weekMonday && e.date <= weekSunday; });
-  if (!allEntries.length) {
-    drawer.innerHTML = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + _fvbdJournalActionsHTML() + '<div class="fvbd-empty">Watchlist is empty</div>';
-    return;
-  }
-  // Group by date descending
-  var dateMap = {};
-  allEntries.forEach(function (e) { if (!dateMap[e.date]) dateMap[e.date] = []; dateMap[e.date].push(e); });
-  var dates = Object.keys(dateMap).sort().reverse();
-  var html = '<div class="fvbd-header"><span class="fvbd-title">Watchlist</span></div>' + _fvbdJournalActionsHTML();
-  dates.forEach(function (date, idx) {
-    var isToday = date === today;
-    if (idx > 0 && dates[idx - 1] === today) html += '<div class="fvbd-divider"></div>';
-    if (!isToday) html += '<div class="fvbd-date-label">' + fmtBriefingDate(date) + '</div>';
-    dateMap[date].forEach(function (e) {
-      var coin = state.coins.find(function (c) { return c.symbol === e.sym; });
-      var change = coin ? ((coin.open_24h > 0 && coin.current_price > 0) ? (coin.current_price - coin.open_24h) / coin.open_24h * 100 : (coin.price_change_percentage_24h || 0)) : 0;
-      var addedDelta = (e.addedPrice && coin && coin.current_price > 0) ? (coin.current_price - e.addedPrice) / e.addedPrice * 100 : null;
-      var tradeInline = _tradeInlineHTML(e.sym, e.date);
-      var tradeLocked = (function () { var t = state.trades[e.sym + ':' + e.date]; return t && t.count > 0; })();
-      var isExpanded = _expandedFvKey === e.sym + ':' + e.date;
-      var hasNote = !!e.note;
-      var hasNotes = notesOnDay(e.sym, e.date).length > 0;
-      ensureCoinNotes(e.sym);
-      var isCurrent = _fvSym === e.sym;
-      html += '<div class="bp-row' + (isExpanded ? ' bp-row-active' : '') + (isCurrent ? ' fvbd-current' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '" data-added-price="' + (e.addedPrice || '') + '">'
-        + '<span class="bp-sym-btn">' + e.sym.toUpperCase() + '</span>'
-        + (addedDelta !== null ? '<span class="bp-chg">' + (addedDelta >= 0 ? '+' : '') + addedDelta.toFixed(2) + '%</span>' : '<span class="bp-chg">—</span>')
-        + '<span class="bp-row-status ' + briefingStatusClass(tradeLocked ? 'traded' : e.status) + '">' + briefingStatusLabel(tradeLocked ? 'traded' : e.status) + '</span>'
-        + '<button class="btn-icon bp-note-btn' + (hasNotes ? ' has-note' : '') + '" data-action="fvbd-expand" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('sticky-note', 16) + '</button>'
-        + (isToday
-          ? '<button class="btn-icon bp-remove" data-action="bp-remove" data-sym="' + e.sym + '" data-date="' + e.date + '">' + icon('trash', 16) + '</button>'
-          : '')
-        + '</div>'
-        + '<div class="bp-note-row' + (isExpanded ? ' bp-row-active' : '') + '" id="bp-note-' + e.sym + '-' + e.date + '"' + (isExpanded ? '' : ' style="display:none"') + '>'
-        + '<div class="bp-expand-bar">'
-        + (tradeLocked
-          ? '<span class="bp-status-group"><span class="bp-status-btn bp-status bp-s-traded bp-status-locked">' + icon('check-check', 16) + '<span class="bp-status-text">Traded</span></span>' + (tradeInline || '') + '</span>'
-          : '<button class="bp-status-btn bp-status ' + briefingStatusClass(e.status) + '" data-action="bp-cycle-status" data-sym="' + e.sym + '" data-date="' + e.date + '">' + briefingStatusLabel(e.status) + '<span class="bp-status-text">' + briefingStatusText(e.status) + '</span></button>')
-        + '</div>'
-        + notesListHTML(e.sym, e.date)
-        + (isToday ? noteInputHTML(e.sym) : '')
-        + '</div>';
-    });
-  });
-  drawer.innerHTML = html;
-  _refreshBriefingPct();
-  // Re-attach textarea listeners
-  drawer.querySelectorAll('textarea[data-sym]').forEach(function (ta) {
-    ta.addEventListener('input', function () {
-      ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
-      var sym = ta.dataset.sym, date = ta.dataset.date;
-      var entry = (state.briefing || []).find(function (e) { return e.sym === sym && e.date === date; });
-      if (entry) { entry.note = ta.value; entry.noteUpdatedAt = Date.now(); saveBriefingLocal(); }
-      var noteBtn = drawer.querySelector('.bp-note-btn[data-sym="' + sym + '"][data-date="' + date + '"]');
-      if (noteBtn) noteBtn.classList.toggle('has-note', !!ta.value);
-    });
-    ta.addEventListener('blur', function () { syncBriefingNow(); });
-  });
-  // Restore textarea height for expanded row after full re-render
-  if (_expandedFvKey) {
-    var _exParts = _expandedFvKey.split(':');
-    var _exSym = _exParts[0], _exDate = _exParts.slice(1).join(':');
-    var _exNoteRow = drawer.querySelector('[id="bp-note-' + _exSym + '-' + _exDate + '"]');
-    if (_exNoteRow) {
-      var _exTa = _exNoteRow.querySelector('textarea');
-      if (_exTa) { _exTa.style.height = 'auto'; _exTa.style.height = _exTa.scrollHeight + 'px'; }
-    }
-  }
-}
+// The drawer beside the full-view chart is a React island while open
+export function renderFVBriefingDrawer() { emit('briefing:render'); }
 
 export function openFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
   if (!drawer) return;
   drawer.classList.add('open');
-  renderFVBriefingDrawer();
+  mountIsland(drawer, BriefingDrawer);
   refreshBriefingFromServer();
   if (!state.isDemoMode) fetchJournalToday().then(renderFVBriefingDrawer);
 }
 
 export function closeFVBriefingDrawer() {
   var drawer = document.getElementById('fv-briefing-drawer');
-  if (drawer) { drawer.classList.remove('open'); drawer.classList.remove('fvbd-has-expanded'); }
-  _expandedFvKey = null;
+  if (drawer) { drawer.classList.remove('open'); unmountIsland(drawer); }
   _applyFVTradeMarkers(null);
 }
 

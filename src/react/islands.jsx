@@ -16,6 +16,12 @@ export function mountIsland(el, Component, props) {
   flushSync(() => root.render(<TooltipProvider delayDuration={300}><Component {...(props || {})} /></TooltipProvider>));
 }
 
+// Unmount the island in `el` (if any)
+export function unmountIsland(el) {
+  const root = roots.get(el);
+  if (root) { root.unmount(); roots.delete(el); }
+}
+
 // Unmount islands inside `container` (or already detached ones)
 export function unmountIslands(container) {
   roots.forEach((root, el) => {
