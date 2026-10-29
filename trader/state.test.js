@@ -133,3 +133,28 @@ test('realized: BNB commissions are not subtracted', () => {
   const r = realizedFromTrades([fill('BUY', 1, 0, 0.001, 1, 'BNB')], '1');
   assert.equal(r.realized, 0);
 });
+
+// Long 1 @100 (opening fee 0.04 known), sell half @110: +5 realized − 0.022 fee.
+// Same breakeven whichever comes first — the fill or the ACCOUNT_UPDATE with the new size.
+test('applyFill: a partial close moves the breakeven at once, in either event order', () => {
+  const fill = { symbol: 'BTCUSDT', side: 'SELL', realizedPnl: '5', commission: '0.022', commissionAsset: 'USDT' };
+  const half = { P: [{ s: 'BTCUSDT', pa: '0.5', ep: '100', up: '0', mt: 'cross', ps: 'BOTH' }] };
+  const expected = 100 - (5 - 0.04 - 0.022) / 0.5; // ≈ 90.124
+  for (const fillFirst of [true, false]) {
+    const s = st.createState();
+    st.loadSnapshot(s, { positions: [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '1', entryPrice: '100', updateTime: 1 }] });
+    s.positions['BTCUSDT:BOTH'].realizedPnl = -0.04;
+    if (fillFirst) { st.applyFill(s, fill); st.applyAccountUpdate(s, half, 1000); }
+    else { st.applyAccountUpdate(s, half, 1000); st.applyFill(s, fill); }
+    assert.ok(Math.abs(s.positions['BTCUSDT:BOTH'].breakEven - expected) < 1e-9, String(s.positions['BTCUSDT:BOTH'].breakEven));
+  }
+});
+
+test('applyFill: adding to a position only takes the fee; unknown position is skipped', () => {
+  const s = st.createState();
+  st.loadSnapshot(s, { positions: [{ symbol: 'BTCUSDT', positionSide: 'BOTH', positionAmt: '-1', entryPrice: '100', updateTime: 1 }] });
+  s.positions['BTCUSDT:BOTH'].realizedPnl = 0;
+  st.applyFill(s, { symbol: 'BTCUSDT', side: 'SELL', realizedPnl: '0', commission: '0.05', commissionAsset: 'USDT' });
+  assert.equal(s.positions['BTCUSDT:BOTH'].realizedPnl, -0.05);
+  assert.equal(st.applyFill(s, { symbol: 'ETHUSDT', side: 'BUY', realizedPnl: '1', commission: '0', commissionAsset: 'USDT' }), null);
+});

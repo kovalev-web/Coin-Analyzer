@@ -150,6 +150,24 @@ function applyAccountUpdate(state, a, eventTime) {
   return changed;
 }
 
+// A fill from the user stream, applied at once so the breakeven moves with the
+// fill instead of after the userTrades recount (that recount still follows and
+// replaces it). Reducing fill: + its realized PnL − fee; adding fill: − fee.
+// fill: { symbol, side, realizedPnl, commission, commissionAsset }. Returns the
+// position it changed, or null (flat / not known yet).
+function applyFill(state, fill) {
+  var p = Object.values(state.positions).find(function (x) { return x.symbol === fill.symbol; });
+  if (!p || p.realizedPnl == null) return null;
+  var amt = Number(p.amount);
+  if (!amt) return null;
+  var fee = fill.commissionAsset === 'USDT' ? Number(fill.commission) || 0 : 0;
+  var reducing = (amt > 0) !== (fill.side === 'BUY');
+  var delta = (reducing ? Number(fill.realizedPnl) || 0 : 0) - fee;
+  p.realizedPnl = Math.round((Number(p.realizedPnl) + delta) * 1e6) / 1e6;
+  p.breakEven = breakEven(p.entryPrice, p.amount, p.realizedPnl);
+  return p;
+}
+
 function toJSON(state) {
   return {
     balances: Object.values(state.balances),
@@ -206,6 +224,6 @@ function breakEven(entryPrice, amount, realized) {
 
 module.exports = {
   openTimeFromTrades, realizedFromTrades, breakEven,
-  createState, loadSnapshot, applyOrderUpdate, applyAlgoUpdate, applyAccountUpdate,
+  createState, loadSnapshot, applyOrderUpdate, applyAlgoUpdate, applyAccountUpdate, applyFill,
   toJSON, posKey, orderFromRest, algoFromRest,
 };

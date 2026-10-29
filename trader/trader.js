@@ -139,15 +139,16 @@ class Trader extends EventEmitter {
       // ACCOUNT_UPDATE comes for it — available balance must be fetched
       this._scheduleBalanceRefresh();
       if (msg.o.x === 'TRADE') {
+        var fill = {
+          symbol: msg.o.s, side: msg.o.S, orderId: msg.o.i, clientOrderId: msg.o.c,
+          price: msg.o.L, quantity: msg.o.l, realizedPnl: msg.o.rp,
+          commission: msg.o.n, commissionAsset: msg.o.N, time: msg.o.T,
+        };
+        // Breakeven moves with the fill; the recount below makes it exact
+        var moved = st.applyFill(this.state, fill);
+        if (moved) this.emit('event', { type: 'position', position: moved });
         this._scheduleRealized(msg.o.s);
-        this.emit('event', {
-          type: 'fill',
-          fill: {
-            symbol: msg.o.s, side: msg.o.S, orderId: msg.o.i, clientOrderId: msg.o.c,
-            price: msg.o.L, quantity: msg.o.l, realizedPnl: msg.o.rp,
-            commission: msg.o.n, commissionAsset: msg.o.N, time: msg.o.T,
-          },
-        });
+        this.emit('event', { type: 'fill', fill: fill });
       }
     } else if (msg.e === 'ALGO_UPDATE') {
       var a = st.applyAlgoUpdate(this.state, msg.o, msg.E);

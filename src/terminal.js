@@ -1906,6 +1906,18 @@ function _placeProtective(price, bestBid, bestAsk) {
   if (long) type = price < bestBid ? 'STOP_MARKET' : price > bestAsk ? 'TAKE_PROFIT_MARKET' : null;
   else type = price > bestAsk ? 'STOP_MARKET' : price < bestBid ? 'TAKE_PROFIT_MARKET' : null;
   if (!type) { _setStatus('SL/TP must be outside the spread', true); return; }
+  // Binance keeps one close-position SL and one TP per side: Shift+click again moves it
+  var kind = type === 'STOP_MARKET' ? 'SL' : 'TP';
+  var existing = T.account.algoOrders.filter(function (a) {
+    return a.symbol === T.sym && a.closePosition && a.type === type && !T.cancelling['a' + a.algoId];
+  });
+  var inFlight = Object.keys(T.pending).some(function (k) { return T.pending[k].kind === kind; });
+  if (inFlight) { _setStatus(kind + ' is being placed — one moment', true); return; }
+  if (existing.length) {
+    if (existing.some(function (a) { return Number(a.triggerPrice) === price; })) return; // already there
+    _moveItems(existing.slice(0, 1).map(function (a) { return { algo: a, kind: kind }; }), kind, price);
+    return;
+  }
   _placeOptimistic({
     clientOrderId: _clientId(), symbol: T.sym, side: long ? 'SELL' : 'BUY', type: type,
     triggerPrice: String(price), closePosition: true, workingType: STOP_TRIGGER,
@@ -2106,7 +2118,12 @@ function _moveLevel(fromIdx, kind, toIdx) {
   // Moving an entry is like placing one (2FA unlock, day open); SL / TP / reduce-only always move
   var opening = items.some(function (x) { return x.order ? !x.order.reduceOnly : !(x.algo.closePosition || x.algo.reduceOnly); });
   if (opening && _lockedBlocked()) return;
+  _moveItems(items, kind, price);
+}
 
+// Move orders (from the Mine column) to a price: limits in place, algo orders
+// cancelled and placed again by the trader (POST /move)
+function _moveItems(items, kind, price) {
   items.forEach(function (x) {
     var key = x.order ? 'o' + x.order.orderId : 'a' + x.algo.algoId;
     if (T.cancelling[key]) return;
