@@ -971,6 +971,13 @@ export function saveTradeTag(tag) {
   }).then(function (r) { if (!r.ok) throw new Error('Tag not saved'); return r.json(); });
 }
 
+// Algorithms in the coin's tape (chart P marks) — server algos/ (GET /api/algos)
+export function fetchAlgos(sym) {
+  var S = String(sym).toUpperCase() + 'USDT';
+  return fetch(API_BASE + '/api/algos?symbol=' + encodeURIComponent(S), { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : null; });
+}
+
 // Where the coin's move came from (Origin popover): every venue over the last
 // `min` minutes against its own norm — server origin/ (GET /api/move-origin)
 export function fetchMoveOrigin(sym, min) {

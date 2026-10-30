@@ -18,6 +18,7 @@
     "test:ladder": "node --test src/ladder-scale.test.mjs",
     "test:venues": "node --test src/venues-stats.test.mjs",
     "test:hits": "node --test src/hit-stats.test.mjs",
+    "test:algos": "node --test algos/*.test.js",
     "test:origin": "node --test origin/*.test.js",
     "test:inplay": "node --test inplay/*.test.js src/inplay-grid.test.mjs",
     "build": "vite build",

@@ -13,6 +13,7 @@ import { TermSettingsDialog } from './TermSettingsDialog.jsx';
 import { LiquidityPopover } from './LiquidityPopover.jsx';
 import { ChartTouchMenu } from './ChartTouchMenu.jsx';
 import { OriginPopover } from './OriginPopover.jsx';
+import { AlgoCard } from './AlgoCard.jsx';
 
 
 export const SURFACES = {
@@ -29,5 +30,6 @@ export const SURFACES = {
   liquidity: LiquidityPopover,
   'chart-menu': ChartTouchMenu,
   origin: OriginPopover,
+  algo: AlgoCard,
   'term-settings': TermSettingsDialog,
 };

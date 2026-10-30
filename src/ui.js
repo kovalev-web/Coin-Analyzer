@@ -14,7 +14,7 @@ import { CardHead } from './react/home/CardHead.jsx';
 import { BriefingDrawer } from './react/home/Briefing.jsx';
 import { FvControls, FvStats } from './react/fullview/FvControls.jsx';
 import { getCurrentRoute } from './router.js';
-import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag } from './api.js';
+import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag, fetchAlgos } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 
@@ -2171,6 +2171,8 @@ function _drawFVOverlays(ctx, rc, sym) {
     ctx.fill();
     ctx.restore();
   });
+  // Algorithms found in the tape (server algos/): P with an arrow at where the series started
+  _drawFvAlgos(ctx, tfSec, cssW, paneH);
   // Your notes on this coin: a bubble at the time and price each was written
   drawNoteIcons(ctx, _fvSeries, _fvChart, sym, tfSec, cssW, paneH);
 }
@@ -2204,6 +2206,62 @@ function _applyFVTradeMarkers(sym) {
   var last = markers.reduce(function (m, x) { return Math.max(m, x.time); }, 0);
   _liveFills[sym] = (_liveFills[sym] || []).filter(function (f) { return f.time > last; });
   _fvTradeMarkersData = markers.concat(_liveFills[sym]);
+}
+
+// ── Algorithms in the coin's tape (P marks): server algos/, GET /api/algos ──
+// Polled every 20 s while the live full view is open; the server starts
+// collecting a coin the first time it's asked (briefing coins are collected anyway).
+var _fvAlgos = [], _fvAlgoTimer = null, _fvAlgoHits = [];
+
+function _startFvAlgos(sym) {
+  _stopFvAlgos();
+  if (state.isDemoMode) return;
+  function load() {
+    // Never in the way of the chart: any failure just means no marks
+    try { fetchAlgos(sym).then(function (d) { if (_fvSym === sym && d) _fvAlgos = d.algos || []; }).catch(function () {}); } catch (e) {}
+  }
+  load();
+  _fvAlgoTimer = setInterval(load, 20000);
+}
+
+function _stopFvAlgos() {
+  clearInterval(_fvAlgoTimer);
+  _fvAlgoTimer = null;
+  _fvAlgos = [];
+  _fvAlgoHits = [];
+}
+
+function _drawFvAlgos(ctx, tfSec, cssW, paneH) {
+  _fvAlgoHits = [];
+  if (!_fvAlgos.length || !_fvSeries || !_fvChart || _fvReplay) return;
+  var up = getCSSVar('--bullish'), dn = getCSSVar('--danger');
+  _fvAlgos.forEach(function (a) {
+    var t = Math.floor(a.start / 1000 / tfSec) * tfSec;
+    var x = _fvChart.timeScale().timeToCoordinate(t);
+    var y = _fvSeries.priceToCoordinate(a.firstPrice);
+    if (x == null || y == null || x < 0 || x > cssW || y < 0 || y > paneH) return;
+    // Buy: arrow up under the price, P below it; sell: arrow down above, P over it
+    var dir = a.buy ? 1 : -1;
+    var ay = y + dir * 10;
+    ctx.save();
+    ctx.fillStyle = a.buy ? up : dn;
+    ctx.beginPath();
+    ctx.moveTo(x, ay); ctx.lineTo(x - 5, ay + dir * 7); ctx.lineTo(x - 1.5, ay + dir * 7); ctx.lineTo(x - 1.5, ay + dir * 13);
+    ctx.lineTo(x + 1.5, ay + dir * 13); ctx.lineTo(x + 1.5, ay + dir * 7); ctx.lineTo(x + 5, ay + dir * 7);
+    ctx.closePath(); ctx.fill();
+    ctx.font = '600 11px ' + (getCSSVar('--font-family') || 'sans-serif');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var ly = ay + dir * 22;
+    ctx.fillText('P', x, ly);
+    ctx.restore();
+    _fvAlgoHits.push({ x: x, y: (ay + ly) / 2, algo: a });
+  });
+}
+
+function _fvAlgoAt(x, y) {
+  var best = null, bestD = 14;
+  _fvAlgoHits.forEach(function (h) { var d = Math.hypot(h.x - x, h.y - y); if (d < bestD) { best = h; bestD = d; } });
+  return best;
 }
 
 // T with the mouse over the full-view chart: hide / show the trade triangles
@@ -2457,6 +2515,7 @@ export function openCoinFullView(sym) {
       if (msg.type === 'trade') appendTapeRow(msg.trade);
     });
     terminalOnFVOpen(sym);
+    _startFvAlgos(sym);
   } else {
     // Review mode: scrolling to an edge loads more history
     _fvChart.timeScale().subscribeVisibleLogicalRangeChange(function (r) {
@@ -2579,6 +2638,16 @@ export function openCoinFullView(sym) {
     var priceAxisW = 0;
     try { priceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
     if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+
+    // A P mark: its card
+    if (e.button === 0 && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+      var algoHit = _fvAlgoAt(e.clientX - rect.left, e.clientY - rect.top);
+      if (algoHit) {
+        e.stopPropagation(); e.preventDefault();
+        openSurface('algo', { algo: algoHit.algo, sym: sym, rect: { left: rect.left + algoHit.x - 8, top: rect.top + algoHit.y - 8, width: 16, height: 16 } });
+        return;
+      }
+    }
 
     // Ctrl+left: add a ray, or grab an existing one to drag
     if (e.button === 0 && e.ctrlKey) {
@@ -3031,6 +3100,8 @@ export function closeCoinFullView() {
   closeSurface('notes');
   closeSurface('liquidity');
   closeSurface('origin');
+  closeSurface('algo');
+  _stopFvAlgos();
   clearNoteIcons();
   softDisconnectOrderbook();
   terminalOnFVClose();

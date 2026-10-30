@@ -17,6 +17,8 @@ const { computeEdge, edgePeriod } = require('./journal/edge');
 const { createInplayFeed } = require('./inplay/feed');
 const originMetrics = require('./origin/metrics');
 const originVenues = require('./origin/venues');
+const { createCollector: createAlgoCollector } = require('./algos/collector');
+const { detectTimers } = require('./algos/detect');
 const { dayCoins, updateBriefingLog, pruneLog, briefingSpans } = require('./journal/briefing');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
@@ -568,6 +570,37 @@ async function moveOrigin(symbol, minutes) {
   };
   originCache.set(key, { at: Date.now(), body: body });
   if (originCache.size > 200) originCache.delete(originCache.keys().next().value);
+  return body;
+}
+
+// ── Algorithms in the tape (chart P marks), algos/ ─────────────────────────
+// Trades of the trader's briefing coins (+ coins opened on the chart) on Binance
+// futures and Hyperliquid; the detector runs on request, 15 s cache per coin.
+var algoCollector = createAlgoCollector({
+  log: function (m) { console.log(m); },
+  briefingSymbols: async function () {
+    if (!TRADER_USER_ID) return [];
+    var br = await redis(['GET', 'briefing:' + TRADER_USER_ID]);
+    var brief = br && br.result ? JSON.parse(br.result) : [];
+    return Object.keys(dayCoins(brief, await userTodayStr(TRADER_USER_ID)));
+  },
+});
+algoCollector.start();
+var algoCache = new Map();
+
+function coinAlgos(symbol) {
+  algoCollector.look(symbol);
+  var hit = algoCache.get(symbol);
+  if (hit && Date.now() - hit.at < 15000) return hit.body;
+  var tapes = algoCollector.tapes(symbol), algos = [], since = {};
+  Object.keys(tapes).forEach(function (v) {
+    since[v] = tapes[v].since();
+    detectTimers(tapes[v].prints(), undefined, tapes[v].turnover).forEach(function (a) { a.venue = v; algos.push(a); });
+  });
+  algos.sort(function (a, b) { return a.start - b.start; });
+  var body = { symbol: symbol, since: since, algos: algos };
+  algoCache.set(symbol, { at: Date.now(), body: body });
+  if (algoCache.size > 100) algoCache.delete(algoCache.keys().next().value);
   return body;
 }
 
@@ -1600,6 +1633,21 @@ var httpServer = http.createServer(async function (req, res) {
         res.end(JSON.stringify({ error: e.message }));
       }
     });
+    return;
+  }
+
+  // Algorithms in the coin's tape (chart P marks): GET ?symbol=SOLUSDT; also starts collecting it
+  if (req.method === 'GET' && req.url.split('?')[0] === '/api/algos') {
+    var alSession = await getSession(req);
+    if (!alSession) return unauthorized(res);
+    var alSym = String(new URL(req.url, 'https://questtick.com').searchParams.get('symbol') || '').toUpperCase();
+    if (!/^[A-Z0-9]{2,30}USDT$/.test(alSym)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid symbol' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(coinAlgos(alSym)));
     return;
   }
 
