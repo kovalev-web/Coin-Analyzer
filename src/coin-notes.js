@@ -128,6 +128,13 @@ function _hitAt(e) {
   return null;
 }
 
+// "28 ОКТ" in the user's time zone
+var RU_MONTHS = ['ЯНВ', 'ФЕВ', 'МАР', 'АПР', 'МАЙ', 'ИЮН', 'ИЮЛ', 'АВГ', 'СЕН', 'ОКТ', 'НОЯ', 'ДЕК'];
+function _noteDate(d) {
+  var ymd = tzDateStr(d).split('-');
+  return Number(ymd[2]) + ' ' + RU_MONTHS[Number(ymd[1]) - 1];
+}
+
 function _hideTip() {
   if (_tip) _tip.style.display = 'none';
 }
@@ -137,7 +144,7 @@ document.addEventListener('mousemove', function (e) {
   if (!hit) { _hideTip(); return; }
   if (!_tip) { _tip = document.createElement('div'); _tip.className = 'cn-tip'; document.body.appendChild(_tip); }
   var d = new Date(hit.note.ts);
-  _tip.innerHTML = '<span class="cn-time">' + tzDateStr(d).slice(5).replace('-', '.') + ' ' + tzTimeStr(d) + '</span>' + escHtml(hit.note.text);
+  _tip.innerHTML = '<span class="cn-time">' + _noteDate(d) + ' ' + tzTimeStr(d) + '</span>' + escHtml(hit.note.text);
   _tip.style.display = 'block';
   _tip.style.left = Math.max(8, Math.min(window.innerWidth - _tip.offsetWidth - 8, e.clientX + 12)) + 'px';
   _tip.style.top = Math.max(8, e.clientY - _tip.offsetHeight - 10) + 'px';
