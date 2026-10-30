@@ -971,6 +971,14 @@ export function saveTradeTag(tag) {
   }).then(function (r) { if (!r.ok) throw new Error('Tag not saved'); return r.json(); });
 }
 
+// Where the coin's move came from (Origin popover): every venue over the last
+// `min` minutes against its own norm — server origin/ (GET /api/move-origin)
+export function fetchMoveOrigin(sym, min) {
+  var S = String(sym).toUpperCase() + 'USDT';
+  return fetch(API_BASE + '/api/move-origin?symbol=' + encodeURIComponent(S) + '&min=' + (min || 30), { credentials: 'include' })
+    .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status)); return d; }); });
+}
+
 // ── Coin notes: many per coin, each with time and price (chart + briefing) ──
 // Cached per coin in state.coinNotes[SYM]; 'coin-notes:updated' fires on change.
 export function fetchCoinNotes(sym) {

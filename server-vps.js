@@ -15,6 +15,8 @@ const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
 const { createInplayFeed } = require('./inplay/feed');
+const originMetrics = require('./origin/metrics');
+const originVenues = require('./origin/venues');
 const { dayCoins, updateBriefingLog, pruneLog, briefingSpans } = require('./journal/briefing');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
@@ -540,6 +542,34 @@ setInterval(function() {
     bootstrapD1Opens();
   }
 }, 60000);
+
+// ── Origin (full-view chart → «Откуда ход»): the coin on every venue, origin/ ─
+// Liquidations have no public history: listen to all of Binance's from start.
+var originLiqs = originVenues.createLiquidations();
+originLiqs.start();
+var originCache = new Map(); // 'SOLUSDT:30' → { at, body } — 10 s, so a popover refresh costs nothing extra
+
+async function moveOrigin(symbol, minutes) {
+  var key = symbol + ':' + minutes;
+  var hit = originCache.get(key);
+  if (hit && Date.now() - hit.at < 10000) return hit.body;
+  var to = Math.floor(Date.now() / 60000) * 60000 + 60000; // through the forming minute
+  var from = to - minutes * 60000;
+  var loaded = await originVenues.loadVenues(symbol, from - originMetrics.CFG.normMin * 60000, to);
+  var a = originMetrics.analyze(loaded.venues, from, to, 'bnf');
+  var extras = await Promise.all([originVenues.loadOpenInterest(symbol, from, to), originVenues.loadFunding(symbol)]);
+  var oi = {};
+  Object.keys(extras[0]).forEach(function (k) { oi[k] = originMetrics.oiChange(extras[0][k], from, to); });
+  var body = {
+    symbol: symbol, from: from, to: to, minutes: minutes,
+    verdict: a.verdict, leader: a.leader, rows: a.rows, missing: loaded.missing,
+    oi: oi, funding: extras[1],
+    liq: Object.assign(originMetrics.liqSum(originLiqs.events(symbol), from, to), { since: originLiqs.since() }),
+  };
+  originCache.set(key, { at: Date.now(), body: body });
+  if (originCache.size > 200) originCache.delete(originCache.keys().next().value);
+  return body;
+}
 
 // ── In play (/grid): активность монет против их нормы, inplay/feed.js ─────
 // Работает, только пока /grid открыт хоть у кого-то (+15 мин после ухода последнего)
@@ -1570,6 +1600,29 @@ var httpServer = http.createServer(async function (req, res) {
         res.end(JSON.stringify({ error: e.message }));
       }
     });
+    return;
+  }
+
+  // Where the coin's move came from: GET ?symbol=SOLUSDT&min=30 (15 / 30 / 60 / 120)
+  if (req.method === 'GET' && req.url.split('?')[0] === '/api/move-origin') {
+    var moSession = await getSession(req);
+    if (!moSession) return unauthorized(res);
+    var moQ = new URL(req.url, 'https://questtick.com').searchParams;
+    var moSym = String(moQ.get('symbol') || '').toUpperCase();
+    var moMin = [15, 30, 60, 120].indexOf(Number(moQ.get('min'))) >= 0 ? Number(moQ.get('min')) : 30;
+    if (!/^[A-Z0-9]{2,30}USDT$/.test(moSym)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid symbol' }));
+      return;
+    }
+    try {
+      var moBody = await moveOrigin(moSym, moMin);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(moBody));
+    } catch (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 

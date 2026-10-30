@@ -1571,6 +1571,13 @@ window._chartDiag = function () {
 // ── Analysis Popup ─────────────────────────────────────────────────────────
 
 // AI analysis of a coin — shadcn popover (src/react/host/AnalysisPopover.jsx)
+// «Откуда ход»: the coin on every venue (src/react/host/OriginPopover.jsx)
+export function openOriginPopup(sym, btn) {
+  if (isSurfaceOpen('origin')) { closeSurface('origin'); return; }
+  var r = btn.getBoundingClientRect();
+  openSurface('origin', { sym: sym, rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+}
+
 export function openAnalysisPopup(sym, btn) {
   if (isSurfaceOpen('analysis')) { closeSurface('analysis'); return; }
   var r = btn.getBoundingClientRect();
@@ -3023,6 +3030,7 @@ export function closeCoinFullView() {
   window.__fvReplay = false;
   closeSurface('notes');
   closeSurface('liquidity');
+  closeSurface('origin');
   clearNoteIcons();
   softDisconnectOrderbook();
   terminalOnFVClose();

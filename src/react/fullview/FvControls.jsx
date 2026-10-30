@@ -5,7 +5,7 @@
 // Also the 24h / NATR / volume line in the chart's corner (FvStats).
 // The chart itself stays vanilla (ui.js); buttons keep their data-action.
 import * as React from 'react';
-import { Activity, ArrowLeft, ArrowUp, ChevronDown, EyeOff, ListOrdered, MessageSquarePlus, Star, Trash2, TriangleAlert, Zap } from 'lucide-react';
+import { Activity, ArrowLeft, Radar, ArrowUp, ChevronDown, EyeOff, ListOrdered, MessageSquarePlus, Star, Trash2, TriangleAlert, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -90,6 +90,7 @@ export function FvControls({ sym, review, bar }) {
               <Act label="Order book" data-action="toggle-terminal" className={term.active ? 'bg-accent text-foreground' : ''}><ListOrdered /></Act>
             )}
             <Act label={warmIn > 0 ? 'Orderbook — warming up' : 'Orderbook'} data-action="toggle-liq-panel" disabled={warmIn > 0}><Activity /></Act>
+            <Act label="Откуда ход — все биржи" data-action="open-origin" data-sym={sym}><Radar /></Act>
             {!isBriefingPanelOpen() && (
               <Act label={starred ? 'Remove from watchlist' : 'Add to watchlist'} data-action="toggle-briefing" data-sym={sym} className={starred ? 'text-level [&_svg]:fill-current' : ''}><Star /></Act>
             )}

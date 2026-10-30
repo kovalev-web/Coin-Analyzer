@@ -7,7 +7,7 @@ import {
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openLiquidityPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
+  render, openAnalysisPopup, openLiquidityPopup, openOriginPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   isBriefingPanelOpen,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -86,6 +86,10 @@ document.body.addEventListener('click', function (e) {
       if (c) { openAnalysisPopup(sym, target); }
       break;
     }
+    case 'open-origin':
+      if (state.isDemoMode) { window.location.href = '/login'; break; }
+      openOriginPopup(sym, target);
+      break;
     case 'open-analysis': {
       if (state.isDemoMode) { window.location.href = '/login'; break; }
       document.querySelectorAll('.tf-dd').forEach(function (el) { el.classList.remove('open'); });
