@@ -9,6 +9,7 @@ export const CACHE_TTL_MS = 2 * 60 * 1000;
 export const ANALYZE_DELAY_MS = 400;
 
 export const state = {
+  algosActive: {},   // 'SOLUSDT' → algorithms running now (server algos/, WS algos_active)
   userId: null,
   timezone: null, // IANA string from Account settings; null = use browser's detected timezone
   tradingLimits: { maxVolume: null, maxDrawdownPct: null, maxTrades: null }, // from Account settings → shown in morning journal

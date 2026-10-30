@@ -22,6 +22,7 @@ import { state } from '../../state.js';
 import { tzDateStr, tzTimeStr } from '../../utils.js';
 import { fetchNATR, fetchAllBriefingTrades } from '../../api.js';
 import { ensureCoinNotes, notesOnDay } from '../../coin-notes.js';
+import { algoShort } from '../../algo-label.js';
 import { briefingCycleStatus, briefingRemove, briefingThisWeekEntries, closeBriefingPanel, openCoinFullView, openFVBriefingDrawer } from '../../ui.js';
 import { AnchorBox, keepOpenOn } from '../host/anchor.jsx';
 
@@ -44,7 +45,7 @@ function openCoin(sym) {
 
 // Live list: redraw on briefing / trades / notes changes and every half second for prices
 function useBriefing() {
-  useEvents(['briefing:render', 'briefing:changed', 'coin-notes:updated', 'journal:saved']);
+  useEvents(['briefing:render', 'briefing:changed', 'coin-notes:updated', 'journal:saved', 'algos:active']);
   const [, tick] = React.useReducer((x) => x + 1, 0);
   React.useEffect(() => { const t = setInterval(tick, 500); return () => clearInterval(t); }, []);
 }
@@ -80,6 +81,22 @@ function Row({ e, open, onToggle, onOpen, current }) {
           ? <span className={'text-xs font-medium tabular-nums ' + (pnl >= 0 ? 'text-bullish' : 'text-danger')}>{money(pnl)}</span>
           : <Status e={locked ? { ...e, status: 'traded' } : e} />}
         <span className="ml-auto flex items-center">
+          {/* An algorithm running now in this coin's tape (server algos/) */}
+          {(() => {
+            const act = e.date === tzDateStr() && state.algosActive[e.sym.toUpperCase() + 'USDT'];
+            if (!act || !act.length) return null;
+            const a = act[act.length - 1];
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className={'mr-1 px-1.5 py-0 text-2xs ' + (a.buy ? 'border-bullish/40 text-bullish' : 'border-danger/40 text-danger')}>
+                    {algoShort(a)}{act.length > 1 ? ' +' + (act.length - 1) : ''}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{act.map(algoShort).join(' · ')} — идёт сейчас, открой график</TooltipContent>
+              </Tooltip>
+            );
+          })()}
           <StickyNote className={'mr-1 size-4 ' + (notes.length ? 'text-level' : 'text-muted-foreground/40')} aria-label={notes.length ? 'Has notes' : 'No notes'} />
           {e.date === tzDateStr() && (
             <Button variant="ghost" size="icon-xs" className="text-muted-foreground opacity-0 group-hover:opacity-100 max-sm:opacity-100" aria-label="Remove"

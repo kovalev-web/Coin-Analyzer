@@ -138,11 +138,19 @@ function verdict(ranked, homeId) {
   const lead = rows.find((r) => r.id === ranked.leader);
   if (!lead) return 'Ни одна площадка не вышла из нормы: обычная активность';
   const home = rows.find((r) => r.id === homeId);
-  let s = 'Триггер: ' + lead.name + ' — объём ×' + (lead.volX || 0).toFixed(1)
-    + (lead.buyPct != null ? ', покупки ' + Math.round(lead.buyPct) + '%' : '');
-  if (lead.id === homeId) s += '. Ход начался здесь';
-  else if (home && home.lag != null) s += '. ' + home.name + (home.lag === 0 ? ' в ту же минуту' : ' позже на ' + Math.round(home.lag / 60000) + ' мин');
-  else if (home) s += '. ' + home.name + ' из нормы не вышел';
+  // Several venues in the same minute: by 1-minute bars there's no telling who was first
+  const together = rows.filter((r) => r.start != null && r.start === lead.start);
+  let s;
+  if (together.length > 1) {
+    s = 'Ход начался одновременно: ' + together.map((r) => r.name + ' ×' + (r.volX || 0).toFixed(1)).join(', ');
+    if (home && home.start == null) s += '. ' + home.name + ' из нормы не вышел';
+  } else {
+    s = 'Триггер: ' + lead.name + ' — объём ×' + (lead.volX || 0).toFixed(1)
+      + (lead.buyPct != null ? ', покупки ' + Math.round(lead.buyPct) + '%' : '');
+    if (lead.id === homeId) s += '. Ход начался здесь';
+    else if (home && home.lag != null) s += '. ' + home.name + ' позже на ' + Math.round(home.lag / 60000) + ' мин';
+    else if (home) s += '. ' + home.name + ' из нормы не вышел';
+  }
   const spot = rows.filter((r) => r.kind === 'spot' && r.start != null).map((r) => r.start);
   const perp = rows.filter((r) => r.kind === 'perp' && r.start != null).map((r) => r.start);
   if (spot.length && perp.length) {
@@ -174,7 +182,9 @@ function analyze(venues, from, to, homeId, cfg) {
   const rows = addShares(venues.map((v) => venueRow(v, from, to, cfg)))
     .map((r) => (r.start != null && !(r.shareNow >= minShare) ? Object.assign({}, r, { start: null }) : r));
   const ranked = rankStarts(rows);
-  return { leader: ranked.leader, rows: ranked.rows, verdict: verdict(ranked, homeId) };
+  const lead = ranked.rows.find((r) => r.id === ranked.leader);
+  const together = lead ? ranked.rows.filter((r) => r.start === lead.start).map((r) => r.id) : [];
+  return { leader: together.length > 1 ? null : ranked.leader, together, rows: ranked.rows, verdict: verdict(ranked, homeId) };
 }
 
 module.exports = {

@@ -87,6 +87,14 @@ test('analyze: nobody left the norm', () => {
   assert.match(r.verdict, /обычная активность/);
 });
 
+test('analyze: futures leaving the norm in the same minute are "одновременно", not one trigger', () => {
+  const venues = ['bnf', 'okx', 'byb'].map((id, k) => ({ id, name: id.toUpperCase(), kind: 'perp', bars: bars([400, 400, 400].map((q) => ({ q: q * 1e3 * (k + 1) })), { q: 100e3 * (k + 1), n: undefined, tb: undefined }) }));
+  const r = m.analyze(venues, T0, T0 + 3 * MIN, 'bnf', CFG);
+  assert.equal(r.leader, null);
+  assert.deepEqual(r.together.sort(), ['bnf', 'byb', 'okx']);
+  assert.match(r.verdict, /^Ход начался одновременно: /);
+});
+
 test('open interest change and liquidations over the window', () => {
   assert.equal(m.oiChange([{ t: T0, v: 100 }, { t: T0 + MIN, v: 105 }, { t: T0 + 9 * MIN, v: 110 }], T0, T0 + 5 * MIN), 5);
   const liq = m.liqSum([{ t: T0, side: 'SELL', usd: 10 }, { t: T0 + 1, side: 'BUY', usd: 4 }, { t: T0 - 1, side: 'BUY', usd: 99 }], T0, T0 + MIN);

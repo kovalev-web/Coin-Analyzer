@@ -564,7 +564,7 @@ async function moveOrigin(symbol, minutes) {
   Object.keys(extras[0]).forEach(function (k) { oi[k] = originMetrics.oiChange(extras[0][k], from, to); });
   var body = {
     symbol: symbol, from: from, to: to, minutes: minutes,
-    verdict: a.verdict, leader: a.leader, rows: a.rows, missing: loaded.missing,
+    verdict: a.verdict, leader: a.leader, together: a.together, rows: a.rows, missing: loaded.missing,
     oi: oi, funding: extras[1],
     liq: Object.assign(originMetrics.liqSum(originLiqs.events(symbol), from, to), { since: originLiqs.since() }),
   };
@@ -616,6 +616,54 @@ async function coinAlgos(symbol) {
   if (algoCache.size > 100) algoCache.delete(algoCache.keys().next().value);
   return body;
 }
+
+// Every 30 s: which algorithms run now on the watched coins → the trader's tabs
+// ({type:'algos_active'}: the briefing list shows them); one that just showed up
+// → {type:'algo_alert'} (a toast) and Telegram. Running: a timer whose next beat
+// isn't overdue (2.5 periods), pressure whose last minute is this one or the last.
+var ALGO_VENUE_NAMES = { bnf: 'Binance F', bns: 'Binance S', byp: 'Bybit P', bys: 'Bybit S', okp: 'OKX P', oks: 'OKX S', hlp: 'Hyperliquid P', upb: 'Upbit KRW' };
+var algoActive = {};
+var algoAlerted = new Map(); // symbol:venue:kind:side:start → when
+
+function algoRunning(a, now) {
+  return a.kind === 'pressure' ? now - a.end < 90000 : now - a.end < a.periodSec * 1000 * 2.5;
+}
+
+function algoText(symbol, a) {
+  var coin = symbol.replace(/USDT$/, '');
+  var side = a.buy ? 'покупка' : 'продажа';
+  var where = ALGO_VENUE_NAMES[a.venue] || a.venue;
+  var usd = function (v) { return v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + Math.round(v / 1e3) + 'K'; };
+  var px = (a.change >= 0 ? '+' : '') + a.change.toFixed(2) + '%';
+  return a.kind === 'pressure'
+    ? coin + ' — давление · ' + side + ' на ' + where + ': ' + Math.round(a.sidePct) + '% одной стороной, объём ×' + a.volX.toFixed(1) + ', цена ' + px
+    : coin + ' — таймер · ' + side + ' на ' + where + ': ~' + usd(a.sizeUsd) + ' каждые ~' + Math.round(a.periodSec) + ' с, уже ' + a.count + ' раз, цена ' + px;
+}
+
+async function algoWatchLoop() {
+  if (!TRADER_USER_ID) return;
+  var now = Date.now(), next = {};
+  var syms = algoCollector.watching();
+  for (var i = 0; i < syms.length; i++) {
+    var sym = syms[i], body;
+    try { body = await coinAlgos(sym); } catch (e) { continue; }
+    var act = body.algos.filter(function (a) { return algoRunning(a, now); });
+    if (act.length) next[sym] = act;
+    act.forEach(function (a) {
+      var key = sym + ':' + a.venue + ':' + a.kind + ':' + a.buy + ':' + a.start;
+      if (algoAlerted.has(key) || now - a.noticed > 5 * 60000) return; // only fresh ones (not old ones after a restart)
+      algoAlerted.set(key, now);
+      var text = algoText(sym, a);
+      broadcastToUser(TRADER_USER_ID, { type: 'algo_alert', symbol: sym, algo: a, text: text });
+      var chatId = alertsMemory[TRADER_USER_ID] && alertsMemory[TRADER_USER_ID].chatId;
+      if (chatId) sendTG(chatId, (a.kind === 'pressure' ? '⚡ ' : '⏱ ') + text);
+    });
+  }
+  algoAlerted.forEach(function (at, k) { if (now - at > 12 * 3600 * 1000) algoAlerted.delete(k); });
+  algoActive = next;
+  broadcastToUser(TRADER_USER_ID, { type: 'algos_active', active: algoActive });
+}
+setInterval(function () { algoWatchLoop().catch(function (e) { console.log('[Algos] loop: ' + e.message); }); }, 30000);
 
 // ── In play (/grid): активность монет против их нормы, inplay/feed.js ─────
 // Работает, только пока /grid открыт хоть у кого-то (+15 мин после ухода последнего)
@@ -2948,6 +2996,8 @@ wss.on('connection', function (ws, upgradeReq) {
   ws._sessionPromise = getSession(upgradeReq).then(function (sess) {
     ws._sessionUserId = (sess && sess.user) ? sess.user.id : null;
     if (ws._sessionUserId) ws._userId = ws._sessionUserId;
+    // The briefing list's algorithm badges right away, not after the next 30 s loop
+    if (TRADER_USER_ID && ws._sessionUserId === TRADER_USER_ID && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'algos_active', active: algoActive }));
     return ws._sessionUserId;
   }).catch(function () { ws._sessionUserId = null; return null; });
 

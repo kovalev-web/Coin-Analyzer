@@ -8,9 +8,9 @@ import * as React from 'react';
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { tzTimeStr } from '../../utils.js';
+import { ALGO_VENUES } from '../../algo-label.js';
 import { AnchorBox } from './anchor.jsx';
 
-const VENUE_NAMES = { bnf: 'Binance F', bns: 'Binance S', byp: 'Bybit P', bys: 'Bybit S', okp: 'OKX P', oks: 'OKX S', hlp: 'Hyperliquid P', upb: 'Upbit KRW' };
 const usd = (v) => (v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + Math.round(v));
 const pct = (v) => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
 const sec = (t) => tzTimeStr(new Date(t)) + ':' + String(new Date(t).getSeconds()).padStart(2, '0');
@@ -31,7 +31,7 @@ export function AlgoCard({ algo: a, rect, onClose }) {
   const running = pressure ? Date.now() - a.end < 60000 : Date.now() - a.end < a.periodSec * 1000 * 2.5;
   const mins = Math.max(1, Math.round((a.end - a.start) / 60000));
   const byNotice = a.firstPrice > 0 ? (a.noticedPrice - a.firstPrice) / a.firstPrice * 100 : 0;
-  const venue = VENUE_NAMES[a.venue] || a.venue;
+  const venue = ALGO_VENUES[a.venue] || a.venue;
   return (
     <Popover open onOpenChange={(o) => { if (!o) onClose(); }}>
       <AnchorBox rect={rect} />

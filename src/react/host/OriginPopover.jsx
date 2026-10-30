@@ -1,14 +1,18 @@
 // «Откуда ход» under its button on the full-view chart: the coin on every venue
-// over the last 15 / 30 / 60 / 120 min, each against its own norm (2 h before):
-// who left the norm first and how much later Binance futures followed, whose
-// volume it is, buys, crowd or big player; open interest, funding and
-// liquidations on the futures. Server: origin/ (GET /api/move-origin); refresh 15 s.
+// over the last 15 / 30 / 60 / 120 min, each against its own norm (2 h before).
+// On top — one line (who started it, how Binance followed) and the venues that
+// left their norm; under «Подробно» — the table (volume / trades ×, buys, crowd
+// or big player, price, share now / usual) and the futures (OI, funding,
+// liquidations). Server: origin/ (GET /api/move-origin); refresh 15 s.
 import * as React from 'react';
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
 import { fetchMoveOrigin } from '../../api.js';
 import { tzTimeStr } from '../../utils.js';
 import { AnchorBox, keepOpenOn } from './anchor.jsx';
@@ -26,6 +30,7 @@ export function OriginPopover({ sym, rect, onClose }) {
   const [min, setMin] = React.useState(30);
   const [data, setData] = React.useState(null);
   const [error, setError] = React.useState(null);
+  const [more, setMore] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -62,8 +67,24 @@ export function OriginPopover({ sym, rect, onClose }) {
 
         {data && (
           <>
-            <p className={'text-sm font-medium ' + (data.leader ? 'text-foreground' : 'text-muted-foreground')}>{data.verdict}</p>
+            <p className={'text-sm font-medium ' + (data.leader || (data.together && data.together.length) ? 'text-foreground' : 'text-muted-foreground')}>{data.verdict}</p>
+            {rows.some((r) => r.start) && (
+              <div className="flex flex-wrap gap-1.5">
+                {rows.filter((r) => r.start).map((r) => (
+                  <Badge key={r.id} variant={r.lag === 0 ? 'default' : 'secondary'} className="font-normal tabular-nums">
+                    {r.name} · {tzTimeStr(new Date(r.start))} · ×{(r.volX || 0).toFixed(1)}{r.buyPct != null ? ' · покупки ' + Math.round(r.buyPct) + '%' : ''}
+                  </Badge>
+                ))}
+              </div>
+            )}
 
+            <Collapsible open={more} onOpenChange={setMore}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="xs" className="-ml-2 text-muted-foreground">
+                  Подробно<ChevronDown className={'transition-transform ' + (more ? 'rotate-180' : '')} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="grid gap-3 pt-2">
             <Table className="text-xs tabular-nums">
               <TableHeader>
                 <TableRow>
@@ -82,7 +103,9 @@ export function OriginPopover({ sym, rect, onClose }) {
                 {rows.map((r) => (
                   <TableRow key={r.id} className={r.id === data.leader ? 'bg-accent' : ''}>
                     <TableCell className="font-medium">
-                      {r.name}{r.id === data.leader && <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-2xs">триггер</Badge>}
+                      {r.name}
+                      {r.id === data.leader && <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-2xs">триггер</Badge>}
+                      {!data.leader && data.together && data.together.indexOf(r.id) >= 0 && <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-2xs">старт</Badge>}
                     </TableCell>
                     <TableCell>{r.start ? tzTimeStr(new Date(r.start)) : '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{lag(r.lag)}</TableCell>
@@ -111,6 +134,8 @@ export function OriginPopover({ sym, rect, onClose }) {
               </p>
               {data.missing.length > 0 && <p>Нет монеты или данных: {data.missing.map((m) => m.name).join(', ')}</p>}
             </div>
+              </CollapsibleContent>
+            </Collapsible>
           </>
         )}
       </PopoverContent>

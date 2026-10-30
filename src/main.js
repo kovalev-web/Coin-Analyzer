@@ -25,7 +25,7 @@ import {
 } from './ui.js';
 import { toggleTerminal } from './terminal.js';
 import { openMorningJournal, openEveningJournal } from './journal-cards.js';
-import { preloadReactHost, closeSurface } from './react-bridge.js';
+import { preloadReactHost, closeSurface, toast } from './react-bridge.js';
 import { mountIsland, unmountIslands } from './react/islands.jsx';
 import { NotFound } from './react/home/HomeState.jsx';
 import { on } from './events.js';
@@ -264,6 +264,16 @@ on('alert:triggered', function (msg) {
 on('notify:received', function (entry) {
   updateNotifBadge();
   showNotifToast(entry);
+});
+
+// An algorithm just showed up on a briefing coin (server algos/): a toast that opens its chart
+on('algo:alert', function (msg) {
+  var sym = String(msg.symbol || '').replace(/USDT$/, '').toLowerCase();
+  if (!sym) return;
+  toast(msg.text, {
+    duration: 12000,
+    action: { label: 'Открыть', onClick: function () { openCoinFullView(sym); } },
+  });
 });
 
 on('notify:ready', function () {

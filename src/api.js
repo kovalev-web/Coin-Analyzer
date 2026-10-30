@@ -134,6 +134,15 @@ function connectWS() {
       case 'trade_event':
         emit('trade:event', msg.event);
         break;
+      // Algorithms running now on the briefing coins (server algos/, every 30 s)
+      case 'algos_active':
+        state.algosActive = msg.active || {};
+        emit('algos:active');
+        break;
+      // One just showed up on a briefing coin
+      case 'algo_alert':
+        emit('algo:alert', msg);
+        break;
       case 'error':
         console.error('[WS] Server error:', msg.message);
         break;
