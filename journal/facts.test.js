@@ -71,6 +71,19 @@ test('size-up after a streak, oversize vs limit, planned and at-level', () => {
   assert.equal(facts.violations.offPlan, 2);
 });
 
+test('planned: the coin was in the briefing when the trade opened', () => {
+  const fills = [
+    f('AUSDT', 10, 'BUY', 10, 1), f('AUSDT', 11, 'SELL', 10, 1.1, 1),  // before A was added
+    f('AUSDT', 30, 'BUY', 10, 1), f('AUSDT', 31, 'SELL', 10, 1.1, 1),  // A in the briefing
+    f('BUSDT', 40, 'BUY', 10, 1), f('BUSDT', 41, 'SELL', 10, 1.1, 1),  // B was removed at 35
+  ];
+  const facts = computeDayFacts(Object.assign({}, base, {
+    fills, briefingSpans: { AUSDT: [[DAY + 20 * MIN, null]], BUSDT: [[DAY, DAY + 35 * MIN]] },
+  }));
+  assert.deepEqual(facts.trades.map((t) => t.planned), [false, true, false]);
+  assert.equal(facts.violations.offPlan, 2);
+});
+
 test('trades opened before the day are not counted; open trade is reported', () => {
   const fills = [
     f('AUSDT', -30, 'BUY', 10, 1), f('AUSDT', 5, 'SELL', 10, 1.1, 1),

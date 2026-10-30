@@ -16,7 +16,7 @@ import { ensureSetups, setupButtons, diagramAttr } from './setups.js';
 import { state } from './state.js';
 import { on, emit } from './events.js';
 import { icon } from './utils.js';
-import { showToast, getCSSVar, chartMarks } from './ui.js';
+import { showToast, getCSSVar, chartMarks, isInBriefing, toggleBriefing } from './ui.js';
 import { openSurface, isSurfaceOpen } from './react-bridge.js';
 import { mountIsland, unmountIsland } from './react/islands.jsx';
 import { TermHeader } from './react/terminal/TermHeader.jsx';
@@ -1798,8 +1798,13 @@ function _refreshDay() {
   }).catch(function () {});
 }
 
+// Live entries only on coins in today's briefing (the server checks it too);
+// the star / "Add to briefing" opens the coin at once
+function _briefCoin() { return (T.sym || '').replace(/USDT$/, '').toLowerCase(); }
+
 function _lockState() {
   if (T.day && !T.day.open) return 'day';
+  if (T.mode === 'live' && T.day && !T.day.test && T.sym && !isInBriefing(_briefCoin())) return 'brief';
   var f = T.access && T.access.twoFactor;
   if (!f) return 'none';
   if (!f.enabled) return f.required ? 'setup' : 'none';
@@ -1816,11 +1821,18 @@ function _renderLock() {
   emit('term:lock');
 }
 
-// { state: none | day | setup | open | locked, reason (day), unlockedUntil (open) }
+// { state: none | day | brief | setup | open | locked, reason (day, brief), unlockedUntil (open) }
 export function termLock() {
   var st = _lockState();
   var f = (T.access && T.access.twoFactor) || {};
-  return { state: st, reason: st === 'day' && T.day ? T.day.reason : '', unlockedUntil: st === 'open' ? f.unlockedUntil : null };
+  var reason = st === 'day' && T.day ? T.day.reason : st === 'brief' ? _briefReason() : '';
+  return { state: st, reason: reason, unlockedUntil: st === 'open' ? f.unlockedUntil : null };
+}
+
+function _briefReason() { return _briefCoin().toUpperCase() + ' is not in today\'s briefing — add it to trade'; }
+
+export function termAddToBriefing() {
+  if (!isInBriefing(_briefCoin())) toggleBriefing(_briefCoin());
 }
 
 // code: the 6 digits from the authenticator; resolves true when unlocked
@@ -1848,6 +1860,7 @@ export function termLockNow() {
 function _lockedBlocked() {
   var st = _lockState();
   if (st === 'day') { _setStatus(T.day.reason, true); return true; }
+  if (st === 'brief') { _setStatus(_briefReason(), true); return true; }
   if (st === 'locked') {
     _setStatus('Trading is locked — enter your 2FA code above', true);
     var i = document.getElementById('dom-unlock-code');

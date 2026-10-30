@@ -15,6 +15,7 @@ const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
 const { createInplayFeed } = require('./inplay/feed');
+const { dayCoins, updateBriefingLog, pruneLog, briefingSpans } = require('./journal/briefing');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
 const { getAuth } = require('./auth');
@@ -140,8 +141,9 @@ async function buildDayFacts(userId, dateStr) {
   var br = await redis(['GET', 'briefing:' + userId]);
   var brief = [];
   try { brief = br && br.result ? JSON.parse(br.result) : []; } catch (e) {}
-  var briefingSyms = brief.filter(function (e) { return !e.auto && e.date === dateStr; })
-    .map(function (e) { return String(e.sym).toUpperCase() + 'USDT'; });
+  var lg = await redis(['GET', 'briefing_log:' + userId]);
+  var blog = {};
+  try { blog = lg && lg.result ? JSON.parse(lg.result) : {}; } catch (e) {}
   var levelsBySym = {};
   var al = alertsMemory[userId] && alertsMemory[userId].data;
   if (al) Object.keys(al).forEach(function (s) {
@@ -151,7 +153,7 @@ async function buildDayFacts(userId, dateStr) {
   return computeDayFacts({
     fills: fills, dayStart: dayStart, dayEnd: dayEnd, date: dateStr, tz: tz.iana || 'UTC',
     limits: { maxVolume: Number(limits.maxVolume) || null, maxTrades: Number(limits.maxTrades) || null, riskPct: Number(limits.maxDrawdownPct) || null },
-    briefingSyms: briefingSyms, levelsBySym: levelsBySym,
+    briefingSpans: briefingSpans(blog, brief, dateStr), levelsBySym: levelsBySym,
   });
 }
 
@@ -943,7 +945,15 @@ async function traderHistory(service, payload) {
 async function dayGateError(action, body) {
   if (!opensRisk(action, body)) return null;
   var d = await tradingDay();
-  return d.open ? null : d.reason;
+  if (!d.open) return d.reason;
+  // New entries only on coins in today's briefing (coins can be added any time)
+  var sym = body && body.symbol ? String(body.symbol).toUpperCase() : null;
+  if (!sym) return null;
+  var br = await redis(['GET', 'briefing:' + TRADER_USER_ID]);
+  var brief = [];
+  try { brief = br && br.result ? JSON.parse(br.result) : []; } catch (e) { return null; }
+  if (dayCoins(brief, d.date)[sym]) return null;
+  return sym.replace(/USDT$/, '') + ' is not in today\'s briefing — add it to trade';
 }
 
 // Relay trader events (SSE) to the trading user's WebSocket tabs only, one
@@ -1527,6 +1537,14 @@ var httpServer = http.createServer(async function (req, res) {
           }));
         } else if (action === 'save') {
           if (!parsed.skip_entries) {
+            // What was in the briefing when — trades are "planned" by it (journal/briefing.js)
+            try {
+              var prevBr = await redis(['GET', key]);
+              var prevLog = await redis(['GET', 'briefing_log:' + userId]);
+              var blog = updateBriefingLog(prevLog && prevLog.result ? JSON.parse(prevLog.result) : {},
+                prevBr && prevBr.result ? JSON.parse(prevBr.result) : [], entries || [], Date.now());
+              await redis(['SET', 'briefing_log:' + userId, JSON.stringify(pruneLog(blog, new Date().toISOString().slice(0, 10)))]);
+            } catch (le) { console.error('[Briefing] log:', le.message); }
             await redis(['SET', key, JSON.stringify(entries || [])]);
           }
           if (parsed.clear_ai) {

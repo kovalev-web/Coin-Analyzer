@@ -13,19 +13,19 @@
 // termTagDone / termTagSkip, termSizes / termPickSize, termFoot in terminal.js;
 // redraws on 'term:lock' / 'term:tag' / 'term:sizes' / 'term:foot'.
 import * as React from 'react';
-import { Lock, LockOpen, ShieldAlert, X } from 'lucide-react';
+import { Lock, LockOpen, ShieldAlert, Star, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEvents } from '@/shared/use-event';
-import { termFoot, termLock, termLockNow, termPickSize, termSizes, termUnlock, termTag, termTagDone, termTagSet, termTagSkip } from '../../terminal.js';
+import { termAddToBriefing, termFoot, termLock, termLockNow, termPickSize, termSizes, termUnlock, termTag, termTagDone, termTagSet, termTagSkip } from '../../terminal.js';
 
 const hhmm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 export function TermLock() {
-  useEvents(['term:lock']);
+  useEvents(['term:lock', 'briefing:changed']);
   const l = termLock();
   const [code, setCode] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -38,6 +38,17 @@ export function TermLock() {
     termUnlock(c).then((ok) => { if (!ok) setCode(''); }).finally(() => setBusy(false));
   };
 
+  if (l.state === 'brief') {
+    return (
+      <div className="jr px-2 pt-1.5">
+        <Alert className="flex items-center border-level/40 bg-level/10 px-3 py-1.5">
+          <ShieldAlert className="text-level" />
+          <AlertDescription className="text-xs text-foreground">{l.reason}</AlertDescription>
+          <Button variant="outline" size="xs" className="ml-auto shrink-0" onClick={() => termAddToBriefing()}><Star /> Add to briefing</Button>
+        </Alert>
+      </div>
+    );
+  }
   if (l.state === 'day' || l.state === 'setup') {
     return (
       <div className="jr px-2 pt-1.5">

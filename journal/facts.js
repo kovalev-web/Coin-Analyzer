@@ -5,6 +5,8 @@
 // read them instead of self-reported numbers. Definitions live in
 // docs/TRADER_EDGE.md; keep the two in sync.
 
+var { inBriefingAt } = require('./briefing');
+
 var FACTS_VERSION = 3; // 2: exits within ±SCRATCH_R are neither wins nor losses for the rules; 3: trades keep their fills
 var MAX_TRADE_FILLS = 60;              // fills kept per trade (for its chart)
 var REVENGE_WINDOW_MS = 5 * 60 * 1000;   // entry this soon after a losing trade closed
@@ -83,7 +85,8 @@ function hourIn(tz, ms) {
 }
 
 // opts: { fills, dayStart, dayEnd, date, tz, limits: {maxVolume, maxTrades},
-//         briefingSyms: ['JCTUSDT', ...], levelsBySym: { JCTUSDT: [price, ...] } }
+//         briefingSpans: { JCTUSDT: [[on, off | null], ...] } (journal/briefing.js) or
+//         briefingSyms: ['JCTUSDT', ...] (in the briefing all day), levelsBySym: { JCTUSDT: [price, ...] } }
 function computeDayFacts(opts) {
   var limits = opts.limits || {};
   // 1R = working volume × risk % (Account settings); a scratch is within ±SCRATCH_R of it
@@ -137,7 +140,7 @@ function computeDayFacts(opts) {
       fees: Math.round(t.fees * 10000) / 10000,
       fills: t.fills,
       result: t.closeTime == null ? 'open' : net > 0 ? 'win' : 'loss',
-      planned: !!planned[t.symbol],
+      planned: opts.briefingSpans ? inBriefingAt(opts.briefingSpans, t.symbol, t.openTime) : !!planned[t.symbol],
       atLevel: lv.length ? nearest <= LEVEL_PROXIMITY_PCT : null,
       oversize: limits.maxVolume > 0 ? t.maxNotional > limits.maxVolume * OVERSIZE_TOLERANCE : null,
       revenge: !!(lastLoss && t.openTime - lastLoss.closeTime <= REVENGE_WINDOW_MS),
