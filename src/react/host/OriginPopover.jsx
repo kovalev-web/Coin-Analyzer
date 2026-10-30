@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
 import { fetchMoveOrigin } from '../../api.js';
+import { openSurface } from '../../react-bridge.js';
 import { tzTimeStr } from '../../utils.js';
 import { AnchorBox, keepOpenOn } from './anchor.jsx';
 
@@ -55,6 +56,7 @@ export function OriginPopover({ sym, rect, onClose }) {
             <PopoverTitle>Откуда ход · {sym.toUpperCase()}</PopoverTitle>
             <PopoverDescription>
               {data ? tzTimeStr(new Date(data.from)) + '–' + tzTimeStr(new Date(data.to)) + ' против нормы за 2 ч до этого' : 'Все биржи против своей нормы'}
+              {' · '}<button type="button" className="underline-offset-2 hover:underline" onClick={() => { onClose(); openSurface('algo-guide'); }}>как читать</button>
             </PopoverDescription>
           </PopoverHeader>
           <ToggleGroup type="single" variant="segmented" size="sm" value={String(min)} onValueChange={(v) => { if (v) setMin(Number(v)); }}>

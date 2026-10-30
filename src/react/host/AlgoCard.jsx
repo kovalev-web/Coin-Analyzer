@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 import { Badge } from '@/components/ui/badge';
 import { tzTimeStr } from '../../utils.js';
 import { ALGO_VENUES } from '../../algo-label.js';
+import { openSurface } from '../../react-bridge.js';
+import { Button } from '@/components/ui/button';
 import { AnchorBox } from './anchor.jsx';
 
 const usd = (v) => (v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + Math.round(v));
@@ -61,6 +63,7 @@ export function AlgoCard({ algo: a, rect, onClose }) {
           <span className="text-muted-foreground">Конец</span><span className="font-medium tabular-nums">{running ? 'идёт' : sec(a.end)}</span>
           <span className="text-level">{running ? 'работает ' + mins + ' мин' : 'длился ' + mins + ' мин'}</span>
         </div>
+        <Button variant="link" size="xs" className="-ml-2 justify-self-start text-muted-foreground" onClick={() => { onClose(); openSurface('algo-guide'); }}>Как читать — подробнее</Button>
       </PopoverContent>
     </Popover>
   );
