@@ -18,7 +18,7 @@ const { createInplayFeed } = require('./inplay/feed');
 const originMetrics = require('./origin/metrics');
 const originVenues = require('./origin/venues');
 const { createCollector: createAlgoCollector } = require('./algos/collector');
-const { detectTimers } = require('./algos/detect');
+const { detectTimers, detectPressure } = require('./algos/detect');
 const { dayCoins, updateBriefingLog, pruneLog, briefingSpans } = require('./journal/briefing');
 const { ensureAuthTables } = require('./db/setup');
 const { getDb } = require('./db/index');
@@ -575,7 +575,7 @@ async function moveOrigin(symbol, minutes) {
 
 // ── Algorithms in the tape (chart P marks), algos/ ─────────────────────────
 // Trades of the trader's briefing coins (+ coins opened on the chart) on Binance
-// futures and Hyperliquid; the detector runs on request, 15 s cache per coin.
+// futures and Hyperliquid; timers (P) and pressure (C) are found on request, 15 s cache per coin.
 var algoCollector = createAlgoCollector({
   log: function (m) { console.log(m); },
   briefingSymbols: async function () {
@@ -588,7 +588,14 @@ var algoCollector = createAlgoCollector({
 algoCollector.start();
 var algoCache = new Map();
 
-function coinAlgos(symbol) {
+// Binance futures minutes for pressure, from 1m klines (trades count and taker
+// buys are in them): one cheap request, 3 h of history at once
+async function binanceMinutes(symbol) {
+  var k = await fetchBinance(BINANCE_REST + '/fapi/v1/klines?symbol=' + symbol + '&interval=1m&limit=180');
+  return k.map(function (r) { return { t: r[0], usd: +r[7], buyUsd: +r[10], n: +r[8], o: +r[1], c: +r[4] }; });
+}
+
+async function coinAlgos(symbol) {
   algoCollector.look(symbol);
   var hit = algoCache.get(symbol);
   if (hit && Date.now() - hit.at < 15000) return hit.body;
@@ -596,7 +603,11 @@ function coinAlgos(symbol) {
   Object.keys(tapes).forEach(function (v) {
     since[v] = tapes[v].since();
     detectTimers(tapes[v].prints(), undefined, tapes[v].turnover).forEach(function (a) { a.venue = v; algos.push(a); });
+    if (v !== 'bnf') detectPressure(tapes[v].minutes()).forEach(function (a) { a.venue = v; algos.push(a); });
   });
+  try {
+    detectPressure(await binanceMinutes(symbol)).forEach(function (a) { a.venue = 'bnf'; algos.push(a); });
+  } catch (e) { console.log('[Algos] ' + symbol + ' klines: ' + e.message); }
   algos.sort(function (a, b) { return a.start - b.start; });
   var body = { symbol: symbol, since: since, algos: algos };
   algoCache.set(symbol, { at: Date.now(), body: body });
@@ -1647,7 +1658,7 @@ var httpServer = http.createServer(async function (req, res) {
       return;
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(coinAlgos(alSym)));
+    res.end(JSON.stringify(await coinAlgos(alSym)));
     return;
   }
 

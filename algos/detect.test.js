@@ -64,3 +64,48 @@ test('share of turnover over the series', () => {
   assert.equal(f.totalUsd, 10000);
   assert.equal(f.share, 25); // 10K of 40K
 });
+
+// ── Давление ──
+const M = 60000;
+// 30 usual minutes ($10K, 20 orders, half buys, price 1), then `run`
+function minutes(run) {
+  const out = [];
+  for (let i = 0; i < 30; i++) out.push({ t: i * M, usd: 10000, buyUsd: 5000, n: 20, o: 1, c: 1 });
+  run.forEach((r, k) => out.push(Object.assign({ t: (30 + k) * M, n: 20, o: 1, c: 1 }, r)));
+  return out;
+}
+
+test('pressure: 4 minutes of ~86% buys at ×50 volume and ×30 orders — one episode, noticed after the 3rd', () => {
+  const run = [500e3, 520e3, 480e3, 510e3].map((u, k) => ({ usd: u, buyUsd: u * 0.86, n: 600, o: 1 + k * 0.01, c: 1.01 + k * 0.01 }));
+  const f = d.detectPressure(minutes(run.concat([{ usd: 10000, buyUsd: 5000 }])));
+  assert.equal(f.length, 1);
+  const p = f[0];
+  assert.equal(p.buy, true);
+  assert.equal(p.start, 30 * M);
+  assert.equal(p.end, 34 * M);
+  assert.equal(p.noticed, 33 * M);       // end of the 3rd pressing minute
+  assert.equal(p.count, 2400);
+  assert.ok(Math.abs(p.sidePct - 86) < 1e-9);
+  assert.ok(Math.abs(p.volX - 50.25) < 1e-9); // average $502.5K a minute vs $10K
+  assert.ok(Math.abs(p.change - 4) < 1e-9);
+});
+
+test('pressure: one weaker minute inside is allowed, two minutes are not enough, mixed sides are not pressure', () => {
+  const buy = (u) => ({ usd: u, buyUsd: u * 0.9, n: 500 });
+  const gap = d.detectPressure(minutes([buy(400e3), buy(400e3), { usd: 30e3, buyUsd: 15e3, n: 30 }, buy(400e3)]));
+  assert.equal(gap.length, 1);
+  assert.equal(gap[0].end, 34 * M);
+  assert.equal(d.detectPressure(minutes([buy(400e3), buy(400e3)])).length, 0);
+  const mixed = [1, 2, 3, 4].map(() => ({ usd: 400e3, buyUsd: 200e3, n: 500 }));
+  assert.equal(d.detectPressure(minutes(mixed)).length, 0);
+});
+
+test('pressure: a sell episode; big volume with few orders (one whale) is not pressure', () => {
+  const sell = [1, 2, 3].map(() => ({ usd: 300e3, buyUsd: 30e3, n: 400 }));
+  const f = d.detectPressure(minutes(sell));
+  assert.equal(f.length, 1);
+  assert.equal(f[0].buy, false);
+  assert.ok(Math.abs(f[0].sidePct - 90) < 1e-9);
+  const whale = [1, 2, 3].map(() => ({ usd: 300e3, buyUsd: 290e3, n: 30 }));
+  assert.equal(d.detectPressure(minutes(whale)).length, 0);
+});

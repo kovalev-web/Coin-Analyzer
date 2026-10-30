@@ -2171,7 +2171,7 @@ function _drawFVOverlays(ctx, rc, sym) {
     ctx.fill();
     ctx.restore();
   });
-  // Algorithms found in the tape (server algos/): P with an arrow at where the series started
+  // Algorithms found in the tape (server algos/): P (timer) / C (pressure) with an arrow where it started
   _drawFvAlgos(ctx, tfSec, cssW, paneH);
   // Your notes on this coin: a bubble at the time and price each was written
   drawNoteIcons(ctx, _fvSeries, _fvChart, sym, tfSec, cssW, paneH);
@@ -2252,7 +2252,7 @@ function _drawFvAlgos(ctx, tfSec, cssW, paneH) {
     ctx.font = '600 11px ' + (getCSSVar('--font-family') || 'sans-serif');
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     var ly = ay + dir * 22;
-    ctx.fillText('P', x, ly);
+    ctx.fillText(a.kind === 'pressure' ? 'C' : 'P', x, ly);
     ctx.restore();
     _fvAlgoHits.push({ x: x, y: (ay + ly) / 2, algo: a });
   });

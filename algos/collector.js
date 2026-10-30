@@ -3,51 +3,118 @@
 // Binance USDT-M futures (aggTrade) and Hyperliquid perps (trades), live by WS.
 // Watched = the trader's coins in today's briefing + any coin opened on the
 // chart (kept 6 h after the last look). Keeps 6 h: big prints (≥ detector's
-// minUsd) and the venue's turnover in 10-second buckets (for "share of turnover").
+// minUsd, for timers) and every minute's volume, buys, market orders and first /
+// last price (for pressure and "share of turnover"). A coin seen for the first
+// time gets up to the last hour of Binance trades from REST (paced, newest first).
 
 const WebSocket = require('ws');
 const { CFG } = require('./detect');
 
 const KEEP_MS = 6 * 3600 * 1000;
-const BUCKET_MS = 10000;
+const MIN = 60000;
+const BACKFILL_MS = 3600 * 1000;  // history for a coin seen the first time
+const BACKFILL_PAGES = 20;        // × 1000 trades; aggTrades weighs 20 of Binance's 2400 a minute (pressure uses klines instead)
+const BACKFILL_GAP_MS = 2000;     // between pages: ~600 weight a minute at most
 const MAX_PRINTS = 200000; // per venue + coin, a guard against a runaway coin
 
 function baseOf(symbol) { return symbol.replace(/USDT$/, '').replace(/^1000000|^1000/, ''); }
 function hlCoin(symbol) { return /^1000/.test(symbol) ? 'k' + baseOf(symbol) : baseOf(symbol); }
 
-// One venue + coin: prints merged from trades, turnover buckets
+// One venue + coin: prints merged from trades, minute stats
 function createTape() {
   const prints = [];
-  const buckets = new Map(); // bucket start → USD
+  const minutes = new Map(); // minute start → { usd, buyUsd, n, o, c }
   let last = null, since = Date.now();
+  function minuteOf(t, p) {
+    const k = Math.floor(t / MIN) * MIN;
+    let m = minutes.get(k);
+    if (!m) minutes.set(k, m = { t: k, usd: 0, buyUsd: 0, n: 0, o: p, c: p });
+    return m;
+  }
+  function add(t, p, usd, buy) {
+    const m = minuteOf(t, p);
+    m.usd += usd; if (buy) m.buyUsd += usd; m.c = p;
+    if (last && last.buy === buy && t - last.t <= CFG.mergeMs) {
+      last.pq += p * usd; last.usd += usd; last.p = last.pq / last.usd;
+      if (!last.kept && last.usd >= CFG.minUsd) { last.kept = true; prints.push(last); }
+      return;
+    }
+    m.n++;
+    last = { t, p, usd, buy, pq: p * usd, kept: usd >= CFG.minUsd };
+    if (last.kept) prints.push(last);
+    if (prints.length > MAX_PRINTS) prints.splice(0, prints.length - MAX_PRINTS);
+  }
   return {
-    add(t, p, usd, buy) {
-      const b = Math.floor(t / BUCKET_MS) * BUCKET_MS;
-      buckets.set(b, (buckets.get(b) || 0) + usd);
-      if (last && last.buy === buy && t - last.t <= CFG.mergeMs) {
-        last.pq += p * usd; last.usd += usd; last.p = last.pq / last.usd;
-        if (!last.kept && last.usd >= CFG.minUsd) { last.kept = true; prints.push(last); }
-        return;
-      }
-      last = { t, p, usd, buy, pq: p * usd, kept: usd >= CFG.minUsd };
-      if (last.kept) prints.push(last);
-      if (prints.length > MAX_PRINTS) prints.splice(0, prints.length - MAX_PRINTS);
+    add,
+    // Older trades (oldest first, all before `since`) put in front of the live ones
+    addHistory(trades) {
+      const h = createTape();
+      trades.forEach((tr) => h.add(tr.t, tr.p, tr.usd, tr.buy));
+      prints.unshift(...h._prints());
+      h._minutes().forEach((hm, k) => {
+        const m = minutes.get(k);
+        if (!m) { minutes.set(k, hm); return; }
+        m.usd += hm.usd; m.buyUsd += hm.buyUsd; m.n += hm.n; m.o = hm.o; // the older part opened that minute
+      });
+      if (trades.length) since = Math.min(since, trades[0].t);
     },
     prune(now) {
       let cut = 0;
       while (cut < prints.length && now - prints[cut].t > KEEP_MS) cut++;
       if (cut) prints.splice(0, cut);
-      for (const b of buckets.keys()) if (now - b > KEEP_MS) buckets.delete(b);
+      for (const k of minutes.keys()) if (now - k > KEEP_MS) minutes.delete(k);
       if (now - since > KEEP_MS) since = now - KEEP_MS;
     },
     prints() { return prints.map((x) => ({ t: x.t, p: x.p, usd: x.usd, buy: x.buy })); },
+    // Every minute from the first one on (quiet minutes as zero), oldest first
+    minutes() {
+      const keys = [...minutes.keys()].sort((a, b) => a - b);
+      if (!keys.length) return [];
+      const out = [];
+      let prev = minutes.get(keys[0]);
+      for (let k = keys[0]; k <= keys[keys.length - 1]; k += MIN) {
+        const m = minutes.get(k) || { t: k, usd: 0, buyUsd: 0, n: 0, o: prev.c, c: prev.c };
+        out.push(Object.assign({}, m));
+        prev = m;
+      }
+      return out;
+    },
     turnover(from, to) {
       let s = 0;
-      for (const [b, v] of buckets) if (b + BUCKET_MS > from && b <= to) s += v;
+      for (const [k, m] of minutes) if (k + MIN > from && k <= to) s += m.usd;
       return s;
     },
     since() { return since; },
+    _prints() { return prints; },
+    _minutes() { return minutes; },
   };
+}
+
+// Up to the last hour of Binance futures trades before `to`, newest pages first
+async function binanceHistory(symbol, to, log) {
+  const get = async (q) => {
+    const r = await fetch('https://fapi.binance.com/fapi/v1/aggTrades?symbol=' + symbol + '&limit=1000&' + q);
+    if (!r.ok) throw new Error('aggTrades HTTP ' + r.status);
+    return r.json();
+  };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let page = await get('startTime=' + (to - MIN) + '&endTime=' + to);
+  if (!page.length) page = await get('endTime=' + to);
+  if (!page.length) return [];
+  const pages = [page];
+  let firstId = page[0].a;
+  for (let k = 1; k < BACKFILL_PAGES && page[0].T > to - BACKFILL_MS && firstId > 0; k++) {
+    await sleep(BACKFILL_GAP_MS);
+    page = await get('fromId=' + Math.max(0, firstId - 1000));
+    page = page.filter((t) => t.a < firstId);
+    if (!page.length) break;
+    pages.unshift(page);
+    firstId = page[0].a;
+  }
+  const out = [];
+  pages.forEach((pg) => pg.forEach((t) => { if (t.T >= to - BACKFILL_MS && t.T < to) out.push({ t: t.T, p: +t.p, usd: +t.p * +t.q, buy: !t.m }); }));
+  log('[Algos] ' + symbol + ': ' + out.length + ' trades of history in ' + pages.length + ' pages');
+  return out;
 }
 
 // Binance: one /market connection, coins added and removed with SUBSCRIBE / UNSUBSCRIBE
@@ -116,9 +183,22 @@ function createCollector(opts) {
   const tapes = new Map();   // 'bnf:SOLUSDT' → tape
   const viewed = new Map();  // symbol → last look (ms)
   let symbols = [], timer = null;
+  const backfilled = new Set();
+  let backfillChain = Promise.resolve(); // one coin's history at a time (Binance weight)
   const tape = (venue, sym) => {
     const k = venue + ':' + sym;
-    if (!tapes.has(k)) tapes.set(k, createTape());
+    if (!tapes.has(k)) {
+      const t = createTape();
+      tapes.set(k, t);
+      if (venue === 'bnf' && !backfilled.has(sym)) {
+        backfilled.add(sym);
+        const to = t.since();
+        backfillChain = backfillChain
+          .then(() => binanceHistory(sym, to, log))
+          .then((trades) => { if (tapes.get(k) === t) t.addHistory(trades); })
+          .catch((e) => log('[Algos] ' + sym + ' history: ' + e.message));
+      }
+    }
     return tapes.get(k);
   };
   const bn = binanceFeed((s, t, p, usd, buy) => { if (symbols.indexOf(s) >= 0) tape('bnf', s).add(t, p, usd, buy); }, log);
@@ -135,7 +215,7 @@ function createCollector(opts) {
       bn.set(symbols); hl.set(symbols);
       log('[Algos] watching ' + (symbols.join(', ') || 'nothing'));
     }
-    tapes.forEach((t, k) => { if (symbols.indexOf(k.split(':')[1]) < 0) tapes.delete(k); else t.prune(now); });
+    tapes.forEach((t, k) => { if (symbols.indexOf(k.split(':')[1]) < 0) { tapes.delete(k); backfilled.delete(k.split(':')[1]); } else t.prune(now); });
   }
 
   return {

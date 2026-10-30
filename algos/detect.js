@@ -1,8 +1,12 @@
 'use strict';
-// Algorithms in the trade tape — "Таймер": one side, about the same size,
-// at about the same interval (a TWAP-like bot: ~$82K every ~33 s). Shown as
-// P marks on the full-view chart with a card (src/react/host/AlgoCard.jsx).
-// Input: prints of one venue + symbol, oldest first — { t (ms), p, usd, buy }
+// Algorithms in the trade tape, shown as marks on the full-view chart with a
+// card (src/react/host/AlgoCard.jsx):
+//  - "Таймер" (P): one side, about the same size, at about the same interval
+//    (a TWAP-like bot: ~$82K every ~33 s);
+//  - "Давление" (C, below): minutes where nearly all market orders are one side
+//    and there are many times more of them and of volume than usual — a bot
+//    slicing a big order into thousands of small ones.
+// Timer input: prints of one venue + symbol, oldest first — { t (ms), p, usd, buy }
 // where a print is one market order (trades of one side within mergeMs merged).
 // Collector: algos/collector.js. Tests: npm run test:algos
 
@@ -181,4 +185,73 @@ function detectTimers(allPrints, cfg, turnoverOf) {
   return out.sort((a, b) => a.start - b.start);
 }
 
-module.exports = { CFG, toPrints, median, chanceOf, findBeat, seriesFrom, detectTimers };
+// ── Давление ────────────────────────────────────────────────────────────────
+// Input: the venue's minutes, oldest first — { t (minute start), usd, buyUsd,
+// n (market orders), o, c (first / last price) }; every minute present.
+
+const PCFG = {
+  normMin: 120,      // usual minute = median over the 2 h before the minute
+  minNormBars: 20,
+  side: 0.7,         // ≥ 70% of the volume one side
+  volX: 5,           // volume ≥ 5× the usual minute
+  tradesX: 3,        // market orders ≥ 3× the usual minute
+  minUsd: 20000,     // and ≥ $20K in the minute (dead coins aside)
+  gap: 1,            // one weaker minute inside an episode is allowed
+  minMinutes: 3,     // pressing minutes before it counts ("замечено" = after the 3rd)
+};
+
+// The usual minute before index i: median volume and market orders
+function minuteNorm(mins, i, cfg) {
+  const hist = mins.slice(Math.max(0, i - cfg.normMin), i);
+  if (hist.length < cfg.minNormBars) return null;
+  return { usd: median(hist.map((m) => m.usd)), n: median(hist.map((m) => m.n)) };
+}
+
+// Is the minute pressing, and which side: true buy / false sell / null no
+function pressing(m, norm, cfg) {
+  if (!norm || !(m.usd >= cfg.minUsd) || !(m.usd >= cfg.volX * norm.usd) || !(m.n >= cfg.tradesX * Math.max(1, norm.n))) return null;
+  const share = m.buyUsd / m.usd;
+  return share >= cfg.side ? true : share <= 1 - cfg.side ? false : null;
+}
+
+function detectPressure(mins, cfg) {
+  cfg = cfg || PCFG;
+  const out = [];
+  let ep = null;
+  const close = () => {
+    if (ep && ep.hits >= cfg.minMinutes) {
+      const ms = mins.slice(ep.i0, ep.i1 + 1);
+      const usd = ms.reduce((a, m) => a + m.usd, 0);
+      const buyUsd = ms.reduce((a, m) => a + m.buyUsd, 0);
+      out.push({
+        kind: 'pressure', buy: ep.buy,
+        count: ms.reduce((a, m) => a + m.n, 0),
+        totalUsd: usd,
+        sidePct: (ep.buy ? buyUsd / usd : 1 - buyUsd / usd) * 100,
+        volX: usd / ms.length / ep.norm.usd,
+        change: ms[0].o > 0 ? (ms[ms.length - 1].c - ms[0].o) / ms[0].o * 100 : 0,
+        start: ms[0].t, end: ms[ms.length - 1].t + 60000,
+        noticed: mins[ep.noticedIdx].t + 60000,
+        firstPrice: ms[0].o, noticedPrice: mins[ep.noticedIdx].c,
+      });
+    }
+    ep = null;
+  };
+  for (let i = 0; i < mins.length; i++) {
+    const norm = ep ? ep.norm : minuteNorm(mins, i, cfg); // inside an episode: the norm from before it
+    const side = pressing(mins[i], norm, cfg);
+    if (ep && side === ep.buy) {
+      ep.i1 = i; ep.hits++; ep.miss = 0;
+      if (ep.hits === cfg.minMinutes) ep.noticedIdx = i;
+    } else if (ep && side === null && ++ep.miss <= cfg.gap) {
+      continue;
+    } else {
+      close();
+      if (side !== null) ep = { buy: side, i0: i, i1: i, hits: 1, miss: 0, norm, noticedIdx: i };
+    }
+  }
+  close();
+  return out;
+}
+
+module.exports = { CFG, PCFG, toPrints, median, chanceOf, findBeat, seriesFrom, detectTimers, minuteNorm, pressing, detectPressure };
