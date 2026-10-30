@@ -2147,9 +2147,9 @@ function _drawFVOverlays(ctx, rc, sym) {
       ctx.restore();
     });
   }
-  // Trade entry/exit triangles
+  // Trade entry/exit triangles (T over the chart hides / shows them)
   var tfSec = {'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'1d':86400}[state.chartTF[sym] || '5m'] || 300;
-  _fvTradeMarkersData.forEach(function (m) {
+  (_tradeMarkersOn ? _fvTradeMarkersData : []).forEach(function (m) {
     var snapped = Math.floor(m.time / tfSec) * tfSec;
     var y = _fvSeries.priceToCoordinate(m.price);
     var x = _fvChart && _fvChart.timeScale().timeToCoordinate(snapped);
@@ -2198,6 +2198,20 @@ function _applyFVTradeMarkers(sym) {
   _liveFills[sym] = (_liveFills[sym] || []).filter(function (f) { return f.time > last; });
   _fvTradeMarkersData = markers.concat(_liveFills[sym]);
 }
+
+// T with the mouse over the full-view chart: hide / show the trade triangles
+// (the physical key, so it works in any keyboard layout); remembered
+var _tradeMarkersOn = (function () { try { return localStorage.getItem('qt_trade_markers') !== '0'; } catch (e) { return true; } })();
+document.addEventListener('keydown', function (e) {
+  if (e.code !== 'KeyT' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+  if (!_fvChart || isSurfaceOpen() || !document.querySelector('.fv-chart-wrap:hover')) return;
+  var t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  e.preventDefault();
+  _tradeMarkersOn = !_tradeMarkersOn;
+  try { localStorage.setItem('qt_trade_markers', _tradeMarkersOn ? '1' : '0'); } catch (err) {}
+  toast(_tradeMarkersOn ? 'Trade markers on' : 'Trade markers off', { duration: 1200 });
+});
 
 // A fill on the live account (terminal.js): draw its triangle at once instead
 // of waiting ~2 s for the trades refetch (refreshTradesAfterFill)
