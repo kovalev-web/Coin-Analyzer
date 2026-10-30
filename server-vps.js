@@ -574,15 +574,18 @@ async function moveOrigin(symbol, minutes) {
 }
 
 // ── Algorithms in the tape (chart P marks), algos/ ─────────────────────────
-// Trades of the trader's briefing coins (+ coins opened on the chart) on Binance
-// futures and Hyperliquid; timers (P) and pressure (C) are found on request, 15 s cache per coin.
+// Trades of the trader's coins in today's briefing on 8 venues, only while the
+// day is open (morning card filled, evening not yet) — the coins and the hours
+// he trades; timers (P) and pressure (C) are found on request, 15 s cache per coin.
 var algoCollector = createAlgoCollector({
   log: function (m) { console.log(m); },
-  briefingSymbols: async function () {
+  symbols: async function () {
     if (!TRADER_USER_ID) return [];
+    var day = await tradingDay();
+    if (!day.open) return [];
     var br = await redis(['GET', 'briefing:' + TRADER_USER_ID]);
     var brief = br && br.result ? JSON.parse(br.result) : [];
-    return Object.keys(dayCoins(brief, await userTodayStr(TRADER_USER_ID)));
+    return Object.keys(dayCoins(brief, day.date));
   },
 });
 algoCollector.start();
@@ -596,7 +599,6 @@ async function binanceMinutes(symbol) {
 }
 
 async function coinAlgos(symbol) {
-  algoCollector.look(symbol);
   var hit = algoCache.get(symbol);
   if (hit && Date.now() - hit.at < 15000) return hit.body;
   var tapes = algoCollector.tapes(symbol), algos = [], since = {};
