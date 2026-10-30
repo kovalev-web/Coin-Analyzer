@@ -32,17 +32,17 @@ var SIZE_DEFAULTS = [10, 25, 50, 100, 250, 500]; // USDT per click
 var SIZE_MIN = 5, SIZE_MAX = 500;
 // Shown in the settings modal; mouse keys work over the ladder, keys while the mouse is over it
 var HOTKEYS = [
-  ['Left click', 'Buy at the level'],
-  ['Right click', 'Sell at the level'],
-  ['Shift + click', 'Stop-loss / take-profit'],
-  ['Option + click', 'Stop order: buy above the market, sell below'],
-  ['Click on Mine', 'Cancel your orders there'],
-  ['Drag on Mine', 'Move your orders to another price'],
-  ['Space', 'Close the position and cancel all orders on the coin'],
-  ['X', 'Cancel all orders on the coin'],
-  ['+ / −', 'Coarser / finer price scale'],
-  ['1 … 6', 'Order size slot 1 … 6'],
-  ['Esc', 'Close this window'],
+  ['Левый клик', 'Купить по уровню'],
+  ['Правый клик', 'Продать по уровню'],
+  ['Shift + клик', 'Стоп-лосс / тейк-профит'],
+  ['Option + клик', 'Стоп-заявка: покупка выше рынка, продажа ниже'],
+  ['Клик по Mine', 'Снять свои заявки на уровне'],
+  ['Перетащить в Mine', 'Перенести заявки на другую цену'],
+  ['Space', 'Закрыть позицию и снять все заявки по монете'],
+  ['X', 'Снять все заявки по монете'],
+  ['+ / −', 'Шкала цены крупнее / мельче'],
+  ['1 … 6', 'Слот объёма 1 … 6'],
+  ['Esc', 'Закрыть это окно'],
 ];
 var HIGHLIGHT_DEFAULT = 65;
 // Clusters (Tiger-style): traded volume per price for each period, columns left of the ladder

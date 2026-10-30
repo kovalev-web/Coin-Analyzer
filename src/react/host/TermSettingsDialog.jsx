@@ -16,10 +16,10 @@ import { Chips } from '@/shared/chips';
 import { termSettings, setTermSetting } from '../../terminal.js';
 import { formatUsdShort } from '../../ladder-scale.js';
 
-const FULL_CHIPS = [[0, 'Auto'], [250e3, '250K'], [500e3, '500K'], [1e6, '1M'], [2e6, '2M'], [5e6, '5M']];
+const FULL_CHIPS = [[0, 'Авто'], [250e3, '250K'], [500e3, '500K'], [1e6, '1M'], [2e6, '2M'], [5e6, '5M']];
 const HL_CHIPS = [[50, '50%'], [60, '60%'], [65, '65%'], [70, '70%'], [80, '80%'], [90, '90%']];
-const HIT_CHIPS = [[0, 'Auto'], [1e3, '1K'], [5e3, '5K'], [1e4, '10K'], [5e4, '50K']];
-const tapeChips = (auto) => [[auto, 'Auto'], [0, 'All'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']];
+const HIT_CHIPS = [[0, 'Авто'], [1e3, '1K'], [5e3, '5K'], [1e4, '10K'], [5e4, '50K']];
+const tapeChips = (auto) => [[auto, 'Авто'], [0, 'Все'], [100, '100'], [500, '500'], [1e3, '1K'], [5e3, '5K']];
 // Chips work with strings; the values are numbers
 const chipList = (list) => list.map(([v, l]) => [String(v), l]);
 
@@ -71,12 +71,12 @@ export function TermSettingsDialog({ sym, onClose }) {
     <Dialog open onOpenChange={(o) => { if (!o) close(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Order book settings · {(sym || s.sym || '').replace(/USDT$/, '')}</DialogTitle>
-          <DialogDescription>For this coin; applies at once</DialogDescription>
+          <DialogTitle>Настройки стакана · {(sym || s.sym || '').replace(/USDT$/, '')}</DialogTitle>
+          <DialogDescription>Для этой монеты, применяется сразу</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5">
-          <Row label="Order sizes, USDT" note={'Order sizes ' + s.sizeMin + '–' + s.sizeMax + ' USDT, an empty slot hides it.'}>
+          <Row label="Объёмы заявок, USDT" note={'От ' + s.sizeMin + ' до ' + s.sizeMax + ' USDT, пустой слот скрывается.'}>
             <div className="grid grid-cols-6 gap-1.5">
               {sizes.map((v, i) => (
                 <Input key={i} type="number" inputMode="decimal" min={s.sizeMin} max={s.sizeMax} className="h-8 px-2 text-center tabular-nums" value={v}
@@ -87,23 +87,23 @@ export function TermSettingsDialog({ sym, onClose }) {
             </div>
           </Row>
 
-          <Row label="Volume bar is full at, $" note="Type 2M, 500K or 1.5M. Empty or Auto — set from the levels on screen.">
-            <Input autoComplete="off" className="h-8" value={full} placeholder={'Auto' + (s.autoFull ? ' · now ≈ ' + formatUsdShort(s.autoFull) : '')}
+          <Row label="Полный бар объёма при, $" note="Например 2M, 500K или 1.5M. Пусто или Авто — по уровням на экране.">
+            <Input autoComplete="off" className="h-8" value={full} placeholder={'Авто' + (s.autoFull ? ' · сейчас ≈ ' + formatUsdShort(s.autoFull) : '')}
               onChange={(e) => { setFull(e.target.value); dirty.current.fullScale = true; }}
               onBlur={() => { if (dirty.current.fullScale) apply('fullScale', full); }}
               onKeyDown={onEnter('fullScale', full)} />
             <Chips list={chipList(FULL_CHIPS)} value={String(s.fullScale)} onChange={(v) => apply('fullScale', Number(v))} />
           </Row>
 
-          <Row label="Colored from, % of a full bar" note="Smaller levels stay grey. In Auto a level is also colored only if it's ≥ 3× the typical one — a flat book stays grey.">
+          <Row label="Цвет с, % от полного бара" note="Уровни меньше остаются серыми. В режиме Авто уровень окрашивается, только если он ≥ 3× обычного — ровный стакан остаётся серым.">
             <Chips list={chipList(HL_CHIPS)} value={String(s.highlight)} onChange={(v) => apply('highlight', Number(v))} />
           </Row>
 
           <Separator />
-          <SwitchRow id="ts-tape" label="Trades tape" checked={s.tape} onChange={(v) => apply('tape', v)} />
-          <Row label="Tape: hide trades under, $" note="Auto — bigger than most trades on that venue lately.">
+          <SwitchRow id="ts-tape" label="Лента сделок" checked={s.tape} onChange={(v) => apply('tape', v)} />
+          <Row label="Лента: скрывать сделки меньше, $" note="Авто — показывает сделки крупнее большинства недавних на этой бирже.">
             <Input autoComplete="off" className="h-8" value={tmin}
-              placeholder={s.tapeMin === s.tapeAuto ? 'Auto · now ≈ ' + (formatUsdShort(s.autoTapeMin) || '10') : 'Show all'}
+              placeholder={s.tapeMin === s.tapeAuto ? 'Авто · сейчас ≈ ' + (formatUsdShort(s.autoTapeMin) || '10') : 'Показывать все'}
               onChange={(e) => { setTmin(e.target.value); dirty.current.tapeMin = true; }}
               onBlur={() => { if (dirty.current.tapeMin) apply('tapeMin', tmin); }}
               onKeyDown={onEnter('tapeMin', tmin)} />
@@ -111,22 +111,22 @@ export function TermSettingsDialog({ sym, onClose }) {
           </Row>
 
           <Separator />
-          <SwitchRow id="ts-venues" label="Other venues: books and their trades on the tape" checked={s.venues} onChange={(v) => apply('venues', v)} />
-          <SwitchRow id="ts-venue-full" label="Other venues as full books (bars like ours)" checked={s.venueFull} onChange={(v) => apply('venueFull', v)} />
-          <Row label="Frames on other venues from, $" note="Auto — a hit bigger than 90% of that venue's recent trades, or one that ate 20%+ of the level.">
+          <SwitchRow id="ts-venues" label="Другие биржи: стаканы и их сделки в ленте" checked={s.venues} onChange={(v) => apply('venues', v)} />
+          <SwitchRow id="ts-venue-full" label="Другие биржи полными стаканами (бары как у нас)" checked={s.venueFull} onChange={(v) => apply('venueFull', v)} />
+          <Row label="Рамки на других биржах от, $" note="Авто — удар крупнее 90% недавних сделок этой биржи или съевший 20%+ уровня.">
             <Chips list={chipList(HIT_CHIPS)} value={String(s.hitMin)} onChange={(v) => apply('hitMin', Number(v))} />
           </Row>
 
           <Separator />
-          <Row label="Clusters period">
+          <Row label="Период кластеров">
             <Select value={s.clusterTf} onValueChange={(v) => apply('clusterTf', v)}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{s.clusterTfs.map((k) => <SelectItem key={k} value={k}>{k === 'off' ? 'Off' : k}</SelectItem>)}</SelectContent>
+              <SelectContent>{s.clusterTfs.map((k) => <SelectItem key={k} value={k}>{k === 'off' ? 'Выкл' : k}</SelectItem>)}</SelectContent>
             </Select>
           </Row>
 
           <Separator />
-          <Row label="Hotkeys · all coins">
+          <Row label="Горячие клавиши · все монеты">
             <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-xs">
               {s.hotkeys.map(([k, what]) => (
                 <React.Fragment key={k}>
@@ -139,7 +139,7 @@ export function TermSettingsDialog({ sym, onClose }) {
         </div>
 
         <DialogFooter>
-          <Button onClick={close}>Done</Button>
+          <Button onClick={close}>Готово</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
