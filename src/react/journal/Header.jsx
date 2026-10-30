@@ -63,7 +63,7 @@ export function Header({ period, onPeriod, aiRange }) {
       <div className="order-3 flex w-full items-center gap-2 sm:order-2 sm:ml-auto sm:w-auto">
         <ToggleGroup
           type="single"
-          variant="outline"
+          variant="segmented"
           size="sm"
           value={period.range || ''}
           onValueChange={(v) => { if (v) onPeriod({ range: v }); }}

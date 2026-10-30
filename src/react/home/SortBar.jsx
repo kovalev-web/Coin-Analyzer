@@ -29,10 +29,10 @@ export function SortBar({ screener }) {
   return (
     <div className="jr flex items-center gap-2 px-8 py-2.5 max-md:gap-1.5 max-md:px-3">
       {!screener && (
-        <ToggleGroup type="single" variant="outline" size="sm" value={state.volTier}>
+        <ToggleGroup type="single" variant="segmented" size="sm" value={state.volTier}>
           {TIERS.map(([v, label, tip]) => (
             <Tip key={v} text={tip}>
-              <ToggleGroupItem value={v} data-action="pick-tier" data-val={v} className="px-3 max-md:px-2 aria-checked:bg-primary aria-checked:text-primary-foreground">{label}</ToggleGroupItem>
+              <ToggleGroupItem value={v} data-action="pick-tier" data-val={v} className="px-3 max-md:px-2">{label}</ToggleGroupItem>
             </Tip>
           ))}
         </ToggleGroup>
@@ -55,12 +55,12 @@ export function SortBar({ screener }) {
           </DropdownMenuContent>
         </DropdownMenu>
         {!screener && (
-          <ToggleGroup type="single" size="sm" value={state.sortCol}>
+          <ToggleGroup type="single" variant="segmented" size="sm" value={state.sortCol}>
             <Tip text="Sort by 24h change">
-              <ToggleGroupItem value="price_change_percentage_24h" className="aria-checked:bg-accent aria-checked:text-foreground" data-action="sort" data-col="price_change_percentage_24h" aria-label="Sort by change"><Percent /></ToggleGroupItem>
+              <ToggleGroupItem value="price_change_percentage_24h" data-action="sort" data-col="price_change_percentage_24h" aria-label="Sort by change"><Percent /></ToggleGroupItem>
             </Tip>
             <Tip text="Sort by volume">
-              <ToggleGroupItem value="total_volume" className="aria-checked:bg-accent aria-checked:text-foreground" data-action="sort" data-col="total_volume" aria-label="Sort by volume"><BarChart2 /></ToggleGroupItem>
+              <ToggleGroupItem value="total_volume" data-action="sort" data-col="total_volume" aria-label="Sort by volume"><BarChart2 /></ToggleGroupItem>
             </Tip>
           </ToggleGroup>
         )}

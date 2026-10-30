@@ -1,5 +1,5 @@
-// Order book header: Live / Test (which trader and account the orders go to —
-// Live tinted red, Test amber), the connection indicator, the price scale
+// Order book header: Live / Test (which trader and account the orders go to;
+// the same segmented switch as everywhere), the connection indicator, the price scale
 // (− finer / + coarser, one row = exchange tick × multiplier), settings; and
 // under it the "view only" line when Test shows the live market.
 // Buttons keep their data- attributes: the panel's click handler in
@@ -24,11 +24,9 @@ export function TermHeader() {
     <div className="jr">
       <div className="flex items-center gap-1.5 border-b px-2 py-1.5">
         <Tip text="Live: real account · Test: Binance Demo, practice money">
-          <ToggleGroup type="single" size="sm" value={h.mode} className="h-7 shrink-0 rounded-full bg-muted p-0.5">
-            <ToggleGroupItem value="live" data-mode="live"
-              className="h-6 rounded-full px-2.5 text-2xs font-bold uppercase data-[state=on]:bg-danger/20 data-[state=on]:text-danger">Live</ToggleGroupItem>
-            <ToggleGroupItem value="test" data-mode="test"
-              className="h-6 rounded-full px-2.5 text-2xs font-bold uppercase data-[state=on]:bg-level/25 data-[state=on]:text-foreground">Test</ToggleGroupItem>
+          <ToggleGroup type="single" variant="segmented" value={h.mode} className="h-7 shrink-0">
+            <ToggleGroupItem value="live" data-mode="live" className="text-xs">Live</ToggleGroupItem>
+            <ToggleGroupItem value="test" data-mode="test" className="text-xs">Test</ToggleGroupItem>
           </ToggleGroup>
         </Tip>
         <PingBadge />
