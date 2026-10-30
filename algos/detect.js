@@ -24,6 +24,9 @@ const CFG = {
   maxJitter: 0.03,      // median |beat − period| ≤ 3% of the period: a clock, not chance
   minPurity: 0.5,       // ≥ half of the same-side same-size prints over its span are the series itself
   maxChance: 1e-4,      // odds that background prints of that size line up this long by chance
+  recent: 20,           // size and period follow the last 20 prints of the series (cheap, and a bot may drift)
+  maxChain: 2000,       // a series stops growing here (hours of a fast bot)
+  maxPrints: 4000,      // per side; more — only the biggest are searched
 };
 
 // Odds that prints of that size, at their background rate, fall into the
@@ -39,18 +42,18 @@ function chanceOf(len, period, alikeOthers, span, cfg) {
 function isRegular(prints, chain, period, cfg) {
   let skips = 0;
   const dev = [];
-  for (let c = 1; c < chain.length; c++) {
+  for (let c = Math.max(1, chain.length - 200); c < chain.length; c++) { // a long series: its last 200 beats
     const dt = prints[chain[c]].t - prints[chain[c - 1]].t;
     const k = Math.max(1, Math.round(dt / period));
     skips += k - 1;
     dev.push(Math.abs(dt / k - period) / period);
   }
-  if (skips > cfg.maxSkipShare * (chain.length - 1)) return false;
+  if (skips > cfg.maxSkipShare * dev.length) return false;
   if (median(dev) > cfg.maxJitter) return false;
   const a = prints[chain[0]].t, b = prints[chain[chain.length - 1]].t;
   const size = median(chain.map((c) => prints[c].usd));
   let alike = 0;
-  for (const x of prints) if (x.t >= a && x.t <= b && sameSize(x.usd, size, cfg.sizeTol)) alike++;
+  for (let k = chain[0]; k < prints.length && prints[k].t <= b; k++) if (sameSize(prints[k].usd, size, cfg.sizeTol)) alike++;
   if (chain.length / alike < cfg.minPurity) return false;
   return chanceOf(chain.length, period, alike - chain.length, b - a, cfg) <= cfg.maxChance;
 }
@@ -80,56 +83,107 @@ function median(v) {
 
 const sameSize = (a, b, tol) => Math.abs(a / b - 1) <= tol;
 
-// First print at index ≥ from whose time is within tol of `at` and size close to `size`
-function findBeat(prints, from, at, tol, size, cfg) {
+// Prints of one side grouped by size (buckets as wide as the size tolerance):
+// a print of size S can only match the bucket of S and the two next to it.
+// Each bucket — indices into prints, in time order.
+function sizeIndex(prints, cfg) {
+  const step = Math.log(1 + cfg.sizeTol);
+  const key = (usd) => Math.floor(Math.log(usd) / step);
+  const lists = new Map();
+  prints.forEach((x, i) => { const k = key(x.usd); if (!lists.has(k)) lists.set(k, []); lists.get(k).push(i); });
+  return { key, near: (usd) => { const k = key(usd); return [lists.get(k - 1), lists.get(k), lists.get(k + 1)].filter(Boolean); } };
+}
+
+// First position in a bucket whose print is at or after time t
+function firstAt(prints, list, t) {
+  let lo = 0, hi = list.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (prints[list[m]].t < t) lo = m + 1; else hi = m; }
+  return lo;
+}
+
+// First print at index ≥ from whose time is within tol of `at` and size close to
+// `size`, not already in a series found (covered)
+function findBeat(prints, from, at, tol, size, cfg, covered, idx) {
   let best = -1, bestErr = Infinity;
-  for (let k = from; k < prints.length && prints[k].t <= at + tol; k++) {
+  const consider = (k) => {
+    if (k < from || (covered && covered[k])) return;
     const err = Math.abs(prints[k].t - at);
     if (err <= tol && sameSize(prints[k].usd, size, cfg.sizeTol) && err < bestErr) { best = k; bestErr = err; }
+  };
+  if (idx) {
+    idx.near(size).forEach((list) => {
+      for (let p = firstAt(prints, list, at - tol); p < list.length && prints[list[p]].t <= at + tol; p++) consider(list[p]);
+    });
+  } else {
+    for (let k = from; k < prints.length && prints[k].t <= at + tol; k++) consider(k);
   }
   return best;
 }
 
 // The longest series starting at prints[i] (indices into prints, one side only)
-function seriesFrom(prints, i, cfg) {
+function seriesFrom(prints, i, cfg, covered, idx) {
   let best = null;
   const a = prints[i];
-  for (let j = i + 1; j < prints.length && prints[j].t - a.t <= cfg.maxPeriodMs; j++) {
+  const tried = new Set(); // prints already in a chain from this start: one ride along a bot, not one per its print
+  // Second prints to try: the same size within maxPeriod, nearest first
+  let js;
+  if (idx) {
+    js = [];
+    idx.near(a.usd).forEach((list) => {
+      for (let p = firstAt(prints, list, a.t + cfg.minPeriodMs); p < list.length && prints[list[p]].t - a.t <= cfg.maxPeriodMs; p++) if (list[p] > i) js.push(list[p]);
+    });
+    js.sort((x, y) => x - y);
+  } else {
+    js = [];
+    for (let j = i + 1; j < prints.length && prints[j].t - a.t <= cfg.maxPeriodMs; j++) js.push(j);
+  }
+  for (const j of js) {
     const dt = prints[j].t - a.t;
-    if (dt < cfg.minPeriodMs || !sameSize(prints[j].usd, a.usd, cfg.sizeTol)) continue;
+    if (dt < cfg.minPeriodMs || tried.has(j) || (covered && covered[j]) || !sameSize(prints[j].usd, a.usd, cfg.sizeTol)) continue;
     const chain = [i, j];
     let period = dt;
-    for (;;) {
+    // Size and period follow the last `recent` prints / beats: running sums, O(1) a step
+    const sizes = [a.usd, prints[j].usd], beats = [dt];
+    let sizeSum = a.usd + prints[j].usd, beatSum = dt;
+    while (chain.length < cfg.maxChain) {
       const last = prints[chain[chain.length - 1]];
-      const size = median(chain.map((c) => prints[c].usd));
+      const size = sizeSum / sizes.length;
       let next = -1;
       for (let skip = 1; skip <= cfg.maxSkip + 1 && next < 0; skip++) {
         const tol = Math.max(cfg.beatTolMs, period * cfg.beatTolRel);
-        next = findBeat(prints, chain[chain.length - 1] + 1, last.t + skip * period, tol, size, cfg);
+        next = findBeat(prints, chain[chain.length - 1] + 1, last.t + skip * period, tol, size, cfg, covered, idx);
         if (next >= 0) {
+          const d = prints[next].t - last.t, beat = d / skip;
           chain.push(next);
-          const beats = [];
-          for (let c = 1; c < chain.length; c++) {
-            const d = prints[chain[c]].t - prints[chain[c - 1]].t;
-            beats.push(d / Math.max(1, Math.round(d / period)));
-          }
-          period = median(beats);
+          sizes.push(prints[next].usd); sizeSum += prints[next].usd;
+          beats.push(beat); beatSum += beat;
+          if (sizes.length > cfg.recent) sizeSum -= sizes.shift();
+          if (beats.length > cfg.recent) beatSum -= beats.shift();
+          period = beatSum / beats.length;
         }
       }
       if (next < 0) break;
     }
+    if (chain.length >= cfg.minRepeats) chain.forEach((c) => tried.add(c));
     if (chain.length >= cfg.minRepeats && isRegular(prints, chain, period, cfg) && (!best || chain.length > best.chain.length)) best = { chain, period };
   }
   return best;
 }
 
-// All timers among the prints of one side: every start's best series, then
-// claimed longest first, so a chance chain can't steal a print of a real one
+// All timers among the prints of one side: the best series from each start
+// that isn't already inside one found (a bot running for hours is followed
+// once, not again from each of its prints), then claimed longest first, so a
+// chance chain can't steal a print of a real one
 function timersOfSide(prints, cfg) {
   const cands = [];
+  const covered = new Uint8Array(prints.length);
+  const idx = sizeIndex(prints, cfg);
   for (let i = 0; i < prints.length; i++) {
-    const s = seriesFrom(prints, i, cfg);
-    if (s) cands.push(s);
+    if (covered[i]) continue;
+    const s = seriesFrom(prints, i, cfg, covered, idx);
+    if (!s) continue;
+    cands.push(s);
+    s.chain.forEach((c) => { covered[c] = 1; });
   }
   cands.sort((a, b) => b.chain.length - a.chain.length);
   const used = new Uint8Array(prints.length);
@@ -157,10 +211,15 @@ function turnover(prints, from, to) {
 function detectTimers(allPrints, cfg, turnoverOf) {
   cfg = cfg || CFG;
   turnoverOf = turnoverOf || ((from, to) => turnover(allPrints, from, to));
-  const big = allPrints.filter((x) => x.usd >= cfg.minUsd);
+  let big = allPrints.filter((x) => x.usd >= cfg.minUsd);
   const out = [];
   [true, false].forEach((buy) => {
-    const side = big.filter((x) => x.buy === buy);
+    let side = big.filter((x) => x.buy === buy);
+    // A very busy coin: only its biggest prints (a bot slicing smaller than that is noise there)
+    if (side.length > cfg.maxPrints) {
+      const cut = side.map((x) => x.usd).sort((p, q) => q - p)[cfg.maxPrints - 1];
+      side = side.filter((x) => x.usd >= cut);
+    }
     timersOfSide(side, cfg).forEach((s) => {
       const pr = s.chain.map((c) => side[c]);
       const total = pr.reduce((a, x) => a + x.usd, 0);

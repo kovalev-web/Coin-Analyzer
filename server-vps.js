@@ -598,15 +598,40 @@ async function binanceMinutes(symbol) {
   return k.map(function (r) { return { t: r[0], usd: +r[7], buyUsd: +r[10], n: +r[8], o: +r[1], c: +r[4] }; });
 }
 
-async function coinAlgos(symbol) {
+// Timers per venue are found on the last 2 h of prints, at most once a minute
+// (the tape changes little in between), with a pause after each venue so the
+// server keeps answering the site; one computation per coin at a time.
+var ALGO_TIMER_WINDOW_MS = 2 * 3600 * 1000;
+var algoTimerCache = new Map(); // 'bnf:SOLUSDT' → { at, algos }
+var algoInFlight = new Map();
+var breathe = function () { return new Promise(function (r) { setImmediate(r); }); };
+
+function coinAlgos(symbol) {
   var hit = algoCache.get(symbol);
-  if (hit && Date.now() - hit.at < 15000) return hit.body;
-  var tapes = algoCollector.tapes(symbol), algos = [], since = {};
-  Object.keys(tapes).forEach(function (v) {
-    since[v] = tapes[v].since();
-    detectTimers(tapes[v].prints(), undefined, tapes[v].turnover).forEach(function (a) { a.venue = v; algos.push(a); });
-    if (v !== 'bnf') detectPressure(tapes[v].minutes()).forEach(function (a) { a.venue = v; algos.push(a); });
-  });
+  if (hit && Date.now() - hit.at < 15000) return Promise.resolve(hit.body);
+  if (algoInFlight.has(symbol)) return algoInFlight.get(symbol);
+  var p = coinAlgosNow(symbol).finally(function () { algoInFlight.delete(symbol); });
+  algoInFlight.set(symbol, p);
+  return p;
+}
+
+async function coinAlgosNow(symbol) {
+  var tapes = algoCollector.tapes(symbol), algos = [], since = {}, now = Date.now();
+  var venues = Object.keys(tapes);
+  for (var i = 0; i < venues.length; i++) {
+    var v = venues[i], key = v + ':' + symbol, tape = tapes[v];
+    since[v] = tape.since();
+    var tc = algoTimerCache.get(key);
+    if (!tc || now - tc.at > 60000) {
+      var prints = tape.prints().filter(function (x) { return now - x.t <= ALGO_TIMER_WINDOW_MS; });
+      tc = { at: now, algos: detectTimers(prints, undefined, tape.turnover) };
+      algoTimerCache.set(key, tc);
+      await breathe();
+    }
+    tc.algos.forEach(function (a) { algos.push(Object.assign({ venue: v }, a)); });
+    if (v !== 'bnf') detectPressure(tape.minutes()).forEach(function (a) { a.venue = v; algos.push(a); });
+  }
+  algoTimerCache.forEach(function (c, k) { if (now - c.at > 10 * 60000) algoTimerCache.delete(k); });
   try {
     detectPressure(await binanceMinutes(symbol)).forEach(function (a) { a.venue = 'bnf'; algos.push(a); });
   } catch (e) { console.log('[Algos] ' + symbol + ' klines: ' + e.message); }

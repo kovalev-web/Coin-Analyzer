@@ -465,9 +465,13 @@ var _API_BASE = (import.meta.env.VITE_WS_URL || '').replace(/^wss?:\/\//, 'https
 var _sessionVerified = false; // true once session confirmed — prevents double-init on revalidate
 
 // Fetch session and apply user state. Returns true (ok), false (no session → demo mode), null (network err).
+// The first screen waits for this — a slow server must not leave the page blank:
+// after 4 s it counts as a network error and the app loads anyway.
 async function _applySession() {
+  var ctl = new AbortController();
+  var timer = setTimeout(function () { ctl.abort(); }, 4000);
   try {
-    var r = await fetch(_API_BASE + '/auth/get-session', { credentials: 'include' });
+    var r = await fetch(_API_BASE + '/auth/get-session', { credentials: 'include', signal: ctl.signal });
     if (!r.ok) { state.isDemoMode = true; return false; }
     var s = await r.json();
     if (!s || !s.user || !s.user.id) { state.isDemoMode = true; return false; }
@@ -475,7 +479,9 @@ async function _applySession() {
     if (s.user.email) setUserEmail(s.user.email);
     return true;
   } catch (e) {
-    return null; // network error — caller decides
+    return null; // network error or too slow — caller decides
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -521,4 +527,6 @@ async function _revalidateSession() {
   initRouter('/');
   preloadReactHost();
   if (state.isDemoMode) injectDemoBanner();
+  // The server was slow or unreachable: pick the session up once it answers
+  if (result === null) setTimeout(_revalidateSession, 5000);
 })();
