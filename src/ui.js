@@ -3205,9 +3205,14 @@ export function openCoinFullView(sym) {
     }
   });
 
-  // rAF loop: alert bells + trade markers (only when ruler is idle)
+  // rAF loop: alert bells + trade markers (only when ruler is idle); the top
+  // bar stops where the price scale starts (its width follows the prices)
+  var fvBar = overlay.querySelector('.fv-coin-info'), fvBarGap = -1;
   (function fvBellLoop() {
     if (!_fvChart) return;
+    var axW = 0;
+    try { axW = _fvChart.priceScale('right').width(); } catch (_) {}
+    if (fvBar && axW !== fvBarGap) { fvBarGap = axW; fvBar.style.marginRight = axW + 'px'; }
     var ruler = _fvRuler;
     if (ruler && ruler.canvas && !ruler.start) {
       var ctx = ruler.canvas.getContext('2d');
