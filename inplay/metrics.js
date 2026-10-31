@@ -3,7 +3,8 @@
 // Input — 1-minute bars of Binance USDT-M futures ({ t, o, h, l, c, q: USDT
 // volume, n: trades }), oldest first; the last one may be the forming minute.
 // The coin's norm is its last 24 h (ticker/24hr): USDT and trades per minute,
-// and the day's high / low.
+// and the day's high / low. RVOL compares with the same time of day over the
+// previous days instead — from a profile of 5-minute USDT volumes (rvolProfile).
 // Fed by inplay/feed.js; who goes on the grid — inplay/rank.js.
 // Tests: npm run test:inplay
 
@@ -12,7 +13,12 @@ const CFG = {
   minDayUsd: 10e6,    // liquidity: USDT volume over 24 h, below it the coin is not shown
   growth: ['15m', '3h'], // volume / trades growth: this window per minute against that one
   natr: { tf: 5, period: 14 }, // NATR on 5-minute candles over 14 of them, like ScalpStation's "NATR 5м/14"
+  // RVOL: the window's volume against the same clock time over the previous
+  // `days` days (their average), from 5-minute buckets; a day counts when its
+  // buckets cover ≥ `cover` of the span, and at least `minDays` must count
+  rvol: { days: 5, minDays: 3, step: 5 * 60000, cover: 0.9 },
 };
+CFG.rvol.keep = (CFG.rvol.days + 1) * 288; // buckets in a profile: the days plus today
 CFG.keepBars = CFG.windows['3h'] + 5;
 
 // Minutes the window covers; the forming minute counts for the part that has passed
@@ -102,8 +108,61 @@ function dayExtreme(bars, norm) {
   return toHigh <= toLow ? { pct: toHigh, side: 'high' } : { pct: toLow, side: 'low' };
 }
 
+// Profile of a coin for RVOL: USDT volume in clock-aligned buckets of
+// cfg.step, { t0: start of q[0], q: [usd | NaN = no data] }, at most cfg.keep
+// buckets. Adds usd to the bucket of t (gaps between are NaN).
+function profileAdd(prof, t, usd, cfg) {
+  cfg = cfg || CFG.rvol;
+  const b = Math.floor(t / cfg.step) * cfg.step;
+  if (!prof.q.length) { prof.t0 = b; prof.q.push(usd); return prof; }
+  let i = (b - prof.t0) / cfg.step;
+  if (i < 0) return prof; // older than the profile
+  while (prof.q.length <= i) prof.q.push(NaN);
+  prof.q[i] = (Number.isNaN(prof.q[i]) ? 0 : prof.q[i]) + usd;
+  const extra = prof.q.length - cfg.keep;
+  if (extra > 0) { prof.q.splice(0, extra); prof.t0 += extra * cfg.step; }
+  return prof;
+}
+
+// USDT in [from, to) from the profile; a bucket cut by the span counts for
+// the part inside it. covered = ms of the span that had data
+function spanUsd(prof, from, to, cfg) {
+  cfg = cfg || CFG.rvol;
+  let usd = 0, covered = 0;
+  if (!prof || !prof.q.length || !(to > from)) return { usd, covered };
+  const first = Math.max(0, Math.floor((from - prof.t0) / cfg.step));
+  const last = Math.min(prof.q.length - 1, Math.floor((to - 1 - prof.t0) / cfg.step));
+  for (let i = first; i <= last; i++) {
+    const v = prof.q[i];
+    if (Number.isNaN(v)) continue;
+    const b0 = prof.t0 + i * cfg.step;
+    const part = Math.min(to, b0 + cfg.step) - Math.max(from, b0);
+    if (part <= 0) continue;
+    usd += v * part / cfg.step;
+    covered += part;
+  }
+  return { usd, covered };
+}
+
+// Relative volume: usd over [from, to) against the average of the same span
+// on each of the previous days; 1 = as usual at this hour, 5 = five times.
+// null while too few days have data
+function rvol(prof, usd, from, to, cfg) {
+  cfg = cfg || CFG.rvol;
+  if (!prof || !(to > from)) return null;
+  const DAY = 86400000;
+  let sum = 0, days = 0;
+  for (let k = 1; k <= cfg.days; k++) {
+    const d = spanUsd(prof, from - k * DAY, to - k * DAY, cfg);
+    if (d.covered < cfg.cover * (to - from)) continue;
+    sum += d.usd; days++;
+  }
+  if (days < cfg.minDays || !(sum > 0)) return null;
+  return usd / (sum / days);
+}
+
 // One window of a coin; null while there are fewer bars than the window
-function windowStats(bars, minutes, now, norm) {
+function windowStats(bars, minutes, now, norm, prof) {
   if (bars.length < minutes) return null;
   const win = bars.slice(-minutes);
   const mins = windowMinutes(win, now);
@@ -117,15 +176,16 @@ function windowStats(bars, minutes, now, norm) {
     usd,
     vol: vsNorm(usd, mins, norm && norm.usdPerMin),
     trades: vsNorm(trades, mins, norm && norm.tradesPerMin),
+    rvol: rvol(prof, usd, win[0].t, win[0].t + mins * 60000),
   };
 }
 
 // Every window of a coin, the growth of volume and trades, the day's extreme
 // and whether it is liquid enough to show at all
-function coinWindows(bars, now, norm, cfg) {
+function coinWindows(bars, now, norm, prof, cfg) {
   cfg = cfg || CFG;
   const w = {};
-  for (const key of Object.keys(cfg.windows)) w[key] = windowStats(bars, cfg.windows[key], now, norm);
+  for (const key of Object.keys(cfg.windows)) w[key] = windowStats(bars, cfg.windows[key], now, norm, prof);
   const s = w[cfg.growth[0]], l = w[cfg.growth[1]];
   return {
     w,
@@ -137,4 +197,4 @@ function coinWindows(bars, now, norm, cfg) {
   };
 }
 
-module.exports = { CFG, windowMinutes, rangePct, changePct, vsNorm, dayNorm, growth, candlesOf, natr, dayExtreme, windowStats, coinWindows };
+module.exports = { CFG, windowMinutes, rangePct, changePct, vsNorm, dayNorm, growth, candlesOf, natr, dayExtreme, profileAdd, spanUsd, rvol, windowStats, coinWindows };

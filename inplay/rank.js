@@ -1,8 +1,9 @@
 'use strict';
 // "In play" screener (/grid): which coins one viewer sees and in what order.
 // The viewer picks a window (5m…3h), a sort and how many cells; pinned coins
-// come first. Sorts: move = range of the window, vol / trades = against the
-// 24 h norm (all by the window); gvol / gtrades = growth 15m against 3h, ext =
+// come first. Sorts: move = range of the window, rvol = volume against the
+// same time of day over the previous days, vol / trades = against the 24 h
+// norm (all by the window); gvol / gtrades = growth 15m against 3h, ext =
 // closest to the day's high or low (these don't depend on the window).
 // The order is refreshed every HOLD_MS (or at once when the choice changes),
 // in between the same coins stay in the same cells and only their numbers move.
@@ -10,7 +11,7 @@
 
 const { CFG } = require('./metrics');
 
-const SORTS = ['move', 'vol', 'trades', 'gvol', 'gtrades', 'ext'];
+const SORTS = ['move', 'rvol', 'vol', 'trades', 'gvol', 'gtrades', 'ext'];
 const HOLD_MS = 15000;
 const MAX_CELLS = 12;
 
@@ -21,7 +22,7 @@ function sortValue(row, win, sort) {
   if (sort === 'ext') return row.ext ? -row.ext.pct : null;
   const w = row.w[win];
   if (!w) return null;
-  return sort === 'move' ? w.range : sort === 'vol' ? w.vol : w.trades;
+  return sort === 'move' ? w.range : sort === 'rvol' ? w.rvol : sort === 'vol' ? w.vol : w.trades;
 }
 
 // Coins by the chosen window and sort, strongest first (only liquid ones)

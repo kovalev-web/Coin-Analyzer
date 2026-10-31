@@ -28,6 +28,7 @@ const DEFAULT_VIEW = { win: '5m', sort: 'move', tf: '1m', n: 6 };
 const WINDOWS = ['5m', '15m', '1h', '3h'];
 const SORTS = [
   { value: 'move', label: 'Move', tip: 'Размах за период: хай − лой, % — насколько монету носит' },
+  { value: 'rvol', label: 'RVOL', tip: 'Относительный объём: объём за период против того же времени суток в среднем за прошлые 5 дней. Выше 2× — монета в игре, от 5× — сильно в игре' },
   { value: 'vol', label: 'Volume', tip: 'Объём в USDT за минуту периода против обычной минуты монеты за 24 ч. 14× — торгуют в 14 раз больше обычного' },
   { value: 'trades', label: 'Trades', tip: 'Сделок за минуту периода против обычной минуты монеты за 24 ч' },
   { value: 'gvol', label: 'Vol ↑', tip: 'Рост объёма: за минуту последних 15 мин против последних 3 ч. От периода не зависит' },
@@ -124,6 +125,7 @@ function SortStat({ coin, w, sort }) {
       ? <Stat tip={TIP.ext} strong className={coin.ext.side === 'high' ? 'text-bullish' : 'text-danger'}>{pct(coin.ext.pct)} to {coin.ext.side}</Stat>
       : <Stat tip={TIP.ext}>—</Stat>;
   }
+  if (sort === 'rvol') return <Stat tip={TIP.rvol} strong>rvol {x(w && w.rvol)}</Stat>;
   if (sort === 'trades') return <Stat tip={TIP.trades} strong>trades {x(w && w.trades)}</Stat>;
   return <Stat tip={TIP.vol} strong={sort === 'vol'}>vol {x(w && w.vol)}</Stat>;
 }

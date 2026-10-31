@@ -112,3 +112,64 @@ test('coinWindows: every window; ok only with a norm at the 24 h liquidity gate'
   assert.equal(M.coinWindows(bars, 0, M.dayNorm({ quoteVolume: '5000000', count: '1' })).ok, false);
   assert.equal(M.coinWindows(bars, 0, null).ok, false);
 });
+
+const STEP = 5 * MIN, DAY = 86400000;
+// A profile of `days` days (and 3 h, the longest window) before T0, $1000 per 5 minutes
+function flatProfile(days) {
+  const prof = { t0: 0, q: [] };
+  for (let t = T0 - days * DAY - 180 * MIN; t < T0; t += STEP) M.profileAdd(prof, t, 1000);
+  return prof;
+}
+
+test('profileAdd: clock buckets, gaps are NaN, older than the profile ignored, trimmed to keep', () => {
+  const cfg = { step: STEP, keep: 4 };
+  const prof = { t0: 0, q: [] };
+  M.profileAdd(prof, T0 + MIN, 10, cfg);
+  M.profileAdd(prof, T0 + 2 * MIN, 5, cfg);
+  M.profileAdd(prof, T0 + 2 * STEP, 7, cfg);
+  assert.equal(prof.t0, T0);
+  assert.deepEqual(prof.q, [15, NaN, 7]);
+  M.profileAdd(prof, T0 - STEP, 99, cfg);
+  assert.deepEqual(prof.q, [15, NaN, 7]);
+  M.profileAdd(prof, T0 + 4 * STEP, 1, cfg);
+  assert.equal(prof.t0, T0 + STEP);
+  assert.deepEqual(prof.q, [NaN, 7, NaN, 1]);
+});
+
+test('spanUsd: buckets cut by the span count for their part, gaps are not covered', () => {
+  const cfg = { step: STEP };
+  const prof = { t0: T0, q: [1000, NaN, 500] };
+  assert.deepEqual(M.spanUsd(prof, T0, T0 + 3 * STEP, cfg), { usd: 1500, covered: 2 * STEP });
+  // 2 min of the first bucket, the gap, the whole third
+  const r = M.spanUsd(prof, T0 + 3 * MIN, T0 + 3 * STEP, cfg);
+  assert.ok(close(r.usd, 400 + 500));
+  assert.equal(r.covered, 2 * MIN + STEP);
+  assert.deepEqual(M.spanUsd(null, T0, T0 + STEP, cfg), { usd: 0, covered: 0 });
+});
+
+test('rvol: the window against the same clock time over the previous days', () => {
+  const prof = flatProfile(5);
+  // 15 min usually make $3000; $15000 now = 5×
+  assert.ok(close(M.rvol(prof, 15000, T0 - 15 * MIN, T0), 5));
+  // a window cut mid-bucket: 7 min usually make $1400
+  assert.ok(close(M.rvol(prof, 1400, T0 - 7 * MIN, T0), 1));
+});
+
+test('rvol: one loud day lifts the norm by its share; null with too few days', () => {
+  const prof = flatProfile(5);
+  // yesterday the same 15 min made $13000 instead of $3000: average 5000
+  for (let i = 1; i <= 3; i++) prof.q[prof.q.length - i - 288] += 10000 / 3;
+  assert.ok(close(M.rvol(prof, 15000, T0 - 15 * MIN, T0), 3));
+  assert.equal(M.rvol(flatProfile(2), 15000, T0 - 15 * MIN, T0), null);
+  assert.equal(M.rvol(null, 15000, T0 - 15 * MIN, T0), null);
+});
+
+test('coinWindows: rvol of every window from the profile', () => {
+  const bars = history(180).map((b) => Object.assign({}, b, { t: b.t - 180 * MIN }));
+  const now = T0;
+  const c = M.coinWindows(bars, now, M.dayNorm({ quoteVolume: '28800000', count: '57600' }), flatProfile(5));
+  // $20K a minute against $200 a minute at this hour
+  assert.ok(close(c.w['15m'].rvol, 100));
+  assert.ok(close(c.w['3h'].rvol, 100));
+  assert.equal(M.coinWindows(bars, now, null).w['5m'].rvol, null);
+});

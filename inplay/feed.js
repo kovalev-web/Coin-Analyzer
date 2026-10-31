@@ -6,9 +6,12 @@
 // moment it opens. 3 h of history over REST only for the liquid coins (the
 // only ones on the grid), most traded first — warm-up takes seconds; the rest
 // collect their minutes from the stream and get history once they turn liquid.
+// For RVOL every liquid coin also gets ~5 days of 5-minute volume over REST
+// (one request, after the minute histories, one a PROFILE_GAP_MS), then the
+// closed minutes of the stream keep adding to it.
 
 const WebSocket = require('ws');
-const { CFG, coinWindows, dayNorm } = require('./metrics');
+const { CFG, coinWindows, dayNorm, profileAdd } = require('./metrics');
 
 const REST = 'https://fapi.binance.com';
 const WS_URL = 'wss://fstream.binance.com/market/ws'; // kline belongs to the /market endpoint
@@ -20,6 +23,8 @@ const REST_WORKERS = 2;               // history requests at once
 const REST_GAP_MS = 150;              // pause per worker: ~10 requests a second (weight 2 each)
 const HISTORY_FROM = CFG.minDayUsd / 2; // a coin gets REST history from half the liquidity gate
 const UNIVERSE_TTL_MS = 30 * 60000;   // new listings join within half an hour
+const PROFILE_BARS = 1500;            // 5-minute bars for RVOL: 5 days and 5 h (weight 10)
+const PROFILE_GAP_MS = 1500;          // one profile request at a time: ≤ 400 weight a minute
 
 function toBar(k) {
   return { t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], q: +k[7], n: +k[8], closed: true };
@@ -31,6 +36,7 @@ function createInplayFeed(opts) {
   const F = {
     running: false, syms: [], bars: new Map(), live: new Map(), norms: new Map(), rows: [],
     socks: [], queue: [], queued: new Set(), filled: new Set(), workers: 0, timers: [],
+    prof: new Map(), profQueue: [], profQueued: new Set(), profWorking: false,
   };
 
   async function loadUniverse() {
@@ -69,11 +75,39 @@ function createInplayFeed(opts) {
     F.workers--;
   }
 
-  // Liquid coins without history, most traded first
+  // 5-minute volume profile for RVOL; the current bucket is filled from the
+  // closed minutes we already have, the stream adds the next ones
+  function refillProfile(sym) {
+    if (F.profQueued.has(sym)) return;
+    F.profQueued.add(sym);
+    F.profQueue.push(sym);
+    if (!F.profWorking) { F.profWorking = true; pumpProfiles(); }
+  }
+  async function pumpProfiles() {
+    while (F.running && F.profQueue.length) {
+      if (F.queue.length) { await new Promise((r) => setTimeout(r, PROFILE_GAP_MS)); continue; } // minute histories first
+      const sym = F.profQueue.shift();
+      F.profQueued.delete(sym);
+      try {
+        const rows = await fetchJson(REST + '/fapi/v1/klines?symbol=' + sym + '&interval=5m&limit=' + PROFILE_BARS);
+        const cur = Math.floor(Date.now() / CFG.rvol.step) * CFG.rvol.step;
+        const prof = { t0: 0, q: [] };
+        rows.forEach((k) => { if (+k[0] < cur) profileAdd(prof, +k[0], +k[7]); });
+        (F.bars.get(sym) || []).forEach((b) => { if (b.t >= cur) profileAdd(prof, b.t, b.q); });
+        F.prof.set(sym, prof);
+      } catch (e) {
+        log('[Inplay] profile ' + sym + ': ' + e.message);
+      }
+      await new Promise((r) => setTimeout(r, PROFILE_GAP_MS));
+    }
+    F.profWorking = false;
+  }
+
+  // Liquid coins without history or profile, most traded first
   function fillLiquid() {
-    F.syms.filter((s) => !F.filled.has(s) && liquid(s))
-      .sort((a, b) => F.norms.get(b).dayUsd - F.norms.get(a).dayUsd)
-      .forEach(refill);
+    const want = F.syms.filter(liquid).sort((a, b) => F.norms.get(b).dayUsd - F.norms.get(a).dayUsd);
+    want.filter((s) => !F.filled.has(s)).forEach(refill);
+    want.filter((s) => !F.prof.has(s)).forEach(refillProfile);
   }
 
   function onKline(k) {
@@ -81,6 +115,8 @@ function createInplayFeed(opts) {
     const bar = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, q: +k.q, n: +k.n, closed: !!k.x };
     if (!bar.closed) { F.live.set(sym, bar); return; }
     F.live.delete(sym);
+    const prof = F.prof.get(sym);
+    if (prof) profileAdd(prof, bar.t, bar.q);
     const bars = F.bars.get(sym);
     if (!bars) { F.bars.set(sym, [bar]); return; } // collects from the stream until history comes
     const last = bars[bars.length - 1];
@@ -88,7 +124,7 @@ function createInplayFeed(opts) {
     if (last && bar.t > last.t + 60000) { // missed minutes
       F.bars.set(sym, [bar]);
       F.filled.delete(sym);
-      if (liquid(sym)) refill(sym);
+      if (liquid(sym)) { refill(sym); F.prof.delete(sym); refillProfile(sym); }
       return;
     }
     bars.push(bar);
@@ -136,7 +172,7 @@ function createInplayFeed(opts) {
       const changed = syms.length !== F.syms.length || syms.some((s) => !known.has(s));
       F.syms = syms;
       const keep = new Set(syms);
-      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); F.filled.delete(s); }
+      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); F.filled.delete(s); F.prof.delete(s); }
       if (changed) subscribeAll();
       fillLiquid();
     } catch (e) {
@@ -162,7 +198,7 @@ function createInplayFeed(opts) {
       if (!bars) continue;
       const live = F.live.get(sym);
       const all = live && (!bars.length || live.t > bars[bars.length - 1].t) ? bars.concat([live]) : bars;
-      const c = coinWindows(all, now, F.norms.get(sym));
+      const c = coinWindows(all, now, F.norms.get(sym), F.prof.get(sym));
       rows.push({ s: sym, ok: c.ok, w: c.w, gv: c.gv, gt: c.gt, ext: c.ext, natr: c.natr });
     }
     F.rows = rows;
@@ -190,6 +226,7 @@ function createInplayFeed(opts) {
       F.socks = [];
       F.syms = []; F.bars.clear(); F.live.clear(); F.norms.clear(); F.rows = [];
       F.queue = []; F.queued.clear(); F.filled.clear();
+      F.prof.clear(); F.profQueue = []; F.profQueued.clear();
     },
     get running() { return F.running; },
     get rows() { return F.rows; },   // [{ s, ok, w: { '5m': {chg, range, usd, vol, trades, …} | null, … }, gv, gt, ext }]

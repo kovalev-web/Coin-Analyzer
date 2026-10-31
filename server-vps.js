@@ -719,7 +719,7 @@ function inplaySend(ws) {
     var r = bySym[s], w = {};
     if (r) Object.keys(r.w).forEach(function (k) {
       var x = r.w[k];
-      w[k] = x && { chg: inplayRound(x.chg), range: inplayRound(x.range), usd: Math.round(x.usd), vol: inplayRound(x.vol), trades: inplayRound(x.trades) };
+      w[k] = x && { chg: inplayRound(x.chg), range: inplayRound(x.range), usd: Math.round(x.usd), vol: inplayRound(x.vol), trades: inplayRound(x.trades), rvol: inplayRound(x.rvol) };
     });
     var ext = r && r.ext ? { pct: inplayRound(r.ext.pct), side: r.ext.side } : null;
     return { s: s, pinned: ws._inplay.pins.indexOf(s) >= 0, w: w, gv: r ? inplayRound(r.gv) : null, gt: r ? inplayRound(r.gt) : null, ext: ext, natr: r ? inplayRound(r.natr) : null };
