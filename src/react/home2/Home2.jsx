@@ -8,7 +8,7 @@
 // chart (mountCoinChart in ui.js): levels, alerts, rays and the ruler work as
 // on the cards; notes open the notes popover of the full view.
 import * as React from 'react';
-import { BarChart2, Maximize, Percent, Star, StickyNote } from 'lucide-react';
+import { BarChart2, ChevronRight, Maximize, Percent, Star, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,7 +22,7 @@ import { Topbar } from '../home/Topbar.jsx';
 import { DaySummary } from '../home/DaySummary.jsx';
 import { WatchlistPanel } from '../home/Briefing.jsx';
 
-const TIERS = [['high', '>100', '>100M USDT 24h volume'], ['mid', '>50', '50M – 100M USDT'], ['low', '>12', '12M – 50M USDT']];
+const TIERS = [['high', '100', '>100M USDT 24h volume'], ['mid', '50', '50M – 100M USDT'], ['low', '12', '12M – 50M USDT']];
 const TFS = ['1m', '5m', '15m', '1h', '4h'];
 
 function Tip({ text, children }) {
@@ -44,7 +44,7 @@ function CoinList({ coins, current, onPick }) {
     <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center gap-2 border-b p-2">
         <ToggleGroup type="single" variant="segmented" size="sm" value={state.volTier || 'high'} onValueChange={(v) => v && pick({ volTier: v })}>
-          {TIERS.map(([v, label, tip]) => <Tip key={v} text={tip}><ToggleGroupItem value={v} className="px-2.5">{label}</ToggleGroupItem></Tip>)}
+          {TIERS.map(([v, label, tip]) => <Tip key={v} text={tip}><ToggleGroupItem value={v} className="gap-0.5 px-2.5"><ChevronRight className="size-3.5" />{label}</ToggleGroupItem></Tip>)}
         </ToggleGroup>
         <ToggleGroup type="single" variant="segmented" size="sm" className="ml-auto" value={state.sortCol} onValueChange={(v) => v && pick({ sortCol: v, sortDir: 'desc' })}>
           <Tip text="Sort by 24h change"><ToggleGroupItem value="price_change_percentage_24h" aria-label="Sort by change"><Percent /></ToggleGroupItem></Tip>
