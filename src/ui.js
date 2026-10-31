@@ -2572,11 +2572,14 @@ export function openCoinFullView(sym) {
   if (!switchingCoins) {
     _pauseCardCharts();
     // First open — build full structure including drawer
+    // .fv-main: the bar over the chart as one column — .fv-body turns into a row when the order book opens
     overlay.innerHTML = '<div class="fv-body">'
+      + '<div class="fv-main">'
       + _fvTopBarHTML()
       + '<div class="fv-chart-wrap">'
       + _fvCoinInfoHTML()
       + '<div id="fv-chart"></div>'
+      + '</div>'
       + '</div>'
       + '</div>'
       + _fvBottomBarHTML()
