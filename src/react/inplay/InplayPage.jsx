@@ -147,7 +147,8 @@ export function InplayPage() {
   const togglePin = (sym) => setPins(pinList.includes(sym) ? pinList.filter((p) => p !== sym) : pinList.concat(sym).slice(-v.n));
 
   const { status, data, syms } = useInplay({ win: v.win, sort: v.sort, n: v.n, pins: pinList });
-  const coins = data ? data.coins : [];
+  // Only coins in the current format (an older server sends no windows)
+  const coins = data && Array.isArray(data.coins) ? data.coins.filter((c) => c && c.w).slice(0, v.n) : [];
   const warming = data && data.ready < data.total;
   const cols = colsFor(coins.length);
 
