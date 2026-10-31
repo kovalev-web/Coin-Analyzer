@@ -41,8 +41,8 @@ function CoinList({ coins, current, onPick }) {
   const [, redraw] = React.useReducer((x) => x + 1, 0);
   const pick = (patch) => { Object.assign(state, patch); redraw(); };
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center gap-2 border-b p-2">
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card max-md:overflow-visible">
+      <div className="flex flex-wrap items-center gap-2 border-b p-2">
         <ToggleGroup type="single" variant="segmented" size="sm" value={state.volTier || 'high'} onValueChange={(v) => v && pick({ volTier: v })}>
           {TIERS.map(([v, label, tip]) => <Tip key={v} text={tip}><ToggleGroupItem value={v} className="gap-0.5 px-2.5"><ChevronRight className="size-3.5" />{label}</ToggleGroupItem></Tip>)}
         </ToggleGroup>
@@ -54,7 +54,7 @@ function CoinList({ coins, current, onPick }) {
       <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 pt-2 pb-1 text-xs text-muted-foreground">
         <span>{coins.length} coins</span><span className="text-right">24h</span><span className="w-14 text-right">Vol</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-1 max-md:flex-none max-md:overflow-visible">
         {coins.map((c) => (
           <button key={c.symbol} type="button" onClick={() => onPick(c.symbol)}
             className={cn('grid w-full cursor-pointer grid-cols-[1fr_auto_auto] items-center gap-x-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted',
@@ -87,23 +87,24 @@ function openNotes(sym, ev) {
   openSurface('notes', { sym, addToBriefing: true, rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
 }
 
-function ChartPanel({ coin }) {
+function ChartPanel({ coin, panelRef }) {
   const [, redraw] = React.useReducer((x) => x + 1, 0);
-  if (!coin) return <section className="rounded-xl border bg-card" />;
+  if (!coin) return <section ref={panelRef} className="rounded-xl border bg-card max-md:order-first max-md:h-[60svh]" />;
   const sym = coin.symbol;
   const tf = state.chartTF[sym] || state.globalTF || '5m';
   const setTf = (v) => { setChartTF(sym, v); redraw(); };
   const starred = isInBriefing(sym);
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center gap-3 border-b py-2 pr-2 pl-4">
+    <section ref={panelRef} className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card max-md:order-first max-md:h-[60svh] max-md:scroll-mt-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b py-2 pr-2 pl-4 max-md:pl-3">
         <span className="text-base font-bold tracking-wide">{sym.toUpperCase()}</span>
         <span className="text-sm tabular-nums">{fmtPrice(coin.current_price)}</span>
         <Pct v={changeOf(coin)} className="text-sm" />
-        <span className="text-xs text-muted-foreground tabular-nums">{fmt(coin.total_volume)}</span>
-        <ToggleGroup type="single" variant="segmented" size="sm" className="ml-auto" value={tf} onValueChange={(v) => v && setTf(v)}>
-          {TFS.map((t) => <ToggleGroupItem key={t} value={t} className="px-2.5">{t}</ToggleGroupItem>)}
+        <span className="text-xs text-muted-foreground tabular-nums max-md:hidden">{fmt(coin.total_volume)}</span>
+        <ToggleGroup type="single" variant="segmented" size="sm" className="ml-auto max-md:order-last max-md:ml-0 max-md:w-full" value={tf} onValueChange={(v) => v && setTf(v)}>
+          {TFS.map((t) => <ToggleGroupItem key={t} value={t} className="px-2.5 max-md:flex-1">{t}</ToggleGroupItem>)}
         </ToggleGroup>
+        <div className="flex items-center max-md:ml-auto">
         <Tip text={starred ? 'Remove from watchlist' : 'Add to watchlist'}>
           <Button variant="ghost" size="icon-sm" data-action="toggle-briefing" data-sym={sym} aria-label={starred ? 'Remove from watchlist' : 'Add to watchlist'}
             className={starred ? 'text-level [&_svg]:fill-current' : 'text-muted-foreground'}><Star /></Button>
@@ -114,6 +115,7 @@ function ChartPanel({ coin }) {
         <Tip text="Chart and order book">
           <Button variant="ghost" size="icon-sm" data-action="expand" data-sym={sym} aria-label="Full screen"><Maximize /></Button>
         </Tip>
+        </div>
       </div>
       <CardChart key={sym} sym={sym} />
     </section>
@@ -127,14 +129,20 @@ export function Home2() {
   const coins = filteredCoins();
   const [picked, setPicked] = React.useState(null);
   const current = coins.find((c) => c.symbol === picked) || coins[0] || null;
+  const chartRef = React.useRef(null);
+  // On the phone the chart is above the list: picking a coin brings it into view
+  const pick = (sym) => {
+    setPicked(sym);
+    if (window.matchMedia('(max-width: 767px)').matches && chartRef.current) chartRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
-    <div className="jr flex h-dvh flex-col text-foreground">
+    <div className="jr flex h-dvh flex-col text-foreground max-md:h-auto max-md:min-h-dvh">
       <Topbar tabs={false} />
       <DaySummary />
-      <main className="grid min-h-0 flex-1 grid-cols-[18rem_minmax(0,1fr)_20rem] gap-2 px-8 pt-2.5 pb-5 max-lg:grid-cols-[16rem_minmax(0,1fr)] max-md:grid-cols-1 max-md:px-3">
-        <CoinList coins={coins} current={current && current.symbol} onPick={setPicked} />
-        <ChartPanel coin={current} />
+      <main className="grid min-h-0 flex-1 grid-cols-[18rem_minmax(0,1fr)_20rem] gap-2 px-8 pt-2.5 pb-5 max-lg:grid-cols-[16rem_minmax(0,1fr)] max-md:flex max-md:flex-col max-md:px-3 max-md:pb-3">
+        <CoinList coins={coins} current={current && current.symbol} onPick={pick} />
+        <ChartPanel coin={current} panelRef={chartRef} />
         <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card max-lg:hidden">
           <WatchlistPanel />
         </section>
