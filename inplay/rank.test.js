@@ -14,6 +14,17 @@ test('rankCoins: by the chosen sort, strongest first, illiquid and empty windows
   assert.deepEqual(R.rankCoins(ROWS, '1h', 'move'), []);
 });
 
+test('rankCoins: growth and the day\'s extreme ignore the window; closest to the extreme first', () => {
+  const rows = [
+    { s: 'A', ok: true, w: {}, gv: 3, gt: 1, ext: { pct: 2, side: 'high' } },
+    { s: 'B', ok: true, w: {}, gv: 1, gt: 2, ext: { pct: 0.1, side: 'low' } },
+    { s: 'C', ok: true, w: {}, gv: null, gt: null, ext: null },
+  ];
+  assert.deepEqual(R.rankCoins(rows, '5m', 'gvol'), ['A', 'B']);
+  assert.deepEqual(R.rankCoins(rows, '1h', 'gtrades'), ['B', 'A']);
+  assert.deepEqual(R.rankCoins(rows, '3h', 'ext'), ['B', 'A']);
+});
+
 test('parseView: known window and sort, cells 1…12, pins look like symbols and fit the cells', () => {
   assert.deepEqual(R.parseView({ win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT', 'bad', 3] }), { win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT'] });
   assert.equal(R.parseView({ win: '2m', sort: 'vol', n: 6 }), null);

@@ -1,5 +1,6 @@
 // "In play" screener (/grid): what moves right now. The viewer picks the
-// period (5m…3h), the sort (move, volume or trades against the coin's norm),
+// period (5m…3h), the sort (move, volume or trades against the coin's norm,
+// volume / trades growth 15m against 3h, closest to the day's high / low),
 // the candles and the number of cells; the server sends the coins for that
 // choice (inplay/rank.js), the cells fill in order with no gaps. Pinned coins
 // (pin in a cell or the search) take the first cells. Charts are vanilla
@@ -27,7 +28,11 @@ const SORTS = [
   { value: 'move', label: 'Move', tip: 'High − low of the period, % — how much the coin is moving' },
   { value: 'vol', label: 'Volume', tip: 'USDT volume per minute over the period against the coin\'s usual minute (24 h)' },
   { value: 'trades', label: 'Trades', tip: 'Trades per minute over the period against the coin\'s usual minute (24 h)' },
+  { value: 'gvol', label: 'Vol ↑', tip: 'Volume growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
+  { value: 'gtrades', label: 'Trades ↑', tip: 'Trades growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
+  { value: 'ext', label: 'Day H/L', tip: 'Closest to the day\'s high or low (last 24 h). Doesn\'t depend on the period' },
 ];
+const TIP = Object.fromEntries(SORTS.map((s) => [s.value, s.tip]));
 const TFS = ['1m', '5m', '15m'];
 const CELLS = [4, 6, 9];
 
@@ -108,21 +113,45 @@ function Stat({ tip, strong, className, children }) {
   );
 }
 
+// The one number the grid is sorted by (Move — the bold range among the four)
+function SortStat({ coin, w, sort }) {
+  if (sort === 'gvol') return <Stat tip={TIP.gvol} strong>vol ↑{x(coin.gv)}</Stat>;
+  if (sort === 'gtrades') return <Stat tip={TIP.gtrades} strong>trades ↑{x(coin.gt)}</Stat>;
+  if (sort === 'ext') {
+    return coin.ext
+      ? <Stat tip={TIP.ext} strong className={coin.ext.side === 'high' ? 'text-bullish' : 'text-danger'}>{pct(coin.ext.pct)} to {coin.ext.side}</Stat>
+      : <Stat tip={TIP.ext}>—</Stat>;
+  }
+  if (sort === 'trades') return <Stat tip={TIP.trades} strong>trades {x(w && w.trades)}</Stat>;
+  return <Stat tip={TIP.vol} strong={sort === 'vol'}>vol {x(w && w.vol)}</Stat>;
+}
+
+// Range of every period in a row, like ScalpStation: 5m · 15m · 1h · 3h, the chosen one bold
+function Ranges({ coin, win }) {
+  return (
+    <Stat tip={'High − low, %: ' + WINDOWS.join(' · ')}>
+      {WINDOWS.map((k, i) => (
+        <React.Fragment key={k}>
+          {i > 0 && ' · '}
+          <span className={k === win ? 'font-semibold text-foreground' : undefined}>
+            {coin.w[k] && coin.w[k].range != null ? coin.w[k].range.toFixed(2) : '—'}
+          </span>
+        </React.Fragment>
+      ))}
+    </Stat>
+  );
+}
+
 function Cell({ coin, win, sort, tf, onPin }) {
   const w = coin.w[win];
   return (
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
       <div className="flex h-9 shrink-0 items-center gap-2.5 overflow-hidden border-b pr-1 pl-3">
         <span className="text-sm font-semibold tracking-wide">{base(coin.s)}</span>
-        {w ? (
-          <>
-            <Stat tip={'Price change over ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>
-            <Stat tip={SORTS[0].tip} strong={sort === 'move'}>{pct(w.range)}</Stat>
-            <Stat tip={SORTS[1].tip} strong={sort === 'vol'}>vol {x(w.vol)}</Stat>
-            <Stat tip={SORTS[2].tip} strong={sort === 'trades'} className="max-lg:hidden">trades {x(w.trades)}</Stat>
-            <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>
-          </>
-        ) : <span className="text-xs text-muted-foreground">no data for {win} yet</span>}
+        {w && <Stat tip={'Price change over ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>}
+        <Ranges coin={coin} win={win} />
+        <SortStat coin={coin} w={w} sort={sort} />
+        {w && <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-xs" className={cn('ml-auto', coin.pinned ? 'text-foreground' : 'text-muted-foreground')}

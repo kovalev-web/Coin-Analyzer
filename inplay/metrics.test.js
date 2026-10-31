@@ -38,8 +38,24 @@ test('vsNorm: per minute against the norm per minute, null without a norm', () =
   assert.equal(M.vsNorm(300, 3, 0), null);
 });
 
-test('dayNorm: 24 h ticker → per minute', () => {
-  assert.deepEqual(M.dayNorm({ quoteVolume: '14400000', count: '144000' }), { dayUsd: 14400000, usdPerMin: 10000, tradesPerMin: 100 });
+test('dayNorm: 24 h ticker → per minute and the day\'s high / low', () => {
+  assert.deepEqual(M.dayNorm({ quoteVolume: '14400000', count: '144000', highPrice: '110', lowPrice: '90' }),
+    { dayUsd: 14400000, usdPerMin: 10000, tradesPerMin: 100, high: 110, low: 90 });
+});
+
+test('growth: per minute of the short window against per minute of the long one', () => {
+  assert.equal(M.growth({ usd: 300, mins: 15 }, { usd: 1800, mins: 180 }, 'usd'), 2);
+  assert.equal(M.growth({ n: 30, mins: 15 }, { n: 0, mins: 180 }, 'n'), null);
+  assert.equal(M.growth(null, { usd: 1, mins: 1 }, 'usd'), null);
+});
+
+test('dayExtreme: distance to the nearer of the day\'s high / low, fresh bars extend them', () => {
+  const norm = { high: 110, low: 90 };
+  assert.deepEqual(M.dayExtreme([{ h: 100, l: 99, c: 108 }], norm), { pct: 2 / 108 * 100, side: 'high' });
+  assert.deepEqual(M.dayExtreme([{ h: 96, l: 95, c: 95 }], norm), { pct: 5 / 95 * 100, side: 'low' });
+  assert.deepEqual(M.dayExtreme([{ h: 112, l: 108, c: 112 }], norm), { pct: 0, side: 'high' }); // a new high
+  assert.equal(M.dayExtreme([], norm), null);
+  assert.equal(M.dayExtreme([{ h: 1, l: 1, c: 1 }], null), null);
 });
 
 test('windowStats: a burst over the last 5 minutes against the day norm', () => {
@@ -53,6 +69,8 @@ test('windowStats: a burst over the last 5 minutes against the day norm', () => 
   assert.ok(close(w.chg, 2));
   assert.ok(close(w.range, 2.4));  // 99.8 → 102.2 from an open of 100
   assert.equal(w.usd, 800000);
+  assert.equal(w.n, 1000);
+  assert.equal(w.mins, 5);
   assert.equal(w.vol, 8);
   assert.equal(w.trades, 5);
   const w15 = M.windowStats(bars, 15, T0 + 15 * MIN, norm);
@@ -62,9 +80,12 @@ test('windowStats: a burst over the last 5 minutes against the day norm', () => 
 
 test('coinWindows: every window; ok only with a norm at the 24 h liquidity gate', () => {
   const bars = history(M.CFG.keepBars);
-  const norm = M.dayNorm({ quoteVolume: String(20000 * 1440), count: String(40 * 1440) });
+  const norm = M.dayNorm({ quoteVolume: String(20000 * 1440), count: String(40 * 1440), highPrice: '101', lowPrice: '99' });
   const c = M.coinWindows(bars, T0 + bars.length * MIN, norm);
   assert.deepEqual(Object.keys(c.w), ['5m', '15m', '1h', '3h']);
+  assert.equal(c.gv, 1);   // a flat coin: the last 15 min like the last 3 h
+  assert.equal(c.gt, 1);
+  assert.equal(c.ext.side, 'high');
   assert.equal(c.w['3h'].vol, 1);
   assert.equal(c.w['1h'].chg, 0);
   assert.equal(c.ok, true); // $28.8M a day

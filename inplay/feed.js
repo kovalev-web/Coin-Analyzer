@@ -1,9 +1,11 @@
 'use strict';
 // "In play" feed for /grid (server-vps.js): 1-minute bars of every Binance
-// USDT-M perpetual — 3 h of history over REST, then the kline_1m streams —
-// the 24 h norm of each coin (ticker/24hr, every minute), and every TICK_MS
-// the windows 5m…3h of every coin (inplay/metrics.js). Runs all the time, so
-// the page has data the moment it opens.
+// USDT-M perpetual from the kline_1m streams, the 24 h norm of each coin
+// (ticker/24hr, every minute), and every TICK_MS the windows 5m…3h of every
+// coin (inplay/metrics.js). Runs all the time, so the page has data the
+// moment it opens. 3 h of history over REST only for the liquid coins (the
+// only ones on the grid), most traded first — warm-up takes seconds; the rest
+// collect their minutes from the stream and get history once they turn liquid.
 
 const WebSocket = require('ws');
 const { CFG, coinWindows, dayNorm } = require('./metrics');
@@ -14,7 +16,9 @@ const TICK_MS = 3000;
 const KEEP_BARS = CFG.keepBars;
 const NORM_MS = 60000;                // 24 h tickers (weight 40)
 const STREAMS_PER_SOCKET = 800;       // Binance: ≤ 1024 streams per connection
-const REST_GAP_MS = 80;               // ~12 history requests a second (weight 2 each)
+const REST_WORKERS = 2;               // history requests at once
+const REST_GAP_MS = 150;              // pause per worker: ~10 requests a second (weight 2 each)
+const HISTORY_FROM = CFG.minDayUsd / 2; // a coin gets REST history from half the liquidity gate
 const UNIVERSE_TTL_MS = 30 * 60000;   // new listings join within half an hour
 
 function toBar(k) {
@@ -26,7 +30,7 @@ function createInplayFeed(opts) {
   const log = opts.log || function () {};
   const F = {
     running: false, syms: [], bars: new Map(), live: new Map(), norms: new Map(), rows: [],
-    socks: [], queue: [], queued: new Set(), pumping: false, timers: [],
+    socks: [], queue: [], queued: new Set(), filled: new Set(), workers: 0, timers: [],
   };
 
   async function loadUniverse() {
@@ -36,30 +40,40 @@ function createInplayFeed(opts) {
       .map((s) => s.symbol);
   }
 
-  // History over REST, one coin at a time (start, a new listing, a gap after a reconnect)
+  function liquid(sym) {
+    const n = F.norms.get(sym);
+    return !!n && n.dayUsd >= HISTORY_FROM;
+  }
+
+  // History over REST for a liquid coin (start, turning liquid, a gap after a reconnect)
   function refill(sym) {
     if (F.queued.has(sym)) return;
     F.queued.add(sym);
     F.queue.push(sym);
-    pump();
+    if (F.workers < REST_WORKERS) { F.workers++; pump(); } // one more worker per queued coin, up to the limit
   }
   async function pump() {
-    if (F.pumping) return;
-    F.pumping = true;
     while (F.running && F.queue.length) {
       const sym = F.queue.shift();
       F.queued.delete(sym);
       try {
         const rows = await fetchJson(REST + '/fapi/v1/klines?symbol=' + sym + '&interval=1m&limit=' + KEEP_BARS);
         const now = Date.now();
-        const closed = rows.filter((k) => +k[6] < now).map(toBar);
-        F.bars.set(sym, closed);
+        F.bars.set(sym, rows.filter((k) => +k[6] < now).map(toBar));
+        F.filled.add(sym);
       } catch (e) {
         log('[Inplay] history ' + sym + ': ' + e.message);
       }
       await new Promise((r) => setTimeout(r, REST_GAP_MS));
     }
-    F.pumping = false;
+    F.workers--;
+  }
+
+  // Liquid coins without history, most traded first
+  function fillLiquid() {
+    F.syms.filter((s) => !F.filled.has(s) && liquid(s))
+      .sort((a, b) => F.norms.get(b).dayUsd - F.norms.get(a).dayUsd)
+      .forEach(refill);
   }
 
   function onKline(k) {
@@ -68,10 +82,15 @@ function createInplayFeed(opts) {
     if (!bar.closed) { F.live.set(sym, bar); return; }
     F.live.delete(sym);
     const bars = F.bars.get(sym);
-    if (!bars) return; // history not loaded yet — it will bring this minute too
+    if (!bars) { F.bars.set(sym, [bar]); return; } // collects from the stream until history comes
     const last = bars[bars.length - 1];
     if (last && bar.t <= last.t) return;
-    if (last && bar.t > last.t + 60000) { refill(sym); return; } // missed minutes
+    if (last && bar.t > last.t + 60000) { // missed minutes
+      F.bars.set(sym, [bar]);
+      F.filled.delete(sym);
+      if (liquid(sym)) refill(sym);
+      return;
+    }
     bars.push(bar);
     if (bars.length > KEEP_BARS) bars.splice(0, bars.length - KEEP_BARS);
   }
@@ -117,9 +136,9 @@ function createInplayFeed(opts) {
       const changed = syms.length !== F.syms.length || syms.some((s) => !known.has(s));
       F.syms = syms;
       const keep = new Set(syms);
-      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); }
-      syms.forEach((s) => { if (!F.bars.has(s)) refill(s); });
+      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); F.filled.delete(s); }
       if (changed) subscribeAll();
+      fillLiquid();
     } catch (e) {
       log('[Inplay] universe: ' + e.message);
     }
@@ -129,6 +148,7 @@ function createInplayFeed(opts) {
     try {
       const rows = await fetchJson(REST + '/fapi/v1/ticker/24hr');
       rows.forEach((t) => F.norms.set(t.symbol, dayNorm(t)));
+      if (F.syms.length) fillLiquid();
     } catch (e) {
       log('[Inplay] norms: ' + e.message);
     }
@@ -143,10 +163,12 @@ function createInplayFeed(opts) {
       const live = F.live.get(sym);
       const all = live && (!bars.length || live.t > bars[bars.length - 1].t) ? bars.concat([live]) : bars;
       const c = coinWindows(all, now, F.norms.get(sym));
-      rows.push({ s: sym, ok: c.ok, w: c.w });
+      rows.push({ s: sym, ok: c.ok, w: c.w, gv: c.gv, gt: c.gt, ext: c.ext });
     }
     F.rows = rows;
-    opts.onUpdate({ t: now, ready: rows.length, total: F.syms.length });
+    // "Ready" = liquid coins with history; the page shows a counter until they all have it
+    const want = F.syms.filter(liquid);
+    opts.onUpdate({ t: now, ready: want.filter((s) => F.filled.has(s)).length, total: want.length });
   }
 
   return {
@@ -154,7 +176,8 @@ function createInplayFeed(opts) {
       if (F.running) return;
       F.running = true;
       log('[Inplay] start');
-      await Promise.all([refreshNorms(), refreshUniverse()]);
+      await refreshNorms();
+      await refreshUniverse();
       F.timers.push(setInterval(tick, TICK_MS), setInterval(refreshNorms, NORM_MS), setInterval(refreshUniverse, UNIVERSE_TTL_MS));
     },
     stop: function () {
@@ -166,10 +189,10 @@ function createInplayFeed(opts) {
       F.socks.forEach((s) => s.close());
       F.socks = [];
       F.syms = []; F.bars.clear(); F.live.clear(); F.norms.clear(); F.rows = [];
-      F.queue = []; F.queued.clear();
+      F.queue = []; F.queued.clear(); F.filled.clear();
     },
     get running() { return F.running; },
-    get rows() { return F.rows; },   // [{ s, ok, w: { '5m': {chg, range, usd, vol, trades} | null, … } }]
+    get rows() { return F.rows; },   // [{ s, ok, w: { '5m': {chg, range, usd, vol, trades, …} | null, … }, gv, gt, ext }]
     get syms() { return F.syms; },
   };
 }
