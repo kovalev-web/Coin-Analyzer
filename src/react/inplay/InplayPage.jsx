@@ -27,12 +27,12 @@ const DEFAULT_VIEW = { win: '5m', sort: 'move', tf: '1m', n: 6 };
 
 const WINDOWS = ['5m', '15m', '1h', '3h'];
 const SORTS = [
-  { value: 'move', label: 'Move', tip: 'High − low of the period, % — how much the coin is moving' },
-  { value: 'vol', label: 'Volume', tip: 'USDT volume per minute over the period against the coin\'s average minute over the last 24 h. 14× = trading 14 times more than usual' },
-  { value: 'trades', label: 'Trades', tip: 'Trades per minute over the period against the coin\'s average minute over the last 24 h' },
-  { value: 'gvol', label: 'Vol ↑', tip: 'Volume growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
-  { value: 'gtrades', label: 'Trades ↑', tip: 'Trades growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
-  { value: 'ext', label: 'Day H/L', tip: 'Closest to the day\'s high or low (last 24 h). Doesn\'t depend on the period' },
+  { value: 'move', label: 'Move', tip: 'Размах за период: хай − лой, % — насколько монету носит' },
+  { value: 'vol', label: 'Volume', tip: 'Объём в USDT за минуту периода против обычной минуты монеты за 24 ч. 14× — торгуют в 14 раз больше обычного' },
+  { value: 'trades', label: 'Trades', tip: 'Сделок за минуту периода против обычной минуты монеты за 24 ч' },
+  { value: 'gvol', label: 'Vol ↑', tip: 'Рост объёма: за минуту последних 15 мин против последних 3 ч. От периода не зависит' },
+  { value: 'gtrades', label: 'Trades ↑', tip: 'Рост числа сделок: за минуту последних 15 мин против последних 3 ч. От периода не зависит' },
+  { value: 'ext', label: 'Day H/L', tip: 'Ближе всех к хаю или лою дня (последние 24 ч). От периода не зависит' },
 ];
 const TIP = Object.fromEntries(SORTS.map((s) => [s.value, s.tip]));
 const TFS = ['1m', '5m', '15m'];
@@ -137,7 +137,7 @@ function Range({ coin, win, sort }) {
         <span className={cn('cursor-default text-xs whitespace-nowrap tabular-nums', sort === 'move' ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{r(win)}</span>
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
-        <div className="mb-1">High − low of the period, % of its open</div>
+        <div className="mb-1">Размах: хай − лой за период, % от открытия</div>
         <div className="grid grid-cols-[auto_auto] gap-x-3 tabular-nums">
           {WINDOWS.map((k) => (
             <React.Fragment key={k}>
@@ -157,11 +157,11 @@ function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
       <div className="flex h-9 shrink-0 items-center gap-2.5 overflow-hidden border-b pr-1 pl-3">
         <span className="text-sm font-semibold tracking-wide">{base(coin.s)}</span>
-        {w && <Stat tip={'Price change over ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>}
+        {w && <Stat tip={'Изменение цены за ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>}
         <Range coin={coin} win={win} sort={sort} />
-        {coin.natr != null && <Stat tip="NATR 5m/14: average true range of the last 14 five-minute candles, % of the price — how big the candles are">natr {pct(coin.natr)}</Stat>}
+        {coin.natr != null && <Stat tip="NATR 5m/14: средний истинный диапазон 14 последних пятиминутных свечей, % цены — насколько крупные свечи">natr {pct(coin.natr)}</Stat>}
         <SortStat coin={coin} w={w} sort={sort} />
-        {w && <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
+        {w && <Stat tip={'Объём в USDT за ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-xs" className={cn('ml-auto', starred ? 'text-level [&_svg]:fill-current' : 'text-muted-foreground')}
@@ -169,7 +169,7 @@ function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
               <Star />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{starred ? 'Remove from watchlist' : 'Add to watchlist'}</TooltipContent>
+          <TooltipContent>{starred ? 'Убрать из вотчлиста' : 'В вотчлист на сегодня'}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -178,7 +178,7 @@ function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
               {coin.pinned ? <PinOff /> : <Pin />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{coin.pinned ? 'Unpin' : 'Pin: keep this coin in the first cells'}</TooltipContent>
+          <TooltipContent>{coin.pinned ? 'Открепить' : 'Закрепить: монета всегда в первых ячейках'}</TooltipContent>
         </Tooltip>
       </div>
       <CoinChart sym={coin.s} tf={tf} delay={delay} />

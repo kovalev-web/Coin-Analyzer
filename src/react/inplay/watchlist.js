@@ -47,7 +47,7 @@ export function useWatchlist() {
 export function toggleWatch(sym) {
   const base = sym.replace(/USDT$/, '');
   const on = !W.snap.starred.has(base);
-  if (!on && W.snap.notes[base] && !confirm('Remove ' + base + ' from watchlist? It has a note.')) return;
+  if (!on && W.snap.notes[base] && !confirm('Убрать ' + base + ' из вотчлиста? У монеты есть заметка.')) return;
   // Show it at once, the server's answer settles it
   const starred = new Set(W.snap.starred);
   if (on) starred.add(base); else starred.delete(base);
