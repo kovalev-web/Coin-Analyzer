@@ -1547,6 +1547,11 @@ function initCharts() {
   document.querySelectorAll('.coin-card').forEach(function (card) {
     _cardObserver.observe(card);
   });
+  // Charts outside the grid (mountCoinChart, the main page) come back too after
+  // the full view paused them
+  document.querySelectorAll('[data-coin-chart]').forEach(function (el) {
+    _initChartForSym(el.dataset.coinChart);
+  });
 }
 
 // Diagnostic snapshot for "charts stop rendering after hours" bug.

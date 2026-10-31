@@ -79,7 +79,7 @@ function CardChart({ sym }) {
     mountCoinChart(sym);
     return () => unmountCoinChart(sym);
   }, [sym]);
-  return <div id={'chart-' + sym} className="relative min-h-0 flex-1" />;
+  return <div id={'chart-' + sym} data-coin-chart={sym} className="relative min-h-0 flex-1" />;
 }
 
 function openNotes(sym, ev) {
