@@ -4,6 +4,12 @@ const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 
+// Outbound connections over IPv4 only. The VPS has no working IPv6, and Node 22
+// gives the IPv4 attempt just 250 ms before trying IPv6 — Telegram is ~250 ms
+// away from Tokyo, so messages (alerts!) failed with ETIMEDOUT now and then.
+require('net').setDefaultAutoSelectFamily(false);
+require('dns').setDefaultResultOrder('ipv4first');
+
 // Load .env from project root if it exists (never committed to git)
 try {
   fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n').forEach(function (line) {
