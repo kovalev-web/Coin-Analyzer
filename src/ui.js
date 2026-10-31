@@ -1232,6 +1232,16 @@ function clearRuler(sym) {
 
 // Attach mouse/resize event listeners to a chart container once.
 // Uses dynamic _fullSeries[sym] / _charts[sym] lookups so listeners survive chart recreate.
+// Index of the level within tol px of y (the nearest), or -1
+function _levelAtY(levels, series, y, tol) {
+  var best = -1, bestD = tol;
+  (levels || []).forEach(function (l, i) {
+    var ly = series.priceToCoordinate(l.price);
+    if (ly != null && Math.abs(ly - y) <= bestD) { best = i; bestD = Math.abs(ly - y); }
+  });
+  return best;
+}
+
 function _attachChartEvents(sym, container) {
   if (container.dataset.eventsAttached) return;
   container.dataset.eventsAttached = '1';
@@ -1287,7 +1297,16 @@ function _attachChartEvents(sym, container) {
     var rect = container.getBoundingClientRect();
     var priceAxisW = 0;
     try { if (ch) priceAxisW = ch.priceScale('right').width(); } catch (_) {}
-    if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+    // The price axis is the chart's own (drag = vertical zoom), except a level's
+    // price label: grabbing it drags the level, as in TradingView
+    if (e.clientX - rect.left > rect.width - priceAxisW - 2) {
+      var axLvl = e.button === 0 && !e.ctrlKey && !e.altKey && !e.shiftKey && cs ? _levelAtY(_levels[sym], cs, e.clientY - rect.top, 9) : -1;
+      if (axLvl < 0) return;
+      e.stopPropagation(); e.preventDefault();
+      _dragging = { sym: sym, idx: axLvl, lvl: _levels[sym][axLvl] };
+      container.style.cursor = 'ns-resize';
+      return;
+    }
 
     if (e.button === 0) {
       if (!cs) return;
@@ -2699,7 +2718,15 @@ export function openCoinFullView(sym) {
     // Ignore clicks on the price axis (right side) — let chart handle vertical zoom natively
     var priceAxisW = 0;
     try { priceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
-    if (e.clientX - rect.left > rect.width - priceAxisW - 2) return;
+    // …except a level's price label: grabbing it drags the level
+    if (e.clientX - rect.left > rect.width - priceAxisW - 2) {
+      var fvAxLvl = e.button === 0 && !_fvReplay && !e.ctrlKey && !e.altKey && !e.shiftKey ? _levelAtY(_levels[sym], _fvSeries, e.clientY - rect.top, 9) : -1;
+      if (fvAxLvl < 0) return;
+      e.stopPropagation(); e.preventDefault();
+      _fvDragging = { idx: fvAxLvl, lvl: _levels[sym][fvAxLvl] };
+      el.style.cursor = 'ns-resize';
+      return;
+    }
 
     // A P mark: its card
     if (e.button === 0 && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
