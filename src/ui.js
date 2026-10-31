@@ -2159,9 +2159,13 @@ export function renderBriefingPanel() { emit('briefing:render'); }
 // placeholders here, mounted by _mountFvChrome
 function _fvBottomBarHTML() { return '<div class="fv-bottom-bar" data-fv-bar></div>'; }
 
-// Desktop: the island is a tab stuck to the chart's top edge, the stats line right under it
+// Desktop: the island is a bar across the top, above the chart (outside the
+// chart wrap, so the chart's overlay canvases keep the chart's coordinates);
+// the stats line sits in the chart's corner under it
+function _fvTopBarHTML() { return '<div class="fv-coin-info" data-fv-island></div>'; }
+
 function _fvCoinInfoHTML() {
-  return '<div class="fv-top"><div class="fv-coin-info" data-fv-island></div><div class="fv-info-stats" data-fv-stats></div></div>';
+  return '<div class="fv-info-stats" data-fv-stats></div>';
 }
 
 function _mountFvChrome(overlay, sym) {
@@ -2569,6 +2573,7 @@ export function openCoinFullView(sym) {
     _pauseCardCharts();
     // First open — build full structure including drawer
     overlay.innerHTML = '<div class="fv-body">'
+      + _fvTopBarHTML()
       + '<div class="fv-chart-wrap">'
       + _fvCoinInfoHTML()
       + '<div id="fv-chart"></div>'

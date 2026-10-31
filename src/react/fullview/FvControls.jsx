@@ -71,7 +71,7 @@ export function FvControls({ sym, review, bar }) {
   const drawings = drawingsCount(sym);
 
   return (
-    <div className={'jr flex items-center gap-1 ' + (bar ? 'w-full justify-between' : '')}>
+    <div className="jr flex w-full items-center justify-between gap-1">
       <div className="flex items-center gap-1.5">
         <Act label="Back" data-action="close-fv"><ArrowLeft /></Act>
         <Tooltip>
@@ -85,7 +85,7 @@ export function FvControls({ sym, review, bar }) {
       {review
         ? <span className="ml-3 text-2xs text-muted-foreground">Разбор сделки · ПКМ — уровень только здесь</span>
         : (
-          <div className={'flex items-center gap-0.5 ' + (bar ? '' : 'ml-3')}>
+          <div className="flex items-center gap-0.5">
             {!bar && term.visible && (
               <Act label="Order book" data-action="toggle-terminal" className={term.active ? 'bg-accent text-foreground' : ''}><ListOrdered /></Act>
             )}
