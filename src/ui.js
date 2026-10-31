@@ -989,7 +989,8 @@ function updateChart(symbol) {
     var vu = getCSSVar('--vol-up'), vd = getCSSVar('--vol-dn'); return { time: c.time, value: c.volume || 0, color: c.close >= c.open ? vu : vd };
   }));
   var total = cd.candles.length;
-  var visibleCandles = 80;
+  // The main page's one big chart shows twice the context of a grid card
+  var visibleCandles = _mainCharts[symbol] ? 160 : 80;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - visibleCandles), to: total + 4 });
   _syncAlerts(symbol);
   // Дать time scale один кадр на пересчёт координат под новый видимый диапазон,
