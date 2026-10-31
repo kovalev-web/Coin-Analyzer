@@ -15,6 +15,7 @@ const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
 const { createInplayFeed } = require('./inplay/feed');
+const inplayRank = require('./inplay/rank');
 const originMetrics = require('./origin/metrics');
 const originVenues = require('./origin/venues');
 const { createCollector: createAlgoCollector } = require('./algos/collector');
@@ -690,39 +691,49 @@ async function algoWatchLoop() {
 }
 setInterval(function () { algoWatchLoop().catch(function (e) { console.log('[Algos] loop: ' + e.message); }); }, 30000);
 
-// ── In play (/grid): активность монет против их нормы, inplay/feed.js ─────
-// Работает, только пока /grid открыт хоть у кого-то (+15 мин после ухода последнего)
+// ── In play (/grid): что ходит за 5m / 15m / 1h / 3h, inplay/feed.js ──────
+// Фид работает всегда (страница открывается сразу с данными). Каждому
+// подписчику — свои монеты: окно, сортировка, число ячеек и закреплённые
+// (inplay/rank.js), порядок держится 15 с.
 
-var inplayLast = null;
-var inplayStopTimer = null;
+var inplayMeta = null;
 var inplayFeed = createInplayFeed({
   fetchJson: fetchBinance,
   log: function (m) { console.log(m); },
-  onUpdate: function (p) {
-    inplayLast = JSON.stringify(Object.assign({ type: 'inplay' }, p));
-    clients.forEach(function (c) { if (c._inplay && c.readyState === WebSocket.OPEN) c.send(inplayLast); });
+  onUpdate: function (meta) {
+    inplayMeta = meta;
+    clients.forEach(function (c) { if (c._inplay && c.readyState === WebSocket.OPEN) inplaySend(c); });
   },
 });
+inplayFeed.start();
 
-function inplayWatchers() {
-  var n = 0;
-  clients.forEach(function (c) { if (c._inplay) n++; });
-  return n;
+function inplayRound(v) { return v == null ? null : Math.round(v * 100) / 100; }
+
+function inplaySend(ws) {
+  if (!inplayMeta) return;
+  var rows = inplayFeed.rows;
+  ws._inplay = inplayRank.nextShown(ws._inplay, rows, Date.now());
+  var bySym = {};
+  rows.forEach(function (r) { bySym[r.s] = r; });
+  var coins = ws._inplay.shown.map(function (s) {
+    var r = bySym[s], w = {};
+    if (r) Object.keys(r.w).forEach(function (k) {
+      var x = r.w[k];
+      w[k] = x && { chg: inplayRound(x.chg), range: inplayRound(x.range), usd: Math.round(x.usd), vol: inplayRound(x.vol), trades: inplayRound(x.trades) };
+    });
+    return { s: s, pinned: ws._inplay.pins.indexOf(s) >= 0, w: w };
+  });
+  var msg = { type: 'inplay', t: inplayMeta.t, ready: inplayMeta.ready, total: inplayMeta.total, coins: coins };
+  // Список монет для поиска — при подписке и когда он изменился
+  if (ws._inplaySyms !== inplayFeed.syms.length) { msg.syms = inplayFeed.syms; ws._inplaySyms = inplayFeed.syms.length; }
+  ws.send(JSON.stringify(msg));
 }
 
-function inplaySubscribe(ws, on) {
-  ws._inplay = !!on;
-  if (on) {
-    clearTimeout(inplayStopTimer);
-    inplayStopTimer = null;
-    inplayFeed.start();
-    if (inplayLast) ws.send(inplayLast);
-  } else if (!inplayWatchers() && inplayFeed.running && !inplayStopTimer) {
-    inplayStopTimer = setTimeout(function () {
-      inplayStopTimer = null;
-      if (!inplayWatchers()) { inplayFeed.stop(); inplayLast = null; }
-    }, 15 * 60000);
-  }
+function inplaySubscribe(ws, msg) {
+  var view = msg.type === 'subscribe_inplay' ? inplayRank.parseView(msg) : null;
+  if (!view) { ws._inplay = null; return; }
+  ws._inplay = Object.assign({ shown: [], at: 0 }, ws._inplay && { shown: ws._inplay.shown, at: ws._inplay.at, key: ws._inplay.key }, view);
+  inplaySend(ws);
 }
 
 // ── Binance WS: индивидуальные @ticker подписки (работают на VPS) ────────
@@ -3047,7 +3058,7 @@ wss.on('connection', function (ws, upgradeReq) {
       }
 
       else if (msg.type === 'subscribe_inplay' || msg.type === 'unsubscribe_inplay') {
-        inplaySubscribe(ws, msg.type === 'subscribe_inplay');
+        inplaySubscribe(ws, msg);
       }
 
       else if (msg.type === 'get_ticker') {
@@ -3161,7 +3172,7 @@ wss.on('connection', function (ws, upgradeReq) {
     }
   });
 
-  ws.on('close', function () { clients.delete(ws); if (ws._inplay) inplaySubscribe(ws, false); console.log('[Server] Client disconnected (' + clients.size + ' total)'); });
+  ws.on('close', function () { clients.delete(ws); ws._inplay = null; console.log('[Server] Client disconnected (' + clients.size + ' total)'); });
   ws.on('error', function () { clients.delete(ws); });
 });
 

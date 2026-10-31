@@ -1,19 +1,20 @@
 'use strict';
 // "In play" feed for /grid (server-vps.js): 1-minute bars of every Binance
-// USDT-M perpetual — 4 h of history over REST, then the kline_1m streams —
-// and every TICK_MS the coins ranked by how active they are against their own
-// norm (inplay/metrics.js). Runs only while someone has /grid open.
+// USDT-M perpetual — 3 h of history over REST, then the kline_1m streams —
+// the 24 h norm of each coin (ticker/24hr, every minute), and every TICK_MS
+// the windows 5m…3h of every coin (inplay/metrics.js). Runs all the time, so
+// the page has data the moment it opens.
 
 const WebSocket = require('ws');
-const { CFG, coinMetrics, ema } = require('./metrics');
+const { CFG, coinWindows, dayNorm } = require('./metrics');
 
 const REST = 'https://fapi.binance.com';
 const WS_URL = 'wss://fstream.binance.com/market/ws'; // kline belongs to the /market endpoint
-const TICK_MS = 2000;
-const KEEP_BARS = CFG.normMin + CFG.windowMin + 5;
-const TOP = 60;                       // coins sent to the page
+const TICK_MS = 3000;
+const KEEP_BARS = CFG.keepBars;
+const NORM_MS = 60000;                // 24 h tickers (weight 40)
 const STREAMS_PER_SOCKET = 800;       // Binance: ≤ 1024 streams per connection
-const REST_GAP_MS = 120;              // ~8 history requests a second (weight 2 each)
+const REST_GAP_MS = 80;               // ~12 history requests a second (weight 2 each)
 const UNIVERSE_TTL_MS = 30 * 60000;   // new listings join within half an hour
 
 function toBar(k) {
@@ -24,8 +25,8 @@ function createInplayFeed(opts) {
   const fetchJson = opts.fetchJson;
   const log = opts.log || function () {};
   const F = {
-    running: false, syms: [], bars: new Map(), live: new Map(), smooth: new Map(),
-    socks: [], queue: [], queued: new Set(), pumping: false, lastTick: 0, timers: [],
+    running: false, syms: [], bars: new Map(), live: new Map(), norms: new Map(), rows: [],
+    socks: [], queue: [], queued: new Set(), pumping: false, timers: [],
   };
 
   async function loadUniverse() {
@@ -116,7 +117,7 @@ function createInplayFeed(opts) {
       const changed = syms.length !== F.syms.length || syms.some((s) => !known.has(s));
       F.syms = syms;
       const keep = new Set(syms);
-      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); F.smooth.delete(s); }
+      for (const s of Array.from(F.bars.keys())) if (!keep.has(s)) { F.bars.delete(s); F.live.delete(s); }
       syms.forEach((s) => { if (!F.bars.has(s)) refill(s); });
       if (changed) subscribeAll();
     } catch (e) {
@@ -124,34 +125,28 @@ function createInplayFeed(opts) {
     }
   }
 
+  async function refreshNorms() {
+    try {
+      const rows = await fetchJson(REST + '/fapi/v1/ticker/24hr');
+      rows.forEach((t) => F.norms.set(t.symbol, dayNorm(t)));
+    } catch (e) {
+      log('[Inplay] norms: ' + e.message);
+    }
+  }
+
   function tick() {
     const now = Date.now();
-    const dt = F.lastTick ? now - F.lastTick : 0;
-    F.lastTick = now;
     const rows = [];
     for (const sym of F.syms) {
       const bars = F.bars.get(sym);
       if (!bars) continue;
       const live = F.live.get(sym);
       const all = live && (!bars.length || live.t > bars[bars.length - 1].t) ? bars.concat([live]) : bars;
-      const m = coinMetrics(all, now);
-      if (!m) continue;
-      const sc = ema(F.smooth.get(sym), m.score, dt);
-      F.smooth.set(sym, sc);
-      rows.push({ sym, m, sc });
+      const c = coinWindows(all, now, F.norms.get(sym));
+      rows.push({ s: sym, ok: c.ok, w: c.w });
     }
-    rows.sort((a, b) => (b.m.ok - a.m.ok) || (b.sc - a.sc)); // tradable first
-    const r2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
-    opts.onUpdate({
-      t: now,
-      ready: rows.length,
-      total: F.syms.length,
-      coins: rows.slice(0, TOP).map(({ sym, m, sc }) => ({
-        s: sym, score: r2(sc), ok: m.ok,
-        rv: r2(m.rv), tr: r2(m.tr), vr: r2(m.vr), move: r2(m.move), chg: r2(m.chg),
-        usd: Math.round(m.usdPerMin), trades: Math.round(m.tradesPerMin), natr: r2(m.natr),
-      })),
-    });
+    F.rows = rows;
+    opts.onUpdate({ t: now, ready: rows.length, total: F.syms.length });
   }
 
   return {
@@ -159,8 +154,8 @@ function createInplayFeed(opts) {
       if (F.running) return;
       F.running = true;
       log('[Inplay] start');
-      await refreshUniverse();
-      F.timers.push(setInterval(tick, TICK_MS), setInterval(refreshUniverse, UNIVERSE_TTL_MS));
+      await Promise.all([refreshNorms(), refreshUniverse()]);
+      F.timers.push(setInterval(tick, TICK_MS), setInterval(refreshNorms, NORM_MS), setInterval(refreshUniverse, UNIVERSE_TTL_MS));
     },
     stop: function () {
       if (!F.running) return;
@@ -170,10 +165,12 @@ function createInplayFeed(opts) {
       F.timers = [];
       F.socks.forEach((s) => s.close());
       F.socks = [];
-      F.syms = []; F.bars.clear(); F.live.clear(); F.smooth.clear();
-      F.queue = []; F.queued.clear(); F.lastTick = 0;
+      F.syms = []; F.bars.clear(); F.live.clear(); F.norms.clear(); F.rows = [];
+      F.queue = []; F.queued.clear();
     },
     get running() { return F.running; },
+    get rows() { return F.rows; },   // [{ s, ok, w: { '5m': {chg, range, usd, vol, trades} | null, … } }]
+    get syms() { return F.syms; },
   };
 }
 

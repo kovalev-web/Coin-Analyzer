@@ -1,5 +1,5 @@
-// 1-minute candles of a coin in a grid cell: Lightweight Charts (vanilla, like
-// every chart of the site) inside a React box; 4 h of history, then live.
+// Candles of a coin in a grid cell: Lightweight Charts (vanilla, like every
+// chart of the site) inside a React box; 240 candles of history, then live.
 import * as React from 'react';
 import { useSiteTheme } from '@/shared/use-site-theme';
 import { fetchKlines, watchKlines } from './feed.js';
@@ -29,7 +29,7 @@ function priceFormat(p) {
 
 const candle = (k) => ({ time: Math.floor(+k[0] / 1000), open: +k[1], high: +k[2], low: +k[3], close: +k[4] });
 
-export function CoinChart({ sym }) {
+export function CoinChart({ sym, tf }) {
   const box = React.useRef(null);
   const chart = React.useRef(null);
   const theme = useSiteTheme();
@@ -52,14 +52,14 @@ export function CoinChart({ sym }) {
 
     const volBar = (t, o, cl, v) => ({ time: t, value: v, color: cl >= o ? colors().volUp : colors().volDn });
     let alive = true, stop = null, lastT = 0;
-    fetchKlines(sym, 240).then((rows) => {
+    fetchKlines(sym, tf, 240).then((rows) => {
       if (!alive || !rows.length) return;
       series.applyOptions({ priceFormat: priceFormat(+rows[rows.length - 1][4]) });
       series.setData(rows.map(candle));
       vol.setData(rows.map((k) => volBar(Math.floor(+k[0] / 1000), +k[1], +k[4], +k[7])));
       lastT = Math.floor(+rows[rows.length - 1][0] / 1000);
       ch.timeScale().scrollToRealTime();
-      stop = watchKlines(sym, (k) => {
+      stop = watchKlines(sym, tf, (k) => {
         const t = Math.floor(k.t / 1000);
         if (t < lastT) return;
         lastT = t;
@@ -68,7 +68,7 @@ export function CoinChart({ sym }) {
       });
     }).catch(() => {});
     return () => { alive = false; if (stop) stop(); ch.remove(); chart.current = null; };
-  }, [sym]);
+  }, [sym, tf]);
 
   // Theme switch: recolor in place
   React.useEffect(() => {

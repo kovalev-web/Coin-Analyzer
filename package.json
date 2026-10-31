@@ -20,7 +20,7 @@
     "test:hits": "node --test src/hit-stats.test.mjs",
     "test:algos": "node --test algos/*.test.js",
     "test:origin": "node --test origin/*.test.js",
-    "test:inplay": "node --test inplay/*.test.js src/inplay-grid.test.mjs",
+    "test:inplay": "node --test inplay/*.test.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server-vps.js"

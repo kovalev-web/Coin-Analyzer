@@ -1,173 +1,195 @@
-// "In play" screener (/grid): 9 cells with the coins most active right now
-// against their own norm (score from the server, inplay/metrics.js) and the
-// candidates list. Who sits in a cell — src/inplay-grid.js (hysteresis,
-// minimum hold, pins). Charts are vanilla Lightweight Charts (CoinChart).
+// "In play" screener (/grid): what moves right now. The viewer picks the
+// period (5m…3h), the sort (move, volume or trades against the coin's norm),
+// the candles and the number of cells; the server sends the coins for that
+// choice (inplay/rank.js), the cells fill in order with no gaps. Pinned coins
+// (pin in a cell or the search) take the first cells. Charts are vanilla
+// Lightweight Charts (CoinChart).
 import * as React from 'react';
-import { ArrowLeft, Pin, PinOff } from 'lucide-react';
+import { ArrowLeft, Check, Pin, PinOff, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { selectGrid, pinCoin, unpinCell } from '../../inplay-grid.js';
 import { useInplay } from './feed.js';
 import { CoinChart } from './CoinChart.jsx';
 
-const CELLS = 9;
+const VIEW_KEY = 'qt_inplay_view';
 const PINS_KEY = 'qt_inplay_pins';
+const DEFAULT_VIEW = { win: '5m', sort: 'move', tf: '1m', n: 6 };
 
-const TIPS = {
-  score: 'Activity against the coin\'s own norm (last 4 h): 0 = as usual, 1 ≈ twice, 2 ≈ four times. Volume, trades and range weigh most.',
-  rv: 'USDT volume per minute (last 5 min) against the coin\'s usual minute',
-  tr: 'Trades per minute (last 5 min) against the coin\'s usual minute',
-  natr: 'Average 1-minute range now, % (high − low)',
-  chg: 'Price change over the last 5 minutes',
-  usd: 'USDT volume per minute now',
-};
+const WINDOWS = ['5m', '15m', '1h', '3h'];
+const SORTS = [
+  { value: 'move', label: 'Move', tip: 'High − low of the period, % — how much the coin is moving' },
+  { value: 'vol', label: 'Volume', tip: 'USDT volume per minute over the period against the coin\'s usual minute (24 h)' },
+  { value: 'trades', label: 'Trades', tip: 'Trades per minute over the period against the coin\'s usual minute (24 h)' },
+];
+const TFS = ['1m', '5m', '15m'];
+const CELLS = [4, 6, 9];
 
 const base = (sym) => sym.replace(/USDT$/, '');
 const x = (v) => (v == null ? '—' : (v >= 10 ? Math.round(v) : v.toFixed(1)) + '×');
 const pct = (v, signed) => (v == null ? '—' : (signed && v > 0 ? '+' : '') + v.toFixed(2) + '%');
-const usd = (v) => (v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.round(v / 1e3) + 'K');
+const usd = (v) => (v == null ? '—' : v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + Math.round(v / 1e3) + 'K');
 
-function loadPins() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(PINS_KEY) || '[]');
-    return Array.from({ length: CELLS }, (_, i) => (saved[i] ? { sym: saved[i], since: Date.now(), below: null, pinned: true } : null));
-  } catch (e) { return Array(CELLS).fill(null); }
+function load(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; }
 }
-function savePins(slots) {
-  try { localStorage.setItem(PINS_KEY, JSON.stringify(slots.map((s) => (s && s.pinned ? s.sym : null)))); } catch (e) {}
+function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+
+function useStored(key, fallback) {
+  const [v, setV] = React.useState(() => load(key, fallback));
+  React.useEffect(() => save(key, v), [key, v]);
+  return [v, setV];
 }
 
-function Stat({ tip, className, children }) {
+// Cells → columns: 1 → 1, 2…4 → 2, more → 3
+const colsFor = (k) => (k <= 1 ? 1 : k <= 4 ? 2 : 3);
+
+function Segmented({ value, onChange, items, label }) {
+  return (
+    <ToggleGroup type="single" variant="segmented" size="sm" value={String(value)} aria-label={label}
+      onValueChange={(v) => { if (v) onChange(v); }}>
+      {items.map((it) => {
+        const item = <ToggleGroupItem key={it.value} value={String(it.value)} className="px-2.5">{it.label}</ToggleGroupItem>;
+        return it.tip ? (
+          <Tooltip key={it.value}>
+            <TooltipTrigger asChild>{item}</TooltipTrigger>
+            <TooltipContent className="max-w-64">{it.tip}</TooltipContent>
+          </Tooltip>
+        ) : item;
+      })}
+    </ToggleGroup>
+  );
+}
+
+function CoinSearch({ syms, pins, onToggle }) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const q = query.trim().toUpperCase().replace(/USDT$/, '');
+  const list = (q ? syms.filter((s) => base(s).includes(q)).sort((a, b) => base(b).startsWith(q) - base(a).startsWith(q)) : syms).slice(0, 80);
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(''); }}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm"><Search />Pin coin</Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-0">
+        <Command shouldFilter={false}>
+          <CommandInput autoFocus placeholder="SOL, PEPE…" value={query} onValueChange={setQuery} />
+          <CommandList className="max-h-80">
+            <CommandEmpty>Nothing found</CommandEmpty>
+            <CommandGroup>
+              {list.map((s) => (
+                <CommandItem key={s} value={s} onSelect={() => { onToggle(s); setOpen(false); setQuery(''); }}>
+                  {base(s)}
+                  {pins.includes(s) && <Check className="ml-auto" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function Stat({ tip, strong, className, children }) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild><span className={cn('cursor-default text-xs whitespace-nowrap tabular-nums', className)}>{children}</span></TooltipTrigger>
+      <TooltipTrigger asChild>
+        <span className={cn('cursor-default text-xs whitespace-nowrap tabular-nums', strong ? 'font-semibold text-foreground' : 'text-muted-foreground', className)}>{children}</span>
+      </TooltipTrigger>
       <TooltipContent className="max-w-64">{tip}</TooltipContent>
     </Tooltip>
   );
 }
 
-function Cell({ slot, coin, onPin, onUnpin }) {
-  if (!slot) {
-    return (
-      <div className="flex min-h-0 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground max-md:hidden">
-        Waiting for activity
-      </div>
-    );
-  }
+function Cell({ coin, win, sort, tf, onPin }) {
+  const w = coin.w[win];
   return (
-    <div className="flex min-h-64 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
+    <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
       <div className="flex h-9 shrink-0 items-center gap-2.5 overflow-hidden border-b pr-1 pl-3">
-        <span className="text-sm font-semibold tracking-wide">{base(slot.sym)}</span>
-        {coin ? (
+        <span className="text-sm font-semibold tracking-wide">{base(coin.s)}</span>
+        {w ? (
           <>
-            <Stat tip={TIPS.score}><Badge variant="secondary" className="tabular-nums">{coin.score.toFixed(1)}</Badge></Stat>
-            <Stat tip={TIPS.chg} className={coin.chg < 0 ? 'text-danger' : 'text-muted-foreground'}>{pct(coin.chg, true)}</Stat>
-            <Stat tip={TIPS.rv} className="hidden text-muted-foreground max-md:inline 2xl:inline">vol {x(coin.rv)}</Stat>
-            <Stat tip={TIPS.tr} className="hidden text-muted-foreground max-md:inline 2xl:inline">trades {x(coin.tr)}</Stat>
-            <Stat tip={TIPS.natr} className="text-muted-foreground">{pct(coin.natr)}</Stat>
+            <Stat tip={'Price change over ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>
+            <Stat tip={SORTS[0].tip} strong={sort === 'move'}>{pct(w.range)}</Stat>
+            <Stat tip={SORTS[1].tip} strong={sort === 'vol'}>vol {x(w.vol)}</Stat>
+            <Stat tip={SORTS[2].tip} strong={sort === 'trades'} className="max-lg:hidden">trades {x(w.trades)}</Stat>
+            <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>
           </>
-        ) : <span className="text-xs text-muted-foreground">cooling down</span>}
+        ) : <span className="text-xs text-muted-foreground">no data for {win} yet</span>}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-xs" className={cn('ml-auto', slot.pinned ? 'text-foreground' : 'text-muted-foreground')}
-              aria-label={slot.pinned ? 'Unpin' : 'Pin'} onClick={slot.pinned ? onUnpin : onPin}>
-              {slot.pinned ? <PinOff /> : <Pin />}
+            <Button variant="ghost" size="icon-xs" className={cn('ml-auto', coin.pinned ? 'text-foreground' : 'text-muted-foreground')}
+              aria-label={coin.pinned ? 'Unpin' : 'Pin'} onClick={onPin}>
+              {coin.pinned ? <PinOff /> : <Pin />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{slot.pinned ? 'Unpin: the coin leaves when it cools down' : 'Pin: keep this coin here'}</TooltipContent>
+          <TooltipContent>{coin.pinned ? 'Unpin' : 'Pin: keep this coin in the first cells'}</TooltipContent>
         </Tooltip>
       </div>
-      <CoinChart sym={slot.sym} />
+      <CoinChart sym={coin.s} tf={tf} />
     </div>
   );
 }
 
-function HeadTip({ tip, className, children }) {
-  return (
-    <TableHead className={className}>
-      <Tooltip>
-        <TooltipTrigger asChild><span className="cursor-default">{children}</span></TooltipTrigger>
-        <TooltipContent className="max-w-64">{tip}</TooltipContent>
-      </Tooltip>
-    </TableHead>
-  );
-}
-
-function Candidates({ coins, onGrid, onPick }) {
-  return (
-    <Table className="text-xs">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Coin</TableHead>
-          <HeadTip tip={TIPS.score} className="text-right">Score</HeadTip>
-          <HeadTip tip={TIPS.rv} className="text-right">Vol</HeadTip>
-          <HeadTip tip={TIPS.tr} className="text-right">Trades</HeadTip>
-          <HeadTip tip={TIPS.natr} className="text-right">Range</HeadTip>
-          <HeadTip tip={TIPS.usd} className="text-right">$/min</HeadTip>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {coins.map((c) => (
-          <TableRow key={c.s} onClick={() => onPick(c.s)} className={cn('cursor-pointer tabular-nums', !c.ok && 'text-muted-foreground')}
-            data-state={onGrid.has(c.s) ? 'selected' : undefined}>
-            <TableCell className="font-medium">{base(c.s)}</TableCell>
-            <TableCell className="text-right">{c.score.toFixed(1)}</TableCell>
-            <TableCell className="text-right">{x(c.rv)}</TableCell>
-            <TableCell className="text-right">{x(c.tr)}</TableCell>
-            <TableCell className="text-right">{pct(c.natr)}</TableCell>
-            <TableCell className="text-right">{usd(c.usd)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
 export function InplayPage() {
-  const { status, data } = useInplay();
-  const [slots, setSlots] = React.useState(loadPins);
-  const coins = React.useMemo(() => {
-    const map = {};
-    if (data) data.coins.forEach((c) => { map[c.s] = c; });
-    return map;
-  }, [data]);
+  const [view, setView] = useStored(VIEW_KEY, DEFAULT_VIEW);
+  const [pins, setPins] = useStored(PINS_KEY, []);
+  const v = { ...DEFAULT_VIEW, ...view };
+  const set = (patch) => setView({ ...v, ...patch });
+  const pinList = Array.isArray(pins) ? pins.filter((p) => typeof p === 'string') : [];
+  const togglePin = (sym) => setPins(pinList.includes(sym) ? pinList.filter((p) => p !== sym) : pinList.concat(sym).slice(-v.n));
 
-  // Every server update decides who sits in the cells
-  React.useEffect(() => { if (data) setSlots((s) => selectGrid(s, coins, Date.now())); }, [data, coins]);
-  React.useEffect(() => savePins(slots), [slots]);
-
-  const onGrid = new Set(slots.filter(Boolean).map((s) => s.sym));
+  const { status, data, syms } = useInplay({ win: v.win, sort: v.sort, n: v.n, pins: pinList });
+  const coins = data ? data.coins : [];
   const warming = data && data.ready < data.total;
+  const cols = colsFor(coins.length);
 
   return (
     <div className="jr flex h-dvh flex-col bg-background text-foreground max-md:h-auto max-md:min-h-dvh">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
         <Button asChild variant="ghost" size="icon-sm" aria-label="Back"><a href="/"><ArrowLeft /></a></Button>
-        <h1 className="text-base font-semibold">In play</h1>
-        <span className="text-xs text-muted-foreground max-sm:hidden">coins far above their usual volume, trades and range</span>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <h1 className="mr-2 text-base font-semibold">In play</h1>
+        <Segmented label="Period" value={v.win} onChange={(win) => set({ win })} items={WINDOWS.map((w) => ({ value: w, label: w }))} />
+        <Segmented label="Sort" value={v.sort} onChange={(sort) => set({ sort })} items={SORTS} />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Candles</span>
+          <Segmented label="Candles" value={v.tf} onChange={(tf) => set({ tf })} items={TFS.map((t) => ({ value: t, label: t }))} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Cells</span>
+          <Segmented label="Cells" value={v.n} onChange={(n) => set({ n: +n })} items={CELLS.map((c) => ({ value: c, label: String(c) }))} />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <CoinSearch syms={syms} pins={pinList} onToggle={togglePin} />
           {status !== 'live' ? <Badge variant="outline">{status === 'offline' ? 'Reconnecting…' : 'Connecting…'}</Badge>
-            : !data ? <Badge variant="outline"><Spinner />Starting…</Badge>
-            : warming ? <Badge variant="outline"><Spinner />Loading history {data.ready}/{data.total}</Badge>
-            : <Badge variant="outline">{data.total} coins</Badge>}
+            : warming ? <Badge variant="outline"><Spinner />History {data.ready}/{data.total}</Badge>
+            : null}
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 max-md:flex-col">
-        <main className="grid min-h-0 flex-1 grid-cols-3 grid-rows-3 gap-1.5 p-1.5 max-md:grid-cols-1 max-md:grid-rows-none">
-          {slots.map((slot, i) => (
-            <Cell key={slot ? slot.sym : 'empty-' + i} slot={slot} coin={slot && coins[slot.sym]}
-              onPin={() => setSlots((s) => pinCoin(s, slot.sym, coins, Date.now()))}
-              onUnpin={() => setSlots((s) => unpinCell(s, i, Date.now()))} />
+      {coins.length ? (
+        <main className="grid min-h-0 flex-1 gap-1.5 p-1.5 max-md:!grid-cols-1 max-md:!grid-rows-none"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(coins.length / cols)}, minmax(0, 1fr))` }}>
+          {coins.map((c) => (
+            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} onPin={() => togglePin(c.s)} />
           ))}
         </main>
-        <aside className="w-80 shrink-0 xl:w-96 overflow-y-auto border-l max-md:w-full max-md:border-t max-md:border-l-0">
-          <Candidates coins={data ? data.coins : []} onGrid={onGrid} onPick={(sym) => setSlots((s) => pinCoin(s, sym, coins, Date.now()))} />
-        </aside>
-      </div>
+      ) : (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{!data ? 'Loading…' : 'Nothing to show yet'}</EmptyTitle>
+            <EmptyDescription>
+              {!data ? 'Connecting to the screener.' : warming ? 'Loading candle history, the grid fills in a minute.' : 'No liquid coin has data for this period yet.'}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     </div>
   );
 }
