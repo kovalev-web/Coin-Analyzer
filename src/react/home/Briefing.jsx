@@ -219,6 +219,11 @@ export function WatchlistPanel() {
           ? <List entries={entries} onOpen={open} />
           : <Empty className="p-6"><EmptyHeader><EmptyDescription>No coins for today — star them in the list</EmptyDescription></EmptyHeader></Empty>}
       </div>
+      {briefingThisWeekEntries().length > 0 && (
+        <div className="border-t p-3">
+          <Button data-action="go-briefing" className="w-full">Watchlist mode</Button>
+        </div>
+      )}
     </>
   );
 }

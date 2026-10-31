@@ -88,7 +88,8 @@ export function Topbar({ screener, tabs = true }) {
 
       <div className="ml-auto flex items-center gap-1 max-md:gap-0">
         <IconAction label="Search  ⌘K" action="open-search"><Search /></IconAction>
-        <IconAction label="Watchlist" action="open-briefing"><Bookmark /></IconAction>
+        {/* The watchlist is open on the main page; the icon stays where that panel is hidden (narrow screens) */}
+        <IconAction label="Watchlist" action="open-briefing" className="lg:hidden"><Bookmark /></IconAction>
         {!demo && (
           <Tooltip>
             <TooltipTrigger asChild>
