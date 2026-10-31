@@ -129,7 +129,7 @@ export function Home2() {
   const current = coins.find((c) => c.symbol === picked) || coins[0] || null;
 
   return (
-    <div className="jr flex h-dvh flex-col bg-background text-foreground">
+    <div className="jr flex h-dvh flex-col text-foreground">
       <Topbar tabs={false} />
       <DaySummary />
       <main className="grid min-h-0 flex-1 grid-cols-[18rem_minmax(0,1fr)_20rem] gap-2 px-8 pt-2.5 pb-5 max-lg:grid-cols-[16rem_minmax(0,1fr)] max-md:grid-cols-1 max-md:px-3">

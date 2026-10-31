@@ -384,8 +384,11 @@ function _takeAutoSym() {
 // coin, watchlist always open. The previous one (card grid) lives at CLASSIC_ROUTE
 // until the new one settles — swap the two registerRoute paths back to roll back
 // (tag home-classic-2026-10-31 has the code before the switch).
+// The main page takes the whole width (one chart), the rest keep #app's 1920px
+onRouteChange(function () { document.getElementById('app').style.maxWidth = ''; });
 registerRoute('/', function () {
   var app = document.getElementById('app');
+  app.style.maxWidth = 'none';
   unmountIslands(app);
   app.innerHTML = '<div id="home2-root"></div>';
   if (state.coins.length === 0) mountIsland(document.getElementById('home2-root'), HomeState, { kind: 'loading', text: 'Loading data from Binance Futures…' });
