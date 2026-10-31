@@ -36,6 +36,11 @@ export function MorningDialog({ onClose }) {
     && f.dayPlan.trim() && f.ifWhen.trim() && f.ifThen.trim() && f.channelsClosed && coins.length > 0;
 
   const done = (kind) => { emit('journal:saved', { kind }); onClose(); };
+  // Filled on another device meanwhile: the server kept that one — close and say so
+  const failed = (e) => {
+    if (e && e.alreadyFilled) { toast(e.message); done(state.journalToday && state.journalToday.skipped ? 'skip' : 'morning'); return; }
+    setBusy(false); toast('Ошибка сети — попробуйте ещё раз');
+  };
   const save = () => {
     setBusy(true);
     saveJournalMorning({
@@ -48,11 +53,11 @@ export function MorningDialog({ onClose }) {
       plannedCoins: coins.join(', '),
       triggerWatch: '', // replaced by the if-then rule (v2)
       channelsClosed: f.channelsClosed,
-    }).then(() => done('morning')).catch(() => { setBusy(false); toast('Ошибка сети — попробуйте ещё раз'); });
+    }).then(() => done('morning')).catch(failed);
   };
   const skip = () => {
     setBusy(true);
-    saveJournalMorning({ skip: true }).then(() => done('skip')).catch(() => { setBusy(false); toast('Ошибка сети — попробуйте ещё раз'); });
+    saveJournalMorning({ skip: true }).then(() => done('skip')).catch(failed);
   };
 
   const notSet = 'Не задано — укажите в настройках аккаунта';

@@ -2165,6 +2165,13 @@ var httpServer = http.createServer(async function (req, res) {
         req.on('end', function () {
           try {
             var jParsed = JSON.parse(jBodyM);
+            // Filled once a day: a stale tab (another device) must not overwrite it
+            var jHadM = jDb.prepare('SELECT morning_at FROM journal_entries WHERE user_id = ? AND date = ?').get(jUserId, jToday);
+            if (jHadM && jHadM.morning_at) {
+              res.writeHead(409, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Morning journal already filled today' }));
+              return;
+            }
             jDb.prepare(
               'INSERT INTO journal_entries (user_id, date, morning_state, volume, stop_level, max_trades, day_plan, planned_coins, trigger_watch, channels_closed, skipped, morning_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
               'ON CONFLICT(user_id, date) DO UPDATE SET morning_state = excluded.morning_state, volume = excluded.volume, stop_level = excluded.stop_level, max_trades = excluded.max_trades, day_plan = excluded.day_plan, planned_coins = excluded.planned_coins, trigger_watch = excluded.trigger_watch, channels_closed = excluded.channels_closed, skipped = excluded.skipped, morning_at = excluded.morning_at'

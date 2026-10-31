@@ -1005,6 +1005,8 @@ export function saveJournalMorning(data) {
     credentials: 'include',
     body: JSON.stringify(data),
   }).then(function (r) {
+    // 409: already filled today (on another device) — the server keeps the first one
+    if (r.status === 409) return fetchJournalToday().then(function () { var e = new Error('Morning journal already filled today'); e.alreadyFilled = true; throw e; });
     if (!r.ok) throw new Error('Save failed');
     return fetchJournalToday();
   });
