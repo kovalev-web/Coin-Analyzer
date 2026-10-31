@@ -39,9 +39,9 @@ document.body.addEventListener('click', function (e) {
 Новые действия → добавлять в `switch` в `main.js`. Рендер → функция в `ui.js`. Запрос к серверу → функция в `api.js`.
 
 ## Роуты фронтенда
-- `#/` — основной экран с карточками монет
 - `#/screener` — скринер
-- `/new` — черновик новой главной (`src/react/home2/Home2.jsx`): шапка без Tear/Gainers, полоса дня, список монет с тирами и сортировкой, график выбранной монеты — тот же, что у карточек (`mountCoinChart` / `unmountCoinChart` в `ui.js`: уровни, алерты, лучи, линейка; заметки — поверхность `notes`), вотчлист всегда открыт (`WatchlistPanel` в `home/Briefing.jsx`). Старая главная на `/` не тронута, откат — тег `home-classic-2026-10-31`; когда новая устроит, `/` отдаёт её, старая — `/classic`
+- `/` — главная (с 2026-10-31, `src/react/home2/Home2.jsx`): шапка без Tear/Gainers, полоса дня, список монет с тирами и сортировкой, график выбранной монеты — тот же, что у карточек (`mountCoinChart` / `unmountCoinChart` в `ui.js`: уровни, алерты, лучи, линейка; заметки — поверхность `notes`), вотчлист всегда открыт (`WatchlistPanel` в `home/Briefing.jsx`); `?sym=` открывает полный график. `render()` на `/` ничего не делает.
+- `/new` (`CLASSIC_ROUTE` в `router.js`) — прежняя главная, сетка карточек (`render()` в `ui.js`), Tear ведёт сюда. Откат: поменять пути двух `registerRoute` в `main.js` местами (код до переключения — тег `home-classic-2026-10-31`)
 - `/grid` — in-play скринер: что ходит за 5m…3h (React + shadcn, см. «In play»)
 - `/journal` — журнал (React + shadcn)
 - `#/profile` — профиль (сейчас заглушка, будет журнал)

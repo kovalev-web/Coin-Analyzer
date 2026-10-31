@@ -27,7 +27,7 @@ import { toggleTerminal } from './terminal.js';
 import { openMorningJournal, openEveningJournal } from './journal-cards.js';
 import { preloadReactHost, closeSurface, toast } from './react-bridge.js';
 import { mountIsland, unmountIslands } from './react/islands.jsx';
-import { NotFound } from './react/home/HomeState.jsx';
+import { NotFound, HomeState } from './react/home/HomeState.jsx';
 import { on } from './events.js';
 import { icon, tzDateStr } from './utils.js';
 
@@ -35,7 +35,7 @@ function openFV(sym) {
   openCoinFullView(sym);
   if (!state.natrData[sym] || state.natrData[sym] === 'error') fetchNATR(sym);
 }
-import { initRouter, registerRoute, reloadRoute, navigate, getCurrentRoute, onRouteChange } from './router.js';
+import { initRouter, registerRoute, reloadRoute, navigate, getCurrentRoute, onRouteChange, CLASSIC_ROUTE } from './router.js';
 import './styles.css';
 
 // ── Event delegation ───────────────────────────────────────────────────────
@@ -232,8 +232,8 @@ document.body.addEventListener('click', function (e) {
       toggleFVBriefingDrawer();
       fetchAllBriefingTrades();
       break;
-    case 'go-main':
-      navigate('/');
+    case 'go-main': // Tear on the previous main page
+      navigate(CLASSIC_ROUTE);
       break;
     case 'go-screener':
       navigate('/gainers');
@@ -373,12 +373,42 @@ window.addEventListener('online', function () {
 
 // ── Router ─────────────────────────────────────────────────────────────────
 
+// ?sym=<coin> (links from alerts and Telegram) opens its full chart once the coins are in
+function _takeAutoSym() {
+  var sym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
+  if (sym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+  return sym;
+}
+
+// Main page (src/react/home2, since 2026-10-31): coin list, chart of the picked
+// coin, watchlist always open. The previous one (card grid) lives at CLASSIC_ROUTE
+// until the new one settles — swap the two registerRoute paths back to roll back
+// (tag home-classic-2026-10-31 has the code before the switch).
 registerRoute('/', function () {
+  var app = document.getElementById('app');
+  unmountIslands(app);
+  app.innerHTML = '<div id="home2-root"></div>';
+  if (state.coins.length === 0) mountIsland(document.getElementById('home2-root'), HomeState, { kind: 'loading', text: 'Loading data from Binance Futures…' });
+  var autoSym = _takeAutoSym();
+  var show = function () {
+    if (getCurrentRoute() !== '/') return;
+    import('./react/home2/Home2.jsx').then(function (m) {
+      if (getCurrentRoute() !== '/') return;
+      unmountIslands(app);
+      app.innerHTML = '<div id="home2-root"></div>';
+      mountIsland(document.getElementById('home2-root'), m.Home2);
+      if (autoSym) openFV(autoSym);
+    });
+  };
+  if (state.coins.length === 0) fetchCoins().then(function () { startChartPolling(); show(); }); else show();
+});
+
+// The previous main page: the card grid (render() in ui.js), Tear / Gainers
+registerRoute(CLASSIC_ROUTE, function () {
   setScreenerMode(false);
   if (state.coins.length === 0) state.loading = true;
   render();
-  var _autoSym = (new URLSearchParams(window.location.search).get('sym') || '').toLowerCase();
-  if (_autoSym) history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+  var _autoSym = _takeAutoSym();
   if (state.coins.length === 0) {
     fetchCoins().then(function () {
       render(); startChartPolling();
@@ -387,20 +417,6 @@ registerRoute('/', function () {
   } else if (_autoSym) {
     openFV(_autoSym);
   }
-});
-
-// Draft of the new main page (src/react/home2), the old one stays at /
-registerRoute('/new', function () {
-  var app = document.getElementById('app');
-  unmountIslands(app);
-  app.innerHTML = '<div id="home2-root"></div>';
-  var show = function () {
-    if (getCurrentRoute() !== '/new') return;
-    import('./react/home2/Home2.jsx').then(function (m) {
-      if (getCurrentRoute() === '/new') mountIsland(document.getElementById('home2-root'), m.Home2);
-    });
-  };
-  if (state.coins.length === 0) fetchCoins().then(show); else show();
 });
 
 registerRoute('/gainers', function () {

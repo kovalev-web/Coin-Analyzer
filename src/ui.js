@@ -13,7 +13,7 @@ import { HomeState, DemoBanner } from './react/home/HomeState.jsx';
 import { CardHead } from './react/home/CardHead.jsx';
 import { BriefingDrawer } from './react/home/Briefing.jsx';
 import { FvControls, FvStats } from './react/fullview/FvControls.jsx';
-import { getCurrentRoute } from './router.js';
+import { getCurrentRoute, CLASSIC_ROUTE } from './router.js';
 import { analyzeCoinBySymbol, fetchChartData, wsConnected, sendWS, API_BASE, applyLivePriceUpdates, fetchNATR, getLastKlineAt, fetchTodayTrades, fetchTradesForDate, fetchTrades, markNotificationRead, fetchJournalToday, fetchJournalFacts, saveTradeTag, fetchAlgos } from './api.js';
 import { connectOrderbook, disconnectOrderbook, softDisconnectOrderbook, msUntilWarm, AGGRESSION_WINDOW_MS } from './orderbook.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
@@ -1713,6 +1713,8 @@ export function setGlobalTF(tf) {
 // ── Main Render ────────────────────────────────────────────────────────────
 
 export function render() {
+  // The card grid is the previous main page now (CLASSIC_ROUTE); / is React (home2)
+  if (getCurrentRoute() === '/') return;
   var app = document.getElementById('app');
   if (state.loading) {
     destroyCharts();
@@ -1758,7 +1760,7 @@ initTheme();
 loadLevels();
 on('render', function () {
   var route = getCurrentRoute();
-  if (route === '/' || route === '/gainers') render();
+  if (route === CLASSIC_ROUTE || route === '/gainers') render();
 });
 on('cards:sync', renderCards);
 on('metrics:update', updateMetricCards);

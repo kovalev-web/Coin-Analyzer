@@ -1,6 +1,9 @@
 import { state } from './state.js';
 
 let currentRoute = '/';
+
+// The previous main page (the card grid) while the new one settles on /
+export const CLASSIC_ROUTE = '/new';
 let routeHandlers = {};
 let leaveHandlers = [];
 

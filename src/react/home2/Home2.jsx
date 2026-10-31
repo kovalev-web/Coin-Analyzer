@@ -1,5 +1,5 @@
-// New main page, a draft at /new (the old one stays at /, tag
-// home-classic-2026-10-31). Top to bottom: the header without Tear / Gainers,
+// Main page at / since 2026-10-31 (the previous one, the card grid, is at
+// CLASSIC_ROUTE = /new for now; tag home-classic-2026-10-31). Top to bottom: the header without Tear / Gainers,
 // the day strip (BTC / ETH / SOL, Your 24h, Open now), then three columns:
 // the coins as a list with the volume tiers and sort, the chart of the coin
 // picked in the list (the first one by default), and today's watchlist always
