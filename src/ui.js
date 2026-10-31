@@ -891,6 +891,12 @@ export function toggleTheme() {
 // Charts read their colors when created: after a theme change the cards are
 // re-rendered and the full-view chart gets its colors anew
 function _recolorCharts() {
+  // Charts outside the grid (the main page) aren't re-rendered: build them anew
+  document.querySelectorAll('[data-coin-chart]').forEach(function (el) {
+    var sym = el.dataset.coinChart;
+    _destroyChartForSym(sym);
+    _initChartForSym(sym);
+  });
   reattachAllLevels();
   if (_fvChart) {
     var fc = getChartColors();
