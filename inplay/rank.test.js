@@ -26,7 +26,8 @@ test('rankCoins: growth and the day\'s extreme ignore the window; closest to the
 });
 
 test('parseView: known window and sort, cells 1…12, pins look like symbols and fit the cells', () => {
-  assert.deepEqual(R.parseView({ win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT', 'bad', 3] }), { win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT'] });
+  assert.deepEqual(R.parseView({ win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT', 'bad', 3] }), { win: '5m', sort: 'vol', n: 6, pins: ['SOLUSDT'], freeze: false });
+  assert.equal(R.parseView({ win: '5m', sort: 'rvol', n: 6, freeze: 1 }).freeze, true);
   assert.equal(R.parseView({ win: '2m', sort: 'vol', n: 6 }), null);
   assert.equal(R.parseView({ win: '5m', sort: 'score', n: 6 }), null);
   assert.equal(R.parseView({ win: '5m', sort: 'move', n: 99 }).n, 12);
@@ -41,4 +42,12 @@ test('nextShown: pins first, then the top; same order until HOLD_MS, at once on 
   assert.deepEqual(R.nextShown(v, later, R.HOLD_MS - 1).shown, ['A', 'B']); // held
   assert.deepEqual(R.nextShown(v, later, R.HOLD_MS).shown, ['A', 'C']);     // refreshed
   assert.deepEqual(R.nextShown(Object.assign({}, v, { pins: [] }), later, 1).shown, ['C', 'A']); // choice changed
+});
+
+test('nextShown: freeze holds the order past HOLD_MS, a new choice still refreshes', () => {
+  let v = R.nextShown({ win: '5m', sort: 'move', n: 2, pins: ['A'], shown: [], at: 0, freeze: true }, ROWS, 0);
+  const later = [row('A', 1, 5, 2), row('B', 1, 1, 4), row('C', 8, 3, 3)];
+  assert.deepEqual(R.nextShown(v, later, 10 * R.HOLD_MS).shown, ['A', 'B']);
+  assert.deepEqual(R.nextShown(Object.assign({}, v, { freeze: false }), later, 10 * R.HOLD_MS).shown, ['A', 'C']);
+  assert.deepEqual(R.nextShown(Object.assign({}, v, { pins: [] }), later, 1).shown, ['C', 'A']);
 });

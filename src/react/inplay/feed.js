@@ -1,5 +1,5 @@
 // Connections of the /grid page. Our server: the coins for this viewer's
-// choice ('inplay' every 3 s — window, sort, cells, pins; inplay/rank.js).
+// choice ('inplay' every 3 s — window, sort, cells, pins, freeze; inplay/rank.js).
 // Binance: candles of the coins in the cells, straight from the browser
 // (history over REST, then kline_<interval>).
 // For 12+ hours on a TV: a socket that has gone silent (sleep, network blip
@@ -43,7 +43,7 @@ function connect() {
 const briefingFns = new Set();
 export function onBriefingUpdated(fn) { briefingFns.add(fn); }
 
-// view: { win, sort, n, pins } — sent again whenever it changes
+// view: { win, sort, n, pins, freeze } — sent again whenever it changes
 export function useInplay(view) {
   const key = JSON.stringify(view);
   React.useEffect(() => { S.view = view; if (!S.sock) connect(); else subscribe(); }, [key]);

@@ -7,6 +7,7 @@
 // closest to the day's high or low (these don't depend on the window).
 // The order is refreshed every HOLD_MS (or at once when the choice changes),
 // in between the same coins stay in the same cells and only their numbers move.
+// freeze (the mouse is on a chart) holds the order for as long as it lasts.
 // Tests: npm run test:inplay
 
 const { CFG } = require('./metrics');
@@ -40,14 +41,14 @@ function parseView(msg) {
   const pins = Array.isArray(msg.pins)
     ? msg.pins.filter((p) => typeof p === 'string' && /^[A-Z0-9]{1,30}USDT$/.test(p)).slice(0, n)
     : [];
-  return { win: msg.win, sort: msg.sort, n, pins };
+  return { win: msg.win, sort: msg.sort, n, pins, freeze: !!msg.freeze };
 }
 
 // view: { win, sort, n, pins, shown: [sym], at: ms, key }; returns the next one.
 // Pins take the first cells, the rest go to the top coins.
 function nextShown(view, rows, now) {
   const key = [view.win, view.sort, view.n, view.pins.join(',')].join('|');
-  if (view.key === key && now - view.at < HOLD_MS && view.shown.length) return view;
+  if (view.key === key && (now - view.at < HOLD_MS || view.freeze) && view.shown.length) return view;
   const pinned = new Set(view.pins);
   const top = rankCoins(rows, view.win, view.sort).filter((s) => !pinned.has(s));
   const shown = view.pins.concat(top).slice(0, view.n);

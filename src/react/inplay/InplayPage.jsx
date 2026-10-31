@@ -4,8 +4,10 @@
 // the candles and the number of cells; the server sends the coins for that
 // choice (inplay/rank.js), the cells fill in order with no gaps. Pinned coins
 // (pin in a cell or the search) take the first cells; the star puts a coin
-// into today's watchlist (watchlist.js). Charts are vanilla
-// Lightweight Charts (CoinChart).
+// into today's watchlist (watchlist.js). While the mouse is on a chart the
+// order is frozen ("Freeze", like ScalpStation): the server keeps the same
+// coins in the same cells until it leaves. Charts are vanilla Lightweight
+// Charts (CoinChart).
 import * as React from 'react';
 import { ArrowLeft, Check, Pin, PinOff, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -116,7 +118,7 @@ function Stat({ tip, strong, className, children }) {
   );
 }
 
-// The one number the grid is sorted by (Move — the bold range among the four)
+// The one number the grid is sorted by (Move — the range, seen on the chart; volume then)
 function SortStat({ coin, w, sort }) {
   if (sort === 'gvol') return <Stat tip={TIP.gvol} strong>vol ↑{x(coin.gv)}</Stat>;
   if (sort === 'gtrades') return <Stat tip={TIP.gtrades} strong>trades ↑{x(coin.gt)}</Stat>;
@@ -130,37 +132,15 @@ function SortStat({ coin, w, sort }) {
   return <Stat tip={TIP.vol} strong={sort === 'vol'}>vol {x(w && w.vol)}</Stat>;
 }
 
-// Range of the chosen period; every period in the tooltip
-function Range({ coin, win, sort }) {
-  const r = (k) => (coin.w[k] && coin.w[k].range != null ? coin.w[k].range.toFixed(2) + '%' : '—');
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn('cursor-default text-xs whitespace-nowrap tabular-nums', sort === 'move' ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{r(win)}</span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-64">
-        <div className="mb-1">Размах: хай − лой за период, % от открытия</div>
-        <div className="grid grid-cols-[auto_auto] gap-x-3 tabular-nums">
-          {WINDOWS.map((k) => (
-            <React.Fragment key={k}>
-              <span className={k === win ? 'font-semibold' : undefined}>{k}</span>
-              <span className={cn('text-right', k === win && 'font-semibold')}>{r(k)}</span>
-            </React.Fragment>
-          ))}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
+function Cell({ coin, win, sort, tf, delay, starred, onPin, onHover }) {
+  const [hover, setHover] = React.useState(false);
+  const over = (on) => { setHover(on); onHover(on); };
   const w = coin.w[win];
   return (
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
       <div className="flex h-9 shrink-0 items-center gap-2.5 overflow-hidden border-b pr-1 pl-3">
         <span className="text-sm font-semibold tracking-wide">{base(coin.s)}</span>
         {w && <Stat tip={'Изменение цены за ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>}
-        <Range coin={coin} win={win} sort={sort} />
         {coin.natr != null && <Stat tip="NATR 5m/14: средний истинный диапазон 14 последних пятиминутных свечей, % цены — насколько крупные свечи">natr {pct(coin.natr)}</Stat>}
         <SortStat coin={coin} w={w} sort={sort} />
         {w && <Stat tip={'Объём в USDT за ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
@@ -183,7 +163,10 @@ function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
           <TooltipContent>{coin.pinned ? 'Открепить' : 'Закрепить: монета всегда в первых ячейках'}</TooltipContent>
         </Tooltip>
       </div>
-      <CoinChart sym={coin.s} tf={tf} delay={delay} />
+      <div className="relative flex min-h-0 flex-1 flex-col" onMouseEnter={() => over(true)} onMouseLeave={() => over(false)}>
+        <CoinChart sym={coin.s} tf={tf} delay={delay} />
+        {hover && <Badge className="pointer-events-none absolute top-1.5 right-1.5 z-10 bg-level text-background">Freeze</Badge>}
+      </div>
     </div>
   );
 }
@@ -197,7 +180,8 @@ export function InplayPage() {
   const togglePin = (sym) => setPins(pinList.includes(sym) ? pinList.filter((p) => p !== sym) : pinList.concat(sym).slice(-v.n));
 
   const { starred } = useWatchlist();
-  const { status, data, syms } = useInplay({ win: v.win, sort: v.sort, n: v.n, pins: pinList });
+  const [freeze, setFreeze] = React.useState(false);
+  const { status, data, syms } = useInplay({ win: v.win, sort: v.sort, n: v.n, pins: pinList, freeze });
   // Only coins in the current format (an older server sends no windows)
   const coins = data && Array.isArray(data.coins) ? data.coins.filter((c) => c && c.w).slice(0, v.n) : [];
   const warming = data && data.ready < data.total;
@@ -229,7 +213,7 @@ export function InplayPage() {
         <main className="grid min-h-0 flex-1 gap-1.5 p-1.5 max-md:!grid-cols-1 max-md:!grid-rows-none"
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(coins.length / cols)}, minmax(0, 1fr))` }}>
           {coins.map((c, i) => (
-            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} delay={i * 150} starred={starred.has(base(c.s))} onPin={() => togglePin(c.s)} />
+            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} delay={i * 150} starred={starred.has(base(c.s))} onPin={() => togglePin(c.s)} onHover={setFreeze} />
           ))}
         </main>
       ) : (
