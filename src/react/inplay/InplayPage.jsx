@@ -133,8 +133,6 @@ function SortStat({ coin, w, sort }) {
 }
 
 function Cell({ coin, win, sort, tf, delay, starred, onPin, onHover }) {
-  const [hover, setHover] = React.useState(false);
-  const over = (on) => { setHover(on); onHover(on); };
   const w = coin.w[win];
   return (
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
@@ -163,9 +161,8 @@ function Cell({ coin, win, sort, tf, delay, starred, onPin, onHover }) {
           <TooltipContent>{coin.pinned ? 'Открепить' : 'Закрепить: монета всегда в первых ячейках'}</TooltipContent>
         </Tooltip>
       </div>
-      <div className="relative flex min-h-0 flex-1 flex-col" onMouseEnter={() => over(true)} onMouseLeave={() => over(false)}>
+      <div className="flex min-h-0 flex-1 flex-col" onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
         <CoinChart sym={coin.s} tf={tf} delay={delay} />
-        {hover && <Badge className="pointer-events-none absolute top-1.5 right-1.5 z-10 bg-level text-background">Freeze</Badge>}
       </div>
     </div>
   );
@@ -203,6 +200,7 @@ export function InplayPage() {
           <Segmented label="Cells" value={v.n} onChange={(n) => set({ n: +n })} items={CELLS.map((c) => ({ value: c, label: String(c) }))} />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {freeze && <Badge className="bg-level text-background">Freeze</Badge>}
           <CoinSearch syms={syms} pins={pinList} onToggle={togglePin} />
           {status !== 'live' ? <Badge variant="outline">{status === 'offline' ? 'Reconnecting…' : 'Connecting…'}</Badge>
             : warming ? <Badge variant="outline"><Spinner />History {data.ready}/{data.total}</Badge>
