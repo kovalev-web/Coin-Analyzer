@@ -1242,6 +1242,24 @@ function _levelAtY(levels, series, y, tol) {
   return best;
 }
 
+// Index of the alert line within tol px of y (triggered alerts don't move), or -1
+function _alertAtY(alerts, series, y, tol) {
+  var best = -1, bestD = tol;
+  (alerts || []).forEach(function (a, i) {
+    if (a.triggered) return;
+    var ay = series.priceToCoordinate(a.price);
+    if (ay != null && Math.abs(ay - y) <= bestD) { best = i; bestD = Math.abs(ay - y); }
+  });
+  return best;
+}
+
+// Cursor over the chart: any line you can grab and move shows it
+function _grabCursor(sym, chart, series, x, y) {
+  if (_levelAtY(_levels[sym], series, y, 6) >= 0 || _alertAtY(_alerts[sym], series, y, 6) >= 0) return 'ns-resize';
+  if (_nearRayIdx(sym, chart, series, state.chartTF[sym] || '5m', x, y) >= 0) return 'move';
+  return '';
+}
+
 function _attachChartEvents(sym, container) {
   if (container.dataset.eventsAttached) return;
   container.dataset.eventsAttached = '1';
@@ -1323,7 +1341,7 @@ function _attachChartEvents(sym, container) {
           var map0 = _rayCoordMap(ch0, sym, tf0);
           var grabPrice = cs.coordinateToPrice(y), grabTime = map0 ? map0.xToTime(x0) : null;
           if (grabPrice != null && grabTime != null) {
-            _rayDragging = { sym: sym, idx: rIdx, ray: ray, grabPrice: grabPrice, grabTime: grabTime, origPrice1: ray.price1, origTime1: ray.time1, moved: false };
+            _rayDragging = { sym: sym, idx: rIdx, ray: ray, grabPrice: grabPrice, grabTime: grabTime, origPrice1: ray.price1, origTime1: ray.time1, moved: false, ctrl: true };
             container.style.cursor = 'move';
           }
           return;
@@ -1365,6 +1383,28 @@ function _attachChartEvents(sym, container) {
           _dragging = { sym: sym, idx: i, lvl: levels[i] };
           container.style.cursor = 'ns-resize';
           return;
+        }
+      }
+      // Alerts and rays move the same way: grab the line and drag
+      if (e.shiftKey || e.metaKey) return;
+      var aGrab = _alertAtY(_alerts[sym], cs, y, 6);
+      if (aGrab >= 0) {
+        e.stopPropagation(); e.preventDefault();
+        _alertDragging = { sym: sym, idx: aGrab, alert: _alerts[sym][aGrab] };
+        _alertDragMoved = false; _alertDragBtn = 0;
+        container.style.cursor = 'ns-resize';
+        return;
+      }
+      var xg = e.clientX - rect.left, tfg = state.chartTF[sym] || '5m';
+      var rGrab = _nearRayIdx(sym, ch, cs, tfg, xg, y);
+      if (rGrab >= 0) {
+        var mapg = _rayCoordMap(ch, sym, tfg);
+        var gp = cs.coordinateToPrice(y), gt = mapg ? mapg.xToTime(xg) : null;
+        if (gp != null && gt != null) {
+          e.stopPropagation(); e.preventDefault();
+          var rg = _rays[sym][rGrab];
+          _rayDragging = { sym: sym, idx: rGrab, ray: rg, grabPrice: gp, grabTime: gt, origPrice1: rg.price1, origTime1: rg.time1, moved: false, ctrl: false };
+          container.style.cursor = 'move';
         }
       }
       return;
@@ -1438,20 +1478,7 @@ function _attachChartEvents(sym, container) {
       return;
     }
     if (cs) {
-      var levels = _levels[sym] || [];
-      var near = false;
-      for (var j = 0; j < levels.length; j++) {
-        var ly2 = cs.priceToCoordinate(levels[j].price);
-        if (ly2 != null && Math.abs(ly2 - y) < 6) { near = true; break; }
-      }
-      if (!near && e.shiftKey) {
-        var alertsHint = _alerts[sym] || [];
-        for (var ak = 0; ak < alertsHint.length; ak++) {
-          var ayk = cs.priceToCoordinate(alertsHint[ak].price);
-          if (ayk != null && Math.abs(ayk - y) < 8) { near = true; break; }
-        }
-      }
-      container.style.cursor = near ? 'ns-resize' : '';
+      container.style.cursor = _grabCursor(sym, _charts[sym], cs, e.clientX - rect.left, y);
       var ruler = _rulers[sym];
       if (ruler && ruler.start && ((e.buttons & 4) || (ruler._altRuler && (e.buttons & 1)))) {
         var pt = { x: e.clientX - rect.left, y: y };
@@ -1463,7 +1490,7 @@ function _attachChartEvents(sym, container) {
   container.addEventListener('mouseup', function (e) {
     if (e.button === 0 && _rayDragging && _rayDragging.sym === sym) {
       var rd = _rayDragging; _rayDragging = null; container.style.cursor = '';
-      if (!rd.moved) removeRay(sym, rd.idx); else saveRays();
+      if (!rd.moved) { if (rd.ctrl) removeRay(sym, rd.idx); } else saveRays();
       return;
     }
     if (e.button === 0 && _dragging && _dragging.sym === sym) {
@@ -2749,7 +2776,7 @@ export function openCoinFullView(sym) {
         var fvMap0 = _rayCoordMap(_fvChart, sym, fvTf0);
         var fvGrabPrice = _fvSeries.coordinateToPrice(fvY0), fvGrabTime = fvMap0 ? fvMap0.xToTime(fvX0) : null;
         if (fvGrabPrice != null && fvGrabTime != null) {
-          _fvRayDragging = { idx: fvRIdx, ray: fvRay, grabPrice: fvGrabPrice, grabTime: fvGrabTime, origPrice1: fvRay.price1, origTime1: fvRay.time1, moved: false };
+          _fvRayDragging = { idx: fvRIdx, ray: fvRay, grabPrice: fvGrabPrice, grabTime: fvGrabTime, origPrice1: fvRay.price1, origTime1: fvRay.time1, moved: false, ctrl: true };
           el.style.cursor = 'move';
         }
         return;
@@ -2817,6 +2844,28 @@ export function openCoinFullView(sym) {
       var ly = _fvSeries.priceToCoordinate(levels[i].price);
       if (ly != null && Math.abs(ly - y) < 6) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
     }
+    // Alerts and rays move the same way: grab the line and drag
+    if (e.shiftKey || e.metaKey) return;
+    var fvAGrab = _alertAtY(_alerts[sym], _fvSeries, y, 6);
+    if (fvAGrab >= 0) {
+      e.stopPropagation(); e.preventDefault();
+      _fvAlertDragging = { idx: fvAGrab, alert: _alerts[sym][fvAGrab] };
+      _fvAlertDragMoved = false; _fvAlertDragBtn = 0;
+      el.style.cursor = 'ns-resize';
+      return;
+    }
+    var fvXg = e.clientX - rect.left, fvTfg = state.chartTF[sym] || '5m';
+    var fvRGrab = _nearRayIdx(sym, _fvChart, _fvSeries, fvTfg, fvXg, y);
+    if (fvRGrab >= 0) {
+      var fvMapg = _rayCoordMap(_fvChart, sym, fvTfg);
+      var fvGp = _fvSeries.coordinateToPrice(y), fvGt = fvMapg ? fvMapg.xToTime(fvXg) : null;
+      if (fvGp != null && fvGt != null) {
+        e.stopPropagation(); e.preventDefault();
+        var fvRg = _rays[sym][fvRGrab];
+        _fvRayDragging = { idx: fvRGrab, ray: fvRg, grabPrice: fvGp, grabTime: fvGt, origPrice1: fvRg.price1, origTime1: fvRg.time1, moved: false, ctrl: false };
+        el.style.cursor = 'move';
+      }
+    }
   }, { capture: true });
   el.addEventListener('mousemove', function (e) {
     var rect = el.getBoundingClientRect();
@@ -2858,20 +2907,7 @@ export function openCoinFullView(sym) {
       }
       return;
     }
-    var fvNear = false;
-    var fvLvls = _levels[sym] || [];
-    for (var fvi = 0; fvi < fvLvls.length; fvi++) {
-      var fvLy = _fvSeries.priceToCoordinate(fvLvls[fvi].price);
-      if (fvLy != null && Math.abs(fvLy - y) < 6) { fvNear = true; break; }
-    }
-    if (!fvNear && e.shiftKey) {
-      var fvAlertHints = _alerts[sym] || [];
-      for (var fvAk = 0; fvAk < fvAlertHints.length; fvAk++) {
-        var fvAyk = _fvSeries.priceToCoordinate(fvAlertHints[fvAk].price);
-        if (fvAyk != null && Math.abs(fvAyk - y) < 8) { fvNear = true; break; }
-      }
-    }
-    el.style.cursor = fvNear ? 'ns-resize' : '';
+    el.style.cursor = _fvReplay ? '' : _grabCursor(sym, _fvChart, _fvSeries, e.clientX - rect.left, y);
     var ruler = _fvRuler;
     if (!ruler || !ruler.start || (!(e.buttons & 4) && !(ruler._altRuler && (e.buttons & 1)))) return;
     var pt = { x: e.clientX - rect.left, y: y };
@@ -2936,7 +2972,7 @@ export function openCoinFullView(sym) {
     if ((e.button === 1 || (e.button === 0 && _fvRuler && _fvRuler._altRuler)) && _fvRuler) { _fvRuler.start = null; _fvRuler._altRuler = false; if (_fvRuler.label) _fvRuler.label.style.display = 'none'; }
     if (_fvRayDragging && e.button === 0) {
       var frd = _fvRayDragging; _fvRayDragging = null; el.style.cursor = '';
-      if (!frd.moved) removeRay(sym, frd.idx); else saveRays();
+      if (!frd.moved) { if (frd.ctrl) removeRay(sym, frd.idx); } else saveRays();
     }
     if (_fvDragging && e.button === 0) { saveLevels(); _fvDragging = null; el.style.cursor = ''; }
     if (_fvAlertDragging && e.button === _fvAlertDragBtn) { saveAlerts(); _fvAlertDragging = null; _fvAlertDragBtn = 2; el.style.cursor = ''; }
