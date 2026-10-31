@@ -4,13 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/components/ui/item';
 
-// Every line moves the same way: grab it and drag (the cursor changes over it)
+// Every line moves the same way: hold ⌘ and drag it (plain drag pans the chart)
 const MAC = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
 const OPT = MAC ? 'Option' : 'Alt';
+const CMD = MAC ? '⌘' : 'Win';
 const GROUPS = [
-  ['Level', [['Add', ['Right-click']], ['Remove', ['Right-click on line']], ['Move', ['Drag line or price label']]]],
-  ['Alert', [['Add', ['Shift', 'Right-click']], ['Remove', ['Shift', 'Right-click on line']], ['Move', ['Drag line']]]],
-  ['Ray', [['Add', ['Ctrl', 'Click']], ['Remove', ['Ctrl', 'Click on ray']], ['Move', ['Drag ray']]]],
+  ['Level', [['Add', ['Right-click']], ['Remove', ['Right-click on line']], ['Move', [CMD, 'Drag line or price label']]]],
+  ['Alert', [['Add', ['Shift', 'Right-click']], ['Remove', ['Shift', 'Right-click on line']], ['Move', [CMD, 'Drag line']]]],
+  ['Ray', [['Add', ['Ctrl', 'Click']], ['Remove', ['Ctrl', 'Click on ray']], ['Move', [CMD, 'Drag ray']]]],
   ['Ruler', [['Measure', [OPT, 'Drag']], ['Measure', ['Middle-button drag']]]],
   ['Trades', [['Show / hide entries and exits', ['T']]]],
 ];

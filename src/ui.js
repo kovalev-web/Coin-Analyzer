@@ -1254,8 +1254,10 @@ function _alertAtY(alerts, series, y, tol) {
   return best;
 }
 
-// Cursor over the chart: any line you can grab and move shows it
-function _grabCursor(sym, chart, series, x, y) {
+// Cursor over the chart: with ⌘ held, any line you can grab and move shows it
+// (plain drag always pans the chart — lines are moved only with ⌘)
+function _grabCursor(sym, chart, series, x, y, meta) {
+  if (!meta) return '';
   if (_levelAtY(_levels[sym], series, y, 6) >= 0 || _alertAtY(_alerts[sym], series, y, 6) >= 0) return 'ns-resize';
   if (_nearRayIdx(sym, chart, series, state.chartTF[sym] || '5m', x, y) >= 0) return 'move';
   return '';
@@ -1317,9 +1319,9 @@ function _attachChartEvents(sym, container) {
     var priceAxisW = 0;
     try { if (ch) priceAxisW = ch.priceScale('right').width(); } catch (_) {}
     // The price axis is the chart's own (drag = vertical zoom), except a level's
-    // price label: grabbing it drags the level, as in TradingView
+    // price label with ⌘: grabbing it drags the level
     if (e.clientX - rect.left > rect.width - priceAxisW - 2) {
-      var axLvl = e.button === 0 && !e.ctrlKey && !e.altKey && !e.shiftKey && cs ? _levelAtY(_levels[sym], cs, e.clientY - rect.top, 9) : -1;
+      var axLvl = e.button === 0 && e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && cs ? _levelAtY(_levels[sym], cs, e.clientY - rect.top, 9) : -1;
       if (axLvl < 0) return;
       e.stopPropagation(); e.preventDefault();
       _dragging = { sym: sym, idx: axLvl, lvl: _levels[sym][axLvl] };
@@ -1376,18 +1378,15 @@ function _attachChartEvents(sym, container) {
         if (pr0 != null && _rulers[sym]) { _rulers[sym].start = { pt: pt0, price: pr0 }; _rulers[sym]._altRuler = true; }
         return;
       }
-      var levels = _levels[sym] || [];
-      for (var i = 0; i < levels.length; i++) {
-        var ly = cs.priceToCoordinate(levels[i].price);
-        if (ly != null && Math.abs(ly - y) < 6) {
-          e.stopPropagation(); e.preventDefault();
-          _dragging = { sym: sym, idx: i, lvl: levels[i] };
-          container.style.cursor = 'ns-resize';
-          return;
-        }
+      // ⌘ + drag moves a level, an alert or a ray; plain drag always pans the chart
+      if (!e.metaKey || e.shiftKey) return;
+      var lGrab = _levelAtY(_levels[sym], cs, y, 6);
+      if (lGrab >= 0) {
+        e.stopPropagation(); e.preventDefault();
+        _dragging = { sym: sym, idx: lGrab, lvl: _levels[sym][lGrab] };
+        container.style.cursor = 'ns-resize';
+        return;
       }
-      // Alerts and rays move the same way: grab the line and drag
-      if (e.shiftKey || e.metaKey) return;
       var aGrab = _alertAtY(_alerts[sym], cs, y, 6);
       if (aGrab >= 0) {
         e.stopPropagation(); e.preventDefault();
@@ -1479,7 +1478,7 @@ function _attachChartEvents(sym, container) {
       return;
     }
     if (cs) {
-      container.style.cursor = _grabCursor(sym, _charts[sym], cs, e.clientX - rect.left, y);
+      container.style.cursor = _grabCursor(sym, _charts[sym], cs, e.clientX - rect.left, y, e.metaKey);
       var ruler = _rulers[sym];
       if (ruler && ruler.start && ((e.buttons & 4) || (ruler._altRuler && (e.buttons & 1)))) {
         var pt = { x: e.clientX - rect.left, y: y };
@@ -2746,9 +2745,9 @@ export function openCoinFullView(sym) {
     // Ignore clicks on the price axis (right side) — let chart handle vertical zoom natively
     var priceAxisW = 0;
     try { priceAxisW = _fvChart.priceScale('right').width(); } catch (_) {}
-    // …except a level's price label: grabbing it drags the level
+    // …except a level's price label with ⌘: grabbing it drags the level
     if (e.clientX - rect.left > rect.width - priceAxisW - 2) {
-      var fvAxLvl = e.button === 0 && !_fvReplay && !e.ctrlKey && !e.altKey && !e.shiftKey ? _levelAtY(_levels[sym], _fvSeries, e.clientY - rect.top, 9) : -1;
+      var fvAxLvl = e.button === 0 && e.metaKey && !_fvReplay && !e.ctrlKey && !e.altKey && !e.shiftKey ? _levelAtY(_levels[sym], _fvSeries, e.clientY - rect.top, 9) : -1;
       if (fvAxLvl < 0) return;
       e.stopPropagation(); e.preventDefault();
       _fvDragging = { idx: fvAxLvl, lvl: _levels[sym][fvAxLvl] };
@@ -2840,13 +2839,10 @@ export function openCoinFullView(sym) {
     if (e.button !== 0) return;
     if (_fvReplay) return; // review mode: the live chart's levels aren't here — nothing to drag
     var y = e.clientY - rect.top;
-    var levels = _levels[sym] || [];
-    for (var i = 0; i < levels.length; i++) {
-      var ly = _fvSeries.priceToCoordinate(levels[i].price);
-      if (ly != null && Math.abs(ly - y) < 6) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: i, lvl: levels[i] }; el.style.cursor = 'ns-resize'; return; }
-    }
-    // Alerts and rays move the same way: grab the line and drag
-    if (e.shiftKey || e.metaKey) return;
+    // ⌘ + drag moves a level, an alert or a ray; plain drag always pans the chart
+    if (!e.metaKey || e.shiftKey) return;
+    var fvLGrab = _levelAtY(_levels[sym], _fvSeries, y, 6);
+    if (fvLGrab >= 0) { e.stopPropagation(); e.preventDefault(); _fvDragging = { idx: fvLGrab, lvl: _levels[sym][fvLGrab] }; el.style.cursor = 'ns-resize'; return; }
     var fvAGrab = _alertAtY(_alerts[sym], _fvSeries, y, 6);
     if (fvAGrab >= 0) {
       e.stopPropagation(); e.preventDefault();
@@ -2908,7 +2904,7 @@ export function openCoinFullView(sym) {
       }
       return;
     }
-    el.style.cursor = _fvReplay ? '' : _grabCursor(sym, _fvChart, _fvSeries, e.clientX - rect.left, y);
+    el.style.cursor = _fvReplay ? '' : _grabCursor(sym, _fvChart, _fvSeries, e.clientX - rect.left, y, e.metaKey);
     var ruler = _fvRuler;
     if (!ruler || !ruler.start || (!(e.buttons & 4) && !(ruler._altRuler && (e.buttons & 1)))) return;
     var pt = { x: e.clientX - rect.left, y: y };
