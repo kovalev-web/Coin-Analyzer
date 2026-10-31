@@ -228,6 +228,11 @@ function createInplayFeed(opts) {
       F.queue = []; F.queued.clear(); F.filled.clear();
       F.prof.clear(); F.profQueue = []; F.profQueued.clear();
     },
+    // A new listing: pick up the coin list and its 24h norm now, not in half an hour
+    refresh: function () {
+      if (!F.running) return;
+      refreshNorms().then(refreshUniverse).catch(function () {});
+    },
     get running() { return F.running; },
     get rows() { return F.rows; },   // [{ s, ok, w: { '5m': {chg, range, usd, vol, trades, …} | null, … }, gv, gt, ext }]
     get syms() { return F.syms; },

@@ -755,6 +755,7 @@ function inplaySubscribe(ws, msg) {
 // ── Binance WS: индивидуальные @ticker подписки (работают на VPS) ────────
 
 var binanceWS = null;
+var tickerStreams = [];  // 'btcusdt@ticker' — the same array the reconnect uses, so a new listing stays subscribed
 var _pushPending = false;
 var _lastTickerPush = 0;
 var TICKER_PUSH_INTERVAL_MS = 1000;
@@ -774,6 +775,7 @@ async function startBinanceWS() {
       .filter(function (s) { return s.symbol.endsWith('USDT') && s.status === 'TRADING'; })
       .map(function (s) { return s.symbol.toLowerCase() + '@ticker'; });
     console.log('[Binance] Got', symbols.length, 'symbols for WS');
+    tickerStreams = symbols;
     if (!knownFuturesSyms) {
       knownFuturesSyms = new Set(info.symbols
         .filter(function (s) { return s.symbol.endsWith('USDT') && s.status === 'TRADING'; })
@@ -3343,9 +3345,18 @@ setInterval(async function () {
   }
 }, 60000);
 
-// ── New futures listing alerts ────────────────────────────────────────────
+// ── New futures listings ──────────────────────────────────────────────────
+// Live at once everywhere: its own @ticker stream (the list's price), In play's
+// universe; then the Telegram alert and a notification to every user
+function goLive(sym) {
+  var stream = sym.toLowerCase() + '@ticker';
+  if (tickerStreams.indexOf(stream) === -1) tickerStreams.push(stream);
+  if (binanceWS && binanceWS.readyState === WebSocket.OPEN) binanceWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: [stream], id: Date.now() }));
+  inplayFeed.refresh();
+}
+
 async function checkNewListings() {
-  if (!LISTING_ALERT_CHAT_ID || !knownFuturesSyms) return;
+  if (!knownFuturesSyms) return;
   try {
     var info = await fetchBinance(BINANCE_REST + '/fapi/v1/exchangeInfo');
     var newOnes = info.symbols.filter(function (s) {
@@ -3359,7 +3370,8 @@ async function checkNewListings() {
         ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + coin }]] }
         : undefined;
       console.log('[Listing] New futures listing detected:', sym);
-      await sendTG(LISTING_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
+      goLive(sym);
+      if (LISTING_ALERT_CHAT_ID) await sendTG(LISTING_ALERT_CHAT_ID, '🆕 Новый листинг!\n<b>' + sym + '</b>', markup);
       var users = getDb().sqlite.prepare('SELECT id FROM user').all();
       users.forEach(function (u) {
         pushNotification(u.id, {

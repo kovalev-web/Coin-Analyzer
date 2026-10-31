@@ -47,6 +47,9 @@ document.body.addEventListener('click', function (e) {
 - `#/profile` — профиль (сейчас заглушка, будет журнал)
 - `/settings` — настройки аккаунта (React + shadcn)
 
+## Новые листинги
+Сервер раз в 2 мин сверяет `exchangeInfo` с известными монетами (`checkNewListings` в `server-vps.js`); новая монета сразу получает свой `@ticker` (живая цена в списке главной, `goLive`, массив `tickerStreams` переживает реконнект) и попадает в In play (`inplayFeed.refresh()`), затем Telegram «Новый листинг» (`LISTING_ALERT_CHAT_ID`) и уведомление всем пользователям. Видна по фильтрам объёма: главная от $12M за 24 ч, In play от $10M.
+
 ## Ценовые алерты
 Срабатывают при касании уровня, фитиль считается (как в терминалах): сервер держит отдельный WS с 1m-свечами Binance по монетам с несработавшими алертами (`startAlertKlineWS` / `syncAlertStreams` в `server-vps.js`, список обновляется раз в 5 с) и по хаю/лою свечи между событиями видит любую сделку на уровне; тикер (`checkAlertsForSym`) — запасной путь. Формулы — `alerts/touch.js` (`candleTouch`, `snapshotRange`, `touches`), тесты `npm run test:alerts`.
 
