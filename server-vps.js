@@ -1506,8 +1506,11 @@ function normBriefing(entries) {
     if (!e || !e.sym) return false;
     e.sym = String(e.sym).toLowerCase();
     var k = e.sym + ':' + e.date;
-    if (seen[k]) return false;
-    seen[k] = true;
+    if (seen[k]) {
+      if (e.note && !seen[k].note) { seen[k].note = e.note; seen[k].noteUpdatedAt = e.noteUpdatedAt; } // keep the note of the dropped twin
+      return false;
+    }
+    seen[k] = e;
     return true;
   });
 }
