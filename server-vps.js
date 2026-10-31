@@ -15,6 +15,7 @@ const { analyzeCoin } = require('./shared/analyze');
 const { computeDayFacts, zonedDayStart, FACTS_VERSION } = require('./journal/facts');
 const { computeEdge, edgePeriod } = require('./journal/edge');
 const { createInplayFeed } = require('./inplay/feed');
+const alertTouch = require('./alerts/touch');
 const inplayRank = require('./inplay/rank');
 const originMetrics = require('./origin/metrics');
 const originVenues = require('./origin/venues');
@@ -386,12 +387,21 @@ async function loadAlertsOnStartup() {
 // Reload alerts from Redis every 30 seconds to pick up changes saved via Vercel
 setInterval(loadAlertsOnStartup, 30000);
 
-// Called on every price update (ticker or kline close) — no polling delay
+// Called on every last-price update (ticker or a chart's kline) — the range
+// between two snapshots; the candle stream of alert coins (startAlertKlineWS)
+// adds the wicks in between
 function checkAlertsForSym(fullSym, cur) {
   var sym = fullSym.replace(/USDT$/, '').toLowerCase();
   var prev = prevPrices[sym];
   prevPrices[sym] = cur;
   if (prev == null) return;
+  fireAlertsInRange(sym, alertTouch.snapshotRange(prev, cur), prev);
+}
+
+// Every untriggered alert of the coin whose level the traded range [lo, hi]
+// reached — touching it counts. from: the price before the move (direction)
+function fireAlertsInRange(sym, range, from) {
+  if (!range) return;
   var now = Date.now();
   var codes = Object.keys(alertsMemory);
   codes.forEach(function (code) {
@@ -404,20 +414,19 @@ function checkAlertsForSym(fullSym, cur) {
       // Use serverReceivedAt (server clock) — never trust client createdAt which can be ahead.
       var _graceTs = a.serverReceivedAt || a.createdAt;
       if (_graceTs && (now - _graceTs) < 5000) return;
-      var crossed = (prev < a.price && cur >= a.price) || (prev > a.price && cur <= a.price);
-      if (!crossed) return;
+      if (!alertTouch.touches(range, a.price)) return;
       var coolKey = code + ':' + sym + ':' + a.price;
       if (_alertSentAt[coolKey] && now - _alertSentAt[coolKey] < 60000) return; // dedup: same alert within 60s
       _alertSentAt[coolKey] = now;
       a.triggered = true;
       dirty = true;
       var fmtPrice = parseFloat(parseFloat(a.price).toPrecision(6));
-      console.log('[Alert] ' + sym.toUpperCase() + ' crossed ' + fmtPrice + ' | chatId=' + (entry.chatId || 'EMPTY'));
+      console.log('[Alert] ' + sym.toUpperCase() + ' touched ' + fmtPrice + ' | chatId=' + (entry.chatId || 'EMPTY'));
       var alertMarkup = APP_URL ? { inline_keyboard: [[{ text: '📈 Открыть график', url: APP_URL + '/?sym=' + sym.toUpperCase() }]] } : undefined;
       sendTG(entry.chatId, '🕷️Price Alert!\n' + sym.toUpperCase() + ' — <code>' + fmtPrice + '</code>', alertMarkup);
       var payload = JSON.stringify({ type: 'alert_triggered', code: code, sym: sym, price: a.price });
       clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === code) c.send(payload); });
-      var alertDirection = (prev < a.price && cur >= a.price) ? 'up' : 'down';
+      var alertDirection = from < a.price ? 'up' : 'down';
       pushNotification(code, {
         type: 'alert',
         sym: sym,
@@ -913,6 +922,75 @@ function startKlineWS() {
     klineWS.close();
   });
 }
+
+// ── Alert candles: 1m klines of every coin with an untriggered alert ──────
+// Its own connection (these candles aren't for the clients): each event has the
+// forming candle's high / low, so a wick that touched a level fires the alert
+// even when the price came back before the next ticker snapshot.
+
+var alertKlineWS = null;
+var alertStreams = new Set();  // 'btcusdt@kline_1m'
+var alertCandles = {};         // sym → { t, h, l, c } of its last event
+
+function alertSymsWanted() {
+  var want = new Set();
+  Object.keys(alertsMemory).forEach(function (code) {
+    var data = alertsMemory[code] && alertsMemory[code].data;
+    if (!data) return;
+    Object.keys(data).forEach(function (sym) {
+      if ((data[sym] || []).some(function (a) { return !a.triggered; })) want.add(sym.toLowerCase() + 'usdt@kline_1m');
+    });
+  });
+  return want;
+}
+
+function syncAlertStreams() {
+  var want = alertSymsWanted();
+  var add = [], drop = [];
+  want.forEach(function (st) { if (!alertStreams.has(st)) add.push(st); });
+  alertStreams.forEach(function (st) { if (!want.has(st)) drop.push(st); });
+  if (!add.length && !drop.length) return;
+  alertStreams = want;
+  console.log('[AlertKlineWS] Watching', want.size, 'coins (+' + add.length + ' / -' + drop.length + ')');
+  drop.forEach(function (st) { delete alertCandles[st.replace(/usdt@kline_1m$/, '')]; });
+  if (!alertKlineWS || alertKlineWS.readyState !== WebSocket.OPEN) return; // subscribed on open
+  for (var i = 0; i < add.length; i += 100) alertKlineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: add.slice(i, i + 100), id: Date.now() + i }));
+  for (var j = 0; j < drop.length; j += 100) alertKlineWS.send(JSON.stringify({ method: 'UNSUBSCRIBE', params: drop.slice(j, j + 100), id: Date.now() + 50000 + j }));
+}
+
+function startAlertKlineWS() {
+  alertKlineWS = new WebSocket(BINANCE_KLINE_WS_URL);
+  alertKlineWS.on('open', function () {
+    alertCandles = {}; // a gap while disconnected: start over, nothing assumed about it
+    alertStreams = alertSymsWanted();
+    var params = Array.from(alertStreams);
+    for (var i = 0; i < params.length; i += 100) alertKlineWS.send(JSON.stringify({ method: 'SUBSCRIBE', params: params.slice(i, i + 100), id: i + 1 }));
+    console.log('[AlertKlineWS] Connected,', params.length, 'coins');
+  });
+  alertKlineWS.on('message', function (raw) {
+    try {
+      var msg = JSON.parse(raw.toString());
+      if (msg.e !== 'kline') return;
+      var k = msg.k;
+      var sym = k.s.replace(/USDT$/, '').toLowerCase();
+      var r = alertTouch.candleTouch(alertCandles[sym] || null, { t: k.t, h: parseFloat(k.h), l: parseFloat(k.l), c: parseFloat(k.c) });
+      var from = alertCandles[sym] ? alertCandles[sym].c : null;
+      alertCandles[sym] = r.state;
+      if (r.range) fireAlertsInRange(sym, r.range, from);
+    } catch (e) {}
+  });
+  alertKlineWS.on('close', function () {
+    console.log('[AlertKlineWS] Disconnected, reconnecting in 5s...');
+    setTimeout(startAlertKlineWS, 5000);
+  });
+  alertKlineWS.on('error', function (e) {
+    console.error('[AlertKlineWS] Error:', e.message);
+    alertKlineWS.close();
+  });
+}
+
+// New, removed and triggered alerts change the list
+setInterval(syncAlertStreams, 5000);
 
 // ── Trading (proxy to the local trader process) ─────────────────────────
 // Only TRADER_USER_ID may trade. pump-ws never sees Binance keys: it checks
@@ -3232,6 +3310,7 @@ startKlineWS();         // kline WS для real-time обновлений све
 connectTraderEvents('live');  // события торговли от trader → WS вкладки владельца
 connectTraderEvents('test');  // тестовый trader (Binance Demo), если запущен
 loadAlertsOnStartup();  // загрузить алерты из Redis в память
+startAlertKlineWS();    // 1m-свечи монет с алертами: касание фитилем
 
 // REST-рефреш каждые 60 секунд — только как fallback для восстановления
 // после разрыва WS. Убрали частый опрос: он перезаписывал свежие WS-данные

@@ -47,6 +47,9 @@ document.body.addEventListener('click', function (e) {
 - `#/profile` — профиль (сейчас заглушка, будет журнал)
 - `/settings` — настройки аккаунта (React + shadcn)
 
+## Ценовые алерты
+Срабатывают при касании уровня, фитиль считается (как в терминалах): сервер держит отдельный WS с 1m-свечами Binance по монетам с несработавшими алертами (`startAlertKlineWS` / `syncAlertStreams` в `server-vps.js`, список обновляется раз в 5 с) и по хаю/лою свечи между событиями видит любую сделку на уровне; тикер (`checkAlertsForSym`) — запасной путь. Формулы — `alerts/touch.js` (`candleTouch`, `snapshotRange`, `touches`), тесты `npm run test:alerts`.
+
 ## API-эндпоинты (server-vps.js)
 - `POST /api/analyze` — анализ монеты через Claude + web_search
 - `POST /api/levels` — уровни цены
