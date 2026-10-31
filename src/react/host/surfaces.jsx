@@ -15,6 +15,7 @@ import { ChartTouchMenu } from './ChartTouchMenu.jsx';
 import { OriginPopover } from './OriginPopover.jsx';
 import { AlgoCard } from './AlgoCard.jsx';
 import { AlgoGuideDialog } from './AlgoGuideDialog.jsx';
+import { ConfirmDialog } from './ConfirmDialog.jsx';
 
 
 export const SURFACES = {
@@ -34,4 +35,5 @@ export const SURFACES = {
   algo: AlgoCard,
   'algo-guide': AlgoGuideDialog,
   'term-settings': TermSettingsDialog,
+  confirm: ConfirmDialog,
 };

@@ -23,9 +23,9 @@ import {
   updateSessionTimer, injectDemoBanner,
   briefingThisWeekEntries,
 } from './ui.js';
-import { toggleTerminal } from './terminal.js';
+import { toggleTerminal, terminalExposure } from './terminal.js';
 import { openMorningJournal, openEveningJournal } from './journal-cards.js';
-import { preloadReactHost, closeSurface, toast } from './react-bridge.js';
+import { preloadReactHost, closeSurface, openSurface, toast } from './react-bridge.js';
 import { mountIsland, unmountIslands } from './react/islands.jsx';
 import { NotFound, HomeState } from './react/home/HomeState.jsx';
 import { on } from './events.js';
@@ -135,8 +135,19 @@ document.body.addEventListener('click', function (e) {
       openFV(sym);
       break;
     }
-    case 'close-fv': {
-      closeCoinFullView();
+    case 'close-fv': { // the only way out of the full chart (Esc doesn't close it)
+      var _ex = terminalExposure();
+      if (_ex && (_ex.position || _ex.orders)) {
+        var _what = _ex.position && _ex.orders ? 'a position and orders' : _ex.position ? 'a position' : (_ex.orders === 1 ? 'an order' : _ex.orders + ' orders');
+        openSurface('confirm', {
+          title: 'Leave the chart?',
+          text: _ex.sym.replace(/USDT$/, '') + ' has ' + _what + ' open. Leaving the chart closes nothing — stops and take-profits keep working.',
+          confirmLabel: 'Leave',
+          onConfirm: closeCoinFullView,
+        });
+      } else {
+        closeCoinFullView();
+      }
       break;
     }
     case 'copy-sym': {

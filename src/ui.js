@@ -2581,12 +2581,12 @@ export function openCoinFullView(sym) {
   window.addEventListener('resize', _syncFVCanvas);
   var _fvWrapObs = new ResizeObserver(_syncFVCanvas);
   _fvWrapObs.observe(wrap);
-  function _onEscKey(e) { if (e.key === 'Escape' && !e.defaultPrevented && !isSurfaceOpen()) closeCoinFullView(); }
-  document.addEventListener('keydown', _onEscKey);
+  // Esc doesn't close the full chart (one stray key and the order book is gone
+  // mid-trade): only the Back button does, asking first when the coin has a position
   var fvLblEl = document.createElement('div');
   fvLblEl.className = 'ruler-lbl';
   wrap.appendChild(fvLblEl);
-  _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _resizeObserver: _fvWrapObs, _escHandler: _onEscKey };
+  _fvRuler = { start: null, canvas: rc, label: fvLblEl, _resizeHandler: _syncFVCanvas, _resizeObserver: _fvWrapObs };
 
   // On Mac trackpads: vertical scroll passes through; horizontal pans the chart.
   el.addEventListener('wheel', function (e) {
@@ -3125,7 +3125,6 @@ export function closeCoinFullView() {
   if (_fvChart) { try { _fvChart.remove(); } catch (e) {} _fvChart = null; }
   if (_fvRuler && _fvRuler._resizeHandler) window.removeEventListener('resize', _fvRuler._resizeHandler);
   if (_fvRuler && _fvRuler._resizeObserver) _fvRuler._resizeObserver.disconnect();
-  if (_fvRuler && _fvRuler._escHandler) document.removeEventListener('keydown', _fvRuler._escHandler);
   if (_fvTimerInterval) { clearInterval(_fvTimerInterval); _fvTimerInterval = null; }
   _fvSeries = null; _fvVolSeries = null; _fvRuler = null; _fvTradeMarkersData = [];
   window.__fvSeries = null; window.__fvVolSeries = null; window.__fvSymbol = null; window.__fvTF = null;

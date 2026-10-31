@@ -1035,6 +1035,16 @@ on('trade:event', function (ev) {
 // ── For the main screen widget (src/react/home/DaySummary.jsx) ─────────────────────────────────
 
 // null when this account can't trade; else the live trader state for the current mode
+// The coin of the open order book: its position size and how many orders
+// (limits, stop entries, SL/TP) stand on it; null without the order book
+export function terminalExposure() {
+  if (!T.open || !T.sym || !T.access) return null;
+  var pos = T.account.positions.find(function (p) { return p.symbol === T.sym && Number(p.amount) !== 0; });
+  var orders = T.account.orders.filter(function (o) { return o.symbol === T.sym; }).length
+    + T.account.algoOrders.filter(function (a) { return a.symbol === T.sym; }).length;
+  return { sym: T.sym, position: pos ? Number(pos.amount) : 0, orders: orders };
+}
+
 export function tradingSnapshot() {
   if (!T.access) return null;
   return { mode: T.mode, account: T.account };
