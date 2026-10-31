@@ -1585,7 +1585,6 @@ export function openAnalysisPopup(sym, btn) {
 }
 
 
-export { openTVMode, closeTVMode } from './tv.js';
 
 // ── Metric cards live update ────────────────────────────────────────────────
 

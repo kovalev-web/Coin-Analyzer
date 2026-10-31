@@ -1496,6 +1496,22 @@ function rememberIpCountry(req) {
   if (_ipCountry.size > 5000) _ipCountry.delete(_ipCountry.keys().next().value);
 }
 
+// Write the briefing: log what was in it when (trades are "planned" by it —
+// journal/briefing.js), save, tell the user's other tabs to reload it
+async function writeBriefing(userId, entries) {
+  var key = 'briefing:' + userId;
+  try {
+    var prevBr = await redis(['GET', key]);
+    var prevLog = await redis(['GET', 'briefing_log:' + userId]);
+    var blog = updateBriefingLog(prevLog && prevLog.result ? JSON.parse(prevLog.result) : {},
+      prevBr && prevBr.result ? JSON.parse(prevBr.result) : [], entries || [], Date.now());
+    await redis(['SET', 'briefing_log:' + userId, JSON.stringify(pruneLog(blog, new Date().toISOString().slice(0, 10)))]);
+  } catch (le) { console.error('[Briefing] log:', le.message); }
+  await redis(['SET', key, JSON.stringify(entries || [])]);
+  var _bMsg = JSON.stringify({ type: 'briefing_updated' });
+  clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === userId) c.send(_bMsg); });
+}
+
 var httpServer = http.createServer(async function (req, res) {
   rememberIpCountry(req);
   var origin = req.headers.origin;
@@ -1691,23 +1707,37 @@ var httpServer = http.createServer(async function (req, res) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             entries: r.result ? JSON.parse(r.result) : [],
+            today: await userTodayStr(userId),
             ai_summary: aiOwned ? (aiData.text || null) : null,
             ai_traded_keys: aiOwned ? (aiData.keys || null) : null,
             ai_summary_date: aiOwned ? (aiData.date || null) : null,
             ai_range: aiOwned ? (aiData.range || null) : null,
           }));
-        } else if (action === 'save') {
-          if (!parsed.skip_entries) {
-            // What was in the briefing when — trades are "planned" by it (journal/briefing.js)
-            try {
-              var prevBr = await redis(['GET', key]);
-              var prevLog = await redis(['GET', 'briefing_log:' + userId]);
-              var blog = updateBriefingLog(prevLog && prevLog.result ? JSON.parse(prevLog.result) : {},
-                prevBr && prevBr.result ? JSON.parse(prevBr.result) : [], entries || [], Date.now());
-              await redis(['SET', 'briefing_log:' + userId, JSON.stringify(pruneLog(blog, new Date().toISOString().slice(0, 10)))]);
-            } catch (le) { console.error('[Briefing] log:', le.message); }
-            await redis(['SET', key, JSON.stringify(entries || [])]);
+        } else if (action === 'toggle') {
+          // One coin in / out of today's briefing (the star on /grid): read, change, write
+          // here, so a page that holds no copy of the list can't overwrite newer edits
+          var tSym = String(parsed.sym || '').toUpperCase();
+          if (!/^[A-Z0-9]{1,30}$/.test(tSym)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid symbol' }));
+            return;
           }
+          var tToday = await userTodayStr(userId);
+          var tCur = await redis(['GET', key]);
+          var tList = tCur.result ? JSON.parse(tCur.result) : [];
+          var tAt = tList.findIndex(function (e) { return e.sym === tSym && e.date === tToday; });
+          if (parsed.on && tAt < 0) {
+            var tTick = tickerCache[tSym + 'USDT'];
+            tList.push({ sym: tSym, date: tToday, addedAt: Date.now(), addedPrice: tTick ? +tTick.c : null, status: 'watching', note: '' });
+            await writeBriefing(userId, tList);
+          } else if (!parsed.on && tAt >= 0) {
+            tList.splice(tAt, 1);
+            await writeBriefing(userId, tList);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, entries: tList, today: tToday }));
+        } else if (action === 'save') {
+          if (!parsed.skip_entries) await writeBriefing(userId, entries);
           if (parsed.clear_ai) {
             await redis(['DEL', keyAI]);
           } else if (parsed.ai_summary) {
@@ -1715,10 +1745,6 @@ var httpServer = http.createServer(async function (req, res) {
           }
           if (typeof parsed.utcOffset === 'number' && isFinite(parsed.utcOffset)) {
             await redis(['SET', 'briefing_tz:' + userId, String(parsed.utcOffset)]);
-          }
-          if (!parsed.skip_entries) {
-            var _bMsg = JSON.stringify({ type: 'briefing_updated' });
-            clients.forEach(function (c) { if (c.readyState === WebSocket.OPEN && c._userId === userId) c.send(_bMsg); });
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));

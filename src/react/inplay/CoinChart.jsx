@@ -1,6 +1,6 @@
 // Candles of a coin in a grid cell: Lightweight Charts (vanilla, like every
 // chart of the site) inside a React box; 240 candles of history, then live.
-// Built to run for 12+ hours on a TV, like TV mode (src/tv.js): explicit size
+// Built to run for 12+ hours on a TV, like the former TV mode: explicit size
 // and one ResizeObserver instead of autoSize (old TV WebKit blanks the chart),
 // charts created one after another (delay), colors read once, and the history
 // reloaded on every Binance reconnect and every HISTORY_MS — closes gaps and

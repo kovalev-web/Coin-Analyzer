@@ -13,9 +13,6 @@ function _uKey(base) { return base + ':' + (state.userId || 'anon'); }
 
 
 // TV update throttle: max once per 2s (TV hardware is slow)
-var _tvKlineThrottle = {};
-var _tvHeaderLast = 0;
-var TV_THROTTLE_MS = 2000;
 
 function volClrs() {
   var s = getComputedStyle(document.documentElement);
@@ -394,16 +391,6 @@ function processKlineUpdate(msg) {
   var vs = (window.__chartVolSeries || {})[sym];
   if (vs) { try { vs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
 
-  // TV-режим: обновляем не чаще TV_THROTTLE_MS (слабые TV-процессоры не справляются с каждым тиком)
-  var _tvNow = Date.now();
-  if (!_tvKlineThrottle[sym] || _tvNow - _tvKlineThrottle[sym] >= TV_THROTTLE_MS) {
-    _tvKlineThrottle[sym] = _tvNow;
-    var ts = (window.__tvChartSeries || {})[sym];
-    if (ts) { try { ts.update(k); } catch (e) {} }
-    var tvs = (window.__tvChartVolSeries || {})[sym];
-    if (tvs) { try { tvs.update({ time: k.time, value: k.volume, color: volClr }); } catch (e) {} }
-  }
-
   // Full view обновляем если открыт для этой монеты и совпадает таймфрейм
   if (window.__fvSymbol === sym && window.__fvTF === tf) {
     var fvs = window.__fvSeries;
@@ -506,10 +493,6 @@ export function loadCache() {
 // ── Live price updates (WS push) ─────────────────────────────────────────
 
 export function applyLivePriceUpdates() {
-  var _tvEl = document.getElementById('tv-overlay');
-  var _tvOpen = _tvEl && _tvEl.style.display !== 'none';
-
-  if (!_tvOpen) {
   document.querySelectorAll('[data-sym]').forEach(function (el) {
     var sym = el.dataset.sym;
     var coin = state.coins.find(function (c) { return c.symbol === sym; });
@@ -548,39 +531,10 @@ export function applyLivePriceUpdates() {
     }
   }
 
-  } // end !_tvOpen
-
-  // Update TV slot headers — only when overlay is visible, throttled + diff-guarded
-  if (_tvOpen) {
-    var _tvHNow = Date.now();
-    if (_tvHNow - _tvHeaderLast >= TV_THROTTLE_MS) {
-      _tvHeaderLast = _tvHNow;
-      document.querySelectorAll('[data-tv-sym]').forEach(function (el) {
-        var sym = el.dataset.tvSym;
-        var coin = state.coins.find(function (c) { return c.symbol === sym; });
-        if (!coin) return;
-        var ch = (coin.open_24h > 0 && coin.current_price > 0)
-          ? (coin.current_price - coin.open_24h) / coin.open_24h * 100
-          : (coin.price_change_percentage_24h || 0);
-        var newChg = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-        var newCls = 'tv-chg ' + (ch >= 0 ? 'up' : 'dn');
-        var chgEl = el.querySelector('.tv-chg');
-        if (chgEl) {
-          if (chgEl.textContent !== newChg) chgEl.textContent = newChg;
-          if (chgEl.className !== newCls) chgEl.className = newCls;
-        }
-        var prEl = el.querySelector('.tv-price');
-        if (prEl && coin.current_price) prEl.textContent = '$' + coin.current_price;
-      });
-    }
-  }
-
   emit('metrics:update');
 }
 
 function _refreshCardPct() {
-  var _tvEl = document.getElementById('tv-overlay');
-  if (_tvEl && _tvEl.style.display !== 'none') return;
   var coinMap = {};
   state.coins.forEach(function (c) { coinMap[c.symbol] = c; });
   document.querySelectorAll('[data-sym]').forEach(function (el) {
@@ -700,8 +654,6 @@ export async function pollCharts(deep) {
         try { s.setData(arr); } catch (e) { }
         var vs2 = (window.__chartVolSeries || {})[c.symbol];
         if (vs2) { try { vs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
-        var tvs2 = (window.__tvChartVolSeries || {})[c.symbol];
-        if (tvs2) { try { tvs2.setData(arr.map(function (x) { return { time: x.time, value: x.volume, color: x.close >= x.open ? volClrs().up : volClrs().dn }; })); } catch (e) { } }
         // Восстанавливаем старый visibleRange только если он ещё пересекается с новыми
         // данными — после долгого сна весь массив свечей мог сдвинуться в новый временной
         // диапазон, и setVisibleRange со старым (уже не существующим) диапазоном прижимает
@@ -712,8 +664,6 @@ export async function pollCharts(deep) {
         try { s.update(lastCandle); } catch (e) { }
         var vs = (window.__chartVolSeries || {})[c.symbol];
         if (vs) { try { vs.update(lastVol); } catch (e) { } }
-        var tvvs2 = (window.__tvChartVolSeries || {})[c.symbol];
-        if (tvvs2) { try { tvvs2.update(lastVol); } catch (e) { } }
       }
     } catch (e) { }
   }

@@ -23,7 +23,7 @@ function Faq() {
           <AccordionItem value="0-2">
             <AccordionTrigger>Can I try it without creating an account?</AccordionTrigger>
             <AccordionContent className={PROSE}>
-              <p>Yes — "Try without account" puts you in demo mode. You can browse the main board, Gainers, Full View, TV Mode, the liquidity panel and search freely, and draw levels/rays (they just stay local to your browser instead of syncing).</p>
+              <p>Yes — "Try without account" puts you in demo mode. You can browse the main board, Gainers, Full View, the liquidity panel and search freely, and draw levels/rays (they just stay local to your browser instead of syncing).</p>
               <p>What's gated behind sign-up: AI coin analysis, saving alerts, the briefing watchlist, the trading journal, notifications, and Telegram/Binance integrations — anything that needs to be remembered between sessions or sent to you.</p>
             </AccordionContent>
           </AccordionItem>
@@ -130,9 +130,9 @@ function Faq() {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="3-5">
-            <AccordionTrigger>What's TV Mode?</AccordionTrigger>
+            <AccordionTrigger>What's In play?</AccordionTrigger>
             <AccordionContent className={PROSE}>
-              <p>A fullscreen 3×2 grid showing six live charts at once (the current top movers), so you can watch several coins simultaneously without flipping between cards. Click any tile to open it in Full View, or exit to go back.</p>
+              <p>A grid of live charts of the coins moving the most right now (the grid icon in the header, /grid). Pick the period (5m–3h) and what to sort by — range, volume or trades against the coin's norm, their growth, or closeness to the day's high / low. Pin a coin to keep it on the grid, star it to add it to your watchlist. Built to stay open on a TV for hours.</p>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="3-6">

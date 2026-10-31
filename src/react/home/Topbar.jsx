@@ -2,7 +2,7 @@
 // the actions on the right. Buttons keep their data-action so the click
 // handling in main.js stays the one place for what they do.
 import * as React from 'react';
-import { Bell, Bookmark, BookOpen, CircleHelp, Info, LayoutGrid, LogIn, Monitor, Moon, Search, Sun, UserRound } from 'lucide-react';
+import { Bell, Bookmark, BookOpen, CircleHelp, Info, LayoutGrid, LogIn, Moon, Search, Sun, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -97,7 +97,6 @@ export function Topbar({ screener }) {
             <TooltipContent>In play</TooltipContent>
           </Tooltip>
         )}
-        <IconAction label="TV mode" action="tv" className="hidden md:inline-flex"><Monitor /></IconAction>
         <IconAction label={theme === 'dark' ? 'Light theme' : 'Dark theme'} action="toggle-theme" className="hidden md:inline-flex"><ThemeIcon /></IconAction>
         {!demo && (
           <IconAction label="Notifications" action="toggle-notif" id="notif-btn" className="relative">
@@ -114,7 +113,6 @@ export function Topbar({ screener }) {
             {!demo && <DropdownMenuItem data-action="open-journal"><BookOpen /> Journal</DropdownMenuItem>}
             {!demo && <DropdownMenuItem asChild><a href="/grid"><LayoutGrid /> In play</a></DropdownMenuItem>}
             <DropdownMenuItem data-action="toggle-theme"><ThemeIcon /> {theme === 'dark' ? 'Light' : 'Dark'}</DropdownMenuItem>
-            <DropdownMenuItem data-action="tv"><Monitor /> TV mode</DropdownMenuItem>
             <DropdownMenuItem data-action="open-hints"><Info /> Interactions</DropdownMenuItem>
             <DropdownMenuItem asChild><a href="/faq"><CircleHelp /> FAQ</a></DropdownMenuItem>
             {!demo && <DropdownMenuItem data-action="open-account"><UserRound /> Account</DropdownMenuItem>}

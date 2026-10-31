@@ -29,6 +29,7 @@ function connect() {
   sock.onopen = () => { S.heard = Date.now(); set({ status: 'live' }); subscribe(); };
   sock.onmessage = (ev) => {
     S.heard = Date.now();
+    if (ev.data.startsWith('{"type":"briefing_updated"')) { briefingFns.forEach((f) => f()); return; }
     if (!ev.data.startsWith('{"type":"inplay"')) return; // the rest is for the main page
     try {
       const d = JSON.parse(ev.data);
@@ -37,6 +38,10 @@ function connect() {
   };
   sock.onclose = () => { if (S.sock !== sock) return; set({ status: 'offline' }); setTimeout(connect, 2000); };
 }
+
+// The watchlist changed on another page (watchlist.js reloads it)
+const briefingFns = new Set();
+export function onBriefingUpdated(fn) { briefingFns.add(fn); }
 
 // view: { win, sort, n, pins } — sent again whenever it changes
 export function useInplay(view) {

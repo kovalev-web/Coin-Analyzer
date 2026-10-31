@@ -285,7 +285,6 @@ Base `button` inherits: `var(--font-family)`, 14px, weight 500, h=40px, radius 8
 | `.code-modal-backdrop` | Full-screen modal (`rgba(0,0,0,.55)`) |
 | `.code-modal` | Centred modal card, 360px max |
 | `.account-overlay` | Full-screen account settings |
-| `.tv-overlay` | Full-screen TV grid |
 | `#fv-overlay` | Full-screen single-chart view |
 
 ### `components.css` — Full View (FV)

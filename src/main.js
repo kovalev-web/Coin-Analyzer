@@ -7,7 +7,7 @@ import {
   fetchJournalToday, saveJournalMorning, saveJournalEvening, fetchJournalRecent,
 } from './api.js';
 import {
-  render, openAnalysisPopup, openLiquidityPopup, openOriginPopup, setChartTF, openTVMode, closeTVMode, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
+  render, openAnalysisPopup, openLiquidityPopup, openOriginPopup, setChartTF, toggleTheme, clearLevels, clearAlerts, clearRays, loadAlerts, handleAlertTriggered, openCoinFullView, closeCoinFullView, setFVChartTF, applyFVTradeMarkers, openFVNote,
   toggleBriefing, openBriefingPanel, closeBriefingPanel, loadBriefing, renderBriefingPanel,
   isBriefingPanelOpen,
   renderFVBriefingDrawer, toggleFVBriefingDrawer, openFVBriefingDrawer, closeFVBriefingDrawer, autoSetTradedStatus, syncBriefingNow, refreshBriefingFromServer, briefingJustSynced,
@@ -161,14 +161,8 @@ document.body.addEventListener('click', function (e) {
     case 'toggle-theme':
       toggleTheme();
       break;
-    case 'tv':
-      openTVMode();
-      break;
     case 'open-hints':
       openHintsPopup();
-      break;
-    case 'close-tv':
-      closeTVMode();
       break;
     case 'open-clear-popup':
       openClearPopup(sym, target);

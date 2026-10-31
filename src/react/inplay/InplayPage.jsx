@@ -3,10 +3,11 @@
 // volume / trades growth 15m against 3h, closest to the day's high / low),
 // the candles and the number of cells; the server sends the coins for that
 // choice (inplay/rank.js), the cells fill in order with no gaps. Pinned coins
-// (pin in a cell or the search) take the first cells. Charts are vanilla
+// (pin in a cell or the search) take the first cells; the star puts a coin
+// into today's watchlist (watchlist.js). Charts are vanilla
 // Lightweight Charts (CoinChart).
 import * as React from 'react';
-import { ArrowLeft, Check, Pin, PinOff, Search } from 'lucide-react';
+import { ArrowLeft, Check, Pin, PinOff, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -17,6 +18,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useInplay } from './feed.js';
+import { useWatchlist, toggleWatch } from './watchlist.js';
 import { CoinChart } from './CoinChart.jsx';
 
 const VIEW_KEY = 'qt_inplay_view';
@@ -149,7 +151,7 @@ function Range({ coin, win, sort }) {
   );
 }
 
-function Cell({ coin, win, sort, tf, delay, onPin }) {
+function Cell({ coin, win, sort, tf, delay, starred, onPin }) {
   const w = coin.w[win];
   return (
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
@@ -162,7 +164,16 @@ function Cell({ coin, win, sort, tf, delay, onPin }) {
         {w && <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-xs" className={cn('ml-auto', coin.pinned ? 'text-foreground' : 'text-muted-foreground')}
+            <Button variant="ghost" size="icon-xs" className={cn('ml-auto', starred ? 'text-level [&_svg]:fill-current' : 'text-muted-foreground')}
+              aria-label={starred ? 'Remove from watchlist' : 'Add to watchlist'} onClick={() => toggleWatch(coin.s)}>
+              <Star />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{starred ? 'Remove from watchlist' : 'Add to watchlist'}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" className={cn(coin.pinned ? 'text-foreground' : 'text-muted-foreground')}
               aria-label={coin.pinned ? 'Unpin' : 'Pin'} onClick={onPin}>
               {coin.pinned ? <PinOff /> : <Pin />}
             </Button>
@@ -183,6 +194,7 @@ export function InplayPage() {
   const pinList = Array.isArray(pins) ? pins.filter((p) => typeof p === 'string') : [];
   const togglePin = (sym) => setPins(pinList.includes(sym) ? pinList.filter((p) => p !== sym) : pinList.concat(sym).slice(-v.n));
 
+  const { starred } = useWatchlist();
   const { status, data, syms } = useInplay({ win: v.win, sort: v.sort, n: v.n, pins: pinList });
   // Only coins in the current format (an older server sends no windows)
   const coins = data && Array.isArray(data.coins) ? data.coins.filter((c) => c && c.w).slice(0, v.n) : [];
@@ -215,7 +227,7 @@ export function InplayPage() {
         <main className="grid min-h-0 flex-1 gap-1.5 p-1.5 max-md:!grid-cols-1 max-md:!grid-rows-none"
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(coins.length / cols)}, minmax(0, 1fr))` }}>
           {coins.map((c, i) => (
-            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} delay={i * 150} onPin={() => togglePin(c.s)} />
+            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} delay={i * 150} starred={starred.has(base(c.s))} onPin={() => togglePin(c.s)} />
           ))}
         </main>
       ) : (
