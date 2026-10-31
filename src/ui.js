@@ -1511,6 +1511,7 @@ function _initChartForSym(sym) {
       ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
       drawAlertIcons(s, ctx, rc2);
       drawCardRays(s, ctx, rc2);
+      if (_mainCharts[s]) _drawMainOverlays(s, ctx, rc2);
     }
     requestAnimationFrame(function () { alertIconLoop(s); });
   }(sym));
@@ -1521,8 +1522,40 @@ function _initChartForSym(sym) {
 
 // One card chart outside the card grid (the new main page, src/react/home2):
 // the same chart, levels, alerts, rays and ruler, in #chart-<sym>
-export function mountCoinChart(sym) { _initChartForSym(sym); }
-export function unmountCoinChart(sym) { _destroyChartForSym(sym); }
+// Unlike the grid's cards it also shows your trades and notes on the coin
+var _mainCharts = {};
+export function mountCoinChart(sym) {
+  _mainCharts[sym] = true;
+  _initChartForSym(sym);
+  ensureCoinNotes(sym);
+  if (!state.isDemoMode) _tradeDates(sym).forEach(function (d) { fetchTrades(sym, d); });
+}
+export function unmountCoinChart(sym) { delete _mainCharts[sym]; _destroyChartForSym(sym); clearNoteIcons(); }
+
+// Days whose fills are drawn: today and every briefing day of the coin
+function _tradeDates(sym) {
+  var dates = {};
+  dates[todayDate()] = true;
+  (state.briefing || []).forEach(function (e) { if (e.sym === sym) dates[e.date] = true; });
+  return Object.keys(dates);
+}
+
+// The briefing comes after the chart on a fresh load: fetch the coin's other days then
+on('briefing:changed', function () {
+  if (state.isDemoMode) return;
+  Object.keys(_mainCharts).forEach(function (sym) { _tradeDates(sym).forEach(function (d) { fetchTrades(sym, d); }); });
+});
+
+function _drawMainOverlays(sym, ctx, rc) {
+  var chart = _charts[sym], series = _fullSeries[sym];
+  if (!chart || !series || !_chartReady[sym]) return;
+  var dpr = window.devicePixelRatio || 1;
+  var w = rc.width / dpr, h = rc.height / dpr;
+  var paneH = h; try { paneH = h - chart.timeScale().height(); } catch (_) {}
+  var tfSec = (TF_MS[state.chartTF[sym] || '5m'] || 300000) / 1000;
+  if (_tradeMarkersOn) _drawTradeTriangles(ctx, chart, series, _tradeMarkersFor(sym, _tradeDates(sym)), tfSec, w, paneH);
+  drawNoteIcons(ctx, series, chart, sym, tfSec, w, paneH);
+}
 
 function _destroyChartForSym(sym) {
   if (!_charts[sym]) return;
@@ -2173,25 +2206,30 @@ function _drawFVOverlays(ctx, rc, sym) {
   }
   // Trade entry/exit triangles (T over the chart hides / shows them)
   var tfSec = {'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'1d':86400}[state.chartTF[sym] || '5m'] || 300;
-  (_tradeMarkersOn ? _fvTradeMarkersData : []).forEach(function (m) {
-    var snapped = Math.floor(m.time / tfSec) * tfSec;
-    var y = _fvSeries.priceToCoordinate(m.price);
-    var x = _fvChart && _fvChart.timeScale().timeToCoordinate(snapped);
-    if (y == null || x == null || x < 0 || x > cssW || y < 0 || y > cssH) return;
-    var hb = 8, h = 14; // equilateral: halfBase=8, height≈8×√3
-    ctx.save();
-    ctx.fillStyle = m.buy ? '#22c55e' : '#ff5050';
-    ctx.beginPath();
-    if (m.buy) { ctx.moveTo(x, y); ctx.lineTo(x - hb, y + h); ctx.lineTo(x + hb, y + h); }
-    else        { ctx.moveTo(x, y); ctx.lineTo(x - hb, y - h); ctx.lineTo(x + hb, y - h); }
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  });
+  if (_tradeMarkersOn && _fvChart) _drawTradeTriangles(ctx, _fvChart, _fvSeries, _fvTradeMarkersData, tfSec, cssW, cssH);
   // Algorithms found in the tape (server algos/): P (timer) / C (pressure) with an arrow where it started
   _drawFvAlgos(ctx, tfSec, cssW, paneH);
   // Your notes on this coin: a bubble at the time and price each was written
   drawNoteIcons(ctx, _fvSeries, _fvChart, sym, tfSec, cssW, paneH);
+}
+
+// Entry (green, up) / exit (red, down) triangles at the fill's candle and price
+function _drawTradeTriangles(ctx, chart, series, markers, tfSec, w, h) {
+  markers.forEach(function (m) {
+    var snapped = Math.floor(m.time / tfSec) * tfSec;
+    var y = series.priceToCoordinate(m.price);
+    var x = chart.timeScale().timeToCoordinate(snapped);
+    if (y == null || x == null || x < 0 || x > w || y < 0 || y > h) return;
+    var hb = 8, th = 14; // equilateral: halfBase=8, height≈8×√3
+    ctx.save();
+    ctx.fillStyle = m.buy ? '#22c55e' : '#ff5050';
+    ctx.beginPath();
+    if (m.buy) { ctx.moveTo(x, y); ctx.lineTo(x - hb, y + th); ctx.lineTo(x + hb, y + th); }
+    else        { ctx.moveTo(x, y); ctx.lineTo(x - hb, y - th); ctx.lineTo(x + hb, y - th); }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
 }
 
 // Entry/exit triangles: with the briefing drawer open — every briefing day of
@@ -2207,6 +2245,12 @@ function _applyFVTradeMarkers(sym) {
   var dates = _drawer && _drawer.classList.contains('open')
     ? (state.briefing || []).filter(function (e) { return e.sym === sym; }).map(function (e) { return e.date; })
     : [todayDate()];
+  _fvTradeMarkersData = _tradeMarkersFor(sym, dates);
+}
+
+// Fills of the coin on these days (fetched trades) plus the ones that just
+// happened and aren't in them yet
+function _tradeMarkersFor(sym, dates) {
   var markers = [];
   dates.forEach(function (date) {
     var t = state.trades[sym + ':' + date];
@@ -2222,7 +2266,7 @@ function _applyFVTradeMarkers(sym) {
   // Fills that just happened and aren't in the fetched trades yet
   var last = markers.reduce(function (m, x) { return Math.max(m, x.time); }, 0);
   _liveFills[sym] = (_liveFills[sym] || []).filter(function (f) { return f.time > last; });
-  _fvTradeMarkersData = markers.concat(_liveFills[sym]);
+  return markers.concat(_liveFills[sym]);
 }
 
 // ── Algorithms in the coin's tape (P marks): server algos/, GET /api/algos ──
@@ -2286,7 +2330,8 @@ function _fvAlgoAt(x, y) {
 var _tradeMarkersOn = (function () { try { return localStorage.getItem('qt_trade_markers') !== '0'; } catch (e) { return true; } })();
 document.addEventListener('keydown', function (e) {
   if (e.code !== 'KeyT' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-  if (!_fvChart || isSurfaceOpen() || !document.querySelector('.fv-chart-wrap:hover')) return;
+  var overChart = (_fvChart && document.querySelector('.fv-chart-wrap:hover')) || document.querySelector('[data-coin-chart]:hover');
+  if (!overChart || isSurfaceOpen()) return;
   var t = e.target;
   if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
   e.preventDefault();

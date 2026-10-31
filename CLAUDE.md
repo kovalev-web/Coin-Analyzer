@@ -40,7 +40,7 @@ document.body.addEventListener('click', function (e) {
 
 ## Роуты фронтенда
 - `#/screener` — скринер
-- `/` — главная (с 2026-10-31, `src/react/home2/Home2.jsx`): шапка без Tear/Gainers, полоса дня, список монет с тирами и сортировкой, график выбранной монеты — тот же, что у карточек (`mountCoinChart` / `unmountCoinChart` в `ui.js`: уровни, алерты, лучи, линейка; заметки — поверхность `notes`), вотчлист всегда открыт (`WatchlistPanel` в `home/Briefing.jsx`); `?sym=` открывает полный график. `render()` на `/` ничего не делает.
+- `/` — главная (с 2026-10-31, `src/react/home2/Home2.jsx`): шапка без Tear/Gainers, полоса дня, список монет с тирами и сортировкой, график выбранной монеты — тот же, что у карточек (`mountCoinChart` / `unmountCoinChart` в `ui.js`: уровни, алерты, лучи, линейка; заметки — поверхность `notes`; в отличие от карточек сетки рисует треугольники сделок за сегодня и дни брифинга монеты и пузыри заметок — `_drawMainOverlays`, T над графиком прячет треугольники), вотчлист всегда открыт (`WatchlistPanel` в `home/Briefing.jsx`); `?sym=` открывает полный график. `render()` на `/` ничего не делает.
 - `/new` (`CLASSIC_ROUTE` в `router.js`) — прежняя главная, сетка карточек (`render()` в `ui.js`), Tear ведёт сюда. Откат: поменять пути двух `registerRoute` в `main.js` местами (код до переключения — тег `home-classic-2026-10-31`)
 - `/grid` — in-play скринер: что ходит за 5m…3h (React + shadcn, см. «In play»)
 - `/journal` — журнал (React + shadcn)
