@@ -2159,8 +2159,9 @@ export function renderBriefingPanel() { emit('briefing:render'); }
 // placeholders here, mounted by _mountFvChrome
 function _fvBottomBarHTML() { return '<div class="fv-bottom-bar" data-fv-bar></div>'; }
 
+// Desktop: the island is a tab stuck to the chart's top edge, the stats line right under it
 function _fvCoinInfoHTML() {
-  return '<div class="fv-coin-info" data-fv-island></div><div class="fv-info-stats" data-fv-stats></div>';
+  return '<div class="fv-top"><div class="fv-coin-info" data-fv-island></div><div class="fv-info-stats" data-fv-stats></div></div>';
 }
 
 function _mountFvChrome(overlay, sym) {
