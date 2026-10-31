@@ -26,8 +26,8 @@ const DEFAULT_VIEW = { win: '5m', sort: 'move', tf: '1m', n: 6 };
 const WINDOWS = ['5m', '15m', '1h', '3h'];
 const SORTS = [
   { value: 'move', label: 'Move', tip: 'High − low of the period, % — how much the coin is moving' },
-  { value: 'vol', label: 'Volume', tip: 'USDT volume per minute over the period against the coin\'s usual minute (24 h)' },
-  { value: 'trades', label: 'Trades', tip: 'Trades per minute over the period against the coin\'s usual minute (24 h)' },
+  { value: 'vol', label: 'Volume', tip: 'USDT volume per minute over the period against the coin\'s average minute over the last 24 h. 14× = trading 14 times more than usual' },
+  { value: 'trades', label: 'Trades', tip: 'Trades per minute over the period against the coin\'s average minute over the last 24 h' },
   { value: 'gvol', label: 'Vol ↑', tip: 'Volume growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
   { value: 'gtrades', label: 'Trades ↑', tip: 'Trades growth: per minute over the last 15 min against the last 3 h. Doesn\'t depend on the period' },
   { value: 'ext', label: 'Day H/L', tip: 'Closest to the day\'s high or low (last 24 h). Doesn\'t depend on the period' },
@@ -126,19 +126,26 @@ function SortStat({ coin, w, sort }) {
   return <Stat tip={TIP.vol} strong={sort === 'vol'}>vol {x(w && w.vol)}</Stat>;
 }
 
-// Range of every period in a row, like ScalpStation: 5m · 15m · 1h · 3h, the chosen one bold
-function Ranges({ coin, win }) {
+// Range of the chosen period; every period in the tooltip
+function Range({ coin, win, sort }) {
+  const r = (k) => (coin.w[k] && coin.w[k].range != null ? coin.w[k].range.toFixed(2) + '%' : '—');
   return (
-    <Stat tip={'High − low, %: ' + WINDOWS.join(' · ')}>
-      {WINDOWS.map((k, i) => (
-        <React.Fragment key={k}>
-          {i > 0 && ' · '}
-          <span className={k === win ? 'font-semibold text-foreground' : undefined}>
-            {coin.w[k] && coin.w[k].range != null ? coin.w[k].range.toFixed(2) : '—'}
-          </span>
-        </React.Fragment>
-      ))}
-    </Stat>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={cn('cursor-default text-xs whitespace-nowrap tabular-nums', sort === 'move' ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{r(win)}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64">
+        <div className="mb-1">High − low of the period, % of its open</div>
+        <div className="grid grid-cols-[auto_auto] gap-x-3 tabular-nums">
+          {WINDOWS.map((k) => (
+            <React.Fragment key={k}>
+              <span className={k === win ? 'font-semibold' : undefined}>{k}</span>
+              <span className={cn('text-right', k === win && 'font-semibold')}>{r(k)}</span>
+            </React.Fragment>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -149,7 +156,8 @@ function Cell({ coin, win, sort, tf, delay, onPin }) {
       <div className="flex h-9 shrink-0 items-center gap-2.5 overflow-hidden border-b pr-1 pl-3">
         <span className="text-sm font-semibold tracking-wide">{base(coin.s)}</span>
         {w && <Stat tip={'Price change over ' + win} strong className={w.chg < 0 ? 'text-danger' : w.chg > 0 ? 'text-bullish' : ''}>{pct(w.chg, true)}</Stat>}
-        <Ranges coin={coin} win={win} />
+        <Range coin={coin} win={win} sort={sort} />
+        {coin.natr != null && <Stat tip="NATR 5m/14: average true range of the last 14 five-minute candles, % of the price — how big the candles are">natr {pct(coin.natr)}</Stat>}
         <SortStat coin={coin} w={w} sort={sort} />
         {w && <Stat tip={'USDT volume over ' + win} className="max-xl:hidden">{usd(w.usd)}</Stat>}
         <Tooltip>

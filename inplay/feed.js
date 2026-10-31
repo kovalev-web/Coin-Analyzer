@@ -163,7 +163,7 @@ function createInplayFeed(opts) {
       const live = F.live.get(sym);
       const all = live && (!bars.length || live.t > bars[bars.length - 1].t) ? bars.concat([live]) : bars;
       const c = coinWindows(all, now, F.norms.get(sym));
-      rows.push({ s: sym, ok: c.ok, w: c.w, gv: c.gv, gt: c.gt, ext: c.ext });
+      rows.push({ s: sym, ok: c.ok, w: c.w, gv: c.gv, gt: c.gt, ext: c.ext, natr: c.natr });
     }
     F.rows = rows;
     // "Ready" = liquid coins with history; the page shows a counter until they all have it

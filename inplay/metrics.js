@@ -11,6 +11,7 @@ const CFG = {
   windows: { '5m': 5, '15m': 15, '1h': 60, '3h': 180 },
   minDayUsd: 10e6,    // liquidity: USDT volume over 24 h, below it the coin is not shown
   growth: ['15m', '3h'], // volume / trades growth: this window per minute against that one
+  natr: { tf: 5, period: 14 }, // NATR on 5-minute candles over 14 of them, like ScalpStation's "NATR 5м/14"
 };
 CFG.keepBars = CFG.windows['3h'] + 5;
 
@@ -58,6 +59,36 @@ function growth(short, long, field) {
 
 // How close the price is to the day's high or low, % of the price; the ticker
 // is a minute old, so the fresh bars can push the extremes further
+// 1-minute bars → candles of tfMin minutes on the clock (…:00, :05, …), oldest first
+function candlesOf(bars, tfMin) {
+  const ms = tfMin * 60000, out = [];
+  for (const b of bars) {
+    const t = Math.floor(b.t / ms) * ms;
+    const last = out[out.length - 1];
+    if (last && last.t === t) {
+      if (b.h > last.h) last.h = b.h;
+      if (b.l < last.l) last.l = b.l;
+      last.c = b.c;
+    } else out.push({ t, o: b.o, h: b.h, l: b.l, c: b.c });
+  }
+  return out;
+}
+
+// Normalized ATR, %: the average true range of the last `period` candles of
+// tfMin minutes (the forming one included) against the last price; null
+// while there are fewer candles
+function natr(bars, tfMin, period) {
+  const candles = candlesOf(bars.slice(-(period + 2) * tfMin), tfMin).slice(-(period + 1));
+  if (candles.length < period + 1) return null;
+  let sum = 0;
+  for (let i = 1; i < candles.length; i++) {
+    const c = candles[i], prev = candles[i - 1].c;
+    sum += Math.max(c.h - c.l, Math.abs(c.h - prev), Math.abs(c.l - prev));
+  }
+  const last = candles[candles.length - 1].c;
+  return last > 0 ? sum / period / last * 100 : null;
+}
+
 function dayExtreme(bars, norm) {
   if (!bars.length || !norm || !(norm.high > 0) || !(norm.low > 0)) return null;
   let hi = norm.high, lo = norm.low;
@@ -101,8 +132,9 @@ function coinWindows(bars, now, norm, cfg) {
     gv: growth(s, l, 'usd'),
     gt: growth(s, l, 'n'),
     ext: dayExtreme(bars, norm),
+    natr: natr(bars, cfg.natr.tf, cfg.natr.period),
     ok: !!norm && norm.dayUsd >= cfg.minDayUsd,
   };
 }
 
-module.exports = { CFG, windowMinutes, rangePct, changePct, vsNorm, dayNorm, growth, dayExtreme, windowStats, coinWindows };
+module.exports = { CFG, windowMinutes, rangePct, changePct, vsNorm, dayNorm, growth, candlesOf, natr, dayExtreme, windowStats, coinWindows };

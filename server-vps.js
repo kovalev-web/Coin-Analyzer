@@ -722,7 +722,7 @@ function inplaySend(ws) {
       w[k] = x && { chg: inplayRound(x.chg), range: inplayRound(x.range), usd: Math.round(x.usd), vol: inplayRound(x.vol), trades: inplayRound(x.trades) };
     });
     var ext = r && r.ext ? { pct: inplayRound(r.ext.pct), side: r.ext.side } : null;
-    return { s: s, pinned: ws._inplay.pins.indexOf(s) >= 0, w: w, gv: r ? inplayRound(r.gv) : null, gt: r ? inplayRound(r.gt) : null, ext: ext };
+    return { s: s, pinned: ws._inplay.pins.indexOf(s) >= 0, w: w, gv: r ? inplayRound(r.gv) : null, gt: r ? inplayRound(r.gt) : null, ext: ext, natr: r ? inplayRound(r.natr) : null };
   });
   var msg = { type: 'inplay', t: inplayMeta.t, ready: inplayMeta.ready, total: inplayMeta.total, coins: coins };
   // Список монет для поиска — при подписке и когда он изменился

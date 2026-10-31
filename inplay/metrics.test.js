@@ -49,6 +49,25 @@ test('growth: per minute of the short window against per minute of the long one'
   assert.equal(M.growth(null, { usd: 1, mins: 1 }, 'usd'), null);
 });
 
+test('candlesOf: 1-minute bars into clock-aligned candles', () => {
+  const bars = [0, 1, 2, 3, 4, 5, 6].map((i) => ({ t: T0 + i * MIN, o: 100 + i, h: 101 + i, l: 99 + i, c: 100.5 + i }));
+  const c = M.candlesOf(bars, 5);
+  assert.equal(c.length, 2);
+  assert.deepEqual(c[0], { t: T0, o: 100, h: 105, l: 99, c: 104.5 });
+  assert.deepEqual(c[1], { t: T0 + 5 * MIN, o: 105, h: 107, l: 104, c: 106.5 });
+});
+
+test('natr: average true range of the last candles in % of the last price, gaps count', () => {
+  // Every 5-minute candle 99…101, closing at 100: true range 2 → 2%
+  const flat = history(80).map((b) => ({ ...b, h: 101, l: 99 }));
+  assert.ok(close(M.natr(flat, 5, 14), 2));
+  // A gap up: the previous close 100, the candle 104…105 → true range 5, not 1
+  const gap = history(10).map((b) => ({ ...b, h: 101, l: 99 }));
+  for (let i = 10; i < 15; i++) gap.push({ t: T0 + i * MIN, o: 104, h: 105, l: 104, c: 104.5, q: 0, n: 0, closed: true });
+  assert.ok(close(M.natr(gap, 5, 2), (2 + 5) / 2 / 104.5 * 100));
+  assert.equal(M.natr(history(20), 5, 14), null); // 4 candles only
+});
+
 test('dayExtreme: distance to the nearer of the day\'s high / low, fresh bars extend them', () => {
   const norm = { high: 110, low: 90 };
   assert.deepEqual(M.dayExtreme([{ h: 100, l: 99, c: 108 }], norm), { pct: 2 / 108 * 100, side: 'high' });
@@ -86,6 +105,7 @@ test('coinWindows: every window; ok only with a norm at the 24 h liquidity gate'
   assert.equal(c.gv, 1);   // a flat coin: the last 15 min like the last 3 h
   assert.equal(c.gt, 1);
   assert.equal(c.ext.side, 'high');
+  assert.ok(close(c.natr, 0.1)); // flat bars 99.95…100.05
   assert.equal(c.w['3h'].vol, 1);
   assert.equal(c.w['1h'].chg, 0);
   assert.equal(c.ok, true); // $28.8M a day
