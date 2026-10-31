@@ -15,8 +15,9 @@ function apply(d) {
   const starred = new Set(), notes = {};
   W.entries.forEach((e) => {
     if (e.date !== W.today) return;
-    starred.add(e.sym);
-    if (e.note && e.note.trim()) notes[e.sym] = true;
+    const s = String(e.sym).toUpperCase(); // the briefing keeps 'sol', the grid 'SOL'
+    starred.add(s);
+    if (e.note && e.note.trim()) notes[s] = true;
   });
   W.snap = { starred, notes };
   W.subs.forEach((f) => f());
@@ -43,7 +44,7 @@ export function useWatchlist() {
   return React.useSyncExternalStore((f) => { W.subs.add(f); return () => W.subs.delete(f); }, () => W.snap);
 }
 
-// sym like 'SOLUSDT'; the briefing keeps 'SOL'
+// sym like 'SOLUSDT'; the briefing keeps 'sol' (the server folds the case)
 export function toggleWatch(sym) {
   const base = sym.replace(/USDT$/, '');
   const on = !W.snap.starred.has(base);

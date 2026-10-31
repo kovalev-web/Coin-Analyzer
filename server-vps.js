@@ -1498,7 +1498,22 @@ function rememberIpCountry(req) {
 
 // Write the briefing: log what was in it when (trades are "planned" by it —
 // journal/briefing.js), save, tell the user's other tabs to reload it
+// Briefing coins are lowercase base symbols ('sol') everywhere on the site; the
+// /grid star once wrote them uppercase — fold the case and drop the duplicates
+function normBriefing(entries) {
+  var seen = {};
+  return (entries || []).filter(function (e) {
+    if (!e || !e.sym) return false;
+    e.sym = String(e.sym).toLowerCase();
+    var k = e.sym + ':' + e.date;
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  });
+}
+
 async function writeBriefing(userId, entries) {
+  entries = normBriefing(entries);
   var key = 'briefing:' + userId;
   try {
     var prevBr = await redis(['GET', key]);
@@ -1706,7 +1721,7 @@ var httpServer = http.createServer(async function (req, res) {
           var aiOwned = aiData.userId === userId;
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
-            entries: r.result ? JSON.parse(r.result) : [],
+            entries: normBriefing(r.result ? JSON.parse(r.result) : []),
             today: await userTodayStr(userId),
             ai_summary: aiOwned ? (aiData.text || null) : null,
             ai_traded_keys: aiOwned ? (aiData.keys || null) : null,
@@ -1716,18 +1731,18 @@ var httpServer = http.createServer(async function (req, res) {
         } else if (action === 'toggle') {
           // One coin in / out of today's briefing (the star on /grid): read, change, write
           // here, so a page that holds no copy of the list can't overwrite newer edits
-          var tSym = String(parsed.sym || '').toUpperCase();
-          if (!/^[A-Z0-9]{1,30}$/.test(tSym)) {
+          var tSym = String(parsed.sym || '').toLowerCase();
+          if (!/^[a-z0-9]{1,30}$/.test(tSym)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Invalid symbol' }));
             return;
           }
           var tToday = await userTodayStr(userId);
           var tCur = await redis(['GET', key]);
-          var tList = tCur.result ? JSON.parse(tCur.result) : [];
+          var tList = normBriefing(tCur.result ? JSON.parse(tCur.result) : []);
           var tAt = tList.findIndex(function (e) { return e.sym === tSym && e.date === tToday; });
           if (parsed.on && tAt < 0) {
-            var tTick = tickerCache[tSym + 'USDT'];
+            var tTick = tickerCache[tSym.toUpperCase() + 'USDT'];
             tList.push({ sym: tSym, date: tToday, addedAt: Date.now(), addedPrice: tTick ? +tTick.c : null, status: 'watching', note: '' });
             await writeBriefing(userId, tList);
           } else if (!parsed.on && tAt >= 0) {
