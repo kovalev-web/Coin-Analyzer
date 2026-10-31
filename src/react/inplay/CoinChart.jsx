@@ -4,10 +4,11 @@
 // and one ResizeObserver instead of autoSize (old TV WebKit blanks the chart),
 // charts created one after another (delay), colors read once, and the history
 // reloaded on every Binance reconnect and every HISTORY_MS — closes gaps and
-// keeps the number of candles bounded.
+// keeps the number of candles bounded. Option + drag measures (ruler.js).
 import * as React from 'react';
 import { useSiteTheme } from '@/shared/use-site-theme';
 import { fetchKlines, watchKlines, onKlinesReconnect } from './feed.js';
+import { attachRuler } from './ruler.js';
 
 const HISTORY = 240;
 const HISTORY_MS = 30 * 60000;
@@ -44,7 +45,7 @@ export function CoinChart({ sym, tf, delay = 0 }) {
 
   React.useEffect(() => {
     const el = box.current;
-    let alive = true, ch = null, stop = null, unReconnect = null, ro = null, timer = null, lastT = 0;
+    let alive = true, ch = null, stop = null, unReconnect = null, ro = null, timer = null, unRuler = null, lastT = 0;
     const start = setTimeout(() => {
       const LW = window.LightweightCharts;
       if (!alive || !LW || !el) return;
@@ -62,6 +63,7 @@ export function CoinChart({ sym, tf, delay = 0 }) {
       const vol = ch.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
       ch.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       chart.current = { ch, series, vol, c };
+      unRuler = attachRuler(el, ch, series);
 
       const volBar = (t, o, cl, v) => ({ time: t, value: v, color: cl >= o ? chart.current.c.volUp : chart.current.c.volDn });
 
@@ -95,6 +97,7 @@ export function CoinChart({ sym, tf, delay = 0 }) {
       if (stop) stop();
       if (unReconnect) unReconnect();
       if (ro) ro.disconnect();
+      if (unRuler) unRuler();
       if (ch) ch.remove();
       chart.current = null;
     };
