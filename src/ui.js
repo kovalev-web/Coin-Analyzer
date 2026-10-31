@@ -1513,6 +1513,11 @@ function _initChartForSym(sym) {
   fetchChart(sym, state.chartTF[sym]);
 }
 
+// One card chart outside the card grid (the new main page, src/react/home2):
+// the same chart, levels, alerts, rays and ruler, in #chart-<sym>
+export function mountCoinChart(sym) { _initChartForSym(sym); }
+export function unmountCoinChart(sym) { _destroyChartForSym(sym); }
+
 function _destroyChartForSym(sym) {
   if (!_charts[sym]) return;
   try { _charts[sym].remove(); } catch (e) {}

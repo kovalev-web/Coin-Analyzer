@@ -389,6 +389,20 @@ registerRoute('/', function () {
   }
 });
 
+// Draft of the new main page (src/react/home2), the old one stays at /
+registerRoute('/new', function () {
+  var app = document.getElementById('app');
+  unmountIslands(app);
+  app.innerHTML = '<div id="home2-root"></div>';
+  var show = function () {
+    if (getCurrentRoute() !== '/new') return;
+    import('./react/home2/Home2.jsx').then(function (m) {
+      if (getCurrentRoute() === '/new') mountIsland(document.getElementById('home2-root'), m.Home2);
+    });
+  };
+  if (state.coins.length === 0) fetchCoins().then(show); else show();
+});
+
 registerRoute('/gainers', function () {
   if (state.coins.length === 0) {
     fetchCoins().then(function () { renderScreener(); startChartPolling(); fetchAllNATR(screenerCoins()); });

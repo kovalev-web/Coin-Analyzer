@@ -1,5 +1,6 @@
 // Briefing (watchlist of the day) on shadcn. Two places, one list:
 //  - BriefingPopover: under the bookmark button — today's coins, "Watchlist mode"
+//  - WatchlistPanel: always open on the new main page (/new, home2/Home2.jsx)
 //  - BriefingDrawer: beside the full-view chart — this week by day, the journal
 //    cards' buttons, the coin on the chart highlighted; a row opens its coin
 // A row: ticker, change since it was added, status (or the trade's PnL), notes,
@@ -194,6 +195,31 @@ export function BriefingPopover({ rect, onClose }) {
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+// The new main page (/new): today's coins, always open; a row opens the full
+// chart with the order book and the watchlist beside it
+export function WatchlistPanel() {
+  useBriefing();
+  const today = tzDateStr();
+  const entries = (state.briefing || []).filter((e) => e.date === today);
+  const open = (sym) => {
+    openCoin(sym);
+    setTimeout(() => { openFVBriefingDrawer(); fetchAllBriefingTrades(); }, 50);
+  };
+  return (
+    <>
+      <div className="flex items-center gap-2 border-b px-4 py-3">
+        <span className="text-sm font-semibold">Watchlist</span>
+        <span className="text-xs text-muted-foreground">{entries.length || ''}</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+        {entries.length
+          ? <List entries={entries} onOpen={open} />
+          : <Empty className="p-6"><EmptyHeader><EmptyDescription>No coins for today — star them in the list</EmptyDescription></EmptyHeader></Empty>}
+      </div>
+    </>
   );
 }
 

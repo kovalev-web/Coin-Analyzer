@@ -59,7 +59,7 @@ function Sessions({ compact }) {
   );
 }
 
-export function Topbar({ screener }) {
+export function Topbar({ screener, tabs = true }) {
   useEvents(['notifications:updated', 'avatar:changed']);
   const theme = useSiteTheme();
   const demo = state.isDemoMode;
@@ -77,12 +77,12 @@ export function Topbar({ screener }) {
         <TooltipContent>Refresh</TooltipContent>
       </Tooltip>
 
-      <Tabs value={screener ? 'gainers' : 'tear'}>
+      {tabs && <Tabs value={screener ? 'gainers' : 'tear'}>
         <TabsList>
           <TabsTrigger value="tear" data-action="go-main" className="px-3 max-md:px-2">Tear</TabsTrigger>
           <TabsTrigger value="gainers" data-action="go-screener" className="px-3 max-md:px-2">Gainers</TabsTrigger>
         </TabsList>
-      </Tabs>
+      </Tabs>}
 
       <div className="absolute left-1/2 hidden -translate-x-1/2 min-[901px]:block"><Sessions /></div>
 
