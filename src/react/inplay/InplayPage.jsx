@@ -142,7 +142,7 @@ function Ranges({ coin, win }) {
   );
 }
 
-function Cell({ coin, win, sort, tf, onPin }) {
+function Cell({ coin, win, sort, tf, delay, onPin }) {
   const w = coin.w[win];
   return (
     <div className="flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border bg-card md:min-h-0">
@@ -162,7 +162,7 @@ function Cell({ coin, win, sort, tf, onPin }) {
           <TooltipContent>{coin.pinned ? 'Unpin' : 'Pin: keep this coin in the first cells'}</TooltipContent>
         </Tooltip>
       </div>
-      <CoinChart sym={coin.s} tf={tf} />
+      <CoinChart sym={coin.s} tf={tf} delay={delay} />
     </div>
   );
 }
@@ -206,8 +206,8 @@ export function InplayPage() {
       {coins.length ? (
         <main className="grid min-h-0 flex-1 gap-1.5 p-1.5 max-md:!grid-cols-1 max-md:!grid-rows-none"
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(coins.length / cols)}, minmax(0, 1fr))` }}>
-          {coins.map((c) => (
-            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} onPin={() => togglePin(c.s)} />
+          {coins.map((c, i) => (
+            <Cell key={c.s} coin={c} win={v.win} sort={v.sort} tf={v.tf} delay={i * 150} onPin={() => togglePin(c.s)} />
           ))}
         </main>
       ) : (
